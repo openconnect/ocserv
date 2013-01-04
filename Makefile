@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-O2
 
-all: a.out
+all: server
 
-a.out: server.c
+server: server.c
 	$(CC) $(CFLAGS) -o $@ $^ -lgnutls

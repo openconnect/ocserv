@@ -19,6 +19,7 @@
 
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
+#include <gnutls/x509.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -55,7 +56,6 @@ int ret;
 	ret = stat(file, &st);
 	if (ret == 0) {
 		tls_print(server->session, "HTTP/1.1 200 OK\r\n");
-		/*tls_print(server->session, "Connection: close\r\n");*/
 		tls_printf(server->session, "Content-Length: %u\r\n", (unsigned int)st.st_size);
 		tls_print(server->session, "Content-Type: text/html\r\n");
 		tls_print(server->session, "X-Transcend-Version: 1\r\n");
@@ -89,6 +89,39 @@ fprintf(stderr, "file: %d, sent: %d\n", (int)st.st_size, ret);
 	}
 }
 
+int get_cert_username(server_st *server, const gnutls_datum_t* raw, 
+			char* username, size_t username_size)
+{
+gnutls_x509_crt_t crt;
+int ret;
+
+	ret = gnutls_x509_crt_init(&crt);
+	if (ret < 0) {
+		syslog(LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		goto fail;
+	}
+	
+	ret = gnutls_x509_crt_import(crt, raw, GNUTLS_X509_FMT_DER);
+	if (ret < 0) {
+		syslog(LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		goto fail;
+	}
+	
+	ret = gnutls_x509_crt_get_dn_by_oid (crt, server->config->cert_user_oid, 
+						0, 0, username, &username_size);
+	if (ret < 0) {
+		syslog(LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		goto fail;
+	}
+	
+	ret = 0;
+	
+fail:
+	gnutls_x509_crt_deinit(crt);
+	return ret;
+	
+}
+
 int post_auth_handler(server_st *server)
 {
 int ret;
@@ -96,6 +129,7 @@ struct req_data_st *req = server->parser->data;
 const char* reason = "Authentication failed";
 unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
+char cert_username[MAX_USERNAME_SIZE];
 char * username = NULL;
 char * password = NULL;
 char *p;
@@ -154,8 +188,22 @@ struct stored_cookie_st sc;
 			reason = "No certificate found";
 			goto auth_fail;
 		}
-		
-		/* XXX if there is no username get it from the certificate */
+
+		if (server->config->cert_user_oid) { /* otherwise certificate username is ignored */
+			ret = get_cert_username(server, cert, cert_username, sizeof(cert_username));
+			if (ret < 0) {
+				syslog(LOG_ERR, "Cannot get username (%s) from certificate", server->config->cert_user_oid);
+				reason = "No username in certificate";
+				goto auth_fail;
+			}
+			
+			if (username) {
+				if (strcmp(username, cert_username) != 0)
+					syslog(LOG_NOTICE, "User '%s' presented the certificate of user '%s'", username, cert_username);
+			} else {
+				username = cert_username;
+			}
+		} 
 	}
 
 	syslog(LOG_INFO, "User '%s' logged in\n", username);

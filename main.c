@@ -32,6 +32,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
+#include <gnutls/x509.h>
 #include <tlslib.h>
 
 #include <vpn.h>
@@ -64,6 +65,7 @@ static struct cfg_st config = {
 	.cert = "./test.pem",
 	.key = "./test.pem",
 	.cert_req = GNUTLS_CERT_IGNORE,
+	.cert_user_oid = GNUTLS_OID_LDAP_UID /* or just GNUTLS_OID_X520_COMMON_NAME */,
 	.root_dir = "root/",
 	.cookie_validity = 3600,
 	.db_file = "/tmp/db",

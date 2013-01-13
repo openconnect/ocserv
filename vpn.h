@@ -14,6 +14,7 @@ struct cfg_st {
 	const char *key;
 	const char *ca;
 	const char *crl;
+	const char *cert_user_oid; /* The OID that will be used to extract the username */
 	gnutls_certificate_request_t cert_req;
 	const char *priorities;
 	const char *root_dir; /* where the xml files are served from */
@@ -34,6 +35,7 @@ typedef struct server_st {
 	int tunfd;
 } server_st;
 
+#define MAX_USERNAME_SIZE 64
 #define COOKIE_SIZE 32
 
 struct req_data_st {

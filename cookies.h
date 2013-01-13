@@ -4,7 +4,7 @@
 #include <vpn.h>
 
 struct __attribute__ ((__packed__)) stored_cookie_st {
-	char username[128];
+	char username[MAX_USERNAME_SIZE];
 	time_t expiration;
 };
 

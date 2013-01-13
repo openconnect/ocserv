@@ -30,12 +30,21 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include <vpn.h>
 #include <auth.h>
+#include <cookies.h>
 #include <tlslib.h>
 
 #include <http-parser/http_parser.h>
+
+static int connect_handler(server_st *server);
 
 typedef int (*url_handler_fn)(server_st*);
 struct known_urls_st {
@@ -183,10 +192,11 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
 	http_parser_settings settings;
 	struct req_data_st req;
 	server_st _server;
-	server_st *server = &_server;
+	server_st *server;
 	url_handler_fn fn;
 	
-	memset(&server, 0, sizeof(*server));
+	memset(&_server, 0, sizeof(_server));
+	server = &_server;
 	
 	server->remote_addr_len = sizeof(server->remote_addr);
 	ret = getpeername (fd, (void*)&server->remote_addr, &server->remote_addr_len);
@@ -298,3 +308,308 @@ finish:
 	tls_close(session);
 }
 
+static int get_network_mask(int fd, int family, const char* vname, 
+		struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
+{
+unsigned char *ptr;
+const char* p;
+struct ifreq ifr;
+unsigned int i;
+int ret;
+
+	/* get netmask */
+	ifr.ifr_addr.sa_family = family;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+
+	ret = ioctl(fd, SIOCGIFNETMASK, &ifr);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	if (family == AF_INET) {
+		ptr = (void*)&((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr;
+	} else if (family == AF_INET6) {
+		ptr = (void*)&((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr;
+	} else {
+		return -1;
+	}
+
+	p = inet_ntop(family, (void*)ptr, *buffer, *buffer_size);
+	if (p == NULL) {
+		goto fail;
+	}
+
+	ret = strlen(p);
+	*buffer += ret;
+	*buffer_size -= ret;
+
+	if (family == AF_INET) {
+		vinfo->ipv4_netmask = p;
+	} else {
+		vinfo->ipv6_netmask = p;
+	}
+	
+	/* get IP (and make it network) */
+	ifr.ifr_addr.sa_family = family;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	
+	ret = ioctl(fd, SIOCGIFADDR, &ifr);
+	if (ret != 0) {
+		goto fail;
+	}
+
+	if (family == AF_INET) {
+		ptr = (void*)&((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr;
+	} else if (family == AF_INET6) {
+		ptr = (void*)&((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr;
+	} else {
+		return -1;
+	}
+	
+	p = inet_ntop(family, (void*)ptr, *buffer, *buffer_size);
+	if (p == NULL) {
+		goto fail;
+	}
+	
+	ret = strlen(p);
+	*buffer += ret;
+	*buffer_size -= ret;
+
+	if (family == AF_INET) {
+		vinfo->ipv4 = p;
+	} else {
+		vinfo->ipv6 = p;
+	}
+
+	return 0;
+fail:
+	return -1;
+}
+
+/* Returns information based on an VPN network stored in server_st but
+ * using real time information for many fields. Nothing is allocated,
+ * the provided buffer is used.
+ * 
+ * Returns 0 on success.
+ */
+static int get_rt_vpn_info(server_st * server, const char* vname, struct vpn_st* vinfo,
+		char* buffer, size_t buffer_size)
+{
+unsigned int i;
+int fd, ret;
+struct ifreq ifr;
+const char* p;
+
+	memset(vinfo, 0, sizeof(*vinfo));
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd == -1)
+		return -1;
+
+	for (i=0;i<server->config->networks_size;i++) {
+		if (strcmp(vname, server->config->networks[i].name) == 0) {
+			vinfo->name = server->config->networks[i].name;
+			vinfo->ipv4_dns = server->config->networks[i].ipv4_dns;
+			vinfo->ipv6_dns = server->config->networks[i].ipv6_dns;
+			vinfo->routes_size = server->config->networks[i].routes_size;
+			memcpy(vinfo->routes, server->config->networks[i].routes, sizeof(vinfo->routes));
+
+			ret = get_network_mask(fd, AF_INET, vname, vinfo, &buffer, &buffer_size); 
+			if (ret < 0) {
+				oclog(server, LOG_INFO, "Cannot obtain IPv4 IP or mask for %s", vinfo->name);
+			}
+
+			ret = get_network_mask(fd, AF_INET6, vname, vinfo, &buffer, &buffer_size); 
+			if (ret < 0) {
+				oclog(server, LOG_INFO, "Cannot obtain IPv6 IP or mask for %s", vinfo->name);
+			}
+			
+			if (vinfo->ipv4_netmask == NULL && vinfo->ipv6_netmask == NULL) {
+				ret = -1;
+				goto fail;
+			}
+		
+			ifr.ifr_addr.sa_family = AF_INET;
+			snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+			ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
+			if (ret < 0) {
+				oclog(server, LOG_ERR, "Cannot obtain MTU for %s. Assuming 1500.", vinfo->name);
+				vinfo->mtu = 1500;
+			} else
+				vinfo->mtu = ifr.ifr_mtu;
+		}
+	}
+
+	ret = 0;
+fail:
+	close(fd);
+	return ret;
+}
+
+static int connect_handler(server_st *server)
+{
+int ret;
+struct req_data_st *req = server->parser->data;
+char buf[256];
+fd_set rfds;
+int l, pktlen;
+int tls_fd, max;
+unsigned i;
+struct stored_cookie_st sc;
+unsigned int tun_nr = 0;
+struct vpn_st vinfo;
+char* buffer;
+unsigned int buffer_size;
+
+	if (req->cookie_set == 0) {
+		oclog(server, LOG_INFO, "Connect request without authentication");
+		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
+		exit(1);
+	}
+	
+	ret = retrieve_cookie(server, req->cookie, sizeof(req->cookie), &sc);
+	if (ret < 0) {
+		oclog(server, LOG_INFO, "Connect request without authentication");
+		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
+		exit(1);
+	}
+
+	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
+		oclog(server, LOG_INFO, "Bad connect request: '%s'\n", req->url);
+		tls_print(server->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
+		exit(1);
+	}
+	
+	if (server->config->networks_size == 0) {
+		oclog(server, LOG_ERR, "No networks are configured. Rejecting client.");
+		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		return -1;
+	}
+
+	oclog(server, LOG_INFO, "Connected\n");
+
+	buffer_size = 2048;
+	buffer = malloc(buffer_size);
+	if (buffer == NULL) {
+		oclog(server, LOG_ERR, "Memory error. Rejecting client.");
+		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		return -1;
+	}
+
+	ret = get_rt_vpn_info(server, server->config->networks[0].name,
+		&vinfo, buffer, buffer_size);
+	if (ret < 0) {
+		oclog(server, LOG_ERR, "Network interfaces are not configured. Rejecting client.");
+		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		return -1;
+	}
+
+	tls_print(server->session, "HTTP/1.1 200 CONNECTED\r\n");
+	tls_printf(server->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
+	tls_print(server->session, "X-CSTP-DPD: 60\r\n");
+
+	if (vinfo.ipv4_netmask) {
+		tls_printf(server->session, "X-CSTP-Address: 172.31.255.%d\r\n",
+		   100 + tun_nr);
+		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
+		tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
+	}
+	
+	if (vinfo.ipv6_netmask) {
+		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
+		tls_printf(server->session, "X-CSTP-Address: 2001:770:15f::%x\r\n",
+			0x100 + tun_nr);
+		tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
+	}
+	
+	for (i=0;i<vinfo.routes_size;i++) {
+		tls_printf(server->session,
+			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
+	}
+	tls_print(server->session, "X-CSTP-Banner: Hello there\r\n");
+	tls_print(server->session, "\r\n");
+	
+	free(buffer);
+	buffer = NULL;
+
+	tls_fd = (long)gnutls_transport_get_ptr(server->session);
+
+	for(;;) {
+		FD_ZERO(&rfds);
+		
+		FD_SET(tls_fd, &rfds);
+		FD_SET(server->tunfd, &rfds);
+		max = MAX(server->tunfd,tls_fd);
+
+		if (gnutls_record_check_pending(server->session) == 0) {
+			ret = select(max + 1, &rfds, NULL, NULL, NULL);
+			if (ret <= 0)
+				break;
+		}
+
+		if (FD_ISSET(server->tunfd, &rfds)) {
+			int l = read(server->tunfd, buf + 8, sizeof(buf) - 8);
+			buf[0] = 'S';
+			buf[1] = 'T';
+			buf[2] = 'F';
+			buf[3] = 1;
+			buf[4] = l >> 8;
+			buf[5] = l & 0xff;
+			buf[6] = 0;
+			buf[7] = 0;
+
+			ret = tls_send(server->session, buf, l + 8);
+			GNUTLS_FATAL_ERR(ret);
+		}
+
+		if (FD_ISSET(tls_fd, &rfds) || gnutls_record_check_pending(server->session)) {
+			l = tls_recv(server->session, buf, sizeof(buf));
+			GNUTLS_FATAL_ERR(l);
+
+			if (l < 8) {
+				oclog(server, LOG_INFO,
+				       "Can't read CSTP header\n");
+				exit(1);
+			}
+			if (buf[0] != 'S' || buf[1] != 'T' ||
+			    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
+				oclog(server, LOG_INFO,
+				       "Can't recognise CSTP header\n");
+				exit(1);
+			}
+			pktlen = (buf[4] << 8) + buf[5];
+			if (l != 8 + pktlen) {
+				oclog(server, LOG_INFO, "Unexpected length\n");
+				exit(1);
+			}
+			switch (buf[6]) {
+			case AC_PKT_DPD_RESP:
+			case AC_PKT_KEEPALIVE:
+				break;
+
+			case AC_PKT_DPD_OUT:
+				ret =
+				    tls_send(server->session, "STF\x1\x0\x0\x4\x0",
+					     8);
+				GNUTLS_FATAL_ERR(ret);
+				break;
+
+			case AC_PKT_DISCONN:
+				oclog(server, LOG_INFO, "Received BYE packet\n");
+				break;
+
+			case AC_PKT_DATA:
+				write(server->tunfd, buf + 8, pktlen);
+				break;
+			}
+		}
+
+
+
+	}
+
+	return 0;
+}

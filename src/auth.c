@@ -63,8 +63,6 @@ int ret;
 
 		ret = tls_send_file(server->session, file);
 
-fprintf(stderr, "file: %d, sent: %d\n", (int)st.st_size, ret);
-		
 		return 0;
 	} else {
 		tls_print(server->session, "HTTP/1.1 200 OK\r\n");
@@ -289,27 +287,6 @@ int ret;
 	}
 }
 
-/* Checks cookie if present and retrieves it. Returns negative error code
- * if cannot be found */
-static int check_cookie(server_st *server, struct stored_cookie_st *sc)
-{
-struct req_data_st *req = server->parser->data;
-int ret;
-
-	if (req->cookie_set == 0) {
-		oclog(server, LOG_INFO, "No cookie found\n");
-		return -1;
-	}
-	
-	ret = retrieve_cookie(server, req->cookie, sizeof(req->cookie), sc);
-	if (ret < 0) {
-		oclog(server, LOG_INFO, "Cookie not recognised\n");
-		return -1;
-	}
-	
-	return 0;
-}
-
 int post_login_handler(server_st *server)
 {
 int ret;
@@ -319,8 +296,14 @@ char *p;
 unsigned int i;
 struct stored_cookie_st sc;
 
-	ret = check_cookie(server, &sc);
+	if (req->cookie_set == 0) {
+		oclog(server, LOG_INFO, "No cookie found\n");
+		goto auth_fail;
+	}
+	
+	ret = retrieve_cookie(server, req->cookie, sizeof(req->cookie), &sc);
 	if (ret < 0) {
+		oclog(server, LOG_INFO, "Cookie not recognised\n");
 		goto auth_fail;
 	}
 
@@ -346,126 +329,3 @@ auth_fail:
 	return get_login_handler(server);
 }
 
-
-int connect_handler(server_st *server)
-{
-int ret;
-struct req_data_st *req = server->parser->data;
-char buf[256];
-fd_set rfds;
-int l, pktlen;
-int tls_fd, max;
-struct stored_cookie_st sc;
-unsigned int tun_nr = 0;
-
-	ret = check_cookie(server, &sc);
-	if (ret < 0) {
-		oclog(server, LOG_INFO, "Connect request without authentication");
-		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
-		exit(1);
-	}
-
-	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
-		oclog(server, LOG_INFO, "Bad connect request: '%s'\n", req->url);
-		tls_print(server->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
-		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
-		exit(1);
-	}
-
-	oclog(server, LOG_INFO, "Connected\n");
-
-	tls_print(server->session, "HTTP/1.1 200 CONNECTED\r\n");
-	tls_print(server->session, "X-CSTP-MTU: 1500\r\n");
-	tls_print(server->session, "X-CSTP-DPD: 60\r\n");
-	tls_printf(server->session, "X-CSTP-Address: 172.31.255.%d\r\n",
-		   100 + tun_nr);
-	tls_print(server->session, "X-CSTP-Netmask: 255.255.255.255\r\n");
-	tls_print(server->session, "X-CSTP-DNS: 172.31.255.1\r\n");
-	tls_printf(server->session, "X-CSTP-Address: 2001:770:15f::%x\r\n",
-		   0x100 + tun_nr);
-	tls_printf(server->session, "X-CSTP-Netmask: 2001:770:15f::%x/128\r\n",
-		   0x100 + tun_nr);
-	tls_print(server->session,
-		   "X-CSTP-Split-Include: 172.31.255.0/255.255.255.0\r\n");
-	tls_print(server->session, "X-CSTP-Banner: Hello there\r\n");
-	tls_print(server->session, "\r\n");
-
-	tls_fd = (long)gnutls_transport_get_ptr(server->session);
-
-	for(;;) {
-		FD_ZERO(&rfds);
-		
-		FD_SET(tls_fd, &rfds);
-		FD_SET(server->tunfd, &rfds);
-		max = MAX(server->tunfd,tls_fd);
-
-		if (gnutls_record_check_pending(server->session) == 0) {
-			ret = select(max + 1, &rfds, NULL, NULL, NULL);
-			if (ret <= 0)
-				break;
-		}
-
-		if (FD_ISSET(server->tunfd, &rfds)) {
-			int l = read(server->tunfd, buf + 8, sizeof(buf) - 8);
-			buf[0] = 'S';
-			buf[1] = 'T';
-			buf[2] = 'F';
-			buf[3] = 1;
-			buf[4] = l >> 8;
-			buf[5] = l & 0xff;
-			buf[6] = 0;
-			buf[7] = 0;
-
-			ret = tls_send(server->session, buf, l + 8);
-			GNUTLS_FATAL_ERR(ret);
-		}
-
-		if (FD_ISSET(tls_fd, &rfds) || gnutls_record_check_pending(server->session)) {
-			l = tls_recv(server->session, buf, sizeof(buf));
-			GNUTLS_FATAL_ERR(l);
-
-			if (l < 8) {
-				oclog(server, LOG_INFO,
-				       "Can't read CSTP header\n");
-				exit(1);
-			}
-			if (buf[0] != 'S' || buf[1] != 'T' ||
-			    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
-				oclog(server, LOG_INFO,
-				       "Can't recognise CSTP header\n");
-				exit(1);
-			}
-			pktlen = (buf[4] << 8) + buf[5];
-			if (l != 8 + pktlen) {
-				oclog(server, LOG_INFO, "Unexpected length\n");
-				exit(1);
-			}
-			switch (buf[6]) {
-			case AC_PKT_DPD_RESP:
-			case AC_PKT_KEEPALIVE:
-				break;
-
-			case AC_PKT_DPD_OUT:
-				ret =
-				    tls_send(server->session, "STF\x1\x0\x0\x4\x0",
-					     8);
-				GNUTLS_FATAL_ERR(ret);
-				break;
-
-			case AC_PKT_DISCONN:
-				oclog(server, LOG_INFO, "Received BYE packet\n");
-				break;
-
-			case AC_PKT_DATA:
-				write(server->tunfd, buf + 8, pktlen);
-				break;
-			}
-		}
-
-
-
-	}
-
-	return 0;
-}

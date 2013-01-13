@@ -23,6 +23,22 @@ extern int syslog_open;
 #define AUTH_TYPE_USERNAME_PASS (1<<0)
 #define AUTH_TYPE_CERTIFICATE (1<<1)
 
+#define MAX_NETWORKS 24
+#define MAX_ROUTES 64
+
+struct vpn_st {
+	const char* name; /* device name */
+	const char* ipv4_netmask;
+	const char* ipv4;
+	const char* ipv6_netmask;
+	const char* ipv6;
+	const char* ipv4_dns;
+	const char* ipv6_dns;
+	unsigned int mtu;
+	const char* routes[MAX_ROUTES];
+	unsigned int routes_size;
+};
+
 struct cfg_st {
 	const char *name;
 	unsigned int port;
@@ -37,6 +53,9 @@ struct cfg_st {
 	unsigned int auth_types; /* or'ed sequence of AUTH_TYPE */
 	time_t cookie_validity; /* in seconds */
 	const char* db_file;
+	
+	struct vpn_st networks[MAX_NETWORKS];
+	unsigned int networks_size;
 };
 
 struct tls_st {

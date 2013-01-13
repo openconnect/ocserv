@@ -71,7 +71,14 @@ static struct cfg_st config = {
 	.root_dir = "root/",
 	.cookie_validity = 3600,
 	.db_file = "/tmp/db",
-	.ca = NULL
+	.ca = NULL,
+	.networks_size = 1,
+	.networks = {{
+		.name = "vpns0",
+		.ipv4_netmask = "255.255.255.0",
+		.ipv4 = "192.168.55.1",
+		.ipv4_dns = "192.168.55.1",
+	}}
 };
 
 /* Returns 0 on success or negative value on error.

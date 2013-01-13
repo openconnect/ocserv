@@ -7,6 +7,7 @@
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #define AC_PKT_DATA             0	/* Uncompressed data */
 #define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
@@ -53,7 +54,10 @@ struct cfg_st {
 	unsigned int auth_types; /* or'ed sequence of AUTH_TYPE */
 	time_t cookie_validity; /* in seconds */
 	const char* db_file;
-	
+
+	uid_t uid;
+	gid_t gid;
+
 	struct vpn_st networks[MAX_NETWORKS];
 	unsigned int networks_size;
 };

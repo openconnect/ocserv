@@ -71,6 +71,8 @@ static struct cfg_st config = {
 	.root_dir = "root/",
 	.cookie_validity = 3600,
 	.db_file = "/tmp/db",
+	.uid = 65534,
+	.gid = 65534,
 	.ca = NULL,
 	.networks_size = 1,
 	.networks = {{
@@ -287,9 +289,9 @@ fail:
 
 static int open_tun(struct cfg_st *config)
 {
-int tunfd, ret;
+int tunfd, ret, e;
 struct ifreq ifr;
-unsigned int i;
+unsigned int i, t;
 
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
@@ -304,11 +306,33 @@ unsigned int i;
 		ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 		snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), config->networks[i].name, 0);
 		if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
-			int e = errno;
+			e = errno;
 			syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
 			exit(1);
 		}
-		
+    
+		if (config->uid != -1) {
+			t = config->uid;
+			ret = ioctl(tunfd, TUNSETOWNER, t);
+			if (ret < 0) {
+				e = errno;
+				syslog(LOG_ERR, "TUNSETOWNER: %s\n", strerror(e));
+				exit(1);
+				
+			}
+		}
+
+		if (config->gid != -1) {
+			t = config->uid;
+			ret = ioctl(tunfd, TUNSETGROUP, t);
+			if (ret < 0) {
+				e = errno;
+				syslog(LOG_ERR, "TUNSETGROUP: %s\n", strerror(e));
+				exit(1);
+				
+			}
+		}
+
 		/* set IP/mask */
 		ret = set_network_info(&config->networks[i]); 
 		if (ret < 0) {
@@ -360,7 +384,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 int main(void)
 {
 
-	int fd, pid;
+	int fd, pid, e;
 	struct tls_st creds;
 	struct listen_list_st llist;
 	struct listen_list_st *tmp;
@@ -387,7 +411,25 @@ int main(void)
 		exit(1);
 	}
 
-	/* XXX drop any privileges */
+	if (config.gid != -1) {
+		ret = setgid(config.gid);
+		if (ret < 0) {
+			e = errno;
+			syslog(LOG_ERR, "setgid: %s\n", strerror(e));
+			exit(1);
+			
+		}
+	}
+
+	if (config.uid != -1) {
+		ret = setuid(config.uid);
+		if (ret < 0) {
+			e = errno;
+			syslog(LOG_ERR, "setuid: %s\n", strerror(e));
+			exit(1);
+			
+		}
+	}
 
 	gnutls_global_set_log_function(tls_log_func);
 	gnutls_global_set_audit_log_function(tls_audit_log_func);

@@ -47,8 +47,10 @@ datum data;
 int ret;
 
 	dbf = gdbm_open((char*)server->config->db_file, 0, GDBM_WRCREAT, S_IRUSR|S_IWUSR, NULL);
-	if (dbf == NULL)
+	if (dbf == NULL) {
+		oclog(server, LOG_ERR, "Cannot open cookie database: %s", server->config->db_file);
 		return -1;
+	}
 
 	key.dptr = (void*)cookie;
 	key.dsize = cookie_size;
@@ -77,8 +79,10 @@ datum data;
 int ret;
 
 	dbf = gdbm_open((char*)server->config->db_file, 0, GDBM_READER, 0, NULL);
-	if (dbf == NULL)
+	if (dbf == NULL) {
+		oclog(server, LOG_ERR, "Cannot open cookie database: %s", server->config->db_file);
 		return -1;
+	}
 
 	key.dptr = (void*)cookie;
 	key.dsize = cookie_size;

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<auth id="main">
+<message>Please enter your credentials.</message>
+<form method="post" action="/auth.xml">
+
+<input type="text" name="username" label="Username:" />
+<input type="password" name="password" label="Password:" />
+
+</form>
+</auth>

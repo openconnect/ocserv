@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2012, 2013 David Woodhouse
+ * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include <gnutls/gnutls.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -9,59 +28,65 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <linux/if_tun.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
+#include <limits.h>
 
-#define AC_PKT_DATA             0	/* Uncompressed data */
-#define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
-#define AC_PKT_DPD_RESP         4	/* DPD response */
-#define AC_PKT_DISCONN          5	/* Client disconnection notice */
-#define AC_PKT_KEEPALIVE        7	/* Keepalive */
-#define AC_PKT_COMPRESSED       8	/* Compressed data */
-#define AC_PKT_TERM_SERVER      9	/* Server kick */
+#include <common.h>
+#include <vpn.h>
+#include <auth.h>
+#include <tlslib.h>
 
+#include <http-parser/http_parser.h>
+
+typedef int (*url_handler_fn)(server_st*);
+struct known_urls_st {
+	const char* url;
+	url_handler_fn get_handler;
+	url_handler_fn post_handler;
+};
+
+struct known_urls_st known_urls[] = {
+		{"/", get_auth_handler, NULL},
+		{"/auth.xml", get_auth_handler, post_auth_handler},
+		{"/login.xml", get_login_handler, post_login_handler},
+		{NULL, NULL}
+};
+
+static url_handler_fn get_url_handler(const char* url)
+{
+struct known_urls_st *p;
+
+	p = known_urls;
+	do {
+		if (p->url != NULL && strcmp(p->url, url)==0)
+			return p->get_handler;
+		p++;
+	} while(p->url != NULL);
+	
+	return NULL;
+}
+
+static url_handler_fn post_url_handler(const char* url)
+{
+struct known_urls_st *p;
+
+	p = known_urls;
+	do {
+		if (p->url != NULL && strcmp(p->url, url)==0)
+			return p->post_handler;
+		p++;
+	} while(p->url != NULL);
+	
+	return NULL;
+}
+
+
+#if 0
 #define CERTFILE "/tmp/test.pem"
 
 static const char *const cookies[] = {
 };
 
 #define nr_cookies (sizeof(cookies) / sizeof(cookies[0]))
-
-static int syslog_open = 0;
-
-#define GNUTLS_FATAL_ERR(x) \
-        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-                if (syslog_open) \
-        		syslog(LOG_ERR, "GnuTLS error (at %d): %s", __LINE__, gnutls_strerror(x)); \
-                else \
-                        fprintf(stderr, "GnuTLS error (at %d): %s\n", __LINE__, gnutls_strerror(x)); \
-                exit(1); \
-        }
-
-static ssize_t tls_send(gnutls_session_t session, const void *data,
-			size_t data_size)
-{
-	int ret;
-
-	do {
-		ret = gnutls_record_send(session, data, data_size);
-	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-	
-	return ret;
-}
-
-static ssize_t tls_recv(gnutls_session_t session, void *data,
-			size_t data_size)
-{
-	int ret;
-
-	do {
-		ret = gnutls_record_recv(session, data, data_size);
-	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-	
-	return ret;
-}
 
 static int tls_gets(gnutls_session_t session, char *buf, size_t len)
 {
@@ -91,21 +116,6 @@ static int tls_gets(gnutls_session_t session, char *buf, size_t len)
 	return i ? : ret;
 }
 
-static int __attribute__ ((format(printf, 2, 3)))
-    tls_printf(gnutls_session_t session, const char *fmt, ...)
-{
-	char buf[1024];
-	va_list args;
-
-	buf[1023] = 0;
-
-	va_start(args, fmt);
-	vsnprintf(buf, 1023, fmt, args);
-	va_end(args);
-	return tls_send(session, buf, strlen(buf));
-
-}
-
 static int hexnybble(char x)
 {
 	if (x >= '0' && x <= '9')
@@ -119,80 +129,228 @@ static int hexnybble(char x)
 
 	return -1;
 }
+#endif
 
-static void tls_close(gnutls_session_t session)
+
+int url_cb(http_parser* parser, const char *at, size_t length)
 {
-	gnutls_bye(session, GNUTLS_SHUT_WR);
-	gnutls_deinit(session);
+	struct req_data_st *req = parser->data;
+	
+	if (length >= sizeof(req->url)) {
+		req->url[0] = 0;
+		return 1;
+	}
+
+	memcpy(req->url, at, length);
+	req->url[length] = 0;
+
+	fprintf(stderr, "request %s %s\n", http_method_str(parser->method), req->url);
+
+	return 0;
 }
 
-static void tls_fatal_close(gnutls_session_t session,
-			    gnutls_alert_description_t a)
+int header_field_cb(http_parser* parser, const char *at, size_t length)
 {
-	gnutls_alert_send(session, GNUTLS_AL_FATAL, a);
-	gnutls_deinit(session);
+	struct req_data_st *req = parser->data;
+
+	if (strncmp(at, "Cookie", length) == 0) {
+		req->cookie_set = -1;
+	}
+	
+	return 0;
+}
+
+int header_complete_cb(http_parser* parser)
+{
+	struct req_data_st *req = parser->data;
+
+	req->headers_complete = 1;
+	return 0;
+}
+
+int message_complete_cb(http_parser* parser)
+{
+	struct req_data_st *req = parser->data;
+
+	req->message_complete = 1;
+	return 0;
+}
+
+int header_value_cb(http_parser* parser, const char *at, size_t length)
+{
+struct req_data_st *req = parser->data;
+char *p;
+size_t nlen;
+	
+	if (req->cookie_set == -1) {
+		p = strstr(at, "webvpn=");
+		if (p == NULL || length <= 7) {
+			req->cookie_set = 0;
+			return 0;
+		}
+		p += 7;
+		length -= 7;
+		
+		if (length < COOKIE_SIZE*2) {
+			req->cookie_set = 0;
+			return 0;
+		}
+		length = COOKIE_SIZE*2;
+
+		nlen = sizeof(req->cookie);
+		gnutls_hex2bin(p, length, req->cookie, &nlen);
+		req->cookie_set = 1;
+	}
+	
+	return 0;
+}
+
+int body_cb(http_parser* parser, const char *at, size_t length)
+{
+struct req_data_st *req = parser->data;
+char* tmp = malloc(length+1);
+
+	if (tmp == NULL)
+		return 1;
+		
+	memcpy(tmp, at, length);
+	tmp[length] = 0;
+
+	req->body = tmp;
+	return 0;
 }
 
 
-
-int main(void)
+void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
 {
-	int tun_nr = -1;
-	struct ifreq ifr;
+//	int tun_nr = -1;
+//	struct ifreq ifr;
 	unsigned char buf[2048];
-	int tunfd;
-	int i, ret;
-	gnutls_certificate_credentials_t x509_cred;
+//	int i;
+	int ret;
+	ssize_t nparsed, nrecvd;
 	gnutls_session_t session;
-	gnutls_priority_t priority_cache;
-
-	ret = gnutls_global_init();
-	GNUTLS_FATAL_ERR(ret);
-
-	ret = gnutls_certificate_allocate_credentials(&x509_cred);
-	GNUTLS_FATAL_ERR(ret);
-
-	ret =
-	    gnutls_certificate_set_x509_key_file(x509_cred, CERTFILE,
-						 CERTFILE,
-						 GNUTLS_X509_FMT_PEM);
-	GNUTLS_FATAL_ERR(ret);
-
-	/*
-	   ret = gnutls_certificate_set_x509_trust_file (x509_cred, TRUSTFILE,
-	   GNUTLS_X509_FMT_PEM);
-	   GNUTLS_FATAL_ERR(ret);
-	 */
-
-	ret = gnutls_priority_init(&priority_cache, "NORMAL", NULL);
-	GNUTLS_FATAL_ERR(ret);
+	http_parser parser;
+	http_parser_settings settings;
+	struct sockaddr_storage remote_addr;
+	socklen_t remote_addr_len;
+	struct req_data_st req;
+	server_st server;
+	url_handler_fn fn;
+	
+	remote_addr_len = sizeof(remote_addr);
+	ret = getpeername (fd, (void*)&remote_addr, &remote_addr_len);
+	if (ret < 0)
+		syslog(LOG_INFO, "Accepted connection from unknown"); 
+	else
+		syslog(LOG_INFO, "Accepted connection from %s", 
+			human_addr((void*)&remote_addr, remote_addr_len,
+			    buf, sizeof(buf)));
 
 	/* initialize the session */
 	ret = gnutls_init(&session, GNUTLS_SERVER);
 	GNUTLS_FATAL_ERR(ret);
 
-	ret = gnutls_priority_set(session, priority_cache);
+	ret = gnutls_priority_set(session, creds->cprio);
 	GNUTLS_FATAL_ERR(ret);
 
 	ret =
 	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
-				   x509_cred);
+				   creds->xcred);
 	GNUTLS_FATAL_ERR(ret);
 
-	gnutls_certificate_server_set_request(session, GNUTLS_CERT_IGNORE);
-
-	gnutls_transport_set_ptr2(session, (gnutls_transport_ptr_t) 0,
-				  (gnutls_transport_ptr_t) 1);
-
-	openlog("ocserv", LOG_PID, LOG_LOCAL0);
-	syslog_open = 1;
+	gnutls_certificate_server_set_request(session, config->cert_req);
+	gnutls_transport_set_ptr(session, (gnutls_transport_ptr_t) (long)fd);
 
 	do {
 		ret = gnutls_handshake(session);
-		GNUTLS_FATAL_ERR(ret);
 	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+	GNUTLS_FATAL_ERR(ret);
 
-	syslog(LOG_INFO, "Accepted connection\n");
+	memset(&settings, 0, sizeof(settings));
+
+	settings.on_url = url_cb;
+	settings.on_header_field = header_field_cb;
+	settings.on_header_value = header_value_cb;
+	settings.on_headers_complete = header_complete_cb;
+	settings.on_message_complete = message_complete_cb;
+	settings.on_body = body_cb;
+
+	server.config = config;
+	server.session = session;
+	server.parser = &parser;
+	server.tunfd = tunfd;
+
+restart:
+	http_parser_init(&parser, HTTP_REQUEST);
+	memset(&req, 0, sizeof(req));
+	parser.data = &req;
+
+	/* parse as we go */
+	do {
+		nrecvd = tls_recv(session, buf, sizeof(buf));
+		GNUTLS_FATAL_ERR(nrecvd);
+	
+		nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
+		if (nparsed == 0) {
+			syslog(LOG_INFO, "Error parsing HTTP request"); 
+			exit(1);
+		}
+	} while(req.headers_complete == 0);
+
+	if (parser.method == HTTP_GET) {
+		fn = get_url_handler(req.url);
+		if (fn == NULL) {
+			syslog(LOG_INFO, "Unexpected URL %s", req.url); 
+			tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+			goto finish;
+		}
+		
+		ret = fn(&server);
+		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
+			goto restart;
+
+	} else if (parser.method == HTTP_POST) {
+		/* continue reading */
+		while(req.message_complete == 0) {
+			nrecvd = tls_recv(session, buf, sizeof(buf));
+			GNUTLS_FATAL_ERR(nrecvd);
+		
+			nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
+			if (nparsed == 0) {
+				syslog(LOG_INFO, "Error parsing HTTP request"); 
+				exit(1);
+			}
+		}
+
+		fn = post_url_handler(req.url);
+		if (fn == NULL) {
+			syslog(LOG_INFO, "Unexpected POST URL %s", req.url); 
+			tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+			goto finish;
+		}
+
+		ret = fn(&server);
+		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
+			goto restart;
+
+	} else if (parser.method == HTTP_CONNECT) {
+		ret = connect_handler(&server);
+		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
+			goto restart;
+
+	} else {
+		syslog(LOG_INFO, "Unexpected method %s", http_method_str(parser.method)); 
+		tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+	}
+
+finish:
+	tls_close(session);
+}
+
+
+
+#if 0
 
       next:
 	if (tls_gets(session, buf, sizeof(buf)) <= 0) {
@@ -448,3 +606,4 @@ int main(void)
 
 	}
 }
+#endif

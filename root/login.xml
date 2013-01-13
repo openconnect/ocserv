@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<auth id="main">
+<message>Please enter your login cookie.</message>
+<form method="post" action="/login.xml">
+<input type="text" name="cookie" label="Cookie:" />
+</form></auth>
+

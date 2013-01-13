@@ -1,7 +1,10 @@
 CC=gcc
-CFLAGS=-O2
+CFLAGS=-O2 -I. -Wall -Ihttp-parser/
 
-all: server
+all: ocserv
 
-server: server.c
-	$(CC) $(CFLAGS) -o $@ $^ -lgnutls
+FILES=main.c vpn.c auth.c tlslib.c cookies.c \
+	http-parser/http_parser.c
+
+ocserv: $(FILES)
+	$(CC) $(CFLAGS) -o $@ $^ -L/usr/local/lib -lgnutls -lgdbm

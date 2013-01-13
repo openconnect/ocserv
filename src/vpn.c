@@ -340,7 +340,7 @@ int ret;
 		goto fail;
 	}
 
-	ret = strlen(p);
+	ret = strlen(p) + 1;
 	*buffer += ret;
 	*buffer_size -= ret;
 
@@ -350,7 +350,7 @@ int ret;
 		vinfo->ipv6_netmask = p;
 	}
 	
-	/* get IP (and make it network) */
+	/* get IP */
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = family;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
@@ -373,13 +373,17 @@ int ret;
 		goto fail;
 	}
 	
-	ret = strlen(p);
+	ret = strlen(p)+1;
 	*buffer += ret;
 	*buffer_size -= ret;
 
 	if (family == AF_INET) {
+		if (strcmp(p, "0.0.0.0")==0)
+			p = NULL;
 		vinfo->ipv4 = p;
 	} else {
+		if (strcmp(p, "::")==0)
+			p = NULL;
 		vinfo->ipv6 = p;
 	}
 
@@ -430,7 +434,7 @@ const char* p;
 				ret = -1;
 				goto fail;
 			}
-		
+
 			memset(&ifr, 0, sizeof(ifr));
 			ifr.ifr_addr.sa_family = AF_INET;
 			snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
@@ -511,24 +515,29 @@ unsigned int buffer_size;
 	}
 
 	tls_puts(server->session, "HTTP/1.1 200 CONNECTED\r\n");
+
+	oclog(server, LOG_DEBUG, "sending mtu %d", vinfo.mtu);
 	tls_printf(server->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
 	tls_puts(server->session, "X-CSTP-DPD: 60\r\n");
 
-	if (vinfo.ipv4_netmask) {
+	if (vinfo.ipv4_netmask && vinfo.ipv4) {
 		tls_printf(server->session, "X-CSTP-Address: 172.31.255.%d\r\n",
 		   100 + tun_nr);
 		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
-		tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
+		if (vinfo.ipv4_dns)
+			tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
 	}
 	
-	if (vinfo.ipv6_netmask) {
+	if (vinfo.ipv6_netmask && vinfo.ipv6) {
 		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
 		tls_printf(server->session, "X-CSTP-Address: 2001:770:15f::%x\r\n",
 			0x100 + tun_nr);
-		tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
+		if (vinfo.ipv6_dns)
+			tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
 	}
 	
 	for (i=0;i<vinfo.routes_size;i++) {
+		oclog(server, LOG_DEBUG, "adding route %s", vinfo.routes[i]);
 		tls_printf(server->session,
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
 	}

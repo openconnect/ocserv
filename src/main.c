@@ -379,7 +379,30 @@ static int verify_certificate_cb(gnutls_session_t session)
 	return 0;
 }
 
+static void drop_privileges(struct cfg_st *config)
+{
+int ret, e;
 
+	if (config->gid != -1) {
+		ret = setgid(config->gid);
+		if (ret < 0) {
+			e = errno;
+			syslog(LOG_ERR, "Cannot set gid to %d: %s\n", (int)config->gid, strerror(e));
+			exit(1);
+			
+		}
+	}
+
+	if (config->uid != -1) {
+		ret = setuid(config->uid);
+		if (ret < 0) {
+			e = errno;
+			syslog(LOG_ERR, "Cannot set uid to %d: %s\n", (int)config->uid, strerror(e));
+			exit(1);
+			
+		}
+	}
+}
 
 int main(void)
 {
@@ -411,25 +434,7 @@ int main(void)
 		exit(1);
 	}
 
-	if (config.gid != -1) {
-		ret = setgid(config.gid);
-		if (ret < 0) {
-			e = errno;
-			syslog(LOG_ERR, "setgid: %s\n", strerror(e));
-			exit(1);
-			
-		}
-	}
-
-	if (config.uid != -1) {
-		ret = setuid(config.uid);
-		if (ret < 0) {
-			e = errno;
-			syslog(LOG_ERR, "setuid: %s\n", strerror(e));
-			exit(1);
-			
-		}
-	}
+	drop_privileges(&config);
 
 	gnutls_global_set_log_function(tls_log_func);
 	gnutls_global_set_audit_log_function(tls_audit_log_func);

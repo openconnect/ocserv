@@ -12,3 +12,9 @@ Makefile.in
 .deps
 build-aux/snippet/
 stamp-h1
+*.o
+gl/string.h
+gl/libgnu.a
+gl/arg-nonnull.h
+gl/warn-on-use.h
+gl/c++defs.h

@@ -17,6 +17,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <config.h>
+
 #include <gnutls/gnutls.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -118,8 +120,7 @@ size_t nlen;
 	if (length > 0)
 		switch (req->next_header) {
 			case HEADER_COOKIE:
-				/*p = memmem(at, length, "webvpn=", 7);*/
-				p = strstr(at, "webvpn=");
+				p = memmem(at, length, "webvpn=", 7);
 				if (p == NULL || length <= 7) {
 					req->cookie_set = 0;
 					return 0;

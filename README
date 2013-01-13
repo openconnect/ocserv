@@ -1,0 +1,5 @@
+To build from the git repository use:
+
+$ autoreconf -fvi
+$ ./configure && make
+

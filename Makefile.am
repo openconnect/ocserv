@@ -1,0 +1,3 @@
+SUBDIRS = gl src
+
+ACLOCAL_AMFLAGS = -I gl/m4

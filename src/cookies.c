@@ -16,6 +16,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <config.h>
+
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <errno.h>

@@ -24,7 +24,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -32,7 +31,7 @@
 #include <limits.h>
 
 #include <tlslib.h>
-#include <common.h>
+#include <vpn.h>
 
 
 ssize_t tls_send(gnutls_session_t session, const void *data,

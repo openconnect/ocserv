@@ -27,14 +27,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
 
-#include <common.h>
 #include <vpn.h>
 #include <auth.h>
 #include <cookies.h>
@@ -99,20 +97,20 @@ int ret;
 
 	ret = gnutls_x509_crt_init(&crt);
 	if (ret < 0) {
-		syslog(LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(server, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
 	ret = gnutls_x509_crt_import(crt, raw, GNUTLS_X509_FMT_DER);
 	if (ret < 0) {
-		syslog(LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(server, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
 	ret = gnutls_x509_crt_get_dn_by_oid (crt, server->config->cert_user_oid, 
 						0, 0, username, &username_size);
 	if (ret < 0) {
-		syslog(LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(server, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
@@ -194,21 +192,21 @@ struct stored_cookie_st sc;
 		if (server->config->cert_user_oid) { /* otherwise certificate username is ignored */
 			ret = get_cert_username(server, cert, cert_username, sizeof(cert_username));
 			if (ret < 0) {
-				syslog(LOG_ERR, "Cannot get username (%s) from certificate", server->config->cert_user_oid);
+				oclog(server, LOG_ERR, "Cannot get username (%s) from certificate", server->config->cert_user_oid);
 				reason = "No username in certificate";
 				goto auth_fail;
 			}
 			
 			if (username) {
 				if (strcmp(username, cert_username) != 0)
-					syslog(LOG_NOTICE, "User '%s' presented the certificate of user '%s'", username, cert_username);
+					oclog(server, LOG_NOTICE, "User '%s' presented the certificate of user '%s'", username, cert_username);
 			} else {
 				username = cert_username;
 			}
 		} 
 	}
 
-	syslog(LOG_INFO, "User '%s' logged in\n", username);
+	oclog(server, LOG_INFO, "User '%s' logged in\n", username);
 
 	/* generate cookie */
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, sizeof(cookie));
@@ -299,13 +297,13 @@ struct req_data_st *req = server->parser->data;
 int ret;
 
 	if (req->cookie_set == 0) {
-		syslog(LOG_INFO, "No cookie found\n");
+		oclog(server, LOG_INFO, "No cookie found\n");
 		return -1;
 	}
 	
 	ret = retrieve_cookie(server, req->cookie, sizeof(req->cookie), sc);
 	if (ret < 0) {
-		syslog(LOG_INFO, "Cookie not recognised\n");
+		oclog(server, LOG_INFO, "Cookie not recognised\n");
 		return -1;
 	}
 	
@@ -332,7 +330,7 @@ struct stored_cookie_st sc;
 		p+=2;
 	}
 
-	syslog(LOG_INFO, "User '%s' logged in via cookie\n", sc.username);
+	oclog(server, LOG_INFO, "User '%s' logged in via cookie\n", sc.username);
 
 	tls_print(server->session, "HTTP/1.1 200 OK\r\n");
 	tls_print(server->session, "Content-Type: text/xml\r\n");
@@ -362,20 +360,20 @@ unsigned int tun_nr = 0;
 
 	ret = check_cookie(server, &sc);
 	if (ret < 0) {
-		syslog(LOG_INFO, "Connect request without authentication");
+		oclog(server, LOG_INFO, "Connect request without authentication");
 		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
-		syslog(LOG_INFO, "Bad connect request: '%s'\n", req->url);
+		oclog(server, LOG_INFO, "Bad connect request: '%s'\n", req->url);
 		tls_print(server->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
 
-	syslog(LOG_INFO, "Connected\n");
+	oclog(server, LOG_INFO, "Connected\n");
 
 	tls_print(server->session, "HTTP/1.1 200 CONNECTED\r\n");
 	tls_print(server->session, "X-CSTP-MTU: 1500\r\n");
@@ -428,19 +426,19 @@ unsigned int tun_nr = 0;
 			GNUTLS_FATAL_ERR(l);
 
 			if (l < 8) {
-				syslog(LOG_INFO,
+				oclog(server, LOG_INFO,
 				       "Can't read CSTP header\n");
 				exit(1);
 			}
 			if (buf[0] != 'S' || buf[1] != 'T' ||
 			    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
-				syslog(LOG_INFO,
+				oclog(server, LOG_INFO,
 				       "Can't recognise CSTP header\n");
 				exit(1);
 			}
 			pktlen = (buf[4] << 8) + buf[5];
 			if (l != 8 + pktlen) {
-				syslog(LOG_INFO, "Unexpected length\n");
+				oclog(server, LOG_INFO, "Unexpected length\n");
 				exit(1);
 			}
 			switch (buf[6]) {
@@ -456,7 +454,7 @@ unsigned int tun_nr = 0;
 				break;
 
 			case AC_PKT_DISCONN:
-				syslog(LOG_INFO, "Received BYE packet\n");
+				oclog(server, LOG_INFO, "Received BYE packet\n");
 				break;
 
 			case AC_PKT_DATA:

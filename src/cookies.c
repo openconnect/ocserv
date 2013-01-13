@@ -25,7 +25,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -34,7 +33,7 @@
 #include <gdbm.h>
 #include <sys/stat.h>
 
-#include <common.h>
+#include <vpn.h>
 #include <cookies.h>
 
 /* All the functions return zero on success and a negative value on error */

@@ -39,7 +39,7 @@
 
 #include <vpn.h>
 #include <cookies.h>
-#include <common.h>
+#include <vpn.h>
 #include <list.h>
 
 int syslog_open = 0;
@@ -73,55 +73,6 @@ static struct cfg_st config = {
 	.db_file = "/tmp/db",
 	.ca = NULL
 };
-
-const char *human_addr(const struct sockaddr *sa, socklen_t salen,
-		       void *_buf, size_t buflen)
-{
-	const char *save_buf = _buf;
-	char *buf = _buf;
-	size_t l;
-
-	if (!buf || !buflen)
-		return NULL;
-
-	*buf = '\0';
-
-	switch (sa->sa_family) {
-#if HAVE_IPV6
-	case AF_INET6:
-		snprintf(buf, buflen, "IPv6 ");
-		break;
-#endif
-
-	case AF_INET:
-		snprintf(buf, buflen, "IPv4 ");
-		break;
-	}
-
-	l = strlen(buf);
-	buf += l;
-	buflen -= l;
-
-	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) !=
-	    0)
-		return NULL;
-
-	l = strlen(buf);
-	buf += l;
-	buflen -= l;
-
-	strncat(buf, " port ", buflen);
-
-	l = strlen(buf);
-	buf += l;
-	buflen -= l;
-
-	if (getnameinfo(sa, salen, NULL, 0, buf, buflen, NI_NUMERICSERV) !=
-	    0)
-		return NULL;
-
-	return save_buf;
-}
 
 /* Returns 0 on success or negative value on error.
  */
@@ -300,7 +251,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 int main(void)
 {
 
-	int fd, pid;		// newly accept()ed socket descriptor
+	int fd, pid;
 	struct tls_st creds;
 	struct listen_list_st llist;
 	struct listen_list_st *tmp;

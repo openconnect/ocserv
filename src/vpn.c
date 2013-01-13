@@ -25,14 +25,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
 
-#include <common.h>
 #include <vpn.h>
 #include <auth.h>
 #include <tlslib.h>
@@ -177,28 +175,26 @@ char* tmp = malloc(length+1);
 
 void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
 {
-//	int tun_nr = -1;
-//	struct ifreq ifr;
 	unsigned char buf[2048];
-//	int i;
 	int ret;
 	ssize_t nparsed, nrecvd;
 	gnutls_session_t session;
 	http_parser parser;
 	http_parser_settings settings;
-	struct sockaddr_storage remote_addr;
-	socklen_t remote_addr_len;
 	struct req_data_st req;
-	server_st server;
+	server_st _server;
+	server_st *server = &_server;
 	url_handler_fn fn;
 	
-	remote_addr_len = sizeof(remote_addr);
-	ret = getpeername (fd, (void*)&remote_addr, &remote_addr_len);
+	memset(&server, 0, sizeof(*server));
+	
+	server->remote_addr_len = sizeof(server->remote_addr);
+	ret = getpeername (fd, (void*)&server->remote_addr, &server->remote_addr_len);
 	if (ret < 0)
 		syslog(LOG_INFO, "Accepted connection from unknown"); 
 	else
 		syslog(LOG_INFO, "Accepted connection from %s", 
-			human_addr((void*)&remote_addr, remote_addr_len,
+			human_addr((void*)&server->remote_addr, server->remote_addr_len,
 			    buf, sizeof(buf)));
 
 	/* initialize the session */
@@ -230,10 +226,10 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
 	settings.on_message_complete = message_complete_cb;
 	settings.on_body = body_cb;
 
-	server.config = config;
-	server.session = session;
-	server.parser = &parser;
-	server.tunfd = tunfd;
+	server->config = config;
+	server->session = session;
+	server->parser = &parser;
+	server->tunfd = tunfd;
 
 restart:
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -247,7 +243,7 @@ restart:
 	
 		nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 		if (nparsed == 0) {
-			syslog(LOG_INFO, "Error parsing HTTP request"); 
+			oclog(server, LOG_INFO, "Error parsing HTTP request"); 
 			exit(1);
 		}
 	} while(req.headers_complete == 0);
@@ -255,12 +251,12 @@ restart:
 	if (parser.method == HTTP_GET) {
 		fn = get_url_handler(req.url);
 		if (fn == NULL) {
-			syslog(LOG_INFO, "Unexpected URL %s", req.url); 
+			oclog(server, LOG_INFO, "Unexpected URL %s", req.url); 
 			tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
 		
-		ret = fn(&server);
+		ret = fn(server);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;
 
@@ -272,29 +268,29 @@ restart:
 		
 			nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 			if (nparsed == 0) {
-				syslog(LOG_INFO, "Error parsing HTTP request"); 
+				oclog(server, LOG_INFO, "Error parsing HTTP request"); 
 				exit(1);
 			}
 		}
 
 		fn = post_url_handler(req.url);
 		if (fn == NULL) {
-			syslog(LOG_INFO, "Unexpected POST URL %s", req.url); 
+			oclog(server, LOG_INFO, "Unexpected POST URL %s", req.url); 
 			tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
 
-		ret = fn(&server);
+		ret = fn(server);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;
 
 	} else if (parser.method == HTTP_CONNECT) {
-		ret = connect_handler(&server);
+		ret = connect_handler(server);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;
 
 	} else {
-		syslog(LOG_INFO, "Unexpected method %s", http_method_str(parser.method)); 
+		oclog(server, LOG_INFO, "Unexpected method %s", http_method_str(parser.method)); 
 		tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 	}
 

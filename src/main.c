@@ -193,10 +193,103 @@ static void handle_alarm(int signo)
 	need_to_expire_cookies = 1;
 }
 
-static int open_tun(void)
+static int set_network_info(const struct vpn_st* vinfo)
 {
-int tunfd;
 struct ifreq ifr;
+int fd, ret;
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd == -1)
+		return -1;
+		
+	/* set netmask */
+	if (vinfo->ipv4_netmask && vinfo->ipv4) {
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	
+		ret = inet_pton(AF_INET, vinfo->ipv4_netmask, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+		if (ret != 1) {
+			syslog(LOG_ERR, "%s: Error reading mask: %s\n",
+				vinfo->name, vinfo->ipv4_netmask);
+			goto fail;
+		}
+
+		ret = ioctl(fd, SIOCSIFNETMASK, &ifr);
+		if (ret != 0) {
+			syslog(LOG_ERR, "%s: Error setting mask: %s\n",
+				vinfo->name, vinfo->ipv4_netmask);
+		}
+		
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	
+		ret = inet_pton(AF_INET, vinfo->ipv4, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+		if (ret != 1) {
+			syslog(LOG_ERR, "%s: Error reading IP: %s\n",
+				vinfo->name, vinfo->ipv4_netmask);
+			goto fail;
+			
+		}
+
+		ret = ioctl(fd, SIOCSIFADDR, &ifr);
+		if (ret != 0) {
+			syslog(LOG_ERR, "%s: Error setting IP: %s\n",
+				vinfo->name, vinfo->ipv4);
+		}
+	}
+
+	if (vinfo->ipv6_netmask && vinfo->ipv6) {
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET6;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	
+		ret = inet_pton(AF_INET6, vinfo->ipv6_netmask, &((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr);
+		if (ret != 1) {
+			syslog(LOG_ERR, "%s: Error reading mask: %s\n",
+				vinfo->name, vinfo->ipv6_netmask);
+			goto fail;
+			
+		}
+
+		ret = ioctl(fd, SIOCSIFNETMASK, &ifr);
+		if (ret != 0) {
+			syslog(LOG_ERR, "%s: Error setting mask: %s\n",
+				vinfo->name, vinfo->ipv6_netmask);
+		}
+		
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET6;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	
+		ret = inet_pton(AF_INET6, vinfo->ipv6, &((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr);
+		if (ret != 1) {
+			syslog(LOG_ERR, "%s: Error reading IP: %s\n",
+				vinfo->name, vinfo->ipv6_netmask);
+			goto fail;
+			
+		}
+
+		ret = ioctl(fd, SIOCSIFADDR, &ifr);
+		if (ret != 0) {
+			syslog(LOG_ERR, "%s: Error setting IP: %s\n",
+				vinfo->name, vinfo->ipv6);
+		}
+	}
+
+
+	ret = 0;
+fail:
+	close(fd);
+	return ret;
+}
+
+static int open_tun(struct cfg_st *config)
+{
+int tunfd, ret;
+struct ifreq ifr;
+unsigned int i;
 
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
@@ -206,13 +299,22 @@ struct ifreq ifr;
 		return -1;
 	}
 
-	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "vpns%d", 0);
-	if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
-		int e = errno;
-		syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
-		exit(1);
+	for (i=0;i<config->networks_size;i++) {
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+		snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), config->networks[i].name, 0);
+		if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
+			int e = errno;
+			syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
+			exit(1);
+		}
+		
+		/* set IP/mask */
+		ret = set_network_info(&config->networks[i]); 
+		if (ret < 0) {
+			exit(1);
+		}
+
 	}
 
 	return tunfd;
@@ -280,7 +382,7 @@ int main(void)
 		exit(1);
 	}
 
-	tunfd = open_tun();
+	tunfd = open_tun(&config);
 	if (tunfd < 0) {
 		exit(1);
 	}

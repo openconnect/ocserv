@@ -318,6 +318,7 @@ unsigned int i;
 int ret;
 
 	/* get netmask */
+	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = family;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 
@@ -350,6 +351,7 @@ int ret;
 	}
 	
 	/* get IP (and make it network) */
+	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = family;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 	
@@ -429,6 +431,7 @@ const char* p;
 				goto fail;
 			}
 		
+			memset(&ifr, 0, sizeof(ifr));
 			ifr.ifr_addr.sa_family = AF_INET;
 			snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 			ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);

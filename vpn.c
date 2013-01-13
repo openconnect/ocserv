@@ -101,8 +101,43 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 	struct req_data_st *req = parser->data;
 
 	if (strncmp(at, "Cookie", length) == 0) {
-		req->cookie_set = -1;
+		req->next_header = HEADER_COOKIE;
+	} else {
+		req->next_header = 0;
 	}
+	
+	return 0;
+}
+
+int header_value_cb(http_parser* parser, const char *at, size_t length)
+{
+struct req_data_st *req = parser->data;
+char *p;
+size_t nlen;
+
+	if (length > 0)
+		switch (req->next_header) {
+			case HEADER_COOKIE:
+				/*p = memmem(at, length, "webvpn=", 7);*/
+				p = strstr(at, "webvpn=");
+				if (p == NULL || length <= 7) {
+					req->cookie_set = 0;
+					return 0;
+				}
+				p += 7;
+				length -= 7;
+				
+				if (length < COOKIE_SIZE*2) {
+					req->cookie_set = 0;
+					return 0;
+				}
+				length = COOKIE_SIZE*2;
+
+				nlen = sizeof(req->cookie);
+				gnutls_hex2bin(p, length, req->cookie, &nlen);
+				req->cookie_set = 1;
+				break;
+		}
 	
 	return 0;
 }
@@ -120,35 +155,6 @@ int message_complete_cb(http_parser* parser)
 	struct req_data_st *req = parser->data;
 
 	req->message_complete = 1;
-	return 0;
-}
-
-int header_value_cb(http_parser* parser, const char *at, size_t length)
-{
-struct req_data_st *req = parser->data;
-char *p;
-size_t nlen;
-	
-	if (req->cookie_set == -1) {
-		p = strstr(at, "webvpn=");
-		if (p == NULL || length <= 7) {
-			req->cookie_set = 0;
-			return 0;
-		}
-		p += 7;
-		length -= 7;
-		
-		if (length < COOKIE_SIZE*2) {
-			req->cookie_set = 0;
-			return 0;
-		}
-		length = COOKIE_SIZE*2;
-
-		nlen = sizeof(req->cookie);
-		gnutls_hex2bin(p, length, req->cookie, &nlen);
-		req->cookie_set = 1;
-	}
-	
 	return 0;
 }
 

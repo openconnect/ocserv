@@ -38,8 +38,13 @@ typedef struct server_st {
 #define MAX_USERNAME_SIZE 64
 #define COOKIE_SIZE 32
 
+enum {
+	HEADER_COOKIE=1,
+};
+
 struct req_data_st {
 	char url[256];
+	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
 	char *body;

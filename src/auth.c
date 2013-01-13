@@ -55,33 +55,33 @@ int ret;
 
 	ret = stat(file, &st);
 	if (ret == 0) {
-		tls_print(server->session, "HTTP/1.1 200 OK\r\n");
+		tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
 		tls_printf(server->session, "Content-Length: %u\r\n", (unsigned int)st.st_size);
-		tls_print(server->session, "Content-Type: text/html\r\n");
-		tls_print(server->session, "X-Transcend-Version: 1\r\n");
-		tls_print(server->session, "\r\n");
+		tls_puts(server->session, "Content-Type: text/html\r\n");
+		tls_puts(server->session, "X-Transcend-Version: 1\r\n");
+		tls_puts(server->session, "\r\n");
 
 		ret = tls_send_file(server->session, file);
 
 		return 0;
 	} else {
-		tls_print(server->session, "HTTP/1.1 200 OK\r\n");
-		tls_print(server->session, "Connection: close\r\n");
-		tls_print(server->session, "Content-Type: text/xml\r\n");
-		tls_print(server->session, "X-Transcend-Version: 1\r\n");
-		tls_print(server->session, "\r\n");
-		tls_print(server->session,
+		tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
+		tls_puts(server->session, "Connection: close\r\n");
+		tls_puts(server->session, "Content-Type: text/xml\r\n");
+		tls_puts(server->session, "X-Transcend-Version: 1\r\n");
+		tls_puts(server->session, "\r\n");
+		tls_puts(server->session,
 			   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n");
-		tls_print(server->session, "<auth id=\"main\">\r\n");
-		tls_print(server->session,
+		tls_puts(server->session, "<auth id=\"main\">\r\n");
+		tls_puts(server->session,
 			   "<message>Please enter your username and password.</message>\r\n");
-		tls_print(server->session,
+		tls_puts(server->session,
 			   "<form method=\"post\" action=\"/auth.xml\">\r\n");
-		tls_print(server->session,
+		tls_puts(server->session,
 			   "<input type=\"text\" name=\"username\" label=\"Username:\" />\r\n");
-		tls_print(server->session,
+		tls_puts(server->session,
 			   "<input type=\"password\" name=\"password\" label=\"Password:\" />\r\n");
-		tls_print(server->session, "</form></auth>\r\n");
+		tls_puts(server->session, "</form></auth>\r\n");
 		
 		return 1;
 	}
@@ -230,17 +230,17 @@ struct stored_cookie_st sc;
 
 	/* reply */
 
-	tls_print(server->session, "HTTP/1.1 200 OK\r\n");
-	tls_print(server->session, "Content-Type: text/xml\r\n");
+	tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
+	tls_puts(server->session, "Content-Type: text/xml\r\n");
         tls_printf(server->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
-	tls_print(server->session, "X-Transcend-Version: 1\r\n");
+	tls_puts(server->session, "X-Transcend-Version: 1\r\n");
 	tls_printf(server->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
-	tls_print(server->session, "\r\n"SUCCESS_MSG);
+	tls_puts(server->session, "\r\n"SUCCESS_MSG);
 
 	return 0;
 
 auth_fail:
-	tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n");
+	tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n");
 	tls_printf(server->session,
 		   "X-Reason: %s\r\n\r\n", reason);
 	tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
@@ -257,31 +257,31 @@ int ret;
 
 	ret = stat(file, &st);
 	if (ret == 0) {
-		tls_print(server->session, "HTTP/1.1 200 OK\r\n");
+		tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
 		tls_printf(server->session, "Content-Length: %u\r\n", (unsigned int)st.st_size);
-		tls_print(server->session, "Content-Type: text/html\r\n");
-		tls_print(server->session, "X-Transcend-Version: 1\r\n");
-		tls_print(server->session, "\r\n");
+		tls_puts(server->session, "Content-Type: text/html\r\n");
+		tls_puts(server->session, "X-Transcend-Version: 1\r\n");
+		tls_puts(server->session, "\r\n");
 
 		tls_send_file(server->session, file);
 		
 		return 0;
 	} else {
-		tls_print(server->session, "HTTP/1.1 200 OK\r\n");
-		tls_print(server->session, "Connection: close\r\n");
-		tls_print(server->session, "Content-Type: text/xml\r\n");
-		tls_print(server->session, "X-Transcend-Version: 1\r\n");
-		tls_print(server->session, "\r\n");
-		tls_print(server->session,
+		tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
+		tls_puts(server->session, "Connection: close\r\n");
+		tls_puts(server->session, "Content-Type: text/xml\r\n");
+		tls_puts(server->session, "X-Transcend-Version: 1\r\n");
+		tls_puts(server->session, "\r\n");
+		tls_puts(server->session,
 			   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n");
-		tls_print(server->session, "<auth id=\"main\">\r\n");
-		tls_print(server->session,
+		tls_puts(server->session, "<auth id=\"main\">\r\n");
+		tls_puts(server->session,
 			   "<message>Please enter your login cookie.</message>\r\n");
-		tls_print(server->session,
+		tls_puts(server->session,
 			   "<form method=\"post\" action=\"/login.xml\">\r\n");
-		tls_print(server->session,
+		tls_puts(server->session,
 			   "<input type=\"text\" name=\"cookie\" label=\"Cookie:\" />\r\n");
-		tls_print(server->session, "</form></auth>\r\n");
+		tls_puts(server->session, "</form></auth>\r\n");
 		
 		return 1;
 	}
@@ -315,13 +315,13 @@ struct stored_cookie_st sc;
 
 	oclog(server, LOG_INFO, "User '%s' logged in via cookie\n", sc.username);
 
-	tls_print(server->session, "HTTP/1.1 200 OK\r\n");
-	tls_print(server->session, "Content-Type: text/xml\r\n");
-	tls_print(server->session, "X-Transcend-Version: 1\r\n");
+	tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
+	tls_puts(server->session, "Content-Type: text/xml\r\n");
+	tls_puts(server->session, "X-Transcend-Version: 1\r\n");
         tls_printf(server->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
 	tls_printf(server->session, "Set-Cookie: webvpn=%s\r\n",
 			   str_cookie);
-	tls_print(server->session, "\r\n"SUCCESS_MSG);
+	tls_puts(server->session, "\r\n"SUCCESS_MSG);
 
 	return 0;
 

@@ -3,7 +3,7 @@
 
 #include <gnutls/gnutls.h>
 
-#define tls_print(s, str) tls_send(s, str, sizeof(str)-1)
+#define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
 	
 int __attribute__ ((format(printf, 2, 3)))
     tls_printf(gnutls_session_t session, const char *fmt, ...);

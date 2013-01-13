@@ -262,7 +262,7 @@ restart:
 		fn = get_url_handler(req.url);
 		if (fn == NULL) {
 			oclog(server, LOG_INFO, "Unexpected URL %s", req.url); 
-			tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
 		
@@ -286,7 +286,7 @@ restart:
 		fn = post_url_handler(req.url);
 		if (fn == NULL) {
 			oclog(server, LOG_INFO, "Unexpected POST URL %s", req.url); 
-			tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
 
@@ -301,7 +301,7 @@ restart:
 
 	} else {
 		oclog(server, LOG_INFO, "Unexpected method %s", http_method_str(parser.method)); 
-		tls_print(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+		tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 	}
 
 finish:
@@ -463,7 +463,7 @@ unsigned int buffer_size;
 
 	if (req->cookie_set == 0) {
 		oclog(server, LOG_INFO, "Connect request without authentication");
-		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
@@ -471,21 +471,21 @@ unsigned int buffer_size;
 	ret = retrieve_cookie(server, req->cookie, sizeof(req->cookie), &sc);
 	if (ret < 0) {
 		oclog(server, LOG_INFO, "Connect request without authentication");
-		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(server, LOG_INFO, "Bad connect request: '%s'\n", req->url);
-		tls_print(server->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
 	
 	if (server->config->networks_size == 0) {
 		oclog(server, LOG_ERR, "No networks are configured. Rejecting client.");
-		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		return -1;
 	}
 
@@ -495,7 +495,7 @@ unsigned int buffer_size;
 	buffer = malloc(buffer_size);
 	if (buffer == NULL) {
 		oclog(server, LOG_ERR, "Memory error. Rejecting client.");
-		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		return -1;
 	}
 
@@ -503,13 +503,13 @@ unsigned int buffer_size;
 		&vinfo, buffer, buffer_size);
 	if (ret < 0) {
 		oclog(server, LOG_ERR, "Network interfaces are not configured. Rejecting client.");
-		tls_print(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		return -1;
 	}
 
-	tls_print(server->session, "HTTP/1.1 200 CONNECTED\r\n");
+	tls_puts(server->session, "HTTP/1.1 200 CONNECTED\r\n");
 	tls_printf(server->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
-	tls_print(server->session, "X-CSTP-DPD: 60\r\n");
+	tls_puts(server->session, "X-CSTP-DPD: 60\r\n");
 
 	if (vinfo.ipv4_netmask) {
 		tls_printf(server->session, "X-CSTP-Address: 172.31.255.%d\r\n",
@@ -529,8 +529,8 @@ unsigned int buffer_size;
 		tls_printf(server->session,
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
 	}
-	tls_print(server->session, "X-CSTP-Banner: Hello there\r\n");
-	tls_print(server->session, "\r\n");
+	tls_puts(server->session, "X-CSTP-Banner: Hello there\r\n");
+	tls_puts(server->session, "\r\n");
 	
 	free(buffer);
 	buffer = NULL;

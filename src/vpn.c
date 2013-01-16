@@ -54,9 +54,8 @@ struct known_urls_st {
 };
 
 struct known_urls_st known_urls[] = {
-		{"/", get_auth_handler, NULL},
-		{"/auth.xml", get_auth_handler, post_auth_handler},
-		{"/login.xml", get_login_handler, post_login_handler},
+		{"/", get_auth_handler, post_new_auth_handler},
+		{"/auth", get_auth_handler, post_old_auth_handler},
 		{NULL, NULL}
 };
 

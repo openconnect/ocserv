@@ -2,8 +2,7 @@
 #define AUTH_H
 
 int get_auth_handler(server_st *server);
-int post_auth_handler(server_st *server);
-int get_login_handler(server_st *server);
-int post_login_handler(server_st *server);
+int post_old_auth_handler(server_st *server);
+int post_new_auth_handler(server_st *server);
 
 #endif

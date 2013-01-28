@@ -38,7 +38,7 @@
 #include <arpa/inet.h>
 
 #include <vpn.h>
-#include <auth.h>
+#include <http_auth.h>
 #include <cookies.h>
 #include <tlslib.h>
 
@@ -181,7 +181,7 @@ char* tmp = malloc(length+1);
 }
 
 
-void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
+void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmdfd, int fd)
 {
 	unsigned char buf[2048];
 	int ret;
@@ -193,10 +193,10 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
 	server_st _server;
 	server_st *server;
 	url_handler_fn fn;
-	
+
 	memset(&_server, 0, sizeof(_server));
 	server = &_server;
-	
+
 	server->remote_addr_len = sizeof(server->remote_addr);
 	ret = getpeername (fd, (void*)&server->remote_addr, &server->remote_addr_len);
 	if (ret < 0)
@@ -238,7 +238,8 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd)
 	server->config = config;
 	server->session = session;
 	server->parser = &parser;
-	server->tunfd = tunfd;
+	server->cmdfd = cmdfd;
+	server->tunfd = -1;
 
 restart:
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -307,8 +308,8 @@ finish:
 	tls_close(session);
 }
 
-static int get_network_mask(int fd, int family, const char* vname, 
-		struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
+static int get_remote_ip(int fd, int family, 
+		         struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
 {
 unsigned char *ptr;
 const char* p;
@@ -321,7 +322,8 @@ int ret;
 	ifr.ifr_addr.sa_family = family;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 
-	ret = ioctl(fd, SIOCGIFNETMASK, &ifr);
+	/* local: SIOCGIFADDR */
+	ret = ioctl(fd, SIOCGIFDSTADDR, &ifr);
 	if (ret != 0) {
 		goto fail;
 	}
@@ -340,39 +342,6 @@ int ret;
 	}
 
 	ret = strlen(p) + 1;
-	*buffer += ret;
-	*buffer_size -= ret;
-
-	if (family == AF_INET) {
-		vinfo->ipv4_netmask = p;
-	} else {
-		vinfo->ipv6_netmask = p;
-	}
-	
-	/* get IP */
-	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_addr.sa_family = family;
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-	
-	ret = ioctl(fd, SIOCGIFADDR, &ifr);
-	if (ret != 0) {
-		goto fail;
-	}
-
-	if (family == AF_INET) {
-		ptr = (void*)&((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr;
-	} else if (family == AF_INET6) {
-		ptr = (void*)&((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr;
-	} else {
-		return -1;
-	}
-	
-	p = inet_ntop(family, (void*)ptr, *buffer, *buffer_size);
-	if (p == NULL) {
-		goto fail;
-	}
-	
-	ret = strlen(p)+1;
 	*buffer += ret;
 	*buffer_size -= ret;
 
@@ -397,7 +366,7 @@ fail:
  * 
  * Returns 0 on success.
  */
-static int get_rt_vpn_info(server_st * server, const char* vname, struct vpn_st* vinfo,
+static int get_rt_vpn_info(server_st * server, struct vpn_st* vinfo,
 		char* buffer, size_t buffer_size)
 {
 unsigned int i;
@@ -410,40 +379,38 @@ const char* p;
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 		return -1;
+        
+        ret = get_remote_ip(fd, AF_INET6, vinfo, &buffer, &buffer_size);
+        if (ret < 0)
+                oclog(server, LOG_INFO, "Cannot obtain IPv6 IP for %s\n", vinfo->name);
 
-	for (i=0;i<server->config->networks_size;i++) {
-		if (strcmp(vname, server->config->networks[i].name) == 0) {
-			vinfo->name = server->config->networks[i].name;
-			vinfo->ipv4_dns = server->config->networks[i].ipv4_dns;
-			vinfo->ipv6_dns = server->config->networks[i].ipv6_dns;
-			vinfo->routes_size = server->config->networks[i].routes_size;
-			memcpy(vinfo->routes, server->config->networks[i].routes, sizeof(vinfo->routes));
+        ret = get_remote_ip(fd, AF_INET, vinfo, &buffer, &buffer_size);
+        if (ret < 0)
+                oclog(server, LOG_INFO, "Cannot obtain IPv4 IP for %s\n", vinfo->name);
+        
+        if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
+                ret = -1;
+                goto fail;
+        }
 
-			ret = get_network_mask(fd, AF_INET, vname, vinfo, &buffer, &buffer_size); 
-			if (ret < 0) {
-				oclog(server, LOG_INFO, "Cannot obtain IPv4 IP or mask for %s", vinfo->name);
-			}
+	vinfo->name = server->config->network.name;
+	vinfo->ipv4_dns = server->config->network.ipv4_dns;
+	vinfo->ipv6_dns = server->config->network.ipv6_dns;
+	vinfo->routes_size = server->config->network.routes_size;
+	memcpy(vinfo->routes, server->config->network.routes, sizeof(vinfo->routes));
 
-			ret = get_network_mask(fd, AF_INET6, vname, vinfo, &buffer, &buffer_size); 
-			if (ret < 0) {
-				oclog(server, LOG_INFO, "Cannot obtain IPv6 IP or mask for %s", vinfo->name);
-			}
-			
-			if (vinfo->ipv4_netmask == NULL && vinfo->ipv6_netmask == NULL) {
-				ret = -1;
-				goto fail;
-			}
+	vinfo->ipv4_netmask = server->config->network.ipv4_netmask;
+	vinfo->ipv6_netmask = server->config->network.ipv6_netmask;
 
-			memset(&ifr, 0, sizeof(ifr));
-			ifr.ifr_addr.sa_family = AF_INET;
-			snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-			ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
-			if (ret < 0) {
-				oclog(server, LOG_ERR, "Cannot obtain MTU for %s. Assuming 1500.", vinfo->name);
-				vinfo->mtu = 1500;
-			} else
-				vinfo->mtu = ifr.ifr_mtu;
-		}
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_addr.sa_family = AF_INET;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
+	if (ret < 0) {
+		oclog(server, LOG_ERR, "Cannot obtain MTU for %s. Assuming 1500.", vinfo->name);
+		vinfo->mtu = 1500;
+	} else {
+		vinfo->mtu = ifr.ifr_mtu;
 	}
 
 	ret = 0;
@@ -489,7 +456,7 @@ unsigned int buffer_size;
 		exit(1);
 	}
 	
-	if (server->config->networks_size == 0) {
+	if (server->config->network.name == NULL) {
 		oclog(server, LOG_ERR, "No networks are configured. Rejecting client.");
 		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		return -1;
@@ -505,11 +472,12 @@ unsigned int buffer_size;
 		return -1;
 	}
 
-	ret = get_rt_vpn_info(server, server->config->networks[0].name,
-		&vinfo, buffer, buffer_size);
+	ret = get_rt_vpn_info(server, &vinfo, buffer, buffer_size);
 	if (ret < 0) {
 		oclog(server, LOG_ERR, "Network interfaces are not configured. Rejecting client.");
-		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n");
+		tls_puts(server->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
 
@@ -520,8 +488,7 @@ unsigned int buffer_size;
 	tls_puts(server->session, "X-CSTP-DPD: 60\r\n");
 
 	if (vinfo.ipv4_netmask && vinfo.ipv4) {
-		tls_printf(server->session, "X-CSTP-Address: 172.31.255.%d\r\n",
-		   100 + tun_nr);
+		tls_printf(server->session, "X-CSTP-Address: %s\r\n", vinfo.ipv4);
 		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
 		if (vinfo.ipv4_dns)
 			tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
@@ -529,8 +496,7 @@ unsigned int buffer_size;
 	
 	if (vinfo.ipv6_netmask && vinfo.ipv6) {
 		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
-		tls_printf(server->session, "X-CSTP-Address: 2001:770:15f::%x\r\n",
-			0x100 + tun_nr);
+		tls_printf(server->session, "X-CSTP-Address: %s\r\n", vinfo.ipv6);
 		if (vinfo.ipv6_dns)
 			tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
 	}
@@ -552,8 +518,10 @@ unsigned int buffer_size;
 		FD_ZERO(&rfds);
 		
 		FD_SET(tls_fd, &rfds);
+		FD_SET(server->cmdfd, &rfds);
 		FD_SET(server->tunfd, &rfds);
-		max = MAX(server->tunfd,tls_fd);
+		max = MAX(server->cmdfd,tls_fd);
+		max = MAX(max,server->tunfd);
 
 		if (gnutls_record_check_pending(server->session) == 0) {
 			ret = select(max + 1, &rfds, NULL, NULL, NULL);

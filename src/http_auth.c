@@ -34,7 +34,7 @@
 #include <limits.h>
 
 #include <vpn.h>
-#include <auth.h>
+#include <http_auth.h>
 #include <cookies.h>
 #include <tlslib.h>
 
@@ -103,6 +103,102 @@ fail:
 	
 }
 
+static int send_auth_req(int fd, struct cmd_auth_req_st* r)
+{
+	struct iovec iov[2];
+	uint8_t cmd;
+	struct msghdr hdr;
+	int ret;
+	union {
+		struct cmsghdr    cm;
+		char control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;	
+
+	memset(&hdr, 0, sizeof(hdr));
+	
+	cmd = AUTH_REQ;
+
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = r;
+	iov[1].iov_len = sizeof(*r);
+	
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	return(sendmsg(fd, &hdr, 0));
+}
+
+static int recv_auth_reply(int cmdfd, int* tunfd)
+{
+	struct iovec iov[2];
+	uint8_t cmd;
+	uint8_t reply;
+	struct msghdr hdr;
+	int ret;
+
+	union {
+		struct cmsghdr    cm;
+		char              control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;
+	
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = &reply;
+	iov[1].iov_len = 1;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	hdr.msg_control = control_un.control;
+	hdr.msg_controllen = sizeof(control_un.control);
+	
+	ret = recvmsg( cmdfd, &hdr, 0);
+	if (ret <= 0) {
+		return -1;
+	}
+	
+	if (cmd != AUTH_REP)
+		return -1;
+
+	switch(reply) {
+		case REP_AUTH_OK:
+			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+				if (cmptr->cmsg_level != SOL_SOCKET)
+					return -1;
+				if (cmptr->cmsg_type != SCM_RIGHTS)
+					return -1;
+				
+				*tunfd = *((int *) CMSG_DATA(cmptr));
+			} else
+				return -1;
+			break;
+		default:
+			return -1;
+	}
+	
+	return 0;
+}
+
+/* sends an authentication request to main thread and waits for
+ * a reply */
+static int auth_user(int cmdfd, struct cmd_auth_req_st* areq, int* tunfd)
+{
+int ret;
+	
+	ret = send_auth_req(cmdfd, areq);
+	if (ret < 0)
+		return ret;
+		
+	return recv_auth_reply(cmdfd, tunfd);
+}
+
+
 int post_old_auth_handler(server_st *server)
 {
 int ret;
@@ -110,12 +206,39 @@ struct req_data_st *req = server->parser->data;
 const char* reason = "Authentication failed";
 unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
-char cert_username[MAX_USERNAME_SIZE];
 char * username = NULL;
 char * password = NULL;
 char *p;
 unsigned int i;
 struct stored_cookie_st sc;
+struct cmd_auth_req_st areq;
+
+	memset(&areq, 0, sizeof(areq));
+
+	if (server->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		const gnutls_datum_t * cert;
+		unsigned int ncerts;
+
+		/* this is superflous. Verification has already been performed 
+		 * during handshake. */
+		cert = gnutls_certificate_get_peers (server->session, &ncerts);
+
+		if (cert == NULL) {
+			reason = "No certificate found";
+			goto auth_fail;
+		}
+		
+		areq.tls_auth_ok = 1;
+		if (server->config->cert_user_oid) { /* otherwise certificate username is ignored */
+			ret = get_cert_username(server, cert, areq.cert_user, sizeof(areq.cert_user));
+			if (ret < 0) {
+				oclog(server, LOG_ERR, "Cannot get username (%s) from certificate", server->config->cert_user_oid);
+				reason = "No username in certificate";
+				goto auth_fail;
+			}
+			username = areq.cert_user;
+		} 
+	}
 
 	if (server->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should be "username=test&password=test" */
@@ -152,40 +275,14 @@ struct stored_cookie_st sc;
 			p++;
 		}
 		
-		/* now verify username and passwords */
-		if (strcmp(username, "test") != 0 || strcmp(password, "test") != 0)
-			goto auth_fail;
+		areq.user_pass_present = 1;
+		snprintf(areq.user, sizeof(areq.user), "%s", username);
+		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 	}
 
-	if (server->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		const gnutls_datum_t * cert;
-		unsigned int ncerts;
-
-		/* this is superflous. Verification has already been performed 
-		 * during handshake. */
-		cert = gnutls_certificate_get_peers (server->session, &ncerts);
-		
-		if (cert == NULL) {
-			reason = "No certificate found";
-			goto auth_fail;
-		}
-
-		if (server->config->cert_user_oid) { /* otherwise certificate username is ignored */
-			ret = get_cert_username(server, cert, cert_username, sizeof(cert_username));
-			if (ret < 0) {
-				oclog(server, LOG_ERR, "Cannot get username (%s) from certificate", server->config->cert_user_oid);
-				reason = "No username in certificate";
-				goto auth_fail;
-			}
-			
-			if (username) {
-				if (strcmp(username, cert_username) != 0)
-					oclog(server, LOG_NOTICE, "User '%s' presented the certificate of user '%s'", username, cert_username);
-			} else {
-				username = cert_username;
-			}
-		} 
-	}
+	ret = auth_user(server->cmdfd, &areq, &server->tunfd);
+	if (ret < 0)
+		goto auth_fail;
 
 	oclog(server, LOG_INFO, "User '%s' logged in\n", username);
 

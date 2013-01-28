@@ -27,39 +27,45 @@ extern int syslog_open;
 #define MAX_NETWORKS 24
 #define MAX_ROUTES 64
 
+struct tun_st {
+	const char *ign;
+
+};
+
 struct vpn_st {
-	const char* name; /* device name */
-	const char* ipv4_netmask;
-	const char* ipv4;
-	const char* ipv6_netmask;
-	const char* ipv6;
-	const char* ipv4_dns;
-	const char* ipv6_dns;
+	const char *name;	/* device name */
+	const char *ipv4_netmask;
+	const char *ipv4;
+	const char *ipv6_netmask;
+	const char *ipv6;
+	const char *ipv4_dns;
+	const char *ipv6_dns;
 	unsigned int mtu;
-	const char* routes[MAX_ROUTES];
+	const char *routes[MAX_ROUTES];
 	unsigned int routes_size;
 };
 
 struct cfg_st {
 	const char *name;
+	unsigned workers;
 	unsigned int port;
 	const char *cert;
 	const char *key;
 	const char *ca;
 	const char *crl;
-	const char *cert_user_oid; /* The OID that will be used to extract the username */
+	const char *cert_user_oid;	/* The OID that will be used to extract the username */
 	gnutls_certificate_request_t cert_req;
 	const char *priorities;
-	const char *root_dir; /* where the xml files are served from */
-	unsigned int auth_types; /* or'ed sequence of AUTH_TYPE */
-	time_t cookie_validity; /* in seconds */
-	const char* db_file;
+	const char *root_dir;	/* where the xml files are served from */
+	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
+	time_t cookie_validity;	/* in seconds */
+	const char *db_file;
 
 	uid_t uid;
 	gid_t gid;
 
-	struct vpn_st networks[MAX_NETWORKS];
-	unsigned int networks_size;
+	/* the tun network */
+	struct vpn_st network;
 };
 
 struct tls_st {
@@ -69,19 +75,21 @@ struct tls_st {
 
 typedef struct server_st {
 	gnutls_session_t session;
-	http_parser* parser;
-	struct cfg_st *config;
+	int cmdfd;
 	int tunfd;
+	http_parser *parser;
+	struct cfg_st *config;
 
-	struct sockaddr_storage remote_addr; /* peer's address */
+	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
 } server_st;
 
 #define MAX_USERNAME_SIZE 64
+#define MAX_PASSWORD_SIZE 64
 #define COOKIE_SIZE 32
 
 enum {
-	HEADER_COOKIE=1,
+	HEADER_COOKIE = 1,
 };
 
 struct req_data_st {
@@ -94,10 +102,29 @@ struct req_data_st {
 	unsigned int message_complete;
 };
 
-void vpn_server(struct cfg_st *config, struct tls_st *creds, int tunfd, int fd);
+typedef enum {
+	AUTH_REQ = 1,
+	AUTH_REP = 2,
+} cmd_request_t;
+
+typedef enum {
+	REP_AUTH_OK = 0,
+	REP_AUTH_FAILED = 1,
+} cmd_auth_reply_t;
+
+struct cmd_auth_req_st {
+	uint8_t user_pass_present;
+	char user[MAX_USERNAME_SIZE];
+	char pass[MAX_PASSWORD_SIZE];
+	uint8_t tls_auth_ok;
+	char cert_user[MAX_USERNAME_SIZE];
+};
+
+void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmd_fd,
+		int fd);
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
-			      void *buf, size_t buflen);
+		       void *buf, size_t buflen);
 
 int __attribute__ ((format(printf, 3, 4)))
     oclog(server_st * server, int priority, const char *fmt, ...);

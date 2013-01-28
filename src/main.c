@@ -45,9 +45,17 @@
 int syslog_open = 0;
 static unsigned int need_to_expire_cookies = 0;
 
+static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd);
+
 struct listen_list_st {
 	struct list_head list;
 	int fd;
+};
+
+struct cmd_list_st {
+	struct list_head list;
+	int fd;
+	pid_t pid;
 };
 
 static void tls_log_func(int level, const char *str)
@@ -62,25 +70,26 @@ static void tls_audit_log_func(gnutls_session_t session, const char *str)
 
 static struct cfg_st config = {
 	.auth_types = AUTH_TYPE_USERNAME_PASS,
+	.workers = 1,
 	.name = NULL,
 	.port = 3333,
 	.cert = "./test.pem",
 	.key = "./test.pem",
 	.cert_req = GNUTLS_CERT_IGNORE,
-	.cert_user_oid = GNUTLS_OID_LDAP_UID /* or just GNUTLS_OID_X520_COMMON_NAME */,
+	.cert_user_oid =
+	    GNUTLS_OID_LDAP_UID /* or just GNUTLS_OID_X520_COMMON_NAME */ ,
 	.root_dir = "root/",
 	.cookie_validity = 3600,
 	.db_file = "/tmp/db",
 	.uid = 65534,
 	.gid = 65534,
 	.ca = NULL,
-	.networks_size = 1,
-	.networks = {{
-		.name = "vpns0",
-		.ipv4_netmask = "255.255.255.0",
-		.ipv4 = "192.168.55.1",
-		.ipv4_dns = "192.168.55.1",
-	}}
+	.network = {
+		      .name = "vpns",
+		      .ipv4_netmask = "255.255.255.0",
+		      .ipv4 = "192.168.55.1",
+		      .ipv4_dns = "192.168.55.1",
+		      }
 };
 
 /* Returns 0 on success or negative value on error.
@@ -187,7 +196,18 @@ listen_ports(struct listen_list_st *list, const char *node,
 
 static void handle_children(int signo)
 {
-	while (waitpid(-1, NULL, WNOHANG) > 0);
+int status;
+
+	while (waitpid(-1, &status, WNOHANG) > 0) {
+		if (WEXITSTATUS(status) != 0 ||
+			(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV)) {
+			if (WIFSIGNALED(status))
+				syslog(LOG_ERR, "Child died with sigsegv\n");
+			else
+				syslog(LOG_DEBUG, "Child died with status %d\n", WEXITSTATUS(status));
+		} else
+			syslog(LOG_DEBUG, "Child died peacefully\n");
+	}
 }
 
 static void handle_alarm(int signo)
@@ -195,50 +215,56 @@ static void handle_alarm(int signo)
 	need_to_expire_cookies = 1;
 }
 
-static int set_network_info(const struct vpn_st* vinfo)
+static int set_network_info(const struct vpn_st *vinfo)
 {
-struct ifreq ifr;
-int fd, ret;
+	struct ifreq ifr;
+	int fd, ret;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 		return -1;
-		
+
 	/* set netmask */
 	if (vinfo->ipv4_netmask && vinfo->ipv4) {
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-	
-		ret = inet_pton(AF_INET, vinfo->ipv4_netmask, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+
+		ret =
+		    inet_pton(AF_INET, vinfo->ipv4_netmask,
+			      &((struct sockaddr_in *) &ifr.ifr_addr)->
+			      sin_addr);
 		if (ret != 1) {
 			syslog(LOG_ERR, "%s: Error reading mask: %s\n",
-				vinfo->name, vinfo->ipv4_netmask);
+			       vinfo->name, vinfo->ipv4_netmask);
 			goto fail;
 		}
 
 		ret = ioctl(fd, SIOCSIFNETMASK, &ifr);
 		if (ret != 0) {
 			syslog(LOG_ERR, "%s: Error setting mask: %s\n",
-				vinfo->name, vinfo->ipv4_netmask);
+			       vinfo->name, vinfo->ipv4_netmask);
 		}
-		
+
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-	
-		ret = inet_pton(AF_INET, vinfo->ipv4, &((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+
+		ret =
+		    inet_pton(AF_INET, vinfo->ipv4,
+			      &((struct sockaddr_in *) &ifr.ifr_addr)->
+			      sin_addr);
 		if (ret != 1) {
 			syslog(LOG_ERR, "%s: Error reading IP: %s\n",
-				vinfo->name, vinfo->ipv4_netmask);
+			       vinfo->name, vinfo->ipv4_netmask);
 			goto fail;
-			
+
 		}
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
 			syslog(LOG_ERR, "%s: Error setting IP: %s\n",
-				vinfo->name, vinfo->ipv4);
+			       vinfo->name, vinfo->ipv4);
 		}
 	}
 
@@ -246,52 +272,60 @@ int fd, ret;
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET6;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-	
-		ret = inet_pton(AF_INET6, vinfo->ipv6_netmask, &((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr);
+
+		ret =
+		    inet_pton(AF_INET6, vinfo->ipv6_netmask,
+			      &((struct sockaddr_in6 *) &ifr.ifr_addr)->
+			      sin6_addr);
 		if (ret != 1) {
 			syslog(LOG_ERR, "%s: Error reading mask: %s\n",
-				vinfo->name, vinfo->ipv6_netmask);
+			       vinfo->name, vinfo->ipv6_netmask);
 			goto fail;
-			
+
 		}
 
 		ret = ioctl(fd, SIOCSIFNETMASK, &ifr);
 		if (ret != 0) {
 			syslog(LOG_ERR, "%s: Error setting mask: %s\n",
-				vinfo->name, vinfo->ipv6_netmask);
+			       vinfo->name, vinfo->ipv6_netmask);
 		}
-		
+
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET6;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-	
-		ret = inet_pton(AF_INET6, vinfo->ipv6, &((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr);
+
+		ret =
+		    inet_pton(AF_INET6, vinfo->ipv6,
+			      &((struct sockaddr_in6 *) &ifr.ifr_addr)->
+			      sin6_addr);
 		if (ret != 1) {
 			syslog(LOG_ERR, "%s: Error reading IP: %s\n",
-				vinfo->name, vinfo->ipv6_netmask);
+			       vinfo->name, vinfo->ipv6_netmask);
 			goto fail;
-			
+
 		}
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
 			syslog(LOG_ERR, "%s: Error setting IP: %s\n",
-				vinfo->name, vinfo->ipv6);
+			       vinfo->name, vinfo->ipv6);
 		}
 	}
 
 
 	ret = 0;
-fail:
+      fail:
 	close(fd);
 	return ret;
 }
 
-static int open_tun(struct cfg_st *config)
+static int open_tun(struct cfg_st *config, struct tun_st* tun)
 {
-int tunfd, ret, e;
-struct ifreq ifr;
-unsigned int i, t;
+	int tunfd, ret, e;
+	struct ifreq ifr;
+	unsigned int t;
+
+	/* XXX obtain random IPs + tun nr */
 
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
@@ -301,47 +335,48 @@ unsigned int i, t;
 		return -1;
 	}
 
-	for (i=0;i<config->networks_size;i++) {
-		memset(&ifr, 0, sizeof(ifr));
-		ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-		snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), config->networks[i].name, 0);
-		if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
-			e = errno;
-			syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
-			exit(1);
-		}
-    
-		if (config->uid != -1) {
-			t = config->uid;
-			ret = ioctl(tunfd, TUNSETOWNER, t);
-			if (ret < 0) {
-				e = errno;
-				syslog(LOG_ERR, "TUNSETOWNER: %s\n", strerror(e));
-				exit(1);
-				
-			}
-		}
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name),
+		 config->network.name, 0);
+	if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
+		e = errno;
+		syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
+		goto fail;
+	}
 
-		if (config->gid != -1) {
-			t = config->uid;
-			ret = ioctl(tunfd, TUNSETGROUP, t);
-			if (ret < 0) {
-				e = errno;
-				syslog(LOG_ERR, "TUNSETGROUP: %s\n", strerror(e));
-				exit(1);
-				
-			}
-		}
-
-		/* set IP/mask */
-		ret = set_network_info(&config->networks[i]); 
+	if (config->uid != -1) {
+		t = config->uid;
+		ret = ioctl(tunfd, TUNSETOWNER, t);
 		if (ret < 0) {
-			exit(1);
+			e = errno;
+			syslog(LOG_INFO, "TUNSETOWNER: %s\n",
+			       strerror(e));
+			goto fail;
 		}
+	}
 
+	if (config->gid != -1) {
+		t = config->uid;
+		ret = ioctl(tunfd, TUNSETGROUP, t);
+		if (ret < 0) {
+			e = errno;
+			syslog(LOG_ERR, "TUNSETGROUP: %s\n",
+			       strerror(e));
+			goto fail;
+		}
+	}
+
+	/* set IP/mask */
+	ret = set_network_info(&config->network);
+	if (ret < 0) {
+		goto fail;
 	}
 
 	return tunfd;
+fail:
+	close(tunfd);
+	return -1;
 }
 
 static int verify_certificate_cb(gnutls_session_t session)
@@ -381,26 +416,54 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 static void drop_privileges(struct cfg_st *config)
 {
-int ret, e;
+	int ret, e;
 
-	if (config->gid != -1) {
+	if (config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
 		ret = setgid(config->gid);
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_ERR, "Cannot set gid to %d: %s\n", (int)config->gid, strerror(e));
+			syslog(LOG_ERR, "Cannot set gid to %d: %s\n",
+			       (int) config->gid, strerror(e));
 			exit(1);
-			
+
 		}
 	}
 
-	if (config->uid != -1) {
+	if (config->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
 		ret = setuid(config->uid);
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_ERR, "Cannot set uid to %d: %s\n", (int)config->uid, strerror(e));
+			syslog(LOG_ERR, "Cannot set uid to %d: %s\n",
+			       (int) config->uid, strerror(e));
 			exit(1);
-			
+
 		}
+	}
+}
+
+static void clear_listen_list(struct listen_list_st* llist)
+{
+	struct list_head *cq;
+	struct list_head *pos;
+	struct listen_list_st *ltmp;
+
+	list_for_each_safe(pos, cq, &llist->list) {
+		ltmp = list_entry(pos, struct listen_list_st, list);
+		close(ltmp->fd);
+		list_del(&ltmp->list);
+	}
+}
+
+static void clear_cmd_list(struct cmd_list_st* clist)
+{
+	struct list_head *cq;
+	struct list_head *pos;
+	struct cmd_list_st *ctmp;
+
+	list_for_each_safe(pos, cq, &clist->list) {
+		ctmp = list_entry(pos, struct cmd_list_st, list);
+		close(ctmp->fd);
+		list_del(&ctmp->list);
 	}
 }
 
@@ -410,11 +473,18 @@ int main(void)
 	int fd, pid, e;
 	struct tls_st creds;
 	struct listen_list_st llist;
-	struct listen_list_st *tmp;
+	struct cmd_list_st clist;
+	struct listen_list_st *ltmp;
+	struct cmd_list_st *ctmp;
+	struct list_head *cq;
 	struct list_head *pos;
+	struct tun_st tun;
 	fd_set rd;
-	int val, n = 0, ret, tunfd;
+	int val, n = 0, ret;
 	struct timeval tv;
+	int cmd_fd[2];
+
+	INIT_LIST_HEAD(&clist.list);
 
 	/*signal(SIGINT, SIG_IGN); */
 	signal(SIGPIPE, SIG_IGN);
@@ -424,18 +494,15 @@ int main(void)
 
 	/* XXX load configuration */
 
+	/* Listen to network ports */
 	ret = listen_ports(&llist, config.name, config.port, SOCK_STREAM);
 	if (ret < 0) {
+		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
 	}
 
-	tunfd = open_tun(&config);
-	if (tunfd < 0) {
-		exit(1);
-	}
 
-	drop_privileges(&config);
-
+	/* Initialize GnuTLS */
 	gnutls_global_set_log_function(tls_log_func);
 	gnutls_global_set_audit_log_function(tls_audit_log_func);
 	gnutls_global_set_log_level(0);
@@ -451,6 +518,7 @@ int main(void)
 						 config.key,
 						 GNUTLS_X509_FMT_PEM);
 	GNUTLS_FATAL_ERR(ret);
+
 
 	if (config.ca != NULL) {
 		ret =
@@ -478,7 +546,8 @@ int main(void)
 	ret = gnutls_priority_init(&creds.cprio, config.priorities, NULL);
 	GNUTLS_FATAL_ERR(ret);
 
-	alarm(config.cookie_validity+300);
+
+	alarm(config.cookie_validity + 300);
 	openlog("ocserv", LOG_PID, LOG_LOCAL0);
 	syslog_open = 1;
 
@@ -486,39 +555,122 @@ int main(void)
 		FD_ZERO(&rd);
 
 		list_for_each(pos, &llist.list) {
-			tmp = list_entry(pos, struct listen_list_st, list);
-#ifndef _WIN32
-			val = fcntl(tmp->fd, F_GETFL, 0);
+			ltmp = list_entry(pos, struct listen_list_st, list);
+
+			val = fcntl(ltmp->fd, F_GETFL, 0);
 			if ((val == -1)
-			    || (fcntl(tmp->fd, F_SETFL, val | O_NONBLOCK) <
+			    || (fcntl(ltmp->fd, F_SETFL, val | O_NONBLOCK) <
 				0)) {
 				perror("fcntl()");
 				exit(1);
 			}
-#endif
 
-			FD_SET(tmp->fd, &rd);
-			n = MAX(n, tmp->fd);
+			FD_SET(ltmp->fd, &rd);
+			n = MAX(n, ltmp->fd);
+		}
+
+		list_for_each(pos, &clist.list) {
+			ctmp = list_entry(pos, struct cmd_list_st, list);
+
+			FD_SET(ctmp->fd, &rd);
+			n = MAX(n, ctmp->fd);
 		}
 
 		tv.tv_usec = 0;
 		tv.tv_sec = 10;
-		n = select(n + 1, &rd, NULL, NULL, &tv);
-		if (n == -1 && errno == EINTR)
+		ret = select(n + 1, &rd, NULL, NULL, &tv);
+		if (ret == -1 && errno == EINTR)
 			continue;
 
-		if (n < 0) {
-			syslog(LOG_ERR, "Error in select(): %s", strerror(errno));
+		if (ret < 0) {
+			syslog(LOG_ERR, "Error in select(): %s",
+			       strerror(errno));
 			exit(1);
 		}
 
+		/* Check for new connections to accept */
+		list_for_each(pos, &llist.list) {
+			ltmp = list_entry(pos, struct listen_list_st, list);
+			if (FD_ISSET(ltmp->fd, &rd)) {
+				fd = accept(ltmp->fd, NULL, NULL);
+				if (fd < 0) {
+					syslog(LOG_ERR,
+					       "Error in accept(): %s",
+					       strerror(errno));
+					continue;
+				}
+
+				/* Create a command socket */
+				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
+				if (ret < 0) {
+					syslog(LOG_ERR, "Error creating command socket");
+					exit(1);
+				}
+
+				pid = fork();
+				if (pid == 0) {	/* child */
+					/* Drop privileges after this point */
+					drop_privileges(&config);
+					/* close any open descriptors before
+					 * running the server
+					 */
+					close(cmd_fd[0]);
+					clear_listen_list(&llist);
+					clear_cmd_list(&clist);
+
+					vpn_server(&config, &creds,
+						   cmd_fd[1], fd);
+					exit(0);
+				} else if (pid == -1) {
+fork_failed:
+					close(cmd_fd[0]);
+					free(ctmp);
+				} else { /* parent */
+					ctmp = calloc(1, sizeof(struct cmd_list_st));
+					if (ctmp == NULL) {
+						kill(pid, SIGTERM);
+						goto fork_failed;
+					}
+
+					ctmp->pid = pid;
+					ctmp->fd = cmd_fd[0];
+					list_add(&(ctmp->list), &(clist.list));
+				}
+				close(cmd_fd[1]);
+				close(fd);
+				
+			}
+		}
+
+		/* Check for any pending commands */
+		list_for_each_safe(pos, cq, &clist.list) {
+			ctmp = list_entry(pos, struct cmd_list_st, list);
+			
+			if (FD_ISSET(ctmp->fd, &rd)) {
+				ret = handle_commands(&config, &tun, ctmp->fd);
+				if (ret < 0) {
+					close(ctmp->fd);
+					kill(ctmp->pid, SIGTERM);
+					list_del(&ctmp->list);
+				}
+			}
+		}
+
+		/* Check if we need to expire any cookies */
 		if (need_to_expire_cookies != 0) {
 			need_to_expire_cookies = 0;
 			pid = fork();
 			if (pid == 0) {	/* child */
+				/* Drop privileges after this point */
+				drop_privileges(&config);
+
 				list_for_each(pos, &llist.list) {
-					tmp = list_entry(pos, struct listen_list_st, list);
-					close(tmp->fd);
+					ltmp =
+					    list_entry(pos,
+						       struct
+						       listen_list_st,
+						       list);
+					close(ltmp->fd);
 				}
 
 				expire_cookies(&config);
@@ -526,30 +678,120 @@ int main(void)
 			}
 		}
 
-		list_for_each(pos, &llist.list) {
-			tmp = list_entry(pos, struct listen_list_st, list);
-			if (FD_ISSET(tmp->fd, &rd)) {
-				fd = accept(tmp->fd, NULL, NULL);
-				if (fd < 0) {
-					syslog(LOG_ERR, "Error in accept(): %s", strerror(errno));
-					continue;
-				}
-
-				pid = fork();
-				if (pid == 0) {	/* child */
-					list_for_each(pos, &llist.list) {
-						tmp = list_entry(pos, struct listen_list_st, list);
-						close(tmp->fd);
-					}
-
-					vpn_server(&config, &creds,
-						     tunfd, fd);
-					exit(0);
-				}
-				close(fd);
-			}
-		}
 	}
 
+	return 0;
+}
+
+static int send_auth_reply(int fd, cmd_auth_reply_t r, int sendfd)
+{
+	struct iovec iov[1];
+	uint8_t cmd[2];
+	struct msghdr hdr;
+	union {
+		struct cmd_auth_req_st auth;
+	} cmd_data;
+	int ret;
+	union {
+		struct cmsghdr    cm;
+		char control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;	
+
+	memset(&hdr, 0, sizeof(hdr));
+	
+	cmd[0] = AUTH_REP;
+	cmd[1] = r;
+
+	iov[0].iov_base = cmd;
+	iov[0].iov_len = 2;
+	
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 1;
+
+	if (r == REP_AUTH_OK) {
+		/* Send the tun fd */
+		hdr.msg_control = control_un.control;
+		hdr.msg_controllen = sizeof(control_un.control);
+	
+		cmptr = CMSG_FIRSTHDR(&hdr);
+		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+		cmptr->cmsg_level = SOL_SOCKET;
+		cmptr->cmsg_type = SCM_RIGHTS;
+		*((int *) CMSG_DATA(cmptr)) = sendfd;	
+	}
+	
+	return(sendmsg(fd, &hdr, 0));
+}
+
+static int handle_auth_req(struct cfg_st *config, struct tun_st *tun,
+  			   struct cmd_auth_req_st * req, int *tunfd)
+{
+int ret;
+
+	if (strcmp(req->user, "test") == 0 && strcmp(req->pass, "test") == 0)
+		ret = 0;
+	else
+		ret = -1;
+		
+	if (ret == 0) { /* open tun */
+		*tunfd = open_tun(config, tun);
+		if (*tunfd == -1)
+		  ret = -1; /* sorry */
+	}
+	
+	return ret;
+}
+
+static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd)
+{
+	struct iovec iov[2];
+	uint8_t cmd;
+	struct msghdr hdr;
+	int tunfd;
+	union {
+		struct cmd_auth_req_st auth;
+	} cmd_data;
+	int ret;
+	
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = &cmd_data;
+	iov[1].iov_len = sizeof(cmd_data);
+	
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+	
+	ret = recvmsg( fd, &hdr, 0);
+	if (ret == -1) {
+		syslog(LOG_ERR, "Cannot obtain data from command socket.");
+		return -1;
+	}
+
+	if (ret == 0) {
+		return -1;
+	}
+	
+	switch(cmd) {
+		case AUTH_REQ:
+			ret = handle_auth_req(config, tun, &cmd_data.auth, &tunfd);
+			if (ret == 0) {
+				ret = send_auth_reply(fd, REP_AUTH_OK, tunfd);
+				close(tunfd);
+			} else
+				ret = send_auth_reply(fd, REP_AUTH_FAILED, -1);
+			
+			if (ret < 0) {
+				syslog(LOG_ERR, "Could not send reply cmd.");
+				return -1;
+			}
+			break;
+		default:
+			syslog(LOG_ERR, "Unknown CMD 0x%x.", (unsigned)cmd);
+			return -1;
+	}
+	
 	return 0;
 }

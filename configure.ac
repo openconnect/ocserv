@@ -3,7 +3,7 @@ AC_INIT([ocserv], [0.0.1], [nmav@gnutls.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([1.11.3 no-dist-gzip dist-xz -Wall -Werror -Wno-override])
+AM_INIT_AUTOMAKE([1.11.0 no-dist-gzip dist-xz -Wall -Werror -Wno-override])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([config.h])
 

@@ -56,7 +56,8 @@ struct proc_list_st {
 	socklen_t remote_addr_len;
 };
 
-static int handle_commands(struct cfg_st *config, struct tun_st *tun, struct proc_list_st*);
+static int handle_commands(const struct cfg_st *config, const struct tun_st *tun, 
+			   const struct proc_list_st* proc);
 
 static void tls_log_func(int level, const char *str)
 {
@@ -574,8 +575,8 @@ static int send_auth_reply(int fd, cmd_auth_reply_t r, struct tun_id_st* tunid)
 	return(sendmsg(fd, &hdr, 0));
 }
 
-static int handle_auth_req(struct cfg_st *config, struct tun_st *tun,
-  			   struct cmd_auth_req_st * req, struct tun_id_st *tunid)
+static int handle_auth_req(const struct cfg_st *config, const struct tun_st *tun,
+  			   const struct cmd_auth_req_st * req, struct tun_id_st *tunid)
 {
 int ret;
 #warning fix auth
@@ -593,7 +594,8 @@ int ret;
 	return ret;
 }
 
-static int handle_commands(struct cfg_st *config, struct tun_st *tun, struct proc_list_st* proc)
+static int handle_commands(const struct cfg_st *config, const struct tun_st *tun, 
+			   const struct proc_list_st* proc)
 {
 	struct iovec iov[2];
 	char buf[128];

@@ -139,7 +139,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);
 
 int __attribute__ ((format(printf, 3, 4)))
-    oclog(server_st * server, int priority, const char *fmt, ...);
+    oclog(const server_st * server, int priority, const char *fmt, ...);
 
 
 #endif

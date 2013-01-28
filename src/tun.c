@@ -98,7 +98,7 @@ static int set_network_info(const char* vname, const struct vpn_st *vinfo)
 	return ret;
 }
 
-int open_tun(struct cfg_st *config, struct tun_st* tun, struct tun_id_st *id)
+int open_tun(const struct cfg_st *config, const struct tun_st* tun, struct tun_id_st *id)
 {
 	int tunfd, ret, e;
 	struct ifreq ifr;

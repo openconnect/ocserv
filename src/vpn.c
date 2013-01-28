@@ -99,7 +99,7 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 	memcpy(req->url, at, length);
 	req->url[length] = 0;
 
-	fprintf(stderr, "request %s %s\n", http_method_str(parser->method), req->url);
+	//fprintf(stderr, "request %s %s\n", http_method_str(parser->method), req->url);
 
 	return 0;
 }
@@ -239,7 +239,7 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmdfd, int fd)
 	server->session = session;
 	server->parser = &parser;
 	server->cmdfd = cmdfd;
-	server->tunfd = -1;
+	server->tunid.fd = -1;
 
 restart:
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -308,7 +308,7 @@ finish:
 	tls_close(session);
 }
 
-static int get_remote_ip(int fd, int family, 
+static int get_remote_ip(int fd, int family,
 		         struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
 {
 unsigned char *ptr;
@@ -366,8 +366,8 @@ fail:
  * 
  * Returns 0 on success.
  */
-static int get_rt_vpn_info(server_st * server, struct vpn_st* vinfo,
-		char* buffer, size_t buffer_size)
+static int get_rt_vpn_info(server_st * server,
+                        struct vpn_st* vinfo, char* buffer, size_t buffer_size)
 {
 unsigned int i;
 int fd, ret;
@@ -375,6 +375,7 @@ struct ifreq ifr;
 const char* p;
 
 	memset(vinfo, 0, sizeof(*vinfo));
+	vinfo->name = server->tunid.name;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
@@ -393,7 +394,6 @@ const char* p;
                 goto fail;
         }
 
-	vinfo->name = server->config->network.name;
 	vinfo->ipv4_dns = server->config->network.ipv4_dns;
 	vinfo->ipv6_dns = server->config->network.ipv6_dns;
 	vinfo->routes_size = server->config->network.routes_size;
@@ -440,7 +440,7 @@ unsigned int buffer_size;
 		tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
-	
+
 	ret = retrieve_cookie(server, req->cookie, sizeof(req->cookie), &sc);
 	if (ret < 0) {
 		oclog(server, LOG_INFO, "Connect request without authentication");
@@ -458,7 +458,8 @@ unsigned int buffer_size;
 	
 	if (server->config->network.name == NULL) {
 		oclog(server, LOG_ERR, "No networks are configured. Rejecting client.");
-		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n");
+		tls_puts(server->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
 
@@ -487,16 +488,22 @@ unsigned int buffer_size;
 	tls_printf(server->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
 	tls_puts(server->session, "X-CSTP-DPD: 60\r\n");
 
-	if (vinfo.ipv4_netmask && vinfo.ipv4) {
+	if (vinfo.ipv4) {
+		oclog(server, LOG_DEBUG, "sending IPv4 %s", vinfo.ipv4);
 		tls_printf(server->session, "X-CSTP-Address: %s\r\n", vinfo.ipv4);
-		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
+
+		if (vinfo.ipv4_netmask)
+			tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
 		if (vinfo.ipv4_dns)
 			tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
 	}
 	
-	if (vinfo.ipv6_netmask && vinfo.ipv6) {
-		tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
+	if (vinfo.ipv6) {
+		oclog(server, LOG_DEBUG, "sending IPv6 %s", vinfo.ipv6);
 		tls_printf(server->session, "X-CSTP-Address: %s\r\n", vinfo.ipv6);
+
+		if (vinfo.ipv6_netmask)
+			tls_printf(server->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
 		if (vinfo.ipv6_dns)
 			tls_printf(server->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
 	}
@@ -519,9 +526,9 @@ unsigned int buffer_size;
 		
 		FD_SET(tls_fd, &rfds);
 		FD_SET(server->cmdfd, &rfds);
-		FD_SET(server->tunfd, &rfds);
+		FD_SET(server->tunid.fd, &rfds);
 		max = MAX(server->cmdfd,tls_fd);
-		max = MAX(max,server->tunfd);
+		max = MAX(max,server->tunid.fd);
 
 		if (gnutls_record_check_pending(server->session) == 0) {
 			ret = select(max + 1, &rfds, NULL, NULL, NULL);
@@ -529,8 +536,8 @@ unsigned int buffer_size;
 				break;
 		}
 
-		if (FD_ISSET(server->tunfd, &rfds)) {
-			int l = read(server->tunfd, buf + 8, sizeof(buf) - 8);
+		if (FD_ISSET(server->tunid.fd, &rfds)) {
+			int l = read(server->tunid.fd, buf + 8, sizeof(buf) - 8);
 			buf[0] = 'S';
 			buf[1] = 'T';
 			buf[2] = 'F';
@@ -581,7 +588,7 @@ unsigned int buffer_size;
 				break;
 
 			case AC_PKT_DATA:
-				write(server->tunfd, buf + 8, pktlen);
+				write(server->tunid.fd, buf + 8, pktlen);
 				break;
 			}
 		}

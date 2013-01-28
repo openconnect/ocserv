@@ -33,7 +33,7 @@
 #include <tun.h>
 #include <list.h>
 
-static int set_network_info(const struct vpn_st *vinfo)
+static int set_network_info(const char* vname, const struct vpn_st *vinfo)
 {
 	struct ifreq ifr;
 	int fd, ret;
@@ -43,30 +43,14 @@ static int set_network_info(const struct vpn_st *vinfo)
 		return -1;
 
 	/* set netmask */
-	if (vinfo->ipv4_netmask && vinfo->ipv4) {
+	if (vinfo->ipv4) {
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-
-		ret =
-		    inet_pton(AF_INET, vinfo->ipv4_netmask,
-			      &((struct sockaddr_in *) &ifr.ifr_addr)->
-			      sin_addr);
-		if (ret != 1) {
-			syslog(LOG_ERR, "%s: Error reading mask: %s\n",
-			       vinfo->name, vinfo->ipv4_netmask);
-			goto fail;
-		}
-
-		ret = ioctl(fd, SIOCSIFNETMASK, &ifr);
-		if (ret != 0) {
-			syslog(LOG_ERR, "%s: Error setting mask: %s\n",
-			       vinfo->name, vinfo->ipv4_netmask);
-		}
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vname);
 
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vname);
 
 		ret =
 		    inet_pton(AF_INET, vinfo->ipv4,
@@ -74,7 +58,7 @@ static int set_network_info(const struct vpn_st *vinfo)
 			      sin_addr);
 		if (ret != 1) {
 			syslog(LOG_ERR, "%s: Error reading IP: %s\n",
-			       vinfo->name, vinfo->ipv4_netmask);
+			       vname, vinfo->ipv4);
 			goto fail;
 
 		}
@@ -82,35 +66,14 @@ static int set_network_info(const struct vpn_st *vinfo)
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
 			syslog(LOG_ERR, "%s: Error setting IP: %s\n",
-			       vinfo->name, vinfo->ipv4);
+			       vname, vinfo->ipv4);
 		}
 	}
 
-	if (vinfo->ipv6_netmask && vinfo->ipv6) {
+	if (vinfo->ipv6) {
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET6;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-
-		ret =
-		    inet_pton(AF_INET6, vinfo->ipv6_netmask,
-			      &((struct sockaddr_in6 *) &ifr.ifr_addr)->
-			      sin6_addr);
-		if (ret != 1) {
-			syslog(LOG_ERR, "%s: Error reading mask: %s\n",
-			       vinfo->name, vinfo->ipv6_netmask);
-			goto fail;
-
-		}
-
-		ret = ioctl(fd, SIOCSIFNETMASK, &ifr);
-		if (ret != 0) {
-			syslog(LOG_ERR, "%s: Error setting mask: %s\n",
-			       vinfo->name, vinfo->ipv6_netmask);
-		}
-
-		memset(&ifr, 0, sizeof(ifr));
-		ifr.ifr_addr.sa_family = AF_INET6;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vname);
 
 		ret =
 		    inet_pton(AF_INET6, vinfo->ipv6,
@@ -118,18 +81,16 @@ static int set_network_info(const struct vpn_st *vinfo)
 			      sin6_addr);
 		if (ret != 1) {
 			syslog(LOG_ERR, "%s: Error reading IP: %s\n",
-			       vinfo->name, vinfo->ipv6_netmask);
+			       vname, vinfo->ipv6);
 			goto fail;
-
 		}
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
 			syslog(LOG_ERR, "%s: Error setting IP: %s\n",
-			       vinfo->name, vinfo->ipv6);
+			       vname, vinfo->ipv6);
 		}
 	}
-
 
 	ret = 0;
       fail:
@@ -137,14 +98,14 @@ static int set_network_info(const struct vpn_st *vinfo)
 	return ret;
 }
 
-int open_tun(struct cfg_st *config, struct tun_st* tun)
+int open_tun(struct cfg_st *config, struct tun_st* tun, struct tun_id_st *id)
 {
 	int tunfd, ret, e;
 	struct ifreq ifr;
 	unsigned int t;
 
 	/* XXX obtain random IPs + tun nr */
-
+#warning fix
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
 		int e = errno;
@@ -155,8 +116,10 @@ int open_tun(struct cfg_st *config, struct tun_st* tun)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name),
-		 config->network.name, 0);
+
+	snprintf(id->name, sizeof(id->name), "%s%u", config->network.name, 0);
+        memcpy(ifr.ifr_name, id->name, sizeof(ifr.ifr_name));
+
 	if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
 		e = errno;
 		syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
@@ -186,12 +149,14 @@ int open_tun(struct cfg_st *config, struct tun_st* tun)
 	}
 
 	/* set IP/mask */
-	ret = set_network_info(&config->network);
+	ret = set_network_info(id->name, &config->network);
 	if (ret < 0) {
 		goto fail;
 	}
+	
+	id->fd = tunfd;
 
-	return tunfd;
+	return 0;
 fail:
 	close(tunfd);
 	return -1;

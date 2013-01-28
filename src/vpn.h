@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <net/if.h>
 
 #define AC_PKT_DATA             0	/* Uncompressed data */
 #define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
@@ -73,10 +74,15 @@ struct tls_st {
 	gnutls_priority_t cprio;
 };
 
+struct tun_id_st {
+  char name[IFNAMSIZ];
+  int fd;
+};
+
 typedef struct server_st {
 	gnutls_session_t session;
+	struct tun_id_st tunid;
 	int cmdfd;
-	int tunfd;
 	http_parser *parser;
 	struct cfg_st *config;
 
@@ -118,6 +124,11 @@ struct cmd_auth_req_st {
 	char pass[MAX_PASSWORD_SIZE];
 	uint8_t tls_auth_ok;
 	char cert_user[MAX_USERNAME_SIZE];
+};
+
+struct cmd_auth_resp_st {
+	uint8_t reply;
+	char vname[IFNAMSIZ]; /* interface name */
 };
 
 void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmd_fd,

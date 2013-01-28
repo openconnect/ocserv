@@ -519,9 +519,9 @@ fork_failed:
 	return 0;
 }
 
-static int send_auth_reply(int fd, cmd_auth_reply_t r, int sendfd)
+static int send_auth_reply(int fd, cmd_auth_reply_t r, struct tun_id_st* tunid)
 {
-	struct iovec iov[1];
+	struct iovec iov[2];
 	uint8_t cmd[2];
 	struct msghdr hdr;
 	union {
@@ -538,14 +538,20 @@ static int send_auth_reply(int fd, cmd_auth_reply_t r, int sendfd)
 	
 	cmd[0] = AUTH_REP;
 	cmd[1] = r;
+	hdr.msg_iovlen++;
 
 	iov[0].iov_base = cmd;
 	iov[0].iov_len = 2;
+	hdr.msg_iovlen++;
+	
+	iov[1].iov_len = sizeof(tunid->name);
 	
 	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 1;
 
-	if (r == REP_AUTH_OK) {
+	if (r == REP_AUTH_OK && tunid != NULL) {
+		iov[1].iov_base = tunid->name;
+		hdr.msg_iovlen++;
+
 		/* Send the tun fd */
 		hdr.msg_control = control_un.control;
 		hdr.msg_controllen = sizeof(control_un.control);
@@ -554,14 +560,14 @@ static int send_auth_reply(int fd, cmd_auth_reply_t r, int sendfd)
 		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
 		cmptr->cmsg_level = SOL_SOCKET;
 		cmptr->cmsg_type = SCM_RIGHTS;
-		*((int *) CMSG_DATA(cmptr)) = sendfd;	
+		*((int *) CMSG_DATA(cmptr)) = tunid->fd;
 	}
 	
 	return(sendmsg(fd, &hdr, 0));
 }
 
 static int handle_auth_req(struct cfg_st *config, struct tun_st *tun,
-  			   struct cmd_auth_req_st * req, int *tunfd)
+  			   struct cmd_auth_req_st * req, struct tun_id_st *tunid)
 {
 int ret;
 
@@ -569,10 +575,10 @@ int ret;
 		ret = 0;
 	else
 		ret = -1;
-		
+
 	if (ret == 0) { /* open tun */
-		*tunfd = open_tun(config, tun);
-		if (*tunfd == -1)
+		ret = open_tun(config, tun, tunid);
+		if (ret < 0)
 		  ret = -1; /* sorry */
 	}
 	
@@ -584,7 +590,7 @@ static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd)
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
-	int tunfd;
+	struct tun_id_st tunid;
 	union {
 		struct cmd_auth_req_st auth;
 	} cmd_data;
@@ -612,12 +618,12 @@ static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd)
 	
 	switch(cmd) {
 		case AUTH_REQ:
-			ret = handle_auth_req(config, tun, &cmd_data.auth, &tunfd);
+			ret = handle_auth_req(config, tun, &cmd_data.auth, &tunid);
 			if (ret == 0) {
-				ret = send_auth_reply(fd, REP_AUTH_OK, tunfd);
-				close(tunfd);
+				ret = send_auth_reply(fd, REP_AUTH_OK, &tunid);
+				close(tunid.fd);
 			} else
-				ret = send_auth_reply(fd, REP_AUTH_FAILED, -1);
+				ret = send_auth_reply(fd, REP_AUTH_FAILED, NULL);
 			
 			if (ret < 0) {
 				syslog(LOG_ERR, "Could not send reply cmd.");

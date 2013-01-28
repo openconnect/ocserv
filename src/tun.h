@@ -3,6 +3,7 @@
 
 #include <vpn.h>
 
-int open_tun(struct cfg_st *config, struct tun_st* tun);
+
+int open_tun(struct cfg_st *config, struct tun_st* tun, struct tun_id_st *id);
 
 #endif

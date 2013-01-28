@@ -181,7 +181,9 @@ char* tmp = malloc(length+1);
 }
 
 
-void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmdfd, int fd)
+void vpn_server(struct cfg_st *config, struct tls_st *creds, 
+                struct sockaddr_storage* r_addr, socklen_t r_addr_len,
+                int cmdfd, int fd)
 {
 	unsigned char buf[2048];
 	int ret;
@@ -197,14 +199,12 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmdfd, int fd)
 	memset(&_server, 0, sizeof(_server));
 	server = &_server;
 
-	server->remote_addr_len = sizeof(server->remote_addr);
-	ret = getpeername (fd, (void*)&server->remote_addr, &server->remote_addr_len);
-	if (ret < 0)
-		syslog(LOG_INFO, "Accepted connection from unknown"); 
-	else
-		syslog(LOG_INFO, "Accepted connection from %s", 
-			human_addr((void*)&server->remote_addr, server->remote_addr_len,
-			    buf, sizeof(buf)));
+	server->remote_addr_len = r_addr_len;
+	memcpy(&server->remote_addr, r_addr, r_addr_len);
+
+	syslog(LOG_INFO, "Accepted connection from %s", 
+		human_addr((void*)&server->remote_addr, server->remote_addr_len,
+		    buf, sizeof(buf)));
 
 	/* initialize the session */
 	ret = gnutls_init(&session, GNUTLS_SERVER);

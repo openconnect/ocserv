@@ -131,8 +131,9 @@ struct cmd_auth_resp_st {
 	char vname[IFNAMSIZ]; /* interface name */
 };
 
-void vpn_server(struct cfg_st *config, struct tls_st *creds, int cmd_fd,
-		int fd);
+void vpn_server(struct cfg_st *config, struct tls_st *creds, 
+                struct sockaddr_storage* r_addr, socklen_t r_addr_len,
+                int cmdfd, int fd);
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);

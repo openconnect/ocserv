@@ -43,18 +43,20 @@
 int syslog_open = 0;
 static unsigned int need_to_expire_cookies = 0;
 
-static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd);
-
 struct listen_list_st {
 	struct list_head list;
 	int fd;
 };
 
-struct cmd_list_st {
+struct proc_list_st {
 	struct list_head list;
 	int fd;
 	pid_t pid;
+	struct sockaddr_storage remote_addr; /* peer address */
+	socklen_t remote_addr_len;
 };
+
+static int handle_commands(struct cfg_st *config, struct tun_st *tun, struct proc_list_st*);
 
 static void tls_log_func(int level, const char *str)
 {
@@ -290,14 +292,14 @@ static void clear_listen_list(struct listen_list_st* llist)
 	}
 }
 
-static void clear_cmd_list(struct cmd_list_st* clist)
+static void clear_proc_list(struct proc_list_st* clist)
 {
 	struct list_head *cq;
 	struct list_head *pos;
-	struct cmd_list_st *ctmp;
+	struct proc_list_st *ctmp;
 
 	list_for_each_safe(pos, cq, &clist->list) {
-		ctmp = list_entry(pos, struct cmd_list_st, list);
+		ctmp = list_entry(pos, struct proc_list_st, list);
 		close(ctmp->fd);
 		list_del(&ctmp->list);
 	}
@@ -309,9 +311,9 @@ int main(void)
 	int fd, pid, e;
 	struct tls_st creds;
 	struct listen_list_st llist;
-	struct cmd_list_st clist;
+	struct proc_list_st clist;
 	struct listen_list_st *ltmp;
-	struct cmd_list_st *ctmp;
+	struct proc_list_st *ctmp;
 	struct list_head *cq;
 	struct list_head *pos;
 	struct tun_st tun;
@@ -319,6 +321,9 @@ int main(void)
 	int val, n = 0, ret;
 	struct timeval tv;
 	int cmd_fd[2];
+	
+	struct sockaddr_storage tmp_addr;
+	socklen_t tmp_addr_len;
 
 	INIT_LIST_HEAD(&clist.list);
 
@@ -406,7 +411,7 @@ int main(void)
 		}
 
 		list_for_each(pos, &clist.list) {
-			ctmp = list_entry(pos, struct cmd_list_st, list);
+			ctmp = list_entry(pos, struct proc_list_st, list);
 
 			FD_SET(ctmp->fd, &rd);
 			n = MAX(n, ctmp->fd);
@@ -428,7 +433,8 @@ int main(void)
 		list_for_each(pos, &llist.list) {
 			ltmp = list_entry(pos, struct listen_list_st, list);
 			if (FD_ISSET(ltmp->fd, &rd)) {
-				fd = accept(ltmp->fd, NULL, NULL);
+				tmp_addr_len = sizeof(tmp_addr);
+				fd = accept(ltmp->fd, (void*)&tmp_addr, &tmp_addr_len);
 				if (fd < 0) {
 					syslog(LOG_ERR,
 					       "Error in accept(): %s",
@@ -452,21 +458,23 @@ int main(void)
 					 */
 					close(cmd_fd[0]);
 					clear_listen_list(&llist);
-					clear_cmd_list(&clist);
+					clear_proc_list(&clist);
 
-					vpn_server(&config, &creds,
-						   cmd_fd[1], fd);
+					vpn_server(&config, &creds, &tmp_addr,
+						   tmp_addr_len, cmd_fd[1], fd);
 					exit(0);
 				} else if (pid == -1) {
 fork_failed:
 					close(cmd_fd[0]);
 					free(ctmp);
 				} else { /* parent */
-					ctmp = calloc(1, sizeof(struct cmd_list_st));
+					ctmp = calloc(1, sizeof(struct proc_list_st));
 					if (ctmp == NULL) {
 						kill(pid, SIGTERM);
 						goto fork_failed;
 					}
+					memcpy(&ctmp->remote_addr, &tmp_addr, tmp_addr_len);
+					ctmp->remote_addr_len = tmp_addr_len;
 
 					ctmp->pid = pid;
 					ctmp->fd = cmd_fd[0];
@@ -480,10 +488,10 @@ fork_failed:
 
 		/* Check for any pending commands */
 		list_for_each_safe(pos, cq, &clist.list) {
-			ctmp = list_entry(pos, struct cmd_list_st, list);
+			ctmp = list_entry(pos, struct proc_list_st, list);
 			
 			if (FD_ISSET(ctmp->fd, &rd)) {
-				ret = handle_commands(&config, &tun, ctmp->fd);
+				ret = handle_commands(&config, &tun, ctmp);
 				if (ret < 0) {
 					close(ctmp->fd);
 					kill(ctmp->pid, SIGTERM);
@@ -570,7 +578,7 @@ static int handle_auth_req(struct cfg_st *config, struct tun_st *tun,
   			   struct cmd_auth_req_st * req, struct tun_id_st *tunid)
 {
 int ret;
-
+#warning fix auth
 	if (strcmp(req->user, "test") == 0 && strcmp(req->pass, "test") == 0)
 		ret = 0;
 	else
@@ -585,16 +593,22 @@ int ret;
 	return ret;
 }
 
-static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd)
+static int handle_commands(struct cfg_st *config, struct tun_st *tun, struct proc_list_st* proc)
 {
 	struct iovec iov[2];
+	char buf[128];
 	uint8_t cmd;
 	struct msghdr hdr;
 	struct tun_id_st tunid;
 	union {
 		struct cmd_auth_req_st auth;
 	} cmd_data;
-	int ret;
+	int ret, cmd_data_len;
+	const char* peer_ip;
+	
+	peer_ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len, buf, sizeof(buf));
+	
+	memset(&cmd_data, 0, sizeof(cmd_data));
 	
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
@@ -606,32 +620,39 @@ static int handle_commands(struct cfg_st *config, struct tun_st *tun, int fd)
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
 	
-	ret = recvmsg( fd, &hdr, 0);
+	ret = recvmsg( proc->fd, &hdr, 0);
 	if (ret == -1) {
-		syslog(LOG_ERR, "Cannot obtain data from command socket.");
+		syslog(LOG_ERR, "Cannot obtain data from command socket (pid: %d, peer: %s).", proc->pid, peer_ip);
 		return -1;
 	}
 
 	if (ret == 0) {
 		return -1;
 	}
+
+	cmd_data_len = ret - 1;
 	
 	switch(cmd) {
 		case AUTH_REQ:
+			if (cmd_data_len != sizeof(cmd_data.auth)) {
+				syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
+				return -1;
+			}
+
 			ret = handle_auth_req(config, tun, &cmd_data.auth, &tunid);
 			if (ret == 0) {
-				ret = send_auth_reply(fd, REP_AUTH_OK, &tunid);
+				ret = send_auth_reply(proc->fd, REP_AUTH_OK, &tunid);
 				close(tunid.fd);
 			} else
-				ret = send_auth_reply(fd, REP_AUTH_FAILED, NULL);
+				ret = send_auth_reply(proc->fd, REP_AUTH_FAILED, NULL);
 			
 			if (ret < 0) {
-				syslog(LOG_ERR, "Could not send reply cmd.");
+				syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
 				return -1;
 			}
 			break;
 		default:
-			syslog(LOG_ERR, "Unknown CMD 0x%x.", (unsigned)cmd);
+			syslog(LOG_ERR, "Unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 			return -1;
 	}
 	

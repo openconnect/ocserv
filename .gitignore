@@ -10,7 +10,6 @@ config.log
 Makefile
 Makefile.in
 .deps
-build-aux/snippet/
 stamp-h1
 *.o
 gl/string.h

@@ -349,7 +349,6 @@ int main(void)
 		exit(1);
 	}
 
-
 	/* Initialize GnuTLS */
 	gnutls_global_set_log_function(tls_log_func);
 	gnutls_global_set_audit_log_function(tls_audit_log_func);
@@ -361,6 +360,7 @@ int main(void)
 	ret = gnutls_certificate_allocate_credentials(&creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
 
+#warning Handle keys using the communication interface
 	ret =
 	    gnutls_certificate_set_x509_key_file(creds.xcred, config.cert,
 						 config.key,

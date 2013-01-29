@@ -64,7 +64,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 }
 
 int __attribute__ ((format(printf, 3, 4)))
-    oclog(const server_st * server, int priority, const char *fmt, ...)
+    oclog(const worker_st * server, int priority, const char *fmt, ...)
 {
 	char buf[1024];
 	char ipbuf[128];

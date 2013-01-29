@@ -38,7 +38,7 @@
 
 /* All the functions return zero on success and a negative value on error */
 
-int store_cookie(server_st *server, const void* cookie, unsigned cookie_size, 
+int store_cookie(worker_st *server, const void* cookie, unsigned cookie_size, 
 		const struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;
@@ -70,7 +70,7 @@ finish:
 	return ret;
 }
 
-int retrieve_cookie(server_st *server, const void* cookie, unsigned cookie_size, 
+int retrieve_cookie(worker_st *server, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;

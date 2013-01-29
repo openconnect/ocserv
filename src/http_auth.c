@@ -53,7 +53,7 @@ const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
 	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\r\n"
 	 "</form></auth>\r\n";
 
-int get_auth_handler(server_st *server)
+int get_auth_handler(worker_st *server)
 {
 int ret;
 
@@ -71,7 +71,7 @@ int ret;
 }
 
 static
-int get_cert_username(server_st *server, const gnutls_datum_t* raw, 
+int get_cert_username(worker_st *server, const gnutls_datum_t* raw, 
 			char* username, size_t username_size)
 {
 gnutls_x509_crt_t crt;
@@ -132,7 +132,7 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
-static int recv_auth_reply(server_st *server)
+static int recv_auth_reply(worker_st *server)
 {
 	struct iovec iov[3];
 	uint8_t cmd = 0;
@@ -191,7 +191,7 @@ static int recv_auth_reply(server_st *server)
 
 /* sends an authentication request to main thread and waits for
  * a reply */
-static int auth_user(server_st *server, const struct cmd_auth_req_st* areq)
+static int auth_user(worker_st *server, const struct cmd_auth_req_st* areq)
 {
 int ret;
 	
@@ -203,7 +203,7 @@ int ret;
 }
 
 static
-int get_cert_info(server_st *server, struct cmd_auth_req_st *areq, const char** reason)
+int get_cert_info(worker_st *server, struct cmd_auth_req_st *areq, const char** reason)
 {
 const gnutls_datum_t * cert;
 unsigned int ncerts;
@@ -231,7 +231,7 @@ int ret;
 	return 0;
 }
 
-int post_old_auth_handler(server_st *server)
+int post_old_auth_handler(worker_st *server)
 {
 int ret;
 struct req_data_st *req = server->parser->data;
@@ -347,7 +347,7 @@ auth_fail:
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
-int post_new_auth_handler(server_st *server)
+int post_new_auth_handler(worker_st *server)
 {
 int ret;
 struct req_data_st *req = server->parser->data;

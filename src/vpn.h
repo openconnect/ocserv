@@ -71,7 +71,7 @@ struct tls_st {
 	gnutls_priority_t cprio;
 };
 
-typedef struct server_st {
+typedef struct worker_st {
 	gnutls_session_t session;
 	char tun_name[IFNAMSIZ];
 	int tun_fd;
@@ -82,7 +82,7 @@ typedef struct server_st {
 
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
-} server_st;
+} worker_st;
 
 #define MAX_USERNAME_SIZE 64
 #define MAX_PASSWORD_SIZE 64
@@ -133,7 +133,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);
 
 int __attribute__ ((format(printf, 3, 4)))
-    oclog(const server_st * server, int priority, const char *fmt, ...);
+    oclog(const worker_st * server, int priority, const char *fmt, ...);
 
 
 #endif

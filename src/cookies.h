@@ -8,11 +8,11 @@ struct __attribute__ ((__packed__)) stored_cookie_st {
 	time_t expiration;
 };
 
-int store_cookie(server_st *server, const void* cookie, unsigned cookie_size, 
+int store_cookie(worker_st *server, const void* cookie, unsigned cookie_size, 
 		const struct stored_cookie_st* sc);
 void expire_cookies(struct cfg_st *cfg);
 
-int retrieve_cookie(server_st *server, const void* cookie, unsigned cookie_size, 
+int retrieve_cookie(worker_st *server, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc);
 
 #endif

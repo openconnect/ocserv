@@ -44,9 +44,9 @@
 
 #include <http-parser/http_parser.h>
 
-static int connect_handler(server_st *server);
+static int connect_handler(worker_st *server);
 
-typedef int (*url_handler_fn)(server_st*);
+typedef int (*url_handler_fn)(worker_st*);
 struct known_urls_st {
 	const char* url;
 	url_handler_fn get_handler;
@@ -192,8 +192,8 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds,
 	http_parser parser;
 	http_parser_settings settings;
 	struct req_data_st req;
-	server_st _server;
-	server_st *server;
+	worker_st _server;
+	worker_st *server;
 	url_handler_fn fn;
 
 	memset(&_server, 0, sizeof(_server));
@@ -360,13 +360,13 @@ fail:
 	return -1;
 }
 
-/* Returns information based on an VPN network stored in server_st but
+/* Returns information based on an VPN network stored in worker_st but
  * using real time information for many fields. Nothing is allocated,
  * the provided buffer is used.
  * 
  * Returns 0 on success.
  */
-static int get_rt_vpn_info(server_st * server,
+static int get_rt_vpn_info(worker_st * server,
                         struct vpn_st* vinfo, char* buffer, size_t buffer_size)
 {
 unsigned int i;
@@ -419,7 +419,7 @@ fail:
 	return ret;
 }
 
-static int connect_handler(server_st *server)
+static int connect_handler(worker_st *server)
 {
 int ret;
 struct req_data_st *req = server->parser->data;

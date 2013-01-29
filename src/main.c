@@ -54,10 +54,13 @@ struct proc_list_st {
 	pid_t pid;
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
+	
+	/* the tun lease this process has */
+	struct lease_st* lease;
 };
 
-static int handle_commands(const struct cfg_st *config, const struct tun_st *tun, 
-			   const struct proc_list_st* proc);
+static int handle_commands(const struct cfg_st *config, struct tun_st *tun, 
+			   struct proc_list_st* proc);
 
 static void tls_log_func(int level, const char *str)
 {
@@ -301,7 +304,8 @@ static void clear_proc_list(struct proc_list_st* clist)
 
 	list_for_each_safe(pos, cq, &clist->list) {
 		ctmp = list_entry(pos, struct proc_list_st, list);
-		close(ctmp->fd);
+		if (ctmp->fd >= 0)
+			close(ctmp->fd);
 		list_del(&ctmp->list);
 	}
 }
@@ -327,6 +331,7 @@ int main(void)
 	socklen_t tmp_addr_len;
 
 	INIT_LIST_HEAD(&clist.list);
+	tun_st_init(&tun);
 
 	/*signal(SIGINT, SIG_IGN); */
 	signal(SIGPIPE, SIG_IGN);
@@ -335,6 +340,7 @@ int main(void)
 	signal(SIGALRM, handle_alarm);
 
 	/* XXX load configuration */
+#warning read configuration from file
 
 	/* Listen to network ports */
 	ret = listen_ports(&llist, config.name, config.port, SOCK_STREAM);
@@ -483,7 +489,6 @@ fork_failed:
 				}
 				close(cmd_fd[1]);
 				close(fd);
-				
 			}
 		}
 
@@ -494,8 +499,14 @@ fork_failed:
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&config, &tun, ctmp);
 				if (ret < 0) {
-					close(ctmp->fd);
-					kill(ctmp->pid, SIGTERM);
+					if (ctmp->fd >= 0)
+						close(ctmp->fd);
+					ctmp->fd = -1;
+
+					if (ret == -2) kill(ctmp->pid, SIGTERM);
+					ctmp->pid = -1;
+					if (ctmp->lease)
+						ctmp->lease->in_use = 0;
 					list_del(&ctmp->list);
 				}
 			}
@@ -528,7 +539,7 @@ fork_failed:
 	return 0;
 }
 
-static int send_auth_reply(int fd, cmd_auth_reply_t r, struct tun_id_st* tunid)
+static int send_auth_reply(int fd, cmd_auth_reply_t r, struct lease_st* lease)
 {
 	struct iovec iov[2];
 	uint8_t cmd[2];
@@ -547,18 +558,16 @@ static int send_auth_reply(int fd, cmd_auth_reply_t r, struct tun_id_st* tunid)
 	
 	cmd[0] = AUTH_REP;
 	cmd[1] = r;
-	hdr.msg_iovlen++;
 
 	iov[0].iov_base = cmd;
 	iov[0].iov_len = 2;
 	hdr.msg_iovlen++;
 	
-	iov[1].iov_len = sizeof(tunid->name);
-	
 	hdr.msg_iov = iov;
 
-	if (r == REP_AUTH_OK && tunid != NULL) {
-		iov[1].iov_base = tunid->name;
+	if (r == REP_AUTH_OK && lease != NULL) {
+		iov[1].iov_base = lease->name;
+		iov[1].iov_len = sizeof(lease->name);
 		hdr.msg_iovlen++;
 
 		/* Send the tun fd */
@@ -569,14 +578,14 @@ static int send_auth_reply(int fd, cmd_auth_reply_t r, struct tun_id_st* tunid)
 		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
 		cmptr->cmsg_level = SOL_SOCKET;
 		cmptr->cmsg_type = SCM_RIGHTS;
-		*((int *) CMSG_DATA(cmptr)) = tunid->fd;
+		*((int *) CMSG_DATA(cmptr)) = lease->fd;
 	}
 	
 	return(sendmsg(fd, &hdr, 0));
 }
 
-static int handle_auth_req(const struct cfg_st *config, const struct tun_st *tun,
-  			   const struct cmd_auth_req_st * req, struct tun_id_st *tunid)
+static int handle_auth_req(const struct cfg_st *config, struct tun_st *tun,
+  			   const struct cmd_auth_req_st * req, struct lease_st **lease)
 {
 int ret;
 #warning fix auth
@@ -586,7 +595,7 @@ int ret;
 		ret = -1;
 
 	if (ret == 0) { /* open tun */
-		ret = open_tun(config, tun, tunid);
+		ret = open_tun(config, tun, lease);
 		if (ret < 0)
 		  ret = -1; /* sorry */
 	}
@@ -594,20 +603,20 @@ int ret;
 	return ret;
 }
 
-static int handle_commands(const struct cfg_st *config, const struct tun_st *tun, 
-			   const struct proc_list_st* proc)
+static int handle_commands(const struct cfg_st *config, struct tun_st *tun, 
+			   struct proc_list_st* proc)
 {
 	struct iovec iov[2];
 	char buf[128];
 	uint8_t cmd;
 	struct msghdr hdr;
-	struct tun_id_st tunid;
+	struct lease_st *lease;
 	union {
 		struct cmd_auth_req_st auth;
 	} cmd_data;
 	int ret, cmd_data_len;
 	const char* peer_ip;
-	
+
 	peer_ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len, buf, sizeof(buf));
 	
 	memset(&cmd_data, 0, sizeof(cmd_data));
@@ -638,24 +647,34 @@ static int handle_commands(const struct cfg_st *config, const struct tun_st *tun
 		case AUTH_REQ:
 			if (cmd_data_len != sizeof(cmd_data.auth)) {
 				syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
-				return -1;
+				return -2;
 			}
 
-			ret = handle_auth_req(config, tun, &cmd_data.auth, &tunid);
+			ret = handle_auth_req(config, tun, &cmd_data.auth, &lease);
 			if (ret == 0) {
-				ret = send_auth_reply(proc->fd, REP_AUTH_OK, &tunid);
-				close(tunid.fd);
-			} else
+				ret = send_auth_reply(proc->fd, REP_AUTH_OK, lease);
+				if (ret < 0) {
+					syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+					return -2;
+				}
+
+				proc->lease = lease;
+				proc->lease->in_use = 1;
+				if (lease->fd >= 0)
+					close(lease->fd);
+				lease->fd = -1;
+			} else {
 				ret = send_auth_reply(proc->fd, REP_AUTH_FAILED, NULL);
-			
-			if (ret < 0) {
-				syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
-				return -1;
+				if (ret < 0) {
+					syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+					return -2;
+				}
 			}
+			
 			break;
 		default:
 			syslog(LOG_ERR, "Unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
-			return -1;
+			return -2;
 	}
 	
 	return 0;

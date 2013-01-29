@@ -183,7 +183,7 @@ char* tmp = malloc(length+1);
 
 void vpn_server(struct cfg_st *config, struct tls_st *creds, 
                 struct sockaddr_storage* r_addr, socklen_t r_addr_len,
-                int cmdfd, int fd)
+                int cmd_fd, int fd)
 {
 	unsigned char buf[2048];
 	int ret;
@@ -238,8 +238,8 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds,
 	server->config = config;
 	server->session = session;
 	server->parser = &parser;
-	server->cmdfd = cmdfd;
-	server->tunid.fd = -1;
+	server->cmd_fd = cmd_fd;
+	server->tun_fd = -1;
 
 restart:
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -375,7 +375,7 @@ struct ifreq ifr;
 const char* p;
 
 	memset(vinfo, 0, sizeof(*vinfo));
-	vinfo->name = server->tunid.name;
+	vinfo->name = server->tun_name;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
@@ -525,10 +525,10 @@ unsigned int buffer_size;
 		FD_ZERO(&rfds);
 		
 		FD_SET(tls_fd, &rfds);
-		FD_SET(server->cmdfd, &rfds);
-		FD_SET(server->tunid.fd, &rfds);
-		max = MAX(server->cmdfd,tls_fd);
-		max = MAX(max,server->tunid.fd);
+		FD_SET(server->cmd_fd, &rfds);
+		FD_SET(server->tun_fd, &rfds);
+		max = MAX(server->cmd_fd,tls_fd);
+		max = MAX(max,server->tun_fd);
 
 		if (gnutls_record_check_pending(server->session) == 0) {
 			ret = select(max + 1, &rfds, NULL, NULL, NULL);
@@ -536,8 +536,8 @@ unsigned int buffer_size;
 				break;
 		}
 
-		if (FD_ISSET(server->tunid.fd, &rfds)) {
-			int l = read(server->tunid.fd, buf + 8, sizeof(buf) - 8);
+		if (FD_ISSET(server->tun_fd, &rfds)) {
+			int l = read(server->tun_fd, buf + 8, sizeof(buf) - 8);
 			buf[0] = 'S';
 			buf[1] = 'T';
 			buf[2] = 'F';
@@ -588,7 +588,7 @@ unsigned int buffer_size;
 				break;
 
 			case AC_PKT_DATA:
-				write(server->tunid.fd, buf + 8, pktlen);
+				write(server->tun_fd, buf + 8, pktlen);
 				break;
 			}
 		}

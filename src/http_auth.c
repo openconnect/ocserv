@@ -104,7 +104,7 @@ fail:
 	
 }
 
-static int send_auth_req(int fd, struct cmd_auth_req_st* r)
+static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 {
 	struct iovec iov[2];
 	uint8_t cmd;
@@ -123,7 +123,7 @@ static int send_auth_req(int fd, struct cmd_auth_req_st* r)
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
-	iov[1].iov_base = r;
+	iov[1].iov_base = (void*)r;
 	iov[1].iov_len = sizeof(*r);
 	
 	hdr.msg_iov = iov;
@@ -132,7 +132,7 @@ static int send_auth_req(int fd, struct cmd_auth_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
-static int recv_auth_reply(int cmdfd, struct tun_id_st * tunid)
+static int recv_auth_reply(server_st *server)
 {
 	struct iovec iov[3];
 	uint8_t cmd = 0;
@@ -162,7 +162,7 @@ static int recv_auth_reply(int cmdfd, struct tun_id_st * tunid)
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 	
-	ret = recvmsg( cmdfd, &hdr, 0);
+	ret = recvmsg( server->cmd_fd, &hdr, 0);
 	if (ret <= 0) {
 		return -1;
 	}
@@ -177,8 +177,8 @@ static int recv_auth_reply(int cmdfd, struct tun_id_st * tunid)
 				if (cmptr->cmsg_type != SCM_RIGHTS)
 					return -1;
 				
-				tunid->fd = *((int *) CMSG_DATA(cmptr));
-				memcpy(tunid->name, resp.vname, sizeof(tunid->name));
+				server->tun_fd = *((int *) CMSG_DATA(cmptr));
+				memcpy(server->tun_name, resp.vname, sizeof(server->tun_name));
 			} else
 				return -1;
 			break;
@@ -191,15 +191,15 @@ static int recv_auth_reply(int cmdfd, struct tun_id_st * tunid)
 
 /* sends an authentication request to main thread and waits for
  * a reply */
-static int auth_user(int cmdfd, struct cmd_auth_req_st* areq, struct tun_id_st* tunid)
+static int auth_user(server_st *server, const struct cmd_auth_req_st* areq)
 {
 int ret;
 	
-	ret = send_auth_req(cmdfd, areq);
+	ret = send_auth_req(server->cmd_fd, areq);
 	if (ret < 0)
 		return ret;
 		
-	return recv_auth_reply(cmdfd, tunid);
+	return recv_auth_reply(server);
 }
 
 static
@@ -295,7 +295,7 @@ struct cmd_auth_req_st areq;
 		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 	}
 
-	ret = auth_user(server->cmdfd, &areq, &server->tunid);
+	ret = auth_user(server, &areq);
 	if (ret < 0)
 		goto auth_fail;
 
@@ -412,8 +412,7 @@ struct cmd_auth_req_st areq;
 		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 	}
 
-
-	ret = auth_user(server->cmdfd, &areq, &server->tunid);
+	ret = auth_user(server, &areq);
 	if (ret < 0)
 		goto auth_fail;
 

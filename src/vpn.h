@@ -28,11 +28,6 @@ extern int syslog_open;
 #define MAX_NETWORKS 24
 #define MAX_ROUTES 64
 
-struct tun_st {
-	const char *ign;
-
-};
-
 struct vpn_st {
 	const char *name;	/* device name */
 	const char *ipv4_netmask;
@@ -69,20 +64,19 @@ struct cfg_st {
 	struct vpn_st network;
 };
 
+#include <tun.h>
+
 struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
 };
 
-struct tun_id_st {
-  char name[IFNAMSIZ];
-  int fd;
-};
-
 typedef struct server_st {
 	gnutls_session_t session;
-	struct tun_id_st tunid;
-	int cmdfd;
+	char tun_name[IFNAMSIZ];
+	int tun_fd;
+
+	int cmd_fd;
 	http_parser *parser;
 	struct cfg_st *config;
 

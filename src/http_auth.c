@@ -53,25 +53,25 @@ const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
 	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\r\n"
 	 "</form></auth>\r\n";
 
-int get_auth_handler(worker_st *server)
+int get_auth_handler(worker_st *ws)
 {
 int ret;
 
-	tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
-	tls_puts(server->session, "Connection: close\r\n");
-	tls_puts(server->session, "Content-Type: text/xml\r\n");
-	tls_printf(server->session, "Content-Length: %u\r\n", sizeof(login_msg)-1);
-	tls_puts(server->session, "X-Transcend-Version: 1\r\n");
-	tls_puts(server->session, "\r\n");
+	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	tls_puts(ws->session, "Connection: close\r\n");
+	tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	tls_printf(ws->session, "Content-Length: %u\r\n", sizeof(login_msg)-1);
+	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	tls_puts(ws->session, "\r\n");
 
-	tls_send(server->session, login_msg, sizeof(login_msg)-1);
+	tls_send(ws->session, login_msg, sizeof(login_msg)-1);
 	
 	return 0;
 
 }
 
 static
-int get_cert_username(worker_st *server, const gnutls_datum_t* raw, 
+int get_cert_username(worker_st *ws, const gnutls_datum_t* raw, 
 			char* username, size_t username_size)
 {
 gnutls_x509_crt_t crt;
@@ -79,20 +79,20 @@ int ret;
 
 	ret = gnutls_x509_crt_init(&crt);
 	if (ret < 0) {
-		oclog(server, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
 	ret = gnutls_x509_crt_import(crt, raw, GNUTLS_X509_FMT_DER);
 	if (ret < 0) {
-		oclog(server, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
-	ret = gnutls_x509_crt_get_dn_by_oid (crt, server->config->cert_user_oid, 
+	ret = gnutls_x509_crt_get_dn_by_oid (crt, ws->config->cert_user_oid, 
 						0, 0, username, &username_size);
 	if (ret < 0) {
-		oclog(server, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
@@ -132,7 +132,7 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
-static int recv_auth_reply(worker_st *server)
+static int recv_auth_reply(worker_st *ws)
 {
 	struct iovec iov[3];
 	uint8_t cmd = 0;
@@ -162,7 +162,7 @@ static int recv_auth_reply(worker_st *server)
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 	
-	ret = recvmsg( server->cmd_fd, &hdr, 0);
+	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret <= 0) {
 		return -1;
 	}
@@ -177,8 +177,8 @@ static int recv_auth_reply(worker_st *server)
 				if (cmptr->cmsg_type != SCM_RIGHTS)
 					return -1;
 				
-				server->tun_fd = *((int *) CMSG_DATA(cmptr));
-				memcpy(server->tun_name, resp.vname, sizeof(server->tun_name));
+				ws->tun_fd = *((int *) CMSG_DATA(cmptr));
+				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
 			} else
 				return -1;
 			break;
@@ -191,19 +191,19 @@ static int recv_auth_reply(worker_st *server)
 
 /* sends an authentication request to main thread and waits for
  * a reply */
-static int auth_user(worker_st *server, const struct cmd_auth_req_st* areq)
+static int auth_user(worker_st *ws, const struct cmd_auth_req_st* areq)
 {
 int ret;
 	
-	ret = send_auth_req(server->cmd_fd, areq);
+	ret = send_auth_req(ws->cmd_fd, areq);
 	if (ret < 0)
 		return ret;
 		
-	return recv_auth_reply(server);
+	return recv_auth_reply(ws);
 }
 
 static
-int get_cert_info(worker_st *server, struct cmd_auth_req_st *areq, const char** reason)
+int get_cert_info(worker_st *ws, struct cmd_auth_req_st *areq, const char** reason)
 {
 const gnutls_datum_t * cert;
 unsigned int ncerts;
@@ -211,7 +211,7 @@ int ret;
 
 	/* this is superflous. Verification has already been performed 
 	 * during handshake. */
-	cert = gnutls_certificate_get_peers (server->session, &ncerts);
+	cert = gnutls_certificate_get_peers (ws->session, &ncerts);
 
 	if (cert == NULL) {
 		*reason = "No certificate found";
@@ -219,10 +219,10 @@ int ret;
 	}
 		
 	areq->tls_auth_ok = 1;
-	if (server->config->cert_user_oid) { /* otherwise certificate username is ignored */
-		ret = get_cert_username(server, cert, areq->cert_user, sizeof(areq->cert_user));
+	if (ws->config->cert_user_oid) { /* otherwise certificate username is ignored */
+		ret = get_cert_username(ws, cert, areq->cert_user, sizeof(areq->cert_user));
 		if (ret < 0) {
-			oclog(server, LOG_ERR, "Cannot get username (%s) from certificate", server->config->cert_user_oid);
+			oclog(ws, LOG_ERR, "Cannot get username (%s) from certificate", ws->config->cert_user_oid);
 			*reason = "No username in certificate";
 			return -1;
 		}
@@ -231,10 +231,10 @@ int ret;
 	return 0;
 }
 
-int post_old_auth_handler(worker_st *server)
+int post_old_auth_handler(worker_st *ws)
 {
 int ret;
-struct req_data_st *req = server->parser->data;
+struct req_data_st *req = ws->parser->data;
 const char* reason = "Authentication failed";
 unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
@@ -247,15 +247,15 @@ struct cmd_auth_req_st areq;
 
 	memset(&areq, 0, sizeof(areq));
 
-	if (server->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		ret = get_cert_info(server, &areq, &reason);
+	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		ret = get_cert_info(ws, &areq, &reason);
 		if (ret < 0)
 			goto auth_fail;
 		
 		username = areq.cert_user;
 	}
 
-	if (server->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should be "username=test&password=test" */
 		username = strstr(req->body, "username=");
 		if (username == NULL) {
@@ -295,11 +295,11 @@ struct cmd_auth_req_st areq;
 		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 	}
 
-	ret = auth_user(server, &areq);
+	ret = auth_user(ws, &areq);
 	if (ret < 0)
 		goto auth_fail;
 
-	oclog(server, LOG_INFO, "User '%s' logged in\n", username);
+	oclog(ws, LOG_INFO, "User '%s' logged in\n", username);
 
 	/* generate cookie */
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, sizeof(cookie));
@@ -312,12 +312,12 @@ struct cmd_auth_req_st areq;
 	}
 
 	memset(&sc, 0, sizeof(sc));
-	sc.expiration = time(0) + server->config->cookie_validity;
+	sc.expiration = time(0) + ws->config->cookie_validity;
 	if (username)
 		snprintf(sc.username, sizeof(sc.username), "%s", username);
 
 	/* store cookie */
-	ret = store_cookie(server, cookie, sizeof(cookie), &sc);
+	ret = store_cookie(ws, cookie, sizeof(cookie), &sc);
 	if (ret < 0) {
 		reason = "Storage issue";
 		goto auth_fail;
@@ -325,20 +325,20 @@ struct cmd_auth_req_st areq;
 
 	/* reply */
 
-	tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
-	tls_puts(server->session, "Content-Type: text/xml\r\n");
-        tls_printf(server->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
-	tls_puts(server->session, "X-Transcend-Version: 1\r\n");
-	tls_printf(server->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
-	tls_puts(server->session, "\r\n"SUCCESS_MSG);
+	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	tls_puts(ws->session, "Content-Type: text/xml\r\n");
+        tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
+	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
+	tls_puts(ws->session, "\r\n"SUCCESS_MSG);
 
 	return 0;
 
 auth_fail:
-	tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n");
-	tls_printf(server->session,
+	tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
+	tls_printf(ws->session,
 		   "X-Reason: %s\r\n\r\n", reason);
-	tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
+	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 	exit(1);
 }
 
@@ -347,10 +347,10 @@ auth_fail:
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
-int post_new_auth_handler(worker_st *server)
+int post_new_auth_handler(worker_st *ws)
 {
 int ret;
-struct req_data_st *req = server->parser->data;
+struct req_data_st *req = ws->parser->data;
 const char* reason = "Authentication failed";
 unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
@@ -364,15 +364,15 @@ struct cmd_auth_req_st areq;
 
 	memset(&areq, 0, sizeof(areq));
 
-	if (server->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		ret = get_cert_info(server, &areq, &reason);
+	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		ret = get_cert_info(ws, &areq, &reason);
 		if (ret < 0)
 			goto auth_fail;
 		
 		username = areq.cert_user;
 	}
 
-	if (server->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should contain <username>test</username><password>test</password> */
 		username = strstr(req->body, XMLUSER);
 		if (username == NULL) {
@@ -412,11 +412,11 @@ struct cmd_auth_req_st areq;
 		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 	}
 
-	ret = auth_user(server, &areq);
+	ret = auth_user(ws, &areq);
 	if (ret < 0)
 		goto auth_fail;
 
-	oclog(server, LOG_INFO, "User '%s' logged in\n", username);
+	oclog(ws, LOG_INFO, "User '%s' logged in\n", username);
 
 	/* generate cookie */
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, sizeof(cookie));
@@ -429,12 +429,12 @@ struct cmd_auth_req_st areq;
 	}
 
 	memset(&sc, 0, sizeof(sc));
-	sc.expiration = time(0) + server->config->cookie_validity;
+	sc.expiration = time(0) + ws->config->cookie_validity;
 	if (username)
 		snprintf(sc.username, sizeof(sc.username), "%s", username);
 
 	/* store cookie */
-	ret = store_cookie(server, cookie, sizeof(cookie), &sc);
+	ret = store_cookie(ws, cookie, sizeof(cookie), &sc);
 	if (ret < 0) {
 		reason = "Storage issue";
 		goto auth_fail;
@@ -442,22 +442,22 @@ struct cmd_auth_req_st areq;
 
 	/* reply */
 
-	tls_puts(server->session, "HTTP/1.1 200 OK\r\n");
-	tls_puts(server->session, "Content-Type: text/xml\r\n");
-        tls_printf(server->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
-	tls_puts(server->session, "X-Transcend-Version: 1\r\n");
-	tls_printf(server->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
-	tls_puts(server->session, "\r\n"SUCCESS_MSG);
+	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	tls_puts(ws->session, "Content-Type: text/xml\r\n");
+        tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
+	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
+	tls_puts(ws->session, "\r\n"SUCCESS_MSG);
 
 	return 0;
 
 ask_auth:
-	return get_auth_handler(server);
+	return get_auth_handler(ws);
 
 auth_fail:
-	tls_puts(server->session, "HTTP/1.1 503 Service Unavailable\r\n");
-	tls_printf(server->session,
+	tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
+	tls_printf(ws->session,
 		   "X-Reason: %s\r\n\r\n", reason);
-	tls_fatal_close(server->session, GNUTLS_A_ACCESS_DENIED);
+	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 	exit(1);
 }

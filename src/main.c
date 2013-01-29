@@ -326,6 +326,7 @@ int main(void)
 	int val, n = 0, ret;
 	struct timeval tv;
 	int cmd_fd[2];
+	struct worker_st ws;
 	
 	struct sockaddr_storage tmp_addr;
 	socklen_t tmp_addr_len;
@@ -395,6 +396,8 @@ int main(void)
 	GNUTLS_FATAL_ERR(ret);
 
 
+	memset(&ws, 0, sizeof(ws));
+
 	alarm(config.cookie_validity + 300);
 	openlog("ocserv", LOG_PID, LOG_LOCAL0);
 	syslog_open = 1;
@@ -440,8 +443,8 @@ int main(void)
 		list_for_each(pos, &llist.list) {
 			ltmp = list_entry(pos, struct listen_list_st, list);
 			if (FD_ISSET(ltmp->fd, &rd)) {
-				tmp_addr_len = sizeof(tmp_addr);
-				fd = accept(ltmp->fd, (void*)&tmp_addr, &tmp_addr_len);
+				ws.remote_addr_len = sizeof(ws.remote_addr);
+				fd = accept(ltmp->fd, (void*)&ws.remote_addr, &ws.remote_addr_len);
 				if (fd < 0) {
 					syslog(LOG_ERR,
 					       "Error in accept(): %s",
@@ -458,6 +461,7 @@ int main(void)
 
 				pid = fork();
 				if (pid == 0) {	/* child */
+
 					/* Drop privileges after this point */
 					drop_privileges(&config);
 					/* close any open descriptors before
@@ -466,9 +470,13 @@ int main(void)
 					close(cmd_fd[0]);
 					clear_listen_list(&llist);
 					clear_proc_list(&clist);
+					
+					ws.config = &config;
+					ws.cmd_fd = cmd_fd[1];
+					ws.tun_fd = -1;
+					ws.conn_fd = fd;
 
-					vpn_server(&config, &creds, &tmp_addr,
-						   tmp_addr_len, cmd_fd[1], fd);
+					vpn_server(&ws, &creds);
 					exit(0);
 				} else if (pid == -1) {
 fork_failed:

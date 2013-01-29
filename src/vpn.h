@@ -75,8 +75,9 @@ typedef struct worker_st {
 	gnutls_session_t session;
 	char tun_name[IFNAMSIZ];
 	int tun_fd;
-
 	int cmd_fd;
+	int conn_fd;
+	
 	http_parser *parser;
 	struct cfg_st *config;
 
@@ -125,9 +126,7 @@ struct cmd_auth_resp_st {
 	char vname[IFNAMSIZ]; /* interface name */
 };
 
-void vpn_server(struct cfg_st *config, struct tls_st *creds, 
-                struct sockaddr_storage* r_addr, socklen_t r_addr_len,
-                int cmdfd, int fd);
+void vpn_server(struct worker_st* ws, struct tls_st *creds);
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);

@@ -44,6 +44,9 @@
 
 #include <http-parser/http_parser.h>
 
+/* HTTP requests prior to disconnection */
+#define MAX_HTTP_REQUESTS 8
+
 static int connect_handler(worker_st *server);
 
 typedef int (*url_handler_fn)(worker_st*);
@@ -180,7 +183,6 @@ char* tmp = malloc(length+1);
 	return 0;
 }
 
-
 void vpn_server(struct cfg_st *config, struct tls_st *creds, 
                 struct sockaddr_storage* r_addr, socklen_t r_addr_len,
                 int cmd_fd, int fd)
@@ -195,6 +197,7 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds,
 	worker_st _server;
 	worker_st *server;
 	url_handler_fn fn;
+	int requests_left = MAX_HTTP_REQUESTS;
 
 	memset(&_server, 0, sizeof(_server));
 	server = &_server;
@@ -242,6 +245,11 @@ void vpn_server(struct cfg_st *config, struct tls_st *creds,
 	server->tun_fd = -1;
 
 restart:
+	if (requests_left-- <= 0) {
+		oclog(server, LOG_INFO, "Maximum number of HTTP requests reached."); 
+		exit(1);
+	}
+
 	http_parser_init(&parser, HTTP_REQUEST);
 	memset(&req, 0, sizeof(req));
 	parser.data = &req;

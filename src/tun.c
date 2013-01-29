@@ -288,6 +288,18 @@ static int set_network_info( const struct lease_st *lease)
 		ret = -1;
 	} else
 		ret = 0;
+		
+	/* bring interface up */
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_addr.sa_family = AF_INET;
+	ifr.ifr_flags |= IFF_UP;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", lease->name);
+
+	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
+	if (ret != 0) {
+		syslog(LOG_ERR, "%s: Could not bring up interface.\n", lease->name);
+	}
+
 fail:
 	close(fd);
 	return ret;

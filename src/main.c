@@ -554,6 +554,7 @@ static int send_auth_reply(int fd, cmd_auth_reply_t r, struct lease_st* lease)
 	} control_un;
 	struct cmsghdr  *cmptr;	
 
+	memset(&control_un, 0, sizeof(control_un));
 	memset(&hdr, 0, sizeof(hdr));
 	
 	cmd[0] = AUTH_REP;

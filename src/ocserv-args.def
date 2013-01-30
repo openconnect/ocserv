@@ -53,6 +53,9 @@ An example configuration file follows.
 #auth = "pam,certificate"
 auth = "pam"
 
+# Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
+# listen-host = [IP|HOSTNAME]
+
 # TCP port number
 tcp-port = 3333
 
@@ -67,6 +70,10 @@ server-key = /path/to/key.pem
 # to verify clients if certificate authentication
 # is set.
 #ca-cert = /path/to/ca.pem
+
+# The object identifier that will be used to read the user ID in the client certificate.
+# The object identifier should be part of the certificate's DN
+#cert-user-oid = 0.9.2342.19200300.100.1.1
 
 # A revocation list of ca-cert is set
 #crl = /path/to/crl.pem
@@ -93,10 +100,10 @@ run-as-group = nogroup
 
 device = vpns
 
-ipv4-address = 192.168.1.0
-ipv4-mask = 255.255.255.0
+ipv4-network = 192.168.1.0
+ipv4-netmask = 255.255.255.0
 # Use the keywork local to advertize the local P-t-P address as DNS server
-# network-ipv4-dns = 192.168.2.1
+# ipv4-dns = 192.168.2.1
 ipv4-dns = local
 
 #ipv6-address = 

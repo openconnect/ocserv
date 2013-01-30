@@ -22,37 +22,39 @@ extern int syslog_open;
 
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
+/* the first is generic, for the methods that require a username password */
 #define AUTH_TYPE_USERNAME_PASS (1<<0)
-#define AUTH_TYPE_CERTIFICATE (1<<1)
-
-#define MAX_NETWORKS 24
-#define MAX_ROUTES 64
+#define AUTH_TYPE_PAM (1<<1 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_CERTIFICATE (1<<2)
 
 struct vpn_st {
 	const char *name;	/* device name */
 	const char *ipv4_netmask;
 	const char *ipv4;
+	const char *ipv4_local; /* local IPv4 address */
 	const char *ipv6_netmask;
 	const char *ipv6;
+	const char *ipv6_local; /* local IPv6 address */
 	const char *ipv4_dns;
 	const char *ipv6_dns;
 	unsigned int mtu;
-	const char *routes[MAX_ROUTES];
+	const char **routes;
 	unsigned int routes_size;
 };
 
 struct cfg_st {
 	const char *name;
 	unsigned int port;
+	unsigned int udp_port;
 	const char *cert;
 	const char *key;
 	const char *ca;
 	const char *crl;
 	const char *cert_user_oid;	/* The OID that will be used to extract the username */
+	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
 	gnutls_certificate_request_t cert_req;
 	const char *priorities;
 	const char *chroot_dir;	/* where the xml files are served from */
-	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
 	time_t cookie_validity;	/* in seconds */
 	const char *db_file;
 	unsigned foreground;

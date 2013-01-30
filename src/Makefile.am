@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(srcdir)../gl/ -I$(builddir)../gl/ \
-	-I$(srcdir)/ -I$(builddir)/../
+	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
 EXTRA_DIST = ocserv.1
 

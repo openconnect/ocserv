@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I$(srcdir)../gl/ -I$(builddir)../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
-EXTRA_DIST = ocserv.1
+EXTRA_DIST = ocserv.1 sample.config
 
 bin_PROGRAMS = ocserv
 

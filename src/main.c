@@ -70,7 +70,7 @@ static void tls_log_func(int level, const char *str)
 /* Returns 0 on success or negative value on error.
  */
 static int
-listen_ports(struct listen_list_st *list, const char *node,
+listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *node,
 	     int listen_port, int socktype)
 {
 	struct addrinfo hints, *res, *ptr;
@@ -103,9 +103,10 @@ listen_ports(struct listen_list_st *list, const char *node,
 		if (ptr->ai_family != AF_INET)
 			continue;
 #endif
-		fprintf(stderr, "listening on %s...\n",
-			human_addr(ptr->ai_addr, ptr->ai_addrlen,
-				   buf, sizeof(buf)));
+		if (config->foreground != 0)
+			fprintf(stderr, "listening on %s...\n",
+				human_addr(ptr->ai_addr, ptr->ai_addrlen,
+					   buf, sizeof(buf)));
 
 		s = socket(ptr->ai_family, ptr->ai_socktype,
 			   ptr->ai_protocol);
@@ -350,7 +351,7 @@ int main(int argc, char** argv)
 #warning read configuration from file
 
 	/* Listen to network ports */
-	ret = listen_ports(&llist, config.name, config.port, SOCK_STREAM);
+	ret = listen_ports(&config, &llist, config.name, config.port, SOCK_STREAM);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);

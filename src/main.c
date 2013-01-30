@@ -67,31 +67,6 @@ static void tls_log_func(int level, const char *str)
 	syslog(LOG_DEBUG, "Debug[<%d>]: %s", level, str);
 }
 
-
-static struct cfg_st config = {
-	.auth_types = AUTH_TYPE_USERNAME_PASS,
-	.name = NULL,
-	.port = 3333,
-	.cert = "./test.pem",
-	.key = "./test.pem",
-	.cert_req = GNUTLS_CERT_IGNORE,
-	.cert_user_oid =
-	    GNUTLS_OID_LDAP_UID /* or just GNUTLS_OID_X520_COMMON_NAME */ ,
-#warning fix chroot
-	.chroot_dir = "root/",
-	.cookie_validity = 3600,
-	.db_file = "/tmp/db",
-	.uid = 65534,
-	.gid = 65534,
-	.ca = NULL,
-	.network = {
-		      .name = "vpns",
-		      .ipv4_netmask = "255.255.255.0",
-		      .ipv4 = "192.168.55.1",
-		      .ipv4_dns = "192.168.55.1",
-		      }
-};
-
 /* Returns 0 on success or negative value on error.
  */
 static int
@@ -392,15 +367,23 @@ int main(int argc, char** argv)
 	    gnutls_certificate_set_x509_key_file(creds.xcred, config.cert,
 						 config.key,
 						 GNUTLS_X509_FMT_PEM);
-	GNUTLS_FATAL_ERR(ret);
-
+	if (ret < 0) {
+		fprintf(stderr, "Error setting the certificate (%s) or key (%s) files.\n",
+			config.cert, config.key);
+		exit(1);
+	}
 
 	if (config.ca != NULL) {
 		ret =
 		    gnutls_certificate_set_x509_trust_file(creds.xcred,
 							   config.ca,
 							   GNUTLS_X509_FMT_PEM);
-		GNUTLS_FATAL_ERR(ret);
+		if (ret < 0) {
+			fprintf(stderr, "Error setting the CA (%s) file.\n",
+				config.ca);
+			exit(1);
+		}
+
 		printf("Processed %d CA certificate(s).\n", ret);
 	}
 
@@ -485,6 +468,7 @@ int main(int argc, char** argv)
 					exit(1);
 				}
 
+#warning chroot here?
 				pid = fork();
 				if (pid == 0) {	/* child */
 

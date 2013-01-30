@@ -55,12 +55,10 @@ const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
 
 int get_auth_handler(worker_st *ws)
 {
-int ret;
-
 	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
 	tls_puts(ws->session, "Connection: close\r\n");
 	tls_puts(ws->session, "Content-Type: text/xml\r\n");
-	tls_printf(ws->session, "Content-Length: %u\r\n", sizeof(login_msg)-1);
+	tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)sizeof(login_msg)-1);
 	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
 	tls_puts(ws->session, "\r\n");
 
@@ -109,12 +107,6 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
-	int ret;
-	union {
-		struct cmsghdr    cm;
-		char control[CMSG_SPACE(sizeof(int))];
-	} control_un;
-	struct cmsghdr  *cmptr;	
 
 	memset(&hdr, 0, sizeof(hdr));
 	
@@ -132,11 +124,33 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
+static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
+{
+	struct iovec iov[2];
+	uint8_t cmd;
+	struct msghdr hdr;
+
+	memset(&hdr, 0, sizeof(hdr));
+	
+	cmd = AUTH_COOKIE_REQ;
+
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = (void*)r;
+	iov[1].iov_len = sizeof(*r);
+	
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	return(sendmsg(fd, &hdr, 0));
+}
+
 static int recv_auth_reply(worker_st *ws)
 {
-	struct iovec iov[3];
+	struct iovec iov[2];
 	uint8_t cmd = 0;
-	struct cmd_auth_resp_st resp;
+	struct cmd_auth_reply_st resp;
 	struct msghdr hdr;
 	int ret;
 
@@ -149,21 +163,19 @@ static int recv_auth_reply(worker_st *ws)
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
-	iov[1].iov_base = &resp.reply;
-	iov[1].iov_len = 1;
-
-	iov[2].iov_base = resp.vname;
-	iov[2].iov_len = sizeof(resp.vname);
+	iov[1].iov_base = &resp;
+	iov[1].iov_len = sizeof(resp);
 
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 3;
+	hdr.msg_iovlen = 2;
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 	
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	if (ret <= 0) {
+	if (ret < sizeof(resp)+1) {
+		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(resp)+1);
 		return -1;
 	}
 	if (cmd != AUTH_REP)
@@ -177,8 +189,11 @@ static int recv_auth_reply(worker_st *ws)
 				if (cmptr->cmsg_type != SCM_RIGHTS)
 					return -1;
 				
-				ws->tun_fd = *((int *) CMSG_DATA(cmptr));
+				memcpy(&ws->tun_fd, CMSG_DATA(cmptr), sizeof(int));
 				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
+				memcpy(ws->username, resp.user, sizeof(ws->username));
+				memcpy(ws->cookie, resp.cookie, sizeof(ws->cookie));
+				ws->auth_ok = 1;
 			} else
 				return -1;
 			break;
@@ -189,21 +204,9 @@ static int recv_auth_reply(worker_st *ws)
 	return 0;
 }
 
-/* sends an authentication request to main thread and waits for
- * a reply */
-static int auth_user(worker_st *ws, const struct cmd_auth_req_st* areq)
-{
-int ret;
-	
-	ret = send_auth_req(ws->cmd_fd, areq);
-	if (ret < 0)
-		return ret;
-		
-	return recv_auth_reply(ws);
-}
-
+/* grabs the username from the session certificate */
 static
-int get_cert_info(worker_st *ws, struct cmd_auth_req_st *areq, const char** reason)
+int get_cert_info(worker_st *ws, char* user, unsigned user_size)
 {
 const gnutls_datum_t * cert;
 unsigned int ncerts;
@@ -214,16 +217,13 @@ int ret;
 	cert = gnutls_certificate_get_peers (ws->session, &ncerts);
 
 	if (cert == NULL) {
-		*reason = "No certificate found";
 		return -1;
 	}
 		
-	areq->tls_auth_ok = 1;
 	if (ws->config->cert_user_oid) { /* otherwise certificate username is ignored */
-		ret = get_cert_username(ws, cert, areq->cert_user, sizeof(areq->cert_user));
+		ret = get_cert_username(ws, cert, user, user_size);
 		if (ret < 0) {
 			oclog(ws, LOG_ERR, "Cannot get username (%s) from certificate", ws->config->cert_user_oid);
-			*reason = "No username in certificate";
 			return -1;
 		}
 	}
@@ -231,29 +231,74 @@ int ret;
 	return 0;
 }
 
+/* sends an authentication request to main thread and waits for
+ * a reply.
+ * Returns 0 on success.
+ */
+static int auth_user(worker_st *ws, struct cmd_auth_req_st* areq)
+{
+int ret;
+
+	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		ret = get_cert_info(ws, areq->cert_user, sizeof(areq->cert_user));
+		if (ret < 0)
+			return -1;
+
+		areq->tls_auth_ok = 1;
+	}
+	
+	oclog(ws, LOG_DEBUG, "Sending authentication request");
+	ret = send_auth_req(ws->cmd_fd, areq);
+	if (ret < 0)
+		return ret;
+	
+	return recv_auth_reply(ws);
+}
+
+/* sends a cookie authentication request to main thread and waits for
+ * a reply.
+ * Returns 0 on success.
+ */
+int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size)
+{
+int ret;
+struct cmd_auth_cookie_req_st areq;
+
+	if (cookie_size != sizeof(areq.cookie))
+		return -1;
+
+	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user));
+		if (ret < 0)
+			return -1;
+
+		areq.tls_auth_ok = 1;
+	}
+
+	memcpy(areq.cookie, cookie, sizeof(areq.cookie));
+
+	oclog(ws, LOG_DEBUG, "Sending cookie authentication request");
+	ret = send_auth_cookie_req(ws->cmd_fd, &areq);
+	if (ret < 0)
+		return ret;
+		
+	return recv_auth_reply(ws);
+}
+
+
 int post_old_auth_handler(worker_st *ws)
 {
 int ret;
 struct req_data_st *req = ws->parser->data;
 const char* reason = "Authentication failed";
-unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
 char * password = NULL;
 char *p;
 unsigned int i;
-struct stored_cookie_st sc;
 struct cmd_auth_req_st areq;
 
 	memset(&areq, 0, sizeof(areq));
-
-	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		ret = get_cert_info(ws, &areq, &reason);
-		if (ret < 0)
-			goto auth_fail;
-		
-		username = areq.cert_user;
-	}
 
 	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should be "username=test&password=test" */
@@ -296,32 +341,20 @@ struct cmd_auth_req_st areq;
 	}
 
 	ret = auth_user(ws, &areq);
-	if (ret < 0)
+	if (ret < 0) {
+		if (username)
+			oclog(ws, LOG_INFO, "Failed authentication attempt for '%s'", username);
+		else
+			oclog(ws, LOG_INFO, "Failed authentication attempt");
 		goto auth_fail;
-
-	oclog(ws, LOG_INFO, "User '%s' logged in\n", username);
-
-	/* generate cookie */
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, sizeof(cookie));
-	GNUTLS_FATAL_ERR(ret);
-	
-	p = str_cookie;
-	for (i=0;i<sizeof(cookie);i++) {
-		sprintf(p, "%.2x", (unsigned int)cookie[i]);
-		p+=2;
 	}
 
-	memset(&sc, 0, sizeof(sc));
-	sc.expiration = time(0) + ws->config->cookie_validity;
-	if (username)
-		snprintf(sc.username, sizeof(sc.username), "%s", username);
-	memcpy(sc.tun_name, ws->tun_name, sizeof(sc.tun_name));
+	oclog(ws, LOG_INFO, "User '%s' logged in\n", ws->username);
 
-	/* store cookie */
-	ret = store_cookie(ws, cookie, sizeof(cookie), &sc);
-	if (ret < 0) {
-		reason = "Storage issue";
-		goto auth_fail;
+	p = str_cookie;
+	for (i=0;i<sizeof(ws->cookie);i++) {
+		sprintf(p, "%.2x", (unsigned int)ws->cookie[i]);
+		p+=2;
 	}
 
 	/* reply */
@@ -355,23 +388,13 @@ struct req_data_st *req = ws->parser->data;
 const char* reason = "Authentication failed";
 unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
-char cert_username[MAX_USERNAME_SIZE];
 char * username = NULL;
 char * password = NULL;
 char *p;
 unsigned int i;
-struct stored_cookie_st sc;
 struct cmd_auth_req_st areq;
 
 	memset(&areq, 0, sizeof(areq));
-
-	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		ret = get_cert_info(ws, &areq, &reason);
-		if (ret < 0)
-			goto auth_fail;
-		
-		username = areq.cert_user;
-	}
 
 	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should contain <username>test</username><password>test</password> */
@@ -414,10 +437,15 @@ struct cmd_auth_req_st areq;
 	}
 
 	ret = auth_user(ws, &areq);
-	if (ret < 0)
+	if (ret < 0) {
+		if (username)
+			oclog(ws, LOG_INFO, "Failed authentication attempt for '%s'", username);
+		else
+			oclog(ws, LOG_INFO, "Failed authentication attempt");
 		goto auth_fail;
+	}
 
-	oclog(ws, LOG_INFO, "User '%s' logged in\n", username);
+	oclog(ws, LOG_INFO, "User '%s' logged in\n", ws->username);
 
 	/* generate cookie */
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, sizeof(cookie));
@@ -427,19 +455,6 @@ struct cmd_auth_req_st areq;
 	for (i=0;i<sizeof(cookie);i++) {
 		sprintf(p, "%.2x", (unsigned int)cookie[i]);
 		p+=2;
-	}
-
-	memset(&sc, 0, sizeof(sc));
-	sc.expiration = time(0) + ws->config->cookie_validity;
-	if (username)
-		snprintf(sc.username, sizeof(sc.username), "%s", username);
-	memcpy(sc.tun_name, ws->tun_name, sizeof(sc.tun_name));
-
-	/* store cookie */
-	ret = store_cookie(ws, cookie, sizeof(cookie), &sc);
-	if (ret < 0) {
-		reason = "Storage issue";
-		goto auth_fail;
 	}
 
 	/* reply */

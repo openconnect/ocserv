@@ -85,6 +85,10 @@ tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE"
 # The default server directory
 #chroot-dir = /path/to/chroot
 
+# The time (in seconds) that a client is allowed to stay connected prior
+# to authentication
+auth-timeout = 40
+
 # Cookie validity time (in seconds)
 # Once a client is authenticated he's provided a cookie with
 # which he can reconnect. This option sets the maximum lifetime

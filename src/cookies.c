@@ -38,7 +38,7 @@
 
 /* All the functions return zero on success and a negative value on error */
 
-int store_cookie(worker_st *server, const void* cookie, unsigned cookie_size, 
+int store_cookie(const struct cfg_st *config, const void* cookie, unsigned cookie_size, 
 		const struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;
@@ -46,9 +46,9 @@ datum key;
 datum data;
 int ret;
 
-	dbf = gdbm_open((char*)server->config->db_file, 0, GDBM_WRCREAT, S_IRUSR|S_IWUSR, NULL);
+	dbf = gdbm_open((char*)config->db_file, 0, GDBM_WRCREAT, S_IRUSR|S_IWUSR, NULL);
 	if (dbf == NULL) {
-		oclog(server, LOG_ERR, "Cannot open cookie database: %s", server->config->db_file);
+		syslog(LOG_ERR, "Cannot open cookie database: %s", config->db_file);
 		return -1;
 	}
 
@@ -70,7 +70,7 @@ finish:
 	return ret;
 }
 
-int retrieve_cookie(worker_st *server, const void* cookie, unsigned cookie_size, 
+int retrieve_cookie(const struct cfg_st *config, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;
@@ -78,9 +78,9 @@ datum key;
 datum data;
 int ret;
 
-	dbf = gdbm_open((char*)server->config->db_file, 0, GDBM_READER, 0, NULL);
+	dbf = gdbm_open((char*)config->db_file, 0, GDBM_READER, 0, NULL);
 	if (dbf == NULL) {
-		oclog(server, LOG_ERR, "Cannot open cookie database: %s", server->config->db_file);
+		syslog(LOG_ERR, "Cannot open cookie database: %s", config->db_file);
 		return -1;
 	}
 
@@ -104,7 +104,7 @@ finish:
 	return ret;
 }
 
-void expire_cookies(struct cfg_st *cfg)
+void expire_cookies(const struct cfg_st *cfg)
 {
 GDBM_FILE dbf;
 datum key;

@@ -56,6 +56,7 @@ struct cfg_st {
 	const char *priorities;
 	const char *chroot_dir;	/* where the xml files are served from */
 	time_t cookie_validity;	/* in seconds */
+	unsigned auth_timeout; /* timeout of HTTP auth */
 	const char *db_file;
 	unsigned foreground;
 
@@ -68,6 +69,10 @@ struct cfg_st {
 
 #include <tun.h>
 
+#define MAX_USERNAME_SIZE 64
+#define MAX_PASSWORD_SIZE 64
+#define COOKIE_SIZE 32
+
 struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
@@ -75,8 +80,6 @@ struct tls_st {
 
 typedef struct worker_st {
 	gnutls_session_t session;
-	char tun_name[IFNAMSIZ];
-	int tun_fd;
 	int cmd_fd;
 	int conn_fd;
 	
@@ -85,11 +88,15 @@ typedef struct worker_st {
 
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
+
+	/* the following are set only if authentication is complete */
+	char tun_name[IFNAMSIZ];
+	char username[MAX_USERNAME_SIZE];
+	uint8_t cookie[COOKIE_SIZE];
+	unsigned auth_ok;
+	int tun_fd;
 } worker_st;
 
-#define MAX_USERNAME_SIZE 64
-#define MAX_PASSWORD_SIZE 64
-#define COOKIE_SIZE 32
 
 enum {
 	HEADER_COOKIE = 1,
@@ -110,10 +117,26 @@ void vpn_server(struct worker_st* ws, struct tls_st *creds);
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);
 
-int __attribute__ ((format(printf, 3, 4)))
+void __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * server, int priority, const char *fmt, ...);
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
+
+struct proc_list_st {
+	struct list_head list;
+	int fd;
+	pid_t pid;
+	struct sockaddr_storage remote_addr; /* peer address */
+	socklen_t remote_addr_len;
+	char username[MAX_USERNAME_SIZE]; /* the owner */
+	uint8_t cookie[COOKIE_SIZE]; /* the cookie associate with the session */
+	
+	/* the tun lease this process has */
+	struct lease_st* lease;
+};
+
+int handle_commands(const struct cfg_st *config, struct tun_st *tun, 
+			   struct proc_list_st* proc);
 
 /* Helper casts */
 #define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)

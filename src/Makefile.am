@@ -5,9 +5,10 @@ EXTRA_DIST = ocserv.1
 
 bin_PROGRAMS = ocserv
 
-ocserv_SOURCES = main.c worker-vpn.c worker-auth.c tlslib.c cookies.c http-parser/http_parser.c \
+ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
+	cookies.c http-parser/http_parser.c \
 	vpn.h cookies.h tlslib.h http-parser/http_parser.h log.c tun.c tun.h \
-	config.c worker-auth.h
+	config.c worker-auth.h 
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 

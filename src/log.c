@@ -22,6 +22,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdarg.h>
 
 #include <vpn.h>
@@ -63,7 +64,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	return save_buf;
 }
 
-int __attribute__ ((format(printf, 3, 4)))
+void __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * ws, int priority, const char *fmt, ...)
 {
 	char buf[1024];
@@ -83,5 +84,7 @@ int __attribute__ ((format(printf, 3, 4)))
 	if (ip)
 		syslog(priority, "%s %s", ip, buf);
 	else
-		syslog(priority, "[unknown] %s", ip, buf);
+		syslog(priority, "[unknown] %s", buf);
+	
+	return;
 }

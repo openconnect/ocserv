@@ -36,6 +36,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #include <vpn.h>
 #include <worker-auth.h>
@@ -46,6 +47,11 @@
 
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 8
+
+static void handle_alarm(int signo)
+{
+	exit(1);
+}
 
 static int connect_handler(worker_st *ws);
 
@@ -195,6 +201,11 @@ void vpn_server(struct worker_st* ws, struct tls_st *creds)
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
 
+	signal(SIGALRM, handle_alarm);
+
+	if (ws->config->auth_timeout)
+		alarm(ws->config->auth_timeout);
+
 	syslog(LOG_INFO, "Accepted connection from %s", 
 		human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
 		    buf, sizeof(buf)));
@@ -245,7 +256,10 @@ restart:
 	/* parse as we go */
 	do {
 		nrecvd = tls_recv(session, buf, sizeof(buf));
-		GNUTLS_FATAL_ERR(nrecvd);
+		if (nrecvd <= 0) {
+			oclog(ws, LOG_INFO, "Error receiving client data"); 
+			exit(1);
+		}
 	
 		nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 		if (nparsed == 0) {
@@ -308,10 +322,10 @@ finish:
 static int get_ip(struct worker_st* ws, int fd, int family, unsigned int local,
 	         struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
 {
-void* *ptr;
+void* ptr;
 const void* p;
 struct ifreq ifr;
-unsigned int i, flags;
+unsigned int flags;
 int ret, e;
 
 	memset(&ifr, 0, sizeof(ifr));
@@ -374,10 +388,8 @@ fail:
 static int get_rt_vpn_info(worker_st * ws,
                         struct vpn_st* vinfo, char* buffer, size_t buffer_size)
 {
-unsigned int i;
 int fd, ret;
 struct ifreq ifr;
-const char* p;
 
 	memset(vinfo, 0, sizeof(*vinfo));
 	vinfo->name = ws->tun_name;
@@ -453,7 +465,6 @@ fd_set rfds;
 int l, pktlen;
 int tls_fd, max;
 unsigned i;
-struct stored_cookie_st sc;
 struct vpn_st vinfo;
 char* buffer;
 unsigned int buffer_size;
@@ -466,14 +477,21 @@ unsigned int buffer_size;
 		exit(1);
 	}
 
-	ret = retrieve_cookie(ws, req->cookie, sizeof(req->cookie), &sc);
-	if (ret < 0) {
-		oclog(ws, LOG_INFO, "Connect request without authentication");
-		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
-		exit(1);
+	if (ws->auth_ok == 0) {
+		/* authentication didn't occur in this session. Use the
+		 * cookie */
+		ret = auth_cookie(ws, req->cookie, sizeof(req->cookie));
+		if (ret < 0) {
+			oclog(ws, LOG_INFO, "Failed cookie authentication attempt");
+			tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+			tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
+			exit(1);
+		}
 	}
-	memcpy(ws->tun_name, sc.tun_name, sizeof(ws->tun_name));
+
+	/* turn of the alarm */
+	if (ws->config->auth_timeout)
+		alarm(0);
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "Bad connect request: '%s'\n", req->url);
@@ -488,8 +506,6 @@ unsigned int buffer_size;
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
-
-	oclog(ws, LOG_INFO, "User '%s' connected.\n", sc.username);
 
 	buffer_size = 2048;
 	buffer = malloc(buffer_size);

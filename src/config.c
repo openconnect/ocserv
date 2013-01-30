@@ -85,9 +85,8 @@ static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
 const tOptionValue* val;
-char tmpstr[256];
-char** auth;
-unsigned auth_size;
+char** auth = NULL;
+unsigned auth_size = 0;
 unsigned j;
 
 	pov = configFileLoad(file);
@@ -127,6 +126,7 @@ unsigned j;
 	READ_STRING("chroot-dir", config->chroot_dir, 0);
 
 	READ_NUMERIC("cookie-validity", config->cookie_validity, 1);
+	READ_NUMERIC("auth-timeout", config->auth_timeout, 0);
 	READ_STRING("cookie-db", config->db_file, 1);
 
 	val = optionGetValue(pov, "run-as-user"); \

@@ -112,6 +112,9 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 		memcpy(&lease->rip4, t4, lease->rip4_len);
 
 	} else if (last4 != NULL) {
+		t4 = (void*)&tmp;
+		t4->sin_family = AF_INET;
+
 		ret =
 		    inet_pton(AF_INET, config->network.ipv4_netmask, SA_IN_P(&mask));
 	
@@ -181,6 +184,9 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 		lease->rip6_len = sizeof(struct sockaddr_in6);
 		memcpy(&lease->rip6, t6, lease->rip6_len);
 	} else if (last6 != NULL) {
+		t6 = (void*)&tmp;
+		t6->sin6_family = AF_INET6;
+
 		ret =
 		    inet_pton(AF_INET6, config->network.ipv6_netmask, SA_IN6_P(&mask));
 	
@@ -227,7 +233,6 @@ static int set_network_info( const struct lease_st *lease)
 {
 	struct ifreq ifr;
 	int fd, ret;
-	void* p;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
@@ -296,7 +301,6 @@ static int set_network_info( const struct lease_st *lease)
 		syslog(LOG_ERR, "%s: Could not bring up interface.\n", lease->name);
 	}
 
-fail:
 	close(fd);
 	return ret;
 }

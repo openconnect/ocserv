@@ -336,7 +336,7 @@ int main(int argc, char** argv)
 	signal(SIGCHLD, handle_children);
 	signal(SIGALRM, handle_alarm);
 
-	/* XXX load configuration */
+	/* load configuration */
 	ret = cmd_parser(argc, argv, &config);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
@@ -404,8 +404,10 @@ int main(int argc, char** argv)
 	ret = gnutls_priority_init(&creds.cprio, config.priorities, NULL);
 	GNUTLS_FATAL_ERR(ret);
 
-
 	memset(&ws, 0, sizeof(ws));
+	
+	if (config.foreground == 0)
+		daemon(0, 0);
 
 	alarm(config.cookie_validity + 300);
 	openlog("ocserv", LOG_PID, LOG_LOCAL0);

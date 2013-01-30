@@ -303,22 +303,26 @@ finish:
 	tls_close(session);
 }
 
-static int get_remote_ip(int fd, int family,
-		         struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
+/* if local is non zero it returns the local, otherwise the remote */
+static int get_ip(int fd, int family, unsigned int local,
+	         struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
 {
 unsigned char *ptr;
 const char* p;
 struct ifreq ifr;
-unsigned int i;
+unsigned int i, flags;
 int ret;
 
-	/* get netmask */
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = family;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 
-	/* local: SIOCGIFADDR */
-	ret = ioctl(fd, SIOCGIFDSTADDR, &ifr);
+	if (local != 0)
+		flags = SIOCGIFDSTADDR;
+	else
+		flags = SIOCGIFADDR;
+
+	ret = ioctl(fd, flags, &ifr);
 	if (ret != 0) {
 		goto fail;
 	}
@@ -376,21 +380,39 @@ const char* p;
 	if (fd == -1)
 		return -1;
         
-        ret = get_remote_ip(fd, AF_INET6, vinfo, &buffer, &buffer_size);
+	/* get the remote IPs */
+        ret = get_ip(fd, AF_INET6, 0, vinfo, &buffer, &buffer_size);
         if (ret < 0)
                 oclog(ws, LOG_INFO, "Cannot obtain IPv6 IP for %s\n", vinfo->name);
 
-        ret = get_remote_ip(fd, AF_INET, vinfo, &buffer, &buffer_size);
+        ret = get_ip(fd, AF_INET, 0, vinfo, &buffer, &buffer_size);
         if (ret < 0)
                 oclog(ws, LOG_INFO, "Cannot obtain IPv4 IP for %s\n", vinfo->name);
-        
+
+	/* get the local IPs */
+        ret = get_ip(fd, AF_INET6, 1, vinfo, &buffer, &buffer_size);
+        if (ret < 0)
+                oclog(ws, LOG_INFO, "Cannot obtain IPv6 local IP for %s\n", vinfo->name);
+
+        ret = get_ip(fd, AF_INET, 1, vinfo, &buffer, &buffer_size);
+        if (ret < 0)
+                oclog(ws, LOG_INFO, "Cannot obtain IPv4 local IP for %s\n", vinfo->name);
+
         if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
                 ret = -1;
                 goto fail;
         }
 
-	vinfo->ipv4_dns = ws->config->network.ipv4_dns;
-	vinfo->ipv6_dns = ws->config->network.ipv6_dns;
+	if (strcmp(vinfo->ipv4_dns, "local") == 0)
+		vinfo->ipv4_dns = vinfo->ipv4_local;
+	else
+		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
+
+	if (strcmp(vinfo->ipv6_dns, "local") == 0)
+		vinfo->ipv6_dns = vinfo->ipv6_local;
+	else
+		vinfo->ipv6_dns = ws->config->network.ipv6_dns;
+
 	vinfo->routes_size = ws->config->network.routes_size;
 	memcpy(vinfo->routes, ws->config->network.routes, sizeof(vinfo->routes));
 

@@ -48,6 +48,8 @@
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 8
 
+static int handle_worker_commands(struct worker_st *ws);
+
 static void handle_alarm(int signo)
 {
 	exit(1);
@@ -462,13 +464,13 @@ int ret;
 struct req_data_st *req = ws->parser->data;
 char buf[256];
 fd_set rfds;
-int l, pktlen;
+int l, pktlen, e;
 int tls_fd, max;
 unsigned i;
 struct vpn_st vinfo;
 char* buffer;
 unsigned int buffer_size;
-
+int tls_pending;
 
 	if (req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "Connect request without authentication");
@@ -564,6 +566,7 @@ unsigned int buffer_size;
 	tls_fd = (long)gnutls_transport_get_ptr(ws->session);
 
 	for(;;) {
+		tls_pending = 0;
 		FD_ZERO(&rfds);
 		
 		FD_SET(tls_fd, &rfds);
@@ -572,14 +575,27 @@ unsigned int buffer_size;
 		max = MAX(ws->cmd_fd,tls_fd);
 		max = MAX(max,ws->tun_fd);
 
-		if (gnutls_record_check_pending(ws->session) == 0) {
+		tls_pending = gnutls_record_check_pending(ws->session);
+		if (tls_pending == 0) {
 			ret = select(max + 1, &rfds, NULL, NULL, NULL);
 			if (ret <= 0)
 				break;
 		}
 
+		if (FD_ISSET(ws->cmd_fd, &rfds)) {
+			ret = handle_worker_commands(ws);
+			if (ret < 0) {
+				exit(1);
+			}
+		}
+
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
-			int l = read(ws->tun_fd, buf + 8, sizeof(buf) - 8);
+			l = read(ws->tun_fd, buf + 8, sizeof(buf) - 8);
+			if (l <= 0) {
+				e = errno;
+				oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
+				exit(1);
+			}
 			buf[0] = 'S';
 			buf[1] = 'T';
 			buf[2] = 'F';
@@ -593,7 +609,7 @@ unsigned int buffer_size;
 			GNUTLS_FATAL_ERR(ret);
 		}
 
-		if (FD_ISSET(tls_fd, &rfds) || gnutls_record_check_pending(ws->session)) {
+		if (FD_ISSET(tls_fd, &rfds) || tls_pending != 0) {
 			l = tls_recv(ws->session, buf, sizeof(buf));
 			GNUTLS_FATAL_ERR(l);
 
@@ -630,7 +646,17 @@ unsigned int buffer_size;
 				break;
 
 			case AC_PKT_DATA:
-				write(ws->tun_fd, buf + 8, pktlen);
+				l = write(ws->tun_fd, buf + 8, pktlen);
+				if (l == -1) {
+					e = errno;
+					oclog(ws, LOG_ERR, "Could not write data to tun: %s", strerror(e));
+					exit(1);
+				}
+
+				if (l != pktlen) {
+					oclog(ws, LOG_ERR, "Could not write all data to tun");
+					exit(1);
+				}
 				break;
 			}
 		}
@@ -639,5 +665,51 @@ unsigned int buffer_size;
 
 	}
 
+	return 0;
+}
+
+static
+int handle_worker_commands(struct worker_st *ws)
+{
+	struct iovec iov[2];
+	uint8_t cmd;
+	struct msghdr hdr;
+	union {
+		char x[20];
+	} cmd_data;
+	int ret, cmd_data_len;
+
+	memset(&cmd_data, 0, sizeof(cmd_data));
+	
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = &cmd_data;
+	iov[1].iov_len = sizeof(cmd_data);
+	
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+	
+	ret = recvmsg( ws->cmd_fd, &hdr, 0);
+	if (ret == -1) {
+		oclog(ws, LOG_ERR, "Cannot obtain data from command socket.");
+		exit(1);
+	}
+
+	if (ret == 0) {
+		exit(1);
+	}
+
+	cmd_data_len = ret - 1;
+	
+	switch(cmd) {
+		case CMD_TERMINATE:
+			exit(0);
+		default:
+			oclog(ws, LOG_ERR, "Unknown CMD 0x%x.", (unsigned)cmd);
+			exit(1);
+	}
+	
 	return 0;
 }

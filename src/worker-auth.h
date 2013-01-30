@@ -12,8 +12,9 @@
 
 typedef enum {
 	AUTH_REQ = 1,
-	AUTH_COOKIE_REQ = 2,
-	AUTH_REP = 3,
+	AUTH_COOKIE_REQ,
+	AUTH_REP,
+	CMD_TERMINATE,
 } cmd_request_t;
 
 typedef enum {
@@ -30,6 +31,14 @@ struct __attribute__ ((__packed__)) cmd_auth_cookie_req_st {
 
 /* AUTH_REQ */
 struct __attribute__ ((__packed__)) cmd_auth_req_st {
+	uint8_t user_pass_present;
+	char user[MAX_USERNAME_SIZE];
+	char pass[MAX_PASSWORD_SIZE];
+	uint8_t tls_auth_ok;
+	char cert_user[MAX_USERNAME_SIZE];
+};
+
+struct __attribute__ ((__packed__)) cmd_udp_fd_st {
 	uint8_t user_pass_present;
 	char user[MAX_USERNAME_SIZE];
 	char pass[MAX_PASSWORD_SIZE];

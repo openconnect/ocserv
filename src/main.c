@@ -243,6 +243,15 @@ static void drop_privileges(struct cfg_st *config)
 {
 	int ret, e;
 
+	if (config->chroot_dir) {
+		ret = chroot(config->chroot_dir);
+		if (ret != 0) {
+			e = errno;
+			syslog(LOG_ERR, "Cannot chroot to %s: %s", config->chroot_dir, strerror(e));
+			exit(1);
+		}
+	}
+
 	if (config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
 		ret = setgid(config->gid);
 		if (ret < 0) {
@@ -331,8 +340,6 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
 	}
-#warning read configuration from file
-
 	/* Listen to network ports */
 	ret = listen_ports(&config, &llist, config.name, config.port, SOCK_STREAM);
 	if (ret < 0) {
@@ -459,12 +466,12 @@ int main(int argc, char** argv)
 					exit(1);
 				}
 
-#warning chroot here?
 				pid = fork();
 				if (pid == 0) {	/* child */
-
+				
 					/* Drop privileges after this point */
 					drop_privileges(&config);
+
 					/* close any open descriptors before
 					 * running the server
 					 */

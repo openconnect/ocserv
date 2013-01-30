@@ -203,6 +203,8 @@ void vpn_server(struct worker_st* ws, struct tls_st *creds)
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
 
+	signal(SIGTERM, SIG_DFL);
+	signal(SIGINT, SIG_DFL);
 	signal(SIGALRM, handle_alarm);
 
 	if (ws->config->auth_timeout)
@@ -677,7 +679,8 @@ int handle_worker_commands(struct worker_st *ws)
 	union {
 		char x[20];
 	} cmd_data;
-	int ret, cmd_data_len;
+	int ret;
+	/*int cmd_data_len;*/
 
 	memset(&cmd_data, 0, sizeof(cmd_data));
 	
@@ -701,7 +704,7 @@ int handle_worker_commands(struct worker_st *ws)
 		exit(1);
 	}
 
-	cmd_data_len = ret - 1;
+	/*cmd_data_len = ret - 1;*/
 	
 	switch(cmd) {
 		case CMD_TERMINATE:

@@ -42,6 +42,7 @@
 #include <list.h>
 
 int syslog_open = 0;
+static unsigned int terminate = 0;
 static unsigned int need_to_expire_cookies = 0;
 
 struct listen_list_st {
@@ -302,6 +303,24 @@ static void clear_proc_list(struct proc_list_st* clist)
 	}
 }
 
+static void kill_children(struct proc_list_st* clist)
+{
+	struct list_head *pos;
+	struct proc_list_st *ctmp;
+
+	list_for_each(pos, &clist->list) {
+		ctmp = list_entry(pos, struct proc_list_st, list);
+		if (ctmp->pid != -1)
+			kill(ctmp->pid, SIGTERM);
+	}
+}
+
+static void handle_term(int signo)
+{
+	/* kill all children */
+	terminate = 1;
+}
+
 int main(int argc, char** argv)
 {
 	int fd, pid;
@@ -323,7 +342,8 @@ int main(int argc, char** argv)
 	INIT_LIST_HEAD(&clist.list);
 	tun_st_init(&tun);
 
-	/*signal(SIGINT, SIG_IGN); */
+	signal(SIGINT, handle_term);
+	signal(SIGTERM, handle_term);
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGCHLD, handle_children);
@@ -435,7 +455,7 @@ int main(int argc, char** argv)
 		}
 
 		tv.tv_usec = 0;
-		tv.tv_sec = 10;
+		tv.tv_sec = 5;
 		ret = select(n + 1, &rd, NULL, NULL, &tv);
 		if (ret == -1 && errno == EINTR)
 			continue;
@@ -445,6 +465,7 @@ int main(int argc, char** argv)
 			       strerror(errno));
 			exit(1);
 		}
+		
 
 		/* Check for new connections to accept */
 		list_for_each(pos, &llist.list) {
@@ -540,6 +561,11 @@ fork_failed:
 			}
 		}
 
+		if (terminate != 0) {
+			kill_children(&clist);
+			sleep(1);
+			exit(0);
+		}
 	}
 
 	return 0;

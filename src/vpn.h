@@ -43,7 +43,6 @@ struct vpn_st {
 
 struct cfg_st {
 	const char *name;
-	unsigned workers;
 	unsigned int port;
 	const char *cert;
 	const char *key;
@@ -52,10 +51,11 @@ struct cfg_st {
 	const char *cert_user_oid;	/* The OID that will be used to extract the username */
 	gnutls_certificate_request_t cert_req;
 	const char *priorities;
-	const char *root_dir;	/* where the xml files are served from */
+	const char *chroot_dir;	/* where the xml files are served from */
 	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
 	time_t cookie_validity;	/* in seconds */
 	const char *db_file;
+	unsigned foreground;
 
 	uid_t uid;
 	gid_t gid;
@@ -134,5 +134,6 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 int __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * server, int priority, const char *fmt, ...);
 
+int cmd_parser (int argc, char **argv, struct cfg_st* config);
 
 #endif

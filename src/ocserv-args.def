@@ -1,0 +1,116 @@
+AutoGen Definitions options;
+prog-name     = ocserv;
+prog-title    = "OpenConnect server";
+prog-desc     = "OpenConnect VPN server.";
+disable-save;
+no-xlate = opt;
+gnu-usage;
+config-header = config.h;
+long-opts;
+no-misuse-usage;
+short-usage   = "Usage: ocserv [options]\nocserv --help for usage instructions.\n";
+explain       = "";
+detail        = "OpenConnect VPN server.";
+
+copyright = {
+    date  = "2013";
+    owner = "Nikos Mavrogiannopoulos";
+    author = "Nikos Mavrogiannopoulos";
+    eaddr  = "nmav@gnutls.org";
+    type  = gplv2;
+};
+
+flag = {
+    name      = foreground;
+    value     = f;
+    descrip   = "Do not fork into background.";
+    doc      = "";
+};
+
+flag = {
+    name      = config;
+    value     = c;
+    arg-type  = file;
+    file-exists = yes;
+    descrip   = "Configuration file for the server.";
+    doc   = "";
+};
+
+help-value    = h;
+
+doc-section = {
+  ds-type = 'FILES';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+@subheading ocserv's configuration file format
+
+An example configuration file follows.
+
+@example
+
+# User authentication method
+# Options certificate, pam.
+#auth = "pam,certificate"
+auth = "pam"
+
+# TCP port number
+tcp-port = 3333
+
+# UDP port number
+udp-port = 3334
+
+# The key and the certificates of the server
+server-cert = /path/to/cert.pem
+server-key = /path/to/key.pem
+
+# The Certificate Authority that will be used
+# to verify clients if certificate authentication
+# is set.
+#ca-cert = /path/to/ca.pem
+
+# A revocation list of ca-cert is set
+#crl = /path/to/crl.pem
+
+# GnuTLS priority string
+tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE"
+
+# The default server directory
+#chroot-dir = /path/to/chroot
+
+# Cookie validity time (in seconds)
+# Once a client is authenticated he's provided a cookie with
+# which he can reconnect. This option sets the maximum lifetime
+# of that cookie.
+cookie-validity = 14400
+
+# Cookie database file. Where to store the cookies.
+cookie-db = /path/to/db
+
+run-as-user = nobody
+run-as-group = nogroup
+
+# Network settings
+
+device = vpns
+
+ipv4-address = 192.168.1.0
+ipv4-mask = 255.255.255.0
+# Use the keywork local to advertize the local P-t-P address as DNS server
+# network-ipv4-dns = 192.168.2.1
+ipv4-dns = local
+
+#ipv6-address = 
+#ipv6-mask = 
+#ipv6-dns = 
+
+# Leave empty to assign the default MTU of the device
+# mtu = 
+
+route = 192.168.2.0/255.255.255.0
+route = 192.168.5.0/255.255.255.0
+
+@end example
+
+_EOT_;
+};
+

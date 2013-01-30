@@ -74,7 +74,6 @@ static void tls_audit_log_func(gnutls_session_t session, const char *str)
 
 static struct cfg_st config = {
 	.auth_types = AUTH_TYPE_USERNAME_PASS,
-	.workers = 1,
 	.name = NULL,
 	.port = 3333,
 	.cert = "./test.pem",
@@ -82,7 +81,8 @@ static struct cfg_st config = {
 	.cert_req = GNUTLS_CERT_IGNORE,
 	.cert_user_oid =
 	    GNUTLS_OID_LDAP_UID /* or just GNUTLS_OID_X520_COMMON_NAME */ ,
-	.root_dir = "root/",
+#warning fix chroot
+	.chroot_dir = "root/",
 	.cookie_validity = 3600,
 	.db_file = "/tmp/db",
 	.uid = 65534,
@@ -310,9 +310,8 @@ static void clear_proc_list(struct proc_list_st* clist)
 	}
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
-
 	int fd, pid, e;
 	struct tls_st creds;
 	struct listen_list_st llist;
@@ -327,6 +326,7 @@ int main(void)
 	struct timeval tv;
 	int cmd_fd[2];
 	struct worker_st ws;
+	struct cfg_st config;
 	
 	struct sockaddr_storage tmp_addr;
 	socklen_t tmp_addr_len;
@@ -341,6 +341,11 @@ int main(void)
 	signal(SIGALRM, handle_alarm);
 
 	/* XXX load configuration */
+	ret = cmd_parser(argc, argv, &config);
+	if (ret < 0) {
+		fprintf(stderr, "Error in arguments\n");
+		exit(1);
+	}
 #warning read configuration from file
 
 	/* Listen to network ports */

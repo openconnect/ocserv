@@ -10,6 +10,8 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC
 gl_EARLY
 
+AM_PROG_CC_C_O
+
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.0])
 
 LIBS="$oldlibs -lgdbm"
@@ -30,6 +32,10 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 LIBS="$oldlibs"
 
 gl_INIT
+
+enable_local_libopts=yes
+NEED_LIBOPTS_DIR=true
+LIBOPTS_CHECK([libopts])
 
 AC_CONFIG_FILES([
 	Makefile

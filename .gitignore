@@ -17,3 +17,6 @@ gl/libgnu.a
 gl/arg-nonnull.h
 gl/warn-on-use.h
 gl/c++defs.h
+src/ocserv.1
+libopts/libopts.a
+build-aux/compile

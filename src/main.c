@@ -67,10 +67,6 @@ static void tls_log_func(int level, const char *str)
 	syslog(LOG_DEBUG, "Debug[<%d>]: %s", level, str);
 }
 
-static void tls_audit_log_func(gnutls_session_t session, const char *str)
-{
-	syslog(LOG_AUTH, "Warning: %s", str);
-}
 
 static struct cfg_st config = {
 	.auth_types = AUTH_TYPE_USERNAME_PASS,
@@ -220,37 +216,62 @@ static void handle_alarm(int signo)
 }
 
 
+static void tls_audit_log_func(gnutls_session_t session, const char *str)
+{
+worker_st * ws;
+
+	if (session == NULL)
+		syslog(LOG_AUTH, "Warning: %s", str);
+	else {
+		ws = gnutls_session_get_ptr(session);
+		
+		oclog(ws, LOG_ERR, "Warning: %s", str);
+	}
+}
 
 static int verify_certificate_cb(gnutls_session_t session)
 {
 	unsigned int status;
 	int ret, type;
 	gnutls_datum_t out;
+	worker_st * ws;
+
+	ws = gnutls_session_get_ptr(session);
+	if (ws == NULL) {
+		syslog(LOG_ERR, "%s:%d: Could not obtain worker state.", __func__, __LINE__);
+		return -1;
+	}
 
 	/* This verification function uses the trusted CAs in the credentials
 	 * structure. So you must have installed one or more CA certificates.
 	 */
 	ret = gnutls_certificate_verify_peers2(session, &status);
 	if (ret < 0) {
-		syslog(LOG_ERR, "Error verifying client certificate");
+		oclog(ws, LOG_ERR, "Error verifying client certificate");
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	}
 
-	type = gnutls_certificate_type_get(session);
+	if (status != 0) {
+#if GNUTLS_VERSION_NUMBER > 0x030106
+		type = gnutls_certificate_type_get(session);
 
-	ret =
-	    gnutls_certificate_verification_status_print(status, type,
+		ret =
+		    gnutls_certificate_verification_status_print(status, type,
 							 &out, 0);
-	if (ret < 0) {
+		if (ret < 0)
+			return GNUTLS_E_CERTIFICATE_ERROR;
+
+		oclog(ws, LOG_INFO, "Client certificate verification failed: %s", out.data);
+
+		gnutls_free(out.data);
+#else
+		oclog(ws, LOG_INFO, "Client certificate verification failed.");
+#endif
+
 		return GNUTLS_E_CERTIFICATE_ERROR;
+	} else {
+		oclog(ws, LOG_INFO, "Client certificate verification succeeded");
 	}
-
-	syslog(LOG_INFO, "verification: %s", out.data);
-
-	gnutls_free(out.data);
-
-	if (status != 0)	/* Certificate is not trusted */
-		return GNUTLS_E_CERTIFICATE_ERROR;
 
 	/* notify gnutls to continue handshake normally */
 	return 0;

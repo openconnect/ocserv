@@ -64,14 +64,14 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 }
 
 int __attribute__ ((format(printf, 3, 4)))
-    oclog(const worker_st * server, int priority, const char *fmt, ...)
+    oclog(const worker_st * ws, int priority, const char *fmt, ...)
 {
 	char buf[1024];
 	char ipbuf[128];
 	const char* ip;
 	va_list args;
 
-	ip = human_addr((void*)&server->remote_addr, server->remote_addr_len,
+	ip = human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
 			    ipbuf, sizeof(ipbuf));
 
 	buf[1023] = 0;

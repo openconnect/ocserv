@@ -213,6 +213,7 @@ void vpn_server(struct worker_st* ws, struct tls_st *creds)
 
 	gnutls_certificate_server_set_request(session, ws->config->cert_req);
 	gnutls_transport_set_ptr(session, (gnutls_transport_ptr_t) (long)ws->conn_fd);
+	gnutls_session_set_ptr(session, ws);
 
 	do {
 		ret = gnutls_handshake(session);

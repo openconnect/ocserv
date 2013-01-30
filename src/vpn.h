@@ -1,5 +1,5 @@
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef VPN_H
+#define VPN_H
 
 #include <config.h>
 #include <gnutls/gnutls.h>
@@ -105,29 +105,6 @@ struct req_data_st {
 	unsigned int message_complete;
 };
 
-typedef enum {
-	AUTH_REQ = 1,
-	AUTH_REP = 2,
-} cmd_request_t;
-
-typedef enum {
-	REP_AUTH_OK = 0,
-	REP_AUTH_FAILED = 1,
-} cmd_auth_reply_t;
-
-struct cmd_auth_req_st {
-	uint8_t user_pass_present;
-	char user[MAX_USERNAME_SIZE];
-	char pass[MAX_PASSWORD_SIZE];
-	uint8_t tls_auth_ok;
-	char cert_user[MAX_USERNAME_SIZE];
-};
-
-struct cmd_auth_resp_st {
-	uint8_t reply;
-	char vname[IFNAMSIZ]; /* interface name */
-};
-
 void vpn_server(struct worker_st* ws, struct tls_st *creds);
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
@@ -137,5 +114,11 @@ int __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * server, int priority, const char *fmt, ...);
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
+
+/* Helper casts */
+#define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)
+#define SA_IN_U8_P(p) ((uint8_t*)(&((struct sockaddr_in *)(p))->sin_addr))
+#define SA_IN6_P(p) (&((struct sockaddr_in6 *)(p))->sin6_addr)
+#define SA_IN6_U8_P(p) ((uint8_t*)(&((struct sockaddr_in6 *)(p))->sin6_addr))
 
 #endif

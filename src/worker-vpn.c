@@ -38,7 +38,7 @@
 #include <arpa/inet.h>
 
 #include <vpn.h>
-#include <http_auth.h>
+#include <worker-auth.h>
 #include <cookies.h>
 #include <tlslib.h>
 
@@ -305,14 +305,14 @@ finish:
 }
 
 /* if local is non zero it returns the local, otherwise the remote */
-static int get_ip(int fd, int family, unsigned int local,
+static int get_ip(struct worker_st* ws, int fd, int family, unsigned int local,
 	         struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
 {
-unsigned char *ptr;
-const char* p;
+void* *ptr;
+const void* p;
 struct ifreq ifr;
 unsigned int i, flags;
-int ret;
+int ret, e;
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = family;
@@ -325,19 +325,24 @@ int ret;
 
 	ret = ioctl(fd, flags, &ifr);
 	if (ret != 0) {
+		e = errno;
+		oclog(ws, LOG_DEBUG, "ioctl error: %s", strerror(e));
 		goto fail;
 	}
 
 	if (family == AF_INET) {
-		ptr = (void*)&((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr;
+		ptr = SA_IN_P(&ifr.ifr_addr);
 	} else if (family == AF_INET6) {
-		ptr = (void*)&((struct sockaddr_in6 *)&ifr.ifr_addr)->sin6_addr;
+		ptr = SA_IN6_P(&ifr.ifr_addr);
 	} else {
+		oclog(ws, LOG_DEBUG, "Unknown family!");
 		return -1;
 	}
 
-	p = inet_ntop(family, (void*)ptr, *buffer, *buffer_size);
+	p = inet_ntop(family, ptr, *buffer, *buffer_size);
 	if (p == NULL) {
+		e = errno;
+		oclog(ws, LOG_DEBUG, "inet_ntop error: %s", strerror(e));
 		goto fail;
 	}
 
@@ -382,40 +387,42 @@ const char* p;
 		return -1;
         
 	/* get the remote IPs */
-        ret = get_ip(fd, AF_INET6, 0, vinfo, &buffer, &buffer_size);
+        ret = get_ip(ws, fd, AF_INET6, 0, vinfo, &buffer, &buffer_size);
         if (ret < 0)
-                oclog(ws, LOG_INFO, "Cannot obtain IPv6 IP for %s\n", vinfo->name);
+                oclog(ws, LOG_DEBUG, "Cannot obtain IPv6 remote IP for %s\n", vinfo->name);
 
-        ret = get_ip(fd, AF_INET, 0, vinfo, &buffer, &buffer_size);
+        ret = get_ip(ws, fd, AF_INET, 0, vinfo, &buffer, &buffer_size);
         if (ret < 0)
-                oclog(ws, LOG_INFO, "Cannot obtain IPv4 IP for %s\n", vinfo->name);
-
-	/* get the local IPs */
-        ret = get_ip(fd, AF_INET6, 1, vinfo, &buffer, &buffer_size);
-        if (ret < 0)
-                oclog(ws, LOG_INFO, "Cannot obtain IPv6 local IP for %s\n", vinfo->name);
-
-        ret = get_ip(fd, AF_INET, 1, vinfo, &buffer, &buffer_size);
-        if (ret < 0)
-                oclog(ws, LOG_INFO, "Cannot obtain IPv4 local IP for %s\n", vinfo->name);
+                oclog(ws, LOG_DEBUG, "Cannot obtain IPv4 remote IP for %s\n", vinfo->name);
 
         if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
                 ret = -1;
                 goto fail;
         }
 
-	if (strcmp(vinfo->ipv4_dns, "local") == 0)
+	/* get the local IPs */
+        ret = get_ip(ws, fd, AF_INET6, 1, vinfo, &buffer, &buffer_size);
+        if (ret < 0)
+                oclog(ws, LOG_DEBUG, "Cannot obtain IPv6 local IP for %s\n", vinfo->name);
+
+        ret = get_ip(ws, fd, AF_INET, 1, vinfo, &buffer, &buffer_size);
+        if (ret < 0)
+                oclog(ws, LOG_DEBUG, "Cannot obtain IPv4 local IP for %s\n", vinfo->name);
+
+
+	if (vinfo->ipv4_dns && strcmp(vinfo->ipv4_dns, "local") == 0)
 		vinfo->ipv4_dns = vinfo->ipv4_local;
 	else
 		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
 
-	if (strcmp(vinfo->ipv6_dns, "local") == 0)
+	if (vinfo->ipv6_dns && strcmp(vinfo->ipv6_dns, "local") == 0)
 		vinfo->ipv6_dns = vinfo->ipv6_local;
 	else
 		vinfo->ipv6_dns = ws->config->network.ipv6_dns;
 
 	vinfo->routes_size = ws->config->network.routes_size;
-	memcpy(vinfo->routes, ws->config->network.routes, sizeof(vinfo->routes));
+	if (ws->config->network.routes_size > 0)
+		vinfo->routes = ws->config->network.routes;
 
 	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
 	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
@@ -447,10 +454,10 @@ int l, pktlen;
 int tls_fd, max;
 unsigned i;
 struct stored_cookie_st sc;
-unsigned int tun_nr = 0;
 struct vpn_st vinfo;
 char* buffer;
 unsigned int buffer_size;
+
 
 	if (req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "Connect request without authentication");
@@ -466,6 +473,7 @@ unsigned int buffer_size;
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
+	memcpy(ws->tun_name, sc.tun_name, sizeof(ws->tun_name));
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "Bad connect request: '%s'\n", req->url);
@@ -481,7 +489,7 @@ unsigned int buffer_size;
 		return -1;
 	}
 
-	oclog(ws, LOG_INFO, "Connected\n");
+	oclog(ws, LOG_INFO, "User '%s' connected.\n", sc.username);
 
 	buffer_size = 2048;
 	buffer = malloc(buffer_size);

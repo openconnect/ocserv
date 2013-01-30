@@ -81,7 +81,6 @@
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 	}
 
-
 static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
@@ -161,7 +160,25 @@ unsigned j;
 	READ_STRING("ipv6-dns", config->network.ipv6_dns, 0);
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size, 0);
+}
 
+/* sanity checks on config */
+static void check_cfg( struct cfg_st *config)
+{
+	if (config->network.ipv4 == NULL && config->network.ipv6 == NULL) {
+		fprintf(stderr, "No ipv4-network or ipv6-network options set.\n");
+		exit(1);
+	}
+
+	if (config->network.ipv4 != NULL && config->network.ipv4_netmask == NULL) {
+		fprintf(stderr, "No mask found for IPv4 network.\n");
+		exit(1);
+	}
+
+	if (config->network.ipv6 != NULL && config->network.ipv6_netmask == NULL) {
+		fprintf(stderr, "No mask found for IPv6 network.\n");
+		exit(1);
+	}
 }
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config)
@@ -183,6 +200,8 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 	}
 	
 	parse_cfg_file(cfg_file, config);
+	
+	check_cfg(config);
 	
 	return 0;
 

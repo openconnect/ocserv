@@ -5,6 +5,7 @@
 
 struct __attribute__ ((__packed__)) stored_cookie_st {
 	char username[MAX_USERNAME_SIZE];
+	char tun_name[IFNAMSIZ];
 	time_t expiration;
 };
 

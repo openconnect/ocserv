@@ -34,7 +34,7 @@
 #include <limits.h>
 
 #include <vpn.h>
-#include <http_auth.h>
+#include <worker-auth.h>
 #include <cookies.h>
 #include <tlslib.h>
 
@@ -152,7 +152,7 @@ static int recv_auth_reply(worker_st *ws)
 	iov[1].iov_base = &resp.reply;
 	iov[1].iov_len = 1;
 
-	iov[2].iov_base = &resp.vname;
+	iov[2].iov_base = resp.vname;
 	iov[2].iov_len = sizeof(resp.vname);
 
 	memset(&hdr, 0, sizeof(hdr));
@@ -315,6 +315,7 @@ struct cmd_auth_req_st areq;
 	sc.expiration = time(0) + ws->config->cookie_validity;
 	if (username)
 		snprintf(sc.username, sizeof(sc.username), "%s", username);
+	memcpy(sc.tun_name, ws->tun_name, sizeof(sc.tun_name));
 
 	/* store cookie */
 	ret = store_cookie(ws, cookie, sizeof(cookie), &sc);
@@ -432,6 +433,7 @@ struct cmd_auth_req_st areq;
 	sc.expiration = time(0) + ws->config->cookie_validity;
 	if (username)
 		snprintf(sc.username, sizeof(sc.username), "%s", username);
+	memcpy(sc.tun_name, ws->tun_name, sizeof(sc.tun_name));
 
 	/* store cookie */
 	ret = store_cookie(ws, cookie, sizeof(cookie), &sc);

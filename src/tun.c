@@ -56,10 +56,6 @@ static int bignum_add1 (uint8_t * num, unsigned size)
   return 0;
 }
 
-#define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)
-#define SA_IN_U8_P(p) ((uint8_t*)(&((struct sockaddr_in *)(p))->sin_addr))
-#define SA_IN6_P(p) (&((struct sockaddr_in6 *)(p))->sin6_addr)
-#define SA_IN6_U8_P(p) ((uint8_t*)(&((struct sockaddr_in6 *)(p))->sin6_addr))
 static int get_avail_network_addresses(const struct cfg_st *config, const struct lease_st *last4,
 					const struct lease_st *last6, struct lease_st* lease)
 {

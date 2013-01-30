@@ -34,6 +34,7 @@
 
 #include <gnutls/x509.h>
 #include <tlslib.h>
+#include <worker-auth.h>
 
 #include <vpn.h>
 #include <cookies.h>

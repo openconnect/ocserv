@@ -40,6 +40,7 @@
 #include <cookies.h>
 #include <tun.h>
 #include <list.h>
+#include "pam.h"
 
 static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct lease_st* lease)
 {
@@ -138,15 +139,33 @@ static int handle_auth_req(const struct cfg_st *config, struct tun_st *tun,
   			   const struct cmd_auth_req_st * req, struct lease_st **lease,
   			   char username[MAX_USERNAME_SIZE])
 {
-int ret;
-#warning fix auth
-	if (strcmp(req->user, "test") == 0 && strcmp(req->pass, "test") == 0)
-		ret = 0;
-	else
-		ret = -1;
-	
-	memcpy(username, req->user, MAX_USERNAME_SIZE);
+int ret = -1;
+unsigned username_set = 0;
 
+	if (config->auth_types & AUTH_TYPE_PAM) {
+		ret = pam_auth_user(req->user, req->pass);
+		if (ret != 0)
+			ret = -1;
+
+		memcpy(username, req->user, MAX_USERNAME_SIZE);
+		username_set = 1;
+	}
+
+	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		if (req->tls_auth_ok != 0) {
+			ret = 0;
+		}
+		
+		if (username_set == 0)
+			memcpy(username, req->cert_user, MAX_USERNAME_SIZE);
+		else {
+			if (strcmp(username, req->cert_user) != 0) {
+				syslog(LOG_INFO, "User '%s' presented a certificate from user '%s'", username, req->cert_user);
+				ret = -1;
+			}
+		}
+	}
+	
 	if (ret == 0) { /* open tun */
 		ret = open_tun(config, tun, lease);
 		if (ret < 0)

@@ -11,6 +11,9 @@ AC_PROG_CC
 gl_EARLY
 
 AM_PROG_CC_C_O
+if [ test "$GCC" = "yes" ];then
+	CFLAGS="$CFLAGS -Wall"
+fi
 
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.0])
 
@@ -31,6 +34,22 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 *** ]])])
 LIBS="$oldlibs"
 
+LIBS="$oldlibs -lpam"
+AC_MSG_CHECKING([for pam library])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+		   #include <security/pam_appl.h>],[
+		   pam_start(0, 0, 0, 0);])],
+		  [AC_MSG_RESULT(yes)
+		   AC_SUBST([PAM_LIBS], [-lpam])
+		   AC_SUBST([PAM_CFLAGS], [])
+		   AC_DEFINE([HAVE_PAM], 1, [Enable the PAM library])],
+		  [AC_MSG_RESULT(no)
+   	           AC_MSG_ERROR([[
+*** 
+*** libpam was not found. It is required for building this program.
+*** ]])])
+LIBS="$oldlibs"
+
 gl_INIT
 
 enable_local_libopts=yes
@@ -43,3 +62,14 @@ AC_CONFIG_FILES([
 	gl/Makefile
 ])
 AC_OUTPUT
+
+AC_MSG_NOTICE([summary of build options:
+
+  version:          ${VERSION}
+  Host type:        ${host}
+  Install prefix:   ${prefix}
+  Compiler:         ${CC}
+  CFlags:           ${CFLAGS}
+  Library types:    Shared=${enable_shared}, Static=${enable_static}
+])
+

@@ -120,6 +120,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Enable the PAM library */
+#undef HAVE_PAM
+
 /* Define this if pathfind(3) works */
 #undef HAVE_PATHFIND
 

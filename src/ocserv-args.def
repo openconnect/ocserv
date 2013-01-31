@@ -60,9 +60,6 @@ auth = "pam"
 # TCP port number
 tcp-port = 3333
 
-# UDP port number
-udp-port = 3334
-
 # The key and the certificates of the server
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem

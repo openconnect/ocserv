@@ -38,8 +38,12 @@ AC_DEFUN([gl_EARLY],
   m4_pattern_allow([^gl_LIBOBJS$])dnl a variable
   m4_pattern_allow([^gl_LTLIBOBJS$])dnl a variable
   AC_REQUIRE([gl_PROG_AR_RANLIB])
+  # Code from module clock-time:
   # Code from module extensions:
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
+  # Code from module extern-inline:
+  # Code from module gettime:
+  # Code from module gettimeofday:
   # Code from module include_next:
   # Code from module memchr:
   # Code from module memmem:
@@ -51,6 +55,9 @@ AC_DEFUN([gl_EARLY],
   # Code from module stddef:
   # Code from module stdint:
   # Code from module string:
+  # Code from module sys_time:
+  # Code from module time:
+  # Code from module timespec:
 ])
 
 # This macro should be invoked from ./configure.ac, in the section
@@ -69,6 +76,15 @@ AC_DEFUN([gl_INIT],
   m4_pushdef([gl_LIBSOURCES_DIR], [])
   gl_COMMON
   gl_source_base='gl'
+  gl_CLOCK_TIME
+  AC_REQUIRE([gl_EXTERN_INLINE])
+  gl_GETTIME
+  gl_FUNC_GETTIMEOFDAY
+  if test $HAVE_GETTIMEOFDAY = 0 || test $REPLACE_GETTIMEOFDAY = 1; then
+    AC_LIBOBJ([gettimeofday])
+    gl_PREREQ_GETTIMEOFDAY
+  fi
+  gl_SYS_TIME_MODULE_INDICATOR([gettimeofday])
   gl_FUNC_MEMCHR
   if test $HAVE_MEMCHR = 0 || test $REPLACE_MEMCHR = 1; then
     AC_LIBOBJ([memchr])
@@ -88,6 +104,10 @@ AC_DEFUN([gl_INIT],
   gl_STDDEF_H
   gl_STDINT_H
   gl_HEADER_STRING_H
+  gl_HEADER_SYS_TIME_H
+  AC_PROG_MKDIR_P
+  gl_HEADER_TIME_H
+  gl_TIMESPEC
   # End of code from modules
   m4_ifval(gl_LIBSOURCES_LIST, [
     m4_syscmd([test ! -d ]m4_defn([gl_LIBSOURCES_DIR])[ ||
@@ -231,7 +251,8 @@ AC_DEFUN([gl_FILE_LIST], [
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
-  lib/dummy.c
+  lib/gettime.c
+  lib/gettimeofday.c
   lib/memchr.c
   lib/memchr.valgrind
   lib/memmem.c
@@ -239,8 +260,16 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stdint.in.h
   lib/str-two-way.h
   lib/string.in.h
+  lib/sys_time.in.h
+  lib/time.in.h
+  lib/timespec.c
+  lib/timespec.h
   m4/00gnulib.m4
+  m4/clock_time.m4
   m4/extensions.m4
+  m4/extern-inline.m4
+  m4/gettime.m4
+  m4/gettimeofday.m4
   m4/gnulib-common.m4
   m4/include_next.m4
   m4/longlong.m4
@@ -251,6 +280,10 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/stddef_h.m4
   m4/stdint.m4
   m4/string_h.m4
+  m4/sys_socket_h.m4
+  m4/sys_time_h.m4
+  m4/time_h.m4
+  m4/timespec.m4
   m4/warn-on-use.m4
   m4/wchar_t.m4
 ])

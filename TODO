@@ -1,5 +1,4 @@
 * Add a simple username/password back-end
-* Add support for UDP/DTLS
 * Handle multiple clients in a single tun device (check if needed at all)
 * Run a server up/down script
 * Keep the TLS key and certificates into the privileged process and use IPC

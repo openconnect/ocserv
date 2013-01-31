@@ -113,7 +113,7 @@ unsigned j;
 	READ_STRING("listen-host", config->name, 0);
 
 	READ_NUMERIC("tcp-port", config->port, 1);
-	READ_NUMERIC("udp-port", config->udp_port, 1);
+	READ_NUMERIC("keepalive", config->keepalive, 0);
 
 	READ_STRING("server-cert", config->cert, 1);
 	READ_STRING("server-key", config->key, 1);
@@ -179,6 +179,9 @@ static void check_cfg( struct cfg_st *config)
 		fprintf(stderr, "No mask found for IPv6 network.\n");
 		exit(1);
 	}
+	
+	if (config->keepalive == 0)
+		config->keepalive = 30;
 }
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config)

@@ -38,18 +38,12 @@ struct __attribute__ ((__packed__)) cmd_auth_req_st {
 	char cert_user[MAX_USERNAME_SIZE];
 };
 
-struct __attribute__ ((__packed__)) cmd_udp_fd_st {
-	uint8_t user_pass_present;
-	char user[MAX_USERNAME_SIZE];
-	char pass[MAX_PASSWORD_SIZE];
-	uint8_t tls_auth_ok;
-	char cert_user[MAX_USERNAME_SIZE];
-};
-
 /* AUTH_REP */
 struct __attribute__ ((__packed__)) cmd_auth_reply_st {
 	uint8_t reply;
 	uint8_t cookie[COOKIE_SIZE];
+	uint8_t master_secret[TLS_MASTER_SIZE];
+	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	char vname[IFNAMSIZ]; /* interface name */
 	char user[MAX_USERNAME_SIZE];
 };

@@ -45,7 +45,6 @@ struct vpn_st {
 struct cfg_st {
 	const char *name;
 	unsigned int port;
-	unsigned int udp_port;
 	const char *cert;
 	const char *key;
 	const char *ca;
@@ -57,6 +56,7 @@ struct cfg_st {
 	const char *chroot_dir;	/* where the xml files are served from */
 	time_t cookie_validity;	/* in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
+	unsigned keepalive;
 	const char *db_file;
 	unsigned foreground;
 
@@ -71,6 +71,7 @@ struct cfg_st {
 
 #define MAX_USERNAME_SIZE 64
 #define MAX_PASSWORD_SIZE 64
+#define TLS_MASTER_SIZE 48
 #define COOKIE_SIZE 32
 
 struct tls_st {
@@ -78,8 +79,18 @@ struct tls_st {
 	gnutls_priority_t cprio;
 };
 
+typedef enum {
+	UP_DISABLED,
+	UP_SETUP,
+	UP_HANDSHAKE,
+	UP_INACTIVE,
+	UP_ACTIVE
+} udp_port_state_t;
+
 typedef struct worker_st {
+	struct tls_st *creds;
 	gnutls_session_t session;
+	gnutls_session_t dtls_session;
 	int cmd_fd;
 	int conn_fd;
 	
@@ -89,10 +100,17 @@ typedef struct worker_st {
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
 
+	/* set after authentication */
+	int udp_fd;
+	udp_port_state_t udp_state;
+	unsigned int udp_port;
+
 	/* the following are set only if authentication is complete */
 	char tun_name[IFNAMSIZ];
 	char username[MAX_USERNAME_SIZE];
 	uint8_t cookie[COOKIE_SIZE];
+	uint8_t master_secret[TLS_MASTER_SIZE];
+	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	unsigned auth_ok;
 	int tun_fd;
 } worker_st;
@@ -100,6 +118,7 @@ typedef struct worker_st {
 
 enum {
 	HEADER_COOKIE = 1,
+	HEADER_MASTER_SECRET = 2,
 };
 
 struct req_data_st {
@@ -107,12 +126,14 @@ struct req_data_st {
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
+	unsigned char master_secret[TLS_MASTER_SIZE];
+	unsigned int master_secret_set;
 	char *body;
 	unsigned int headers_complete;
 	unsigned int message_complete;
 };
 
-void vpn_server(struct worker_st* ws, struct tls_st *creds);
+void vpn_server(struct worker_st* ws);
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);
@@ -130,6 +151,8 @@ struct proc_list_st {
 	socklen_t remote_addr_len;
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associate with the session */
+	uint8_t master_secret[TLS_MASTER_SIZE];
+	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	
 	/* the tun lease this process has */
 	struct lease_st* lease;
@@ -143,5 +166,8 @@ int handle_commands(const struct cfg_st *config, struct tun_st *tun,
 #define SA_IN_U8_P(p) ((uint8_t*)(&((struct sockaddr_in *)(p))->sin_addr))
 #define SA_IN6_P(p) (&((struct sockaddr_in6 *)(p))->sin6_addr)
 #define SA_IN6_U8_P(p) ((uint8_t*)(&((struct sockaddr_in6 *)(p))->sin6_addr))
+
+#define SA_IN_PORT(p) (((struct sockaddr_in *)(p))->sin_port)
+#define SA_IN6_PORT(p) (((struct sockaddr_in6 *)(p))->sin6_port)
 
 #endif

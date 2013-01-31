@@ -20,6 +20,8 @@
 #include <config.h>
 
 #include <gnutls/gnutls.h>
+#include <gnutls/dtls.h>
+#include <gnutls/crypto.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -37,6 +39,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <time.h>
 
 #include <vpn.h>
 #include <worker-auth.h>
@@ -45,10 +48,16 @@
 
 #include <http-parser/http_parser.h>
 
+/* after that time (secs) of inactivity in the UDP part, connection switches to 
+ * TCP (if activity occurs there).
+ */
+#define UDP_SWITCH_TIME 15
+
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 8
 
 static int handle_worker_commands(struct worker_st *ws);
+static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size);
 
 static void handle_alarm(int signo)
 {
@@ -119,8 +128,10 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct req_data_st *req = parser->data;
 
-	if (strncmp(at, "Cookie", length) == 0) {
+	if (strncmp(at, "Cookie:", length) == 0) {
 		req->next_header = HEADER_COOKIE;
+	} else if (strncmp(at, "X-DTLS-Master-Secret:", length) == 0) {
+		req->next_header = HEADER_MASTER_SECRET;
 	} else {
 		req->next_header = 0;
 	}
@@ -136,6 +147,19 @@ size_t nlen;
 
 	if (length > 0)
 		switch (req->next_header) {
+			case HEADER_MASTER_SECRET:
+				if (length < TLS_MASTER_SIZE*2) {
+					req->master_secret_set = 0;
+					return 0;
+				}
+				
+				length = TLS_MASTER_SIZE*2;
+
+				nlen = sizeof(req->master_secret);
+
+				gnutls_hex2bin(at, length, req->master_secret, &nlen);
+				req->master_secret_set = 1;
+				break;
 			case HEADER_COOKIE:
 				p = memmem(at, length, "webvpn=", 7);
 				if (p == NULL || length <= 7) {
@@ -191,7 +215,97 @@ char* tmp = malloc(length+1);
 	return 0;
 }
 
-void vpn_server(struct worker_st* ws, struct tls_st *creds)
+#define GNUTLS_CIPHERSUITE "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION"
+#define OPENSSL_CIPHERSUITE "AES128-SHA"
+
+static int setup_dtls_connection(struct worker_st *ws)
+{
+int ret, e;
+gnutls_session_t session;
+struct sockaddr_storage cli_addr;
+socklen_t cli_addr_size;
+uint8_t buffer[512];
+ssize_t buffer_size;
+gnutls_datum_t master = { ws->master_secret, sizeof(ws->master_secret) };
+gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
+
+	/* first receive from the correct client and connect socket */
+	cli_addr_size = sizeof(cli_addr);
+	ret = recvfrom(ws->udp_fd, buffer, sizeof(buffer), MSG_PEEK, (void*)&cli_addr, &cli_addr_size);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Error receiving in UDP socket");
+		return -1;
+	}
+		
+	buffer_size = ret;
+
+	if ( (ws->remote_addr_len == sizeof(struct sockaddr_in) && memcmp(SA_IN_P(&cli_addr), 
+		SA_IN_P(&ws->remote_addr), sizeof(struct in_addr)) == 0) ||
+		(ws->remote_addr_len == sizeof(struct sockaddr_in6) && memcmp(SA_IN6_P(&cli_addr), 
+		SA_IN6_P(&ws->remote_addr), sizeof(struct in6_addr)) == 0)) {
+
+		/* connect to host */
+		ret = connect(ws->udp_fd, (void*)&cli_addr, cli_addr_size);
+		if (ret < 0) {
+			e = errno;
+			oclog(ws, LOG_ERR, "Error connecting: %s", strerror(e));
+			return -1;
+		}
+	} else {
+		/* received packet from unknown host */
+
+		oclog(ws, LOG_ERR, "Received UDP packet from unexpected host; discarding it");
+		recv(ws->udp_fd, buffer, buffer_size, 0);
+
+		return 0;
+	}
+	
+	/* DTLS cookie verified.
+	 * Initialize session.
+	 */
+	ret = gnutls_init(&session, GNUTLS_SERVER|GNUTLS_DATAGRAM);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Could not initialize TLS session: %s", gnutls_strerror(ret));
+		return -1;
+	}
+
+	ret = gnutls_priority_set_direct(session, GNUTLS_CIPHERSUITE, NULL);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Could not set TLS priority: %s", gnutls_strerror(ret));
+		goto fail;
+	}
+
+	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
+		GNUTLS_DTLS0_9, GNUTLS_KX_RSA, GNUTLS_CIPHER_AES_128_CBC,
+		GNUTLS_MAC_SHA1, GNUTLS_COMP_NULL, &master, &sid);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Could not set TLS premaster: %s", gnutls_strerror(ret));
+		goto fail;
+	}
+	
+
+	ret =
+	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
+				   ws->creds->xcred);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Could not set TLS credentials: %s", gnutls_strerror(ret));
+		goto fail;
+	}
+
+	gnutls_transport_set_ptr(session, (gnutls_transport_ptr_t) (long)ws->udp_fd);
+	gnutls_session_set_ptr(session, ws);
+
+	ws->udp_state = UP_HANDSHAKE;
+
+	ws->dtls_session = session;
+
+	return 0;
+fail:
+	gnutls_deinit(session);
+	return -1;
+}
+
+void vpn_server(struct worker_st* ws)
 {
 	unsigned char buf[2048];
 	int ret;
@@ -218,12 +332,12 @@ void vpn_server(struct worker_st* ws, struct tls_st *creds)
 	ret = gnutls_init(&session, GNUTLS_SERVER);
 	GNUTLS_FATAL_ERR(ret);
 
-	ret = gnutls_priority_set(session, creds->cprio);
+	ret = gnutls_priority_set(session, ws->creds->cprio);
 	GNUTLS_FATAL_ERR(ret);
 
 	ret =
 	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
-				   creds->xcred);
+				   ws->creds->xcred);
 	GNUTLS_FATAL_ERR(ret);
 
 	gnutls_certificate_server_set_request(session, ws->config->cert_req);
@@ -249,7 +363,7 @@ void vpn_server(struct worker_st* ws, struct tls_st *creds)
 
 restart:
 	if (requests_left-- <= 0) {
-		oclog(ws, LOG_INFO, "Maximum number of HTTP requests reached."); 
+		oclog(ws, LOG_INFO, "Maximum number of HTTP requests reached"); 
 		exit(1);
 	}
 
@@ -448,7 +562,7 @@ struct ifreq ifr;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 	ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Cannot obtain MTU for %s. Assuming 1500.", vinfo->name);
+		oclog(ws, LOG_ERR, "Cannot obtain MTU for %s. Assuming 1500", vinfo->name);
 		vinfo->mtu = 1500;
 	} else {
 		vinfo->mtu = ifr.ifr_mtu;
@@ -460,19 +574,120 @@ fail:
 	return ret;
 }
 
+static int open_udp_port(worker_st *ws)
+{
+int s, e, ret;
+struct sockaddr_storage si;
+struct sockaddr_storage stcp;
+socklen_t len;
+int proto;
+
+	len = sizeof(stcp);
+	ret = getsockname(ws->conn_fd, (void*)&stcp, &len);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Error in getsockname: %s", strerror(e));
+		return -1;
+	}
+
+
+	proto = ((struct sockaddr*)&stcp)->sa_family;
+
+	s = socket(proto, SOCK_DGRAM, IPPROTO_UDP);
+	if (s == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Could not open a UDP socket: %s", strerror(e));
+		return -1;
+	}
+
+	/* listen on the same IP the client connected at */
+	memset(&si, 0, sizeof(si));
+	((struct sockaddr*)&stcp)->sa_family = proto;
+
+#if 0
+	if (proto == AF_INET) {
+		memcpy(SA_IN_P(&si), SA_IN_P(&stcp), len);
+	} else if (proto == AF_INET6) {
+		memcpy(SA_IN6_P(&si), SA_IN6_P(&stcp), len);
+	} else {
+		oclog(ws, LOG_ERR, "Unknown protocol family: %d", proto);
+		goto fail;
+	}
+#endif
+
+	/* make sure we don't fragment packets */
+#if defined(IP_DONTFRAG)
+	ret = 1;
+        if (setsockopt (s, IPPROTO_IP, IP_DONTFRAG,
+                          (const void *) &ret, sizeof (ret)) < 0)
+	if (ret < 0) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Error in setsockopt (IP_DF): %s", strerror(e));
+		goto fail;
+	}
+#elif defined(IP_MTU_DISCOVER)
+	ret = IP_PMTUDISC_DO;
+	if (setsockopt (s, IPPROTO_IP, IP_MTU_DISCOVER,
+                          (const void *) &ret, sizeof (ret)) < 0)
+	if (ret < 0) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Error in setsockopt (IP_MTU_DISCOVER): %s", strerror(e));
+		goto fail;
+	}
+#endif
+#ifdef SO_REUSEPORT
+	ret = 1;
+	ret = setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &ret, sizeof(ret));
+	if (ret < 0) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Error in setsockopt (SO_REUSEPORT): %s", strerror(e));
+		goto fail;
+	}
+#endif
+	ret = bind(s, (void*)&si, len);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Could not bind on a UDP port: %s", strerror(e));
+		goto fail;
+	}
+
+	len = sizeof(si);
+	ret = getsockname(s, (void*)&si, &len);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "Could not obtain UDP port number: %s", strerror(e));
+		goto fail;
+	}
+
+	if (proto == AF_INET) {
+		ws->udp_port = ntohs(SA_IN_PORT(&si));
+	} else {
+		ws->udp_port = ntohs(SA_IN6_PORT(&si));
+	}
+
+	ws->udp_fd = s;
+	
+	return 0;
+fail:
+	close(s);
+	return -1;
+}
+
+
 static int connect_handler(worker_st *ws)
 {
 int ret;
 struct req_data_st *req = ws->parser->data;
-char buf[256];
 fd_set rfds;
-int l, pktlen, e;
-int tls_fd, max;
+int l, e;
+int max;
 unsigned i;
 struct vpn_st vinfo;
-char* buffer;
+uint8_t buffer[1024];
 unsigned int buffer_size;
-int tls_pending;
+char *p;
+unsigned tls_pending, dtls_pending = 0;
+time_t udp_recv_time = 0;
 
 	if (req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "Connect request without authentication");
@@ -505,23 +720,16 @@ int tls_pending;
 	}
 	
 	if (ws->config->network.name == NULL) {
-		oclog(ws, LOG_ERR, "No networks are configured. Rejecting client.");
+		oclog(ws, LOG_ERR, "No networks are configured. Rejecting client");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
 
-	buffer_size = 2048;
-	buffer = malloc(buffer_size);
-	if (buffer == NULL) {
-		oclog(ws, LOG_ERR, "Memory error. Rejecting client.");
-		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		return -1;
-	}
-
-	ret = get_rt_vpn_info(ws, &vinfo, buffer, buffer_size);
+	buffer_size = sizeof(buffer);
+	ret = get_rt_vpn_info(ws, &vinfo, (char*)buffer, buffer_size);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Network interfaces are not configured. Rejecting client.");
+		oclog(ws, LOG_ERR, "Network interfaces are not configured. Rejecting client");
 
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
@@ -533,6 +741,18 @@ int tls_pending;
 	oclog(ws, LOG_DEBUG, "sending mtu %d", vinfo.mtu);
 	tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
 	tls_puts(ws->session, "X-CSTP-DPD: 60\r\n");
+
+	ws->udp_state = UP_DISABLED;
+	if (req->master_secret_set != 0) {
+		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
+
+		ret = open_udp_port(ws);
+		if (ret < 0) {
+			oclog(ws, LOG_NOTICE, "Could not open UDP port");
+		} else
+			ws->udp_state = UP_SETUP;
+	}
+	
 
 	if (vinfo.ipv4) {
 		oclog(ws, LOG_DEBUG, "sending IPv4 %s", vinfo.ipv4);
@@ -553,35 +773,140 @@ int tls_pending;
 		if (vinfo.ipv6_dns)
 			tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
 	}
-	
+
 	for (i=0;i<vinfo.routes_size;i++) {
 		oclog(ws, LOG_DEBUG, "adding route %s", vinfo.routes[i]);
 		tls_printf(ws->session,
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
 	}
+	tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);
+
+	if (ws->udp_state != UP_DISABLED) {
+		p = (char*)buffer;
+		for (i=0;i<sizeof(ws->session_id);i++) {
+			sprintf(p, "%.2x", (unsigned int)ws->session_id[i]);
+			p+=2;
+		}
+		tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
+
+		p = (char*)buffer;
+		for (i=0;i<sizeof(ws->master_secret);i++) {
+			sprintf(p, "%.2x", (unsigned int)ws->master_secret[i]);
+			p+=2;
+		}
+fprintf(stderr, "X-DTLS-Master-Secret: %s\n", buffer);
+
+//		tls_printf(ws->session, "X-DTLS-Master-Secret: %s\r\n", buffer);
+
+		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->udp_port);
+		tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
+		tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
+		tls_puts(ws->session, "X-DTLS-CipherSuite: "OPENSSL_CIPHERSUITE"\r\n");
+	}
+
 	tls_puts(ws->session, "X-CSTP-Banner: Hello there\r\n");
 	tls_puts(ws->session, "\r\n");
 	
-	free(buffer);
-	buffer = NULL;
-
-	tls_fd = (long)gnutls_transport_get_ptr(ws->session);
-
 	for(;;) {
-		tls_pending = 0;
 		FD_ZERO(&rfds);
 		
-		FD_SET(tls_fd, &rfds);
+		FD_SET(ws->conn_fd, &rfds);
 		FD_SET(ws->cmd_fd, &rfds);
 		FD_SET(ws->tun_fd, &rfds);
-		max = MAX(ws->cmd_fd,tls_fd);
+		max = MAX(ws->cmd_fd,ws->conn_fd);
 		max = MAX(max,ws->tun_fd);
 
+		if (ws->udp_state != UP_DISABLED) {
+			FD_SET(ws->udp_fd, &rfds);
+			max = MAX(max,ws->udp_fd);
+		}
+
 		tls_pending = gnutls_record_check_pending(ws->session);
-		if (tls_pending == 0) {
+		
+		if (ws->dtls_session != NULL)
+			dtls_pending = gnutls_record_check_pending(ws->dtls_session);
+		if (tls_pending == 0 && dtls_pending == 0) {
 			ret = select(max + 1, &rfds, NULL, NULL, NULL);
 			if (ret <= 0)
 				break;
+		}
+
+		if (FD_ISSET(ws->tun_fd, &rfds)) {
+			l = read(ws->tun_fd, buffer + 8, sizeof(buffer) - 8);
+			if (l <= 0) {
+				e = errno;
+				oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
+				exit(1);
+			}
+			buffer[0] = 'S';
+			buffer[1] = 'T';
+			buffer[2] = 'F';
+			buffer[3] = 1;
+			buffer[4] = l >> 8;
+			buffer[5] = l & 0xff;
+			buffer[6] = 0;
+			buffer[7] = 0;
+
+			if (ws->udp_state == UP_ACTIVE)
+				ret = tls_send(ws->dtls_session, buffer, l + 8);
+			else
+				ret = tls_send(ws->session, buffer, l + 8);
+			GNUTLS_FATAL_ERR(ret);
+		}
+
+		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
+			ret = tls_recv(ws->session, buffer, sizeof(buffer));
+			GNUTLS_FATAL_ERR(ret);
+			
+			ret = parse_cstp_data(ws, buffer, ret);
+			if (ret < 0) {
+				exit(1);
+			}
+			
+			if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
+				/* client switched to TLS for some reason */
+				if (time(0) - udp_recv_time > UDP_SWITCH_TIME)
+					ws->udp_state = UP_INACTIVE;
+			}
+		}
+
+		if (ws->udp_state != UP_DISABLED && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
+		
+			switch (ws->udp_state) {
+				case UP_ACTIVE:
+				case UP_INACTIVE:
+					ret = tls_recv(ws->dtls_session, buffer, sizeof(buffer));
+					GNUTLS_FATAL_ERR(ret);
+				
+					ws->udp_state = UP_ACTIVE;
+
+					ret = parse_cstp_data(ws, buffer, ret);
+					if (ret < 0)
+						exit(1);
+					
+					udp_recv_time = time(0);
+					break;
+				case UP_SETUP:
+					ret = setup_dtls_connection(ws);
+					if (ret < 0)
+						exit(1);
+					break;
+				case UP_HANDSHAKE:
+					ret = gnutls_handshake(ws->dtls_session);
+					
+					if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
+						oclog(ws, LOG_ERR, "Error in DTLS handshake: %s\n", gnutls_strerror(ret));
+						ws->udp_state = UP_DISABLED;
+						break;
+					}
+					
+					if (ret == 0)
+						ws->udp_state = UP_ACTIVE;
+					
+					break;
+				default:
+					break;
+			}
 		}
 
 		if (FD_ISSET(ws->cmd_fd, &rfds)) {
@@ -590,79 +915,6 @@ int tls_pending;
 				exit(1);
 			}
 		}
-
-		if (FD_ISSET(ws->tun_fd, &rfds)) {
-			l = read(ws->tun_fd, buf + 8, sizeof(buf) - 8);
-			if (l <= 0) {
-				e = errno;
-				oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
-				exit(1);
-			}
-			buf[0] = 'S';
-			buf[1] = 'T';
-			buf[2] = 'F';
-			buf[3] = 1;
-			buf[4] = l >> 8;
-			buf[5] = l & 0xff;
-			buf[6] = 0;
-			buf[7] = 0;
-
-			ret = tls_send(ws->session, buf, l + 8);
-			GNUTLS_FATAL_ERR(ret);
-		}
-
-		if (FD_ISSET(tls_fd, &rfds) || tls_pending != 0) {
-			l = tls_recv(ws->session, buf, sizeof(buf));
-			GNUTLS_FATAL_ERR(l);
-
-			if (l < 8) {
-				oclog(ws, LOG_INFO,
-				       "Can't read CSTP header\n");
-				exit(1);
-			}
-			if (buf[0] != 'S' || buf[1] != 'T' ||
-			    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
-				oclog(ws, LOG_INFO,
-				       "Can't recognise CSTP header\n");
-				exit(1);
-			}
-			pktlen = (buf[4] << 8) + buf[5];
-			if (l != 8 + pktlen) {
-				oclog(ws, LOG_INFO, "Unexpected length\n");
-				exit(1);
-			}
-			switch (buf[6]) {
-			case AC_PKT_DPD_RESP:
-			case AC_PKT_KEEPALIVE:
-				break;
-
-			case AC_PKT_DPD_OUT:
-				ret =
-				    tls_send(ws->session, "STF\x1\x0\x0\x4\x0",
-					     8);
-				GNUTLS_FATAL_ERR(ret);
-				break;
-
-			case AC_PKT_DISCONN:
-				oclog(ws, LOG_INFO, "Received BYE packet\n");
-				break;
-
-			case AC_PKT_DATA:
-				l = write(ws->tun_fd, buf + 8, pktlen);
-				if (l == -1) {
-					e = errno;
-					oclog(ws, LOG_ERR, "Could not write data to tun: %s", strerror(e));
-					exit(1);
-				}
-
-				if (l != pktlen) {
-					oclog(ws, LOG_ERR, "Could not write all data to tun");
-					exit(1);
-				}
-				break;
-			}
-		}
-
 
 
 	}
@@ -696,7 +948,7 @@ int handle_worker_commands(struct worker_st *ws)
 	
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret == -1) {
-		oclog(ws, LOG_ERR, "Cannot obtain data from command socket.");
+		oclog(ws, LOG_ERR, "Cannot obtain data from command socket");
 		exit(1);
 	}
 
@@ -710,9 +962,61 @@ int handle_worker_commands(struct worker_st *ws)
 		case CMD_TERMINATE:
 			exit(0);
 		default:
-			oclog(ws, LOG_ERR, "Unknown CMD 0x%x.", (unsigned)cmd);
+			oclog(ws, LOG_ERR, "Unknown CMD 0x%x", (unsigned)cmd);
 			exit(1);
 	}
 	
 	return 0;
+}
+
+static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size)
+{
+int pktlen, ret, e;
+
+	if (buf_size < 8) {
+		oclog(ws, LOG_INFO, "Can't read CSTP header\n");
+		return -1;
+	}
+
+	if (buf[0] != 'S' || buf[1] != 'T' ||
+	    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
+		oclog(ws, LOG_INFO, "Can't recognise CSTP header\n");
+		return -1;
+	}
+
+	pktlen = (buf[4] << 8) + buf[5];
+	if (buf_size != 8 + pktlen) {
+		oclog(ws, LOG_INFO, "Unexpected length\n");
+		return -1;
+	}
+
+	switch (buf[6]) {
+		case AC_PKT_DPD_RESP:
+		case AC_PKT_KEEPALIVE:
+			break;
+
+		case AC_PKT_DPD_OUT:
+			ret =
+			    tls_send(ws->session, "STF\x1\x0\x0\x4\x0", 8);
+			GNUTLS_FATAL_ERR(ret);
+			break;
+		case AC_PKT_DISCONN:
+			oclog(ws, LOG_INFO, "Received BYE packet\n");
+			break;
+		case AC_PKT_DATA:
+			ret = write(ws->tun_fd, buf + 8, pktlen);
+			if (ret == -1) {
+				e = errno;
+				oclog(ws, LOG_ERR, "Could not write data to tun: %s", strerror(e));
+				return -1;
+			}
+
+			if (ret != pktlen) {
+				oclog(ws, LOG_ERR, "Could not write all data to tun");
+				exit(1);
+			}
+			break;
+	}
+	
+	return buf[6];
 }

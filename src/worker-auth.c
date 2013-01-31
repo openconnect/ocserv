@@ -193,6 +193,8 @@ static int recv_auth_reply(worker_st *ws)
 				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
 				memcpy(ws->username, resp.user, sizeof(ws->username));
 				memcpy(ws->cookie, resp.cookie, sizeof(ws->cookie));
+				memcpy(ws->master_secret, resp.master_secret, sizeof(ws->master_secret));
+				memcpy(ws->session_id, resp.session_id, sizeof(ws->session_id));
 				ws->auth_ok = 1;
 			} else
 				return -1;
@@ -386,7 +388,6 @@ int post_new_auth_handler(worker_st *ws)
 int ret;
 struct req_data_st *req = ws->parser->data;
 const char* reason = "Authentication failed";
-unsigned char cookie[COOKIE_SIZE];
 char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
 char * password = NULL;
@@ -447,13 +448,9 @@ struct cmd_auth_req_st areq;
 
 	oclog(ws, LOG_INFO, "User '%s' logged in\n", ws->username);
 
-	/* generate cookie */
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, sizeof(cookie));
-	GNUTLS_FATAL_ERR(ret);
-	
 	p = str_cookie;
-	for (i=0;i<sizeof(cookie);i++) {
-		sprintf(p, "%.2x", (unsigned int)cookie[i]);
+	for (i=0;i<sizeof(ws->cookie);i++) {
+		sprintf(p, "%.2x", (unsigned int)ws->cookie[i]);
 		p+=2;
 	}
 

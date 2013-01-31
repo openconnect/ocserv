@@ -44,7 +44,7 @@
 
 static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct lease_st* lease)
 {
-	struct iovec iov[4];
+	struct iovec iov[6];
 	uint8_t cmd[2];
 	struct msghdr hdr;
 	union {
@@ -70,12 +70,20 @@ static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct
 		iov[1].iov_len = sizeof(proc->cookie);
 		hdr.msg_iovlen++;
 
-		iov[2].iov_base = lease->name;
-		iov[2].iov_len = sizeof(lease->name);
+		iov[2].iov_base = proc->master_secret;
+		iov[2].iov_len = sizeof(proc->master_secret);
 		hdr.msg_iovlen++;
 
-		iov[3].iov_base = proc->username;
-		iov[3].iov_len = MAX_USERNAME_SIZE;
+		iov[3].iov_base = proc->session_id;
+		iov[3].iov_len = sizeof(proc->session_id);
+		hdr.msg_iovlen++;
+
+		iov[4].iov_base = lease->name;
+		iov[4].iov_len = sizeof(lease->name);
+		hdr.msg_iovlen++;
+
+		iov[5].iov_base = proc->username;
+		iov[5].iov_len = MAX_USERNAME_SIZE;
 		hdr.msg_iovlen++;
 
 		/* Send the tun fd */
@@ -94,7 +102,7 @@ static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct
 
 static int handle_auth_cookie_req(const struct cfg_st *config, struct tun_st *tun,
   			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease,
-  			   char username[MAX_USERNAME_SIZE])
+  			   struct proc_list_st* proc)
 {
 int ret;
 struct stored_cookie_st sc;
@@ -106,7 +114,10 @@ struct stored_cookie_st sc;
 	
 	ret = 0; /* cookie was found and valid */
 	
-	memcpy(username, sc.username, MAX_USERNAME_SIZE);
+	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
+	memcpy(proc->username, sc.username, sizeof(proc->username));
+	memcpy(proc->master_secret, sc.master_secret, sizeof(proc->master_secret));
+	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	
 	ret = open_tun(config, tun, lease);
 	if (ret < 0)
@@ -116,19 +127,29 @@ struct stored_cookie_st sc;
 }
 
 static
-int generate_and_store_cookie(const struct cfg_st* config, uint8_t *cookie, unsigned cookie_size)
+int generate_and_store_vals(const struct cfg_st* config, struct proc_list_st* proc)
 {
 int ret;
 struct stored_cookie_st sc;
 
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie, cookie_size);
+	ret = gnutls_rnd(GNUTLS_RND_RANDOM, proc->cookie, sizeof(proc->cookie));
+	if (ret < 0)
+		return -2;
+	ret = gnutls_rnd(GNUTLS_RND_RANDOM, proc->master_secret, sizeof(proc->master_secret));
+	if (ret < 0)
+		return -2;
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
 	if (ret < 0)
 		return -2;
 	
 	memset(&sc, 0, sizeof(sc));
 	sc.expiration = time(0) + config->cookie_validity;
 	
-	ret = store_cookie(config, cookie, cookie_size, &sc);
+	memcpy(sc.username, proc->username, sizeof(sc.username));
+	memcpy(sc.master_secret, proc->master_secret, sizeof(sc.master_secret));
+	memcpy(sc.session_id, proc->session_id, sizeof(sc.session_id));
+	
+	ret = store_cookie(config, proc->cookie, sizeof(proc->cookie), &sc);
 	if (ret < 0)
 		return -1;
 	
@@ -233,20 +254,15 @@ int handle_commands(const struct cfg_st *config, struct tun_st *tun,
 					return -2;
 				}
 
-				ret = handle_auth_cookie_req(config, tun, &cmd_data.cauth, &lease, proc->username);
+				ret = handle_auth_cookie_req(config, tun, &cmd_data.cauth, &lease, proc);
 			}
 
 			if (ret == 0) {
 				if (cmd == AUTH_REQ) {
 					/* generate and store cookie */
-					ret = generate_and_store_cookie(config, 
-									proc->cookie, 
-									COOKIE_SIZE);
+					ret = generate_and_store_vals(config, proc);
 					if (ret < 0)
 						return -2;
-				} else { /* copy cookie */
-					memcpy(proc->cookie, cmd_data.cauth.cookie, 
-						COOKIE_SIZE);
 				}
 
 				syslog(LOG_INFO, "User '%s' authenticated", proc->username);

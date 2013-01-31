@@ -323,7 +323,7 @@ static void handle_term(int signo)
 
 int main(int argc, char** argv)
 {
-	int fd, pid;
+	int fd, pid, e;
 	struct tls_st creds;
 	struct listen_list_st llist;
 	struct proc_list_st clist;
@@ -430,6 +430,12 @@ int main(int argc, char** argv)
 	syslog_open = 1;
 
 	for (;;) {
+		if (terminate != 0) {
+			kill_children(&clist);
+			sleep(1);
+			exit(0);
+		}
+
 		FD_ZERO(&rd);
 
 		list_for_each(pos, &llist.list) {
@@ -461,11 +467,11 @@ int main(int argc, char** argv)
 			continue;
 
 		if (ret < 0) {
+			e = errno;
 			syslog(LOG_ERR, "Error in select(): %s",
-			       strerror(errno));
+			       strerror(e));
 			exit(1);
 		}
-		
 
 		/* Check for new connections to accept */
 		list_for_each(pos, &llist.list) {
@@ -504,8 +510,9 @@ int main(int argc, char** argv)
 					ws.cmd_fd = cmd_fd[1];
 					ws.tun_fd = -1;
 					ws.conn_fd = fd;
+					ws.creds = &creds;
 
-					vpn_server(&ws, &creds);
+					vpn_server(&ws);
 					exit(0);
 				} else if (pid == -1) {
 fork_failed:
@@ -559,12 +566,6 @@ fork_failed:
 				expire_cookies(&config);
 				exit(0);
 			}
-		}
-
-		if (terminate != 0) {
-			kill_children(&clist);
-			sleep(1);
-			exit(0);
 		}
 	}
 

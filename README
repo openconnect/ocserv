@@ -3,3 +3,6 @@ To build from the git repository use:
 $ autoreconf -fvi
 $ ./configure && make
 
+To run the server edit the src/sample.config and then run:
+# src/ocserv -f -c src/sample.config
+

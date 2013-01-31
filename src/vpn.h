@@ -59,6 +59,7 @@ struct cfg_st {
 	unsigned keepalive;
 	const char *db_file;
 	unsigned foreground;
+	unsigned max_clients;
 
 	uid_t uid;
 	gid_t gid;

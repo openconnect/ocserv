@@ -315,6 +315,19 @@ static void kill_children(struct proc_list_st* clist)
 	}
 }
 
+static void remove_proc(struct proc_list_st *ctmp)
+{
+	/* close the intercomm fd */
+	if (ctmp->fd >= 0)
+		close(ctmp->fd);
+	ctmp->fd = -1;
+
+	ctmp->pid = -1;
+	if (ctmp->lease)
+		ctmp->lease->in_use = 0;
+	list_del(&ctmp->list);
+}
+
 static void handle_term(int signo)
 {
 	/* kill all children */
@@ -338,6 +351,7 @@ int main(int argc, char** argv)
 	int cmd_fd[2];
 	struct worker_st ws;
 	struct cfg_st config;
+	unsigned active_clients = 0;
 	
 	INIT_LIST_HEAD(&clist.list);
 	tun_st_init(&tun);
@@ -461,7 +475,7 @@ int main(int argc, char** argv)
 		}
 
 		tv.tv_usec = 0;
-		tv.tv_sec = 5;
+		tv.tv_sec = 10;
 		ret = select(n + 1, &rd, NULL, NULL, &tv);
 		if (ret == -1 && errno == EINTR)
 			continue;
@@ -485,12 +499,19 @@ int main(int argc, char** argv)
 					       strerror(errno));
 					continue;
 				}
+				
+				if (config.max_clients > 0 && active_clients > config.max_clients) {
+					close(fd);
+					syslog(LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
+					break;
+				}
 
 				/* Create a command socket */
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
 				if (ret < 0) {
 					syslog(LOG_ERR, "Error creating command socket");
-					exit(1);
+					close(fd);
+					break;
 				}
 
 				pid = fork();
@@ -529,6 +550,7 @@ fork_failed:
 					ctmp->pid = pid;
 					ctmp->fd = cmd_fd[0];
 					list_add(&(ctmp->list), &(clist.list));
+					active_clients++;
 				}
 				close(cmd_fd[1]);
 				close(fd);
@@ -542,15 +564,12 @@ fork_failed:
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&config, &tun, ctmp);
 				if (ret < 0) {
-					if (ctmp->fd >= 0)
-						close(ctmp->fd);
-					ctmp->fd = -1;
-
-					if (ret == -2) kill(ctmp->pid, SIGTERM);
-					ctmp->pid = -1;
-					if (ctmp->lease)
-						ctmp->lease->in_use = 0;
-					list_del(&ctmp->list);
+					if (ret == -2) {
+						/* received a bad command from worker */
+						kill(ctmp->pid, SIGTERM);
+					}
+					remove_proc(ctmp);
+					active_clients--;
 				}
 			}
 		}

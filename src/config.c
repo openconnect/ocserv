@@ -182,6 +182,9 @@ static void check_cfg( struct cfg_st *config)
 	
 	if (config->keepalive == 0)
 		config->keepalive = 30;
+	
+	if (config->priorities == NULL)
+		config->priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT";
 }
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config)

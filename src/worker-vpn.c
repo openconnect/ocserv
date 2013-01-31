@@ -602,18 +602,16 @@ int proto;
 
 	/* listen on the same IP the client connected at */
 	memset(&si, 0, sizeof(si));
-	((struct sockaddr*)&stcp)->sa_family = proto;
+	((struct sockaddr*)&si)->sa_family = proto;
 
-#if 0
 	if (proto == AF_INET) {
-		memcpy(SA_IN_P(&si), SA_IN_P(&stcp), len);
+		memcpy(SA_IN_P(&si), SA_IN_P(&stcp), sizeof(*SA_IN_P(&si)));
 	} else if (proto == AF_INET6) {
-		memcpy(SA_IN6_P(&si), SA_IN6_P(&stcp), len);
+		memcpy(SA_IN6_P(&si), SA_IN6_P(&stcp), sizeof(*SA_IN6_P(&si)));
 	} else {
 		oclog(ws, LOG_ERR, "Unknown protocol family: %d", proto);
 		goto fail;
 	}
-#endif
 
 	/* make sure we don't fragment packets */
 #if defined(IP_DONTFRAG)
@@ -788,15 +786,6 @@ time_t udp_recv_time = 0;
 			p+=2;
 		}
 		tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
-
-		p = (char*)buffer;
-		for (i=0;i<sizeof(ws->master_secret);i++) {
-			sprintf(p, "%.2x", (unsigned int)ws->master_secret[i]);
-			p+=2;
-		}
-fprintf(stderr, "X-DTLS-Master-Secret: %s\n", buffer);
-
-//		tls_printf(ws->session, "X-DTLS-Master-Secret: %s\r\n", buffer);
 
 		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->udp_port);
 		tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");

@@ -19,3 +19,5 @@ gl/warn-on-use.h
 gl/c++defs.h
 src/ocserv.1
 libopts/libopts.a
+gl/time.h
+gl/sys/time.h

@@ -193,7 +193,6 @@ static int recv_auth_reply(worker_st *ws)
 				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
 				memcpy(ws->username, resp.user, sizeof(ws->username));
 				memcpy(ws->cookie, resp.cookie, sizeof(ws->cookie));
-				memcpy(ws->master_secret, resp.master_secret, sizeof(ws->master_secret));
 				memcpy(ws->session_id, resp.session_id, sizeof(ws->session_id));
 				ws->auth_ok = 1;
 			} else

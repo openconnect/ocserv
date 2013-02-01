@@ -152,7 +152,6 @@ struct proc_list_st {
 	socklen_t remote_addr_len;
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associate with the session */
-	uint8_t master_secret[TLS_MASTER_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	
 	/* the tun lease this process has */

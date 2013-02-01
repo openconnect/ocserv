@@ -70,20 +70,16 @@ static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct
 		iov[1].iov_len = sizeof(proc->cookie);
 		hdr.msg_iovlen++;
 
-		iov[2].iov_base = proc->master_secret;
-		iov[2].iov_len = sizeof(proc->master_secret);
+		iov[2].iov_base = proc->session_id;
+		iov[2].iov_len = sizeof(proc->session_id);
 		hdr.msg_iovlen++;
 
-		iov[3].iov_base = proc->session_id;
-		iov[3].iov_len = sizeof(proc->session_id);
+		iov[3].iov_base = lease->name;
+		iov[3].iov_len = sizeof(lease->name);
 		hdr.msg_iovlen++;
 
-		iov[4].iov_base = lease->name;
-		iov[4].iov_len = sizeof(lease->name);
-		hdr.msg_iovlen++;
-
-		iov[5].iov_base = proc->username;
-		iov[5].iov_len = MAX_USERNAME_SIZE;
+		iov[4].iov_base = proc->username;
+		iov[4].iov_len = MAX_USERNAME_SIZE;
 		hdr.msg_iovlen++;
 
 		/* Send the tun fd */
@@ -116,7 +112,6 @@ struct stored_cookie_st sc;
 	
 	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
 	memcpy(proc->username, sc.username, sizeof(proc->username));
-	memcpy(proc->master_secret, sc.master_secret, sizeof(proc->master_secret));
 	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	
 	ret = open_tun(config, tun, lease);
@@ -135,9 +130,6 @@ struct stored_cookie_st sc;
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, proc->cookie, sizeof(proc->cookie));
 	if (ret < 0)
 		return -2;
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, proc->master_secret, sizeof(proc->master_secret));
-	if (ret < 0)
-		return -2;
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
 	if (ret < 0)
 		return -2;
@@ -146,7 +138,6 @@ struct stored_cookie_st sc;
 	sc.expiration = time(0) + config->cookie_validity;
 	
 	memcpy(sc.username, proc->username, sizeof(sc.username));
-	memcpy(sc.master_secret, proc->master_secret, sizeof(sc.master_secret));
 	memcpy(sc.session_id, proc->session_id, sizeof(sc.session_id));
 	
 	ret = store_cookie(config, proc->cookie, sizeof(proc->cookie), &sc);

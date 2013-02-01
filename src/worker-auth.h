@@ -42,7 +42,6 @@ struct __attribute__ ((__packed__)) cmd_auth_req_st {
 struct __attribute__ ((__packed__)) cmd_auth_reply_st {
 	uint8_t reply;
 	uint8_t cookie[COOKIE_SIZE];
-	uint8_t master_secret[TLS_MASTER_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	char vname[IFNAMSIZ]; /* interface name */
 	char user[MAX_USERNAME_SIZE];

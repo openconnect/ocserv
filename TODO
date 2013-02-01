@@ -1,7 +1,9 @@
 * Add a simple username/password back-end
 * Add path MTU discovery
-* Handle multiple clients in a single tun device (check if needed at all)
 * Run a server up/down script
 * Keep the TLS key and certificates into the privileged process and use IPC
   for operations (this will make the privileged process a bottleneck).
 * session resumption in main TLS
+  - session db should be kept on main thread and resumption should be
+    allowed only when it is requested from the same IP as the original
+* Handle multiple clients in a single tun device (check if needed at all)

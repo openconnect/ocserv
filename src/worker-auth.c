@@ -77,20 +77,24 @@ int ret;
 
 	ret = gnutls_x509_crt_init(&crt);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "certificate init error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
 	ret = gnutls_x509_crt_import(crt, raw, GNUTLS_X509_FMT_DER);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "certificate import error: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
-	ret = gnutls_x509_crt_get_dn_by_oid (crt, ws->config->cert_user_oid, 
-						0, 0, username, &username_size);
+	if (ws->config->cert_user_oid) { /* otherwise certificate username is ignored */
+		ret = gnutls_x509_crt_get_dn_by_oid (crt, ws->config->cert_user_oid, 
+							0, 0, username, &username_size);
+	} else {
+		ret = gnutls_x509_crt_get_dn (crt, username, &username_size);
+	}
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "certificate error: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "certificate error in DN: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
@@ -221,12 +225,10 @@ int ret;
 		return -1;
 	}
 		
-	if (ws->config->cert_user_oid) { /* otherwise certificate username is ignored */
-		ret = get_cert_username(ws, cert, user, user_size);
-		if (ret < 0) {
-			oclog(ws, LOG_ERR, "Cannot get username (%s) from certificate", ws->config->cert_user_oid);
-			return -1;
-		}
+	ret = get_cert_username(ws, cert, user, user_size);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Cannot get username (%s) from certificate", ws->config->cert_user_oid);
+		return -1;
 	}
 
 	return 0;

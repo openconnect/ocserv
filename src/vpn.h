@@ -105,6 +105,7 @@ typedef struct worker_st {
 	int udp_fd;
 	udp_port_state_t udp_state;
 	unsigned int udp_port;
+	int udp_port_proto;
 
 	/* the following are set only if authentication is complete */
 	char tun_name[IFNAMSIZ];

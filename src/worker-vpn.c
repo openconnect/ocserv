@@ -590,7 +590,6 @@ int proto;
 		return -1;
 	}
 
-
 	proto = ((struct sockaddr*)&stcp)->sa_family;
 
 	s = socket(proto, SOCK_DGRAM, IPPROTO_UDP);
@@ -662,6 +661,7 @@ int proto;
 	} else {
 		ws->udp_port = ntohs(SA_IN6_PORT(&si));
 	}
+	ws->udp_port_proto = proto;
 
 	ws->udp_fd = s;
 	
@@ -671,6 +671,27 @@ fail:
 	return -1;
 }
 
+static ssize_t sock_send(int sockfd, const void *buf, size_t len)
+{
+int left = len;
+int ret;
+const uint8_t * p = buf;
+
+	while(left > 0) {
+		ret = send(sockfd, p, left, 0);
+		if (ret == -1) {
+			if (errno != EAGAIN && errno != EINTR)
+				return ret;
+		}
+		
+		if (ret > 0) {
+			left -= ret;
+			p += ret;
+		}
+	}
+	
+	return len;
+}
 
 static int connect_handler(worker_st *ws)
 {
@@ -681,11 +702,13 @@ int l, e;
 int max;
 unsigned i;
 struct vpn_st vinfo;
-uint8_t buffer[1024];
+uint8_t buffer[16*1024];
 unsigned int buffer_size;
 char *p;
 unsigned tls_pending, dtls_pending = 0;
 time_t udp_recv_time = 0;
+unsigned mtu_overhead, effective_mtu = 0;
+gnutls_session_t ts;
 
 	if (req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "Connect request without authentication");
@@ -796,6 +819,11 @@ time_t udp_recv_time = 0;
 	tls_puts(ws->session, "X-CSTP-Banner: Hello there\r\n");
 	tls_puts(ws->session, "\r\n");
 	
+	if (ws->udp_port_proto == AF_INET)
+		mtu_overhead = 20+8;
+	else
+		mtu_overhead = 40+8;
+	
 	for(;;) {
 		FD_ZERO(&rfds);
 		
@@ -819,14 +847,27 @@ time_t udp_recv_time = 0;
 			if (ret <= 0)
 				break;
 		}
-
+		
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
-			l = read(ws->tun_fd, buffer + 8, sizeof(buffer) - 8);
-			if (l <= 0) {
-				e = errno;
-				oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
-				exit(1);
+			if (ws->udp_state == UP_ACTIVE) {
+				l = effective_mtu;
+				ts = ws->dtls_session;
+			} else {
+				l = sizeof(buffer);
+				ts = ws->session;
 			}
+				
+			l = recv(ws->tun_fd, buffer + 8, l - 8, 0);
+			if (l < 0) {
+				e = errno;
+				
+				if (e != EAGAIN && e != EINTR) {
+					oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
+					exit(1);
+				}
+				continue;
+			}
+
 			buffer[0] = 'S';
 			buffer[1] = 'T';
 			buffer[2] = 'F';
@@ -836,11 +877,18 @@ time_t udp_recv_time = 0;
 			buffer[6] = 0;
 			buffer[7] = 0;
 
-			if (ws->udp_state == UP_ACTIVE)
-				ret = tls_send(ws->dtls_session, buffer, l + 8);
-			else
-				ret = tls_send(ws->session, buffer, l + 8);
+			ret = tls_send(ts, buffer, l + 8);
 			GNUTLS_FATAL_ERR(ret);
+			
+			if (ret == GNUTLS_E_LARGE_PACKET) {
+				/* XXX: we have to do something better than that.
+				 * adjust mtu */
+				if (effective_mtu > 100)
+					effective_mtu -= 32;
+
+				ret = tls_send(ws->session, buffer, l + 8);
+				GNUTLS_FATAL_ERR(ret);
+			}
 		}
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
@@ -879,6 +927,8 @@ time_t udp_recv_time = 0;
 					ret = setup_dtls_connection(ws);
 					if (ret < 0)
 						exit(1);
+					
+					gnutls_dtls_set_mtu (ws->dtls_session, vinfo.mtu-mtu_overhead);
 					break;
 				case UP_HANDSHAKE:
 					ret = gnutls_handshake(ws->dtls_session);
@@ -889,8 +939,10 @@ time_t udp_recv_time = 0;
 						break;
 					}
 					
-					if (ret == 0)
+					if (ret == 0) {
 						ws->udp_state = UP_ACTIVE;
+						effective_mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
+					}
 					
 					break;
 				default:
@@ -993,17 +1045,13 @@ int pktlen, ret, e;
 			oclog(ws, LOG_INFO, "Received BYE packet\n");
 			break;
 		case AC_PKT_DATA:
-			ret = write(ws->tun_fd, buf + 8, pktlen);
+			ret = sock_send(ws->tun_fd, buf + 8, pktlen);
 			if (ret == -1) {
 				e = errno;
 				oclog(ws, LOG_ERR, "Could not write data to tun: %s", strerror(e));
 				return -1;
 			}
 
-			if (ret != pktlen) {
-				oclog(ws, LOG_ERR, "Could not write all data to tun");
-				exit(1);
-			}
 			break;
 	}
 	

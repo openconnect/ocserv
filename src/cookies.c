@@ -46,9 +46,9 @@ datum key;
 datum data;
 int ret;
 
-	dbf = gdbm_open((char*)config->db_file, 0, GDBM_WRCREAT, S_IRUSR|S_IWUSR, NULL);
+	dbf = gdbm_open((char*)config->cookie_db, 0, GDBM_WRCREAT, S_IRUSR|S_IWUSR, NULL);
 	if (dbf == NULL) {
-		syslog(LOG_ERR, "Cannot open cookie database: %s", config->db_file);
+		syslog(LOG_ERR, "Cannot open cookie database: %s", config->cookie_db);
 		return -1;
 	}
 
@@ -78,9 +78,9 @@ datum key;
 datum data;
 int ret;
 
-	dbf = gdbm_open((char*)config->db_file, 0, GDBM_READER, 0, NULL);
+	dbf = gdbm_open((char*)config->cookie_db, 0, GDBM_READER, 0, NULL);
 	if (dbf == NULL) {
-		syslog(LOG_ERR, "Cannot open cookie database: %s", config->db_file);
+		syslog(LOG_ERR, "Cannot open cookie database: %s", config->cookie_db);
 		return -1;
 	}
 
@@ -113,7 +113,7 @@ int deleted = 0;
 struct stored_cookie_st sc;
 time_t now = time(0);
 
-	dbf = gdbm_open((char*)cfg->db_file, 0, GDBM_WRITER, 0, NULL);
+	dbf = gdbm_open((char*)cfg->cookie_db, 0, GDBM_WRITER, 0, NULL);
 	if (dbf == NULL)
 		return;
 

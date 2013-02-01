@@ -57,7 +57,7 @@ struct cfg_st {
 	time_t cookie_validity;	/* in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;
-	const char *db_file;
+	const char *cookie_db;
 	unsigned foreground;
 	unsigned max_clients;
 

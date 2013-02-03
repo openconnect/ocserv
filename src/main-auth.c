@@ -34,15 +34,17 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
-#include <worker-auth.h>
+#include "ipc.h"
 
 #include <vpn.h>
 #include <cookies.h>
 #include <tun.h>
+#include <main.h>
 #include <list.h>
 #include "pam.h"
 
-static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct lease_st* lease)
+static int send_auth_reply(main_server_st* s, struct proc_list_st* proc,
+				cmd_auth_reply_t r, struct lease_st* lease)
 {
 	struct iovec iov[6];
 	uint8_t cmd[2];
@@ -96,14 +98,13 @@ static int send_auth_reply(cmd_auth_reply_t r, struct proc_list_st* proc, struct
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
-static int handle_auth_cookie_req(const struct cfg_st *config, struct tun_st *tun,
-  			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease,
-  			   struct proc_list_st* proc)
+static int handle_auth_cookie_req(main_server_st* s, struct proc_list_st* proc,
+  			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease)
 {
 int ret;
 struct stored_cookie_st sc;
 
-	ret = retrieve_cookie(config, req->cookie, sizeof(req->cookie), &sc);
+	ret = retrieve_cookie(s->config, req->cookie, sizeof(req->cookie), &sc);
 	if (ret < 0) {
 		return -1;
 	}
@@ -114,7 +115,7 @@ struct stored_cookie_st sc;
 	memcpy(proc->username, sc.username, sizeof(proc->username));
 	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	
-	ret = open_tun(config, tun, lease);
+	ret = open_tun(s->config, s->tun, lease);
 	if (ret < 0)
 		ret = -1; /* sorry */
 	
@@ -122,7 +123,7 @@ struct stored_cookie_st sc;
 }
 
 static
-int generate_and_store_vals(const struct cfg_st* config, struct proc_list_st* proc)
+int generate_and_store_vals(main_server_st *s, struct proc_list_st* proc)
 {
 int ret;
 struct stored_cookie_st sc;
@@ -135,51 +136,50 @@ struct stored_cookie_st sc;
 		return -2;
 	
 	memset(&sc, 0, sizeof(sc));
-	sc.expiration = time(0) + config->cookie_validity;
+	sc.expiration = time(0) + s->config->cookie_validity;
 	
 	memcpy(sc.username, proc->username, sizeof(sc.username));
 	memcpy(sc.session_id, proc->session_id, sizeof(sc.session_id));
 	
-	ret = store_cookie(config, proc->cookie, sizeof(proc->cookie), &sc);
+	ret = store_cookie(s->config, proc->cookie, sizeof(proc->cookie), &sc);
 	if (ret < 0)
 		return -1;
 	
 	return 0;
 }
 
-static int handle_auth_req(const struct cfg_st *config, struct tun_st *tun,
-  			   const struct cmd_auth_req_st * req, struct lease_st **lease,
-  			   char username[MAX_USERNAME_SIZE])
+static int handle_auth_req(main_server_st *s, struct proc_list_st* proc,
+  			   const struct cmd_auth_req_st * req, struct lease_st **lease)
 {
 int ret = -1;
 unsigned username_set = 0;
 
-	if (config->auth_types & AUTH_TYPE_PAM) {
+	if (req->user_pass_present != 0 && s->config->auth_types & AUTH_TYPE_PAM) {
 		ret = pam_auth_user(req->user, req->pass);
 		if (ret != 0)
 			ret = -1;
 
-		memcpy(username, req->user, MAX_USERNAME_SIZE);
+		memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
 		username_set = 1;
 	}
 
-	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
+	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 		if (req->tls_auth_ok != 0) {
 			ret = 0;
 		}
 		
 		if (username_set == 0)
-			memcpy(username, req->cert_user, MAX_USERNAME_SIZE);
+			memcpy(proc->username, req->cert_user, MAX_USERNAME_SIZE);
 		else {
-			if (strcmp(username, req->cert_user) != 0) {
-				syslog(LOG_INFO, "User '%s' presented a certificate from user '%s'", username, req->cert_user);
+			if (strcmp(proc->username, req->cert_user) != 0) {
+				syslog(LOG_INFO, "User '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
 				ret = -1;
 			}
 		}
 	}
 	
 	if (ret == 0) { /* open tun */
-		ret = open_tun(config, tun, lease);
+		ret = open_tun(s->config, s->tun, lease);
 		if (ret < 0)
 		  ret = -1; /* sorry */
 	}
@@ -187,17 +187,19 @@ unsigned username_set = 0;
 	return ret;
 }
 
-int handle_commands(const struct cfg_st *config, struct tun_st *tun, 
-			   struct proc_list_st* proc)
+int handle_commands(main_server_st *s, struct proc_list_st* proc)
 {
 	struct iovec iov[2];
 	char buf[128];
+	int e;
 	uint8_t cmd;
 	struct msghdr hdr;
 	struct lease_st *lease;
 	union {
 		struct cmd_auth_req_st auth;
 		struct cmd_auth_cookie_req_st cauth;
+		struct cmd_resume_store_req_st sresume;
+		struct cmd_resume_fetch_req_st fresume;
 	} cmd_data;
 	int ret, cmd_data_len;
 	const char* peer_ip;
@@ -218,7 +220,8 @@ int handle_commands(const struct cfg_st *config, struct tun_st *tun,
 	
 	ret = recvmsg( proc->fd, &hdr, 0);
 	if (ret == -1) {
-		syslog(LOG_ERR, "Cannot obtain data from command socket (pid: %d, peer: %s).", proc->pid, peer_ip);
+		e = errno;
+		syslog(LOG_ERR, "Cannot obtain data from command socket (pid: %d, peer: %s): %s", proc->pid, peer_ip, strerror(e));
 		return -1;
 	}
 
@@ -229,6 +232,51 @@ int handle_commands(const struct cfg_st *config, struct tun_st *tun,
 	cmd_data_len = ret - 1;
 	
 	switch(cmd) {
+		case RESUME_STORE_REQ:
+			if (cmd_data_len != sizeof(cmd_data.sresume)) {
+				syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
+				return -2;
+			}
+			ret = handle_resume_store_req(s, proc, &cmd_data.sresume);
+			if (ret < 0) {
+				syslog(LOG_DEBUG, "Could not store resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+			}
+			
+			break;
+			
+		case RESUME_DELETE_REQ:
+			if (cmd_data_len != sizeof(cmd_data.fresume)) {
+				syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
+				return -2;
+			}
+			ret = handle_resume_delete_req(s, proc, &cmd_data.fresume);
+			if (ret < 0) {
+				syslog(LOG_DEBUG, "Could not delete resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+			}
+
+			break;
+		case RESUME_FETCH_REQ: {
+			struct cmd_resume_fetch_reply_st reply;
+
+			if (cmd_data_len != sizeof(cmd_data.fresume)) {
+				syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
+				return -2;
+			}
+			ret = handle_resume_fetch_req(s, proc, &cmd_data.fresume, &reply);
+			if (ret < 0) {
+				syslog(LOG_DEBUG, "Could not fetch resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				ret = send_resume_fetch_reply(s, proc, REP_RESUME_FAILED, NULL);
+			} else
+				ret = send_resume_fetch_reply(s, proc, REP_RESUME_OK, &reply);
+			}
+			
+			if (ret < 0) {
+				syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+				return -2;
+			}
+			
+			break;
+
 		case AUTH_REQ:
 		case AUTH_COOKIE_REQ:
 		
@@ -238,26 +286,26 @@ int handle_commands(const struct cfg_st *config, struct tun_st *tun,
 					return -2;
 				}
 
-				ret = handle_auth_req(config, tun, &cmd_data.auth, &lease, proc->username);
+				ret = handle_auth_req(s, proc, &cmd_data.auth, &lease);
 			} else {
 				if (cmd_data_len != sizeof(cmd_data.cauth)) {
 					syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
 					return -2;
 				}
 
-				ret = handle_auth_cookie_req(config, tun, &cmd_data.cauth, &lease, proc);
+				ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth, &lease);
 			}
 
 			if (ret == 0) {
 				if (cmd == AUTH_REQ) {
 					/* generate and store cookie */
-					ret = generate_and_store_vals(config, proc);
+					ret = generate_and_store_vals(s, proc);
 					if (ret < 0)
 						return -2;
 				}
 
 				syslog(LOG_INFO, "User '%s' authenticated", proc->username);
-				ret = send_auth_reply(REP_AUTH_OK, proc, lease);
+				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
 				if (ret < 0) {
 					syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
 					return -2;
@@ -270,7 +318,7 @@ int handle_commands(const struct cfg_st *config, struct tun_st *tun,
 				lease->fd = -1;
 			} else {
 				syslog(LOG_INFO, "Failed authentication attempt for user '%s'", proc->username);
-				ret = send_auth_reply( REP_AUTH_FAILED, proc, NULL);
+				ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
 				if (ret < 0) {
 					syslog(LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
 					return -2;

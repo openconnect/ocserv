@@ -34,8 +34,9 @@
 
 #include <gnutls/x509.h>
 #include <tlslib.h>
-#include <worker-auth.h>
+#include "ipc.h"
 
+#include <main.h>
 #include <vpn.h>
 #include <cookies.h>
 #include <tun.h>
@@ -352,9 +353,12 @@ int main(int argc, char** argv)
 	struct worker_st ws;
 	struct cfg_st config;
 	unsigned active_clients = 0;
+	main_server_st s;
+	tls_cache_db_st* tls_db;
 	
 	INIT_LIST_HEAD(&clist.list);
 	tun_st_init(&tun);
+	tls_cache_init(&config, &tls_db);
 
 	signal(SIGINT, handle_term);
 	signal(SIGTERM, handle_term);
@@ -374,6 +378,11 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
 	}
+	
+	s.config = &config;
+	s.tun = &tun;
+	s.tls_db = tls_db;
+	
 	/* Listen to network ports */
 	ret = listen_ports(&config, &llist, config.name, config.port, SOCK_STREAM);
 	if (ret < 0) {
@@ -562,7 +571,7 @@ fork_failed:
 			ctmp = list_entry(pos, struct proc_list_st, list);
 			
 			if (FD_ISSET(ctmp->fd, &rd)) {
-				ret = handle_commands(&config, &tun, ctmp);
+				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {
 					if (ret == -2) {
 						/* received a bad command from worker */

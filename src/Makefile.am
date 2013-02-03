@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(srcdir)../gl/ -I$(builddir)../gl/ \
+AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
 EXTRA_DIST = ocserv.1 sample.config
@@ -8,7 +8,8 @@ bin_PROGRAMS = ocserv
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c http-parser/http_parser.c \
 	vpn.h cookies.h tlslib.h http-parser/http_parser.h log.c tun.c tun.h \
-	config.c worker-auth.h pam.c pam.h
+	config.c worker-auth.h pam.c pam.h worker-resume.c worker.h hash.h \
+	hashtable.h main-resume.c
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 

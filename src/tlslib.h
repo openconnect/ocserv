@@ -2,6 +2,10 @@
 #define TLS_H
 
 #include <gnutls/gnutls.h>
+#include <vpn.h>
+#include <hashtable.h>
+
+#define MAX_SESSION_DATA_SIZE (4*1024)
 
 #define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
 	
@@ -27,5 +31,30 @@ void tls_close(gnutls_session_t session);
 
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
+
+#define MAX_SESSION_DATA_SIZE (4*1024)
+
+typedef struct
+{
+  /* does not allow resumption from different address
+   * than the original */
+  struct sockaddr_storage remote_addr;
+  socklen_t remote_addr_len;
+
+  char session_id[GNUTLS_MAX_SESSION_ID];
+  unsigned int session_id_size;
+
+  char session_data[MAX_SESSION_DATA_SIZE];
+  unsigned int session_data_size;
+  
+  struct hlist_node list;
+} tls_cache_st;
+
+typedef struct 
+{
+	DECLARE_HASHTABLE(entry, 7);
+} tls_cache_db_st;
+
+void tls_cache_init(struct cfg_st* config, tls_cache_db_st** db);
 
 #endif

@@ -115,3 +115,16 @@ void tls_fatal_close(gnutls_session_t session,
 	gnutls_alert_send(session, GNUTLS_AL_FATAL, a);
 	gnutls_deinit(session);
 }
+
+void tls_cache_init(struct cfg_st* config, tls_cache_db_st** _db)
+{
+tls_cache_db_st * db;
+
+	db = malloc(sizeof(*db));
+	if (db == NULL)
+		exit(1);
+
+	hash_init(db->entry);
+	
+	*_db = db;
+}

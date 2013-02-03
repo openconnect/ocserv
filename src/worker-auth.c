@@ -34,7 +34,8 @@
 #include <limits.h>
 
 #include <vpn.h>
-#include <worker-auth.h>
+#include "ipc.h"
+#include <worker.h>
 #include <cookies.h>
 #include <tlslib.h>
 

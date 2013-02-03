@@ -15,6 +15,8 @@ if [ test "$GCC" = "yes" ];then
 	CFLAGS="$CFLAGS -Wall"
 fi
 
+AC_CHECK_SIZEOF([unsigned long])
+
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.0])
 
 LIBS="$oldlibs -lgdbm"

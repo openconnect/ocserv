@@ -446,6 +446,9 @@
 /* The size of `short', as computed by sizeof. */
 #undef SIZEOF_SHORT
 
+/* The size of `unsigned long', as computed by sizeof. */
+#undef SIZEOF_UNSIGNED_LONG
+
 /* Define to l, ll, u, ul, ull, etc., as suitable for constants of type
    'size_t'. */
 #undef SIZE_T_SUFFIX

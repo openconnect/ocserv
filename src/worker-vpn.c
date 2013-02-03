@@ -42,8 +42,9 @@
 #include <time.h>
 
 #include <vpn.h>
-#include <worker-auth.h>
+#include "ipc.h"
 #include <cookies.h>
+#include <worker.h>
 #include <tlslib.h>
 
 #include <http-parser/http_parser.h>
@@ -283,7 +284,6 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 		goto fail;
 	}
 	
-
 	ret =
 	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
 				   ws->creds->xcred);
@@ -342,7 +342,9 @@ void vpn_server(struct worker_st* ws)
 
 	gnutls_certificate_server_set_request(session, ws->config->cert_req);
 	gnutls_transport_set_ptr(session, (gnutls_transport_ptr_t) (long)ws->conn_fd);
+	set_resume_db_funcs(session);
 	gnutls_session_set_ptr(session, ws);
+	gnutls_db_set_ptr (session, ws);
 
 	do {
 		ret = gnutls_handshake(session);

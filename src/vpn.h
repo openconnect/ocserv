@@ -143,25 +143,6 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 void __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * server, int priority, const char *fmt, ...);
 
-int cmd_parser (int argc, char **argv, struct cfg_st* config);
-
-struct proc_list_st {
-	struct list_head list;
-	int fd;
-	pid_t pid;
-	struct sockaddr_storage remote_addr; /* peer address */
-	socklen_t remote_addr_len;
-	char username[MAX_USERNAME_SIZE]; /* the owner */
-	uint8_t cookie[COOKIE_SIZE]; /* the cookie associate with the session */
-	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
-	
-	/* the tun lease this process has */
-	struct lease_st* lease;
-};
-
-int handle_commands(const struct cfg_st *config, struct tun_st *tun, 
-			   struct proc_list_st* proc);
-
 /* Helper casts */
 #define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)
 #define SA_IN_U8_P(p) ((uint8_t*)(&((struct sockaddr_in *)(p))->sin_addr))

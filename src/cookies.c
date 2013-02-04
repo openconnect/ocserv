@@ -33,7 +33,7 @@
 #include <gdbm.h>
 #include <sys/stat.h>
 
-#include <vpn.h>
+#include <main.h>
 #include <cookies.h>
 
 /* All the functions return zero on success and a negative value on error */
@@ -104,7 +104,7 @@ finish:
 	return ret;
 }
 
-void expire_cookies(const struct cfg_st *cfg)
+void expire_cookies(main_server_st* s)
 {
 GDBM_FILE dbf;
 datum key;
@@ -113,7 +113,7 @@ int deleted = 0;
 struct stored_cookie_st sc;
 time_t now = time(0);
 
-	dbf = gdbm_open((char*)cfg->cookie_db, 0, GDBM_WRITER, 0, NULL);
+	dbf = gdbm_open((char*)s->config->cookie_db, 0, GDBM_WRITER, 0, NULL);
 	if (dbf == NULL)
 		return;
 

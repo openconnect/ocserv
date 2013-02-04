@@ -600,7 +600,7 @@ fork_failed:
 				syslog(LOG_INFO, "Performing maintainance");
 				clear_lists(&s);
 
-				expire_cookies(&config);
+				expire_cookies(&s);
 				expire_tls_sessions(&s);
 
 				exit(0);

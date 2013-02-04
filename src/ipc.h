@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <vpn.h>
-#include <cookies.h>
 #include <tlslib.h>
 
 typedef enum {

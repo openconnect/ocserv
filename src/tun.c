@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <cloexec.h>
 
 #include <vpn.h>
 #include <tun.h>
@@ -380,6 +381,8 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 		       strerror(e));
 		return -1;
 	}
+	
+	set_cloexec_flag (tunfd, 1);
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;

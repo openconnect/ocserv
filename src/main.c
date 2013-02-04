@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <cloexec.h>
 
 #include <gnutls/x509.h>
 #include <tlslib.h>
@@ -99,6 +100,8 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 			perror("socket() failed");
 			continue;
 		}
+		
+
 #if defined(HAVE_IPV6) && !defined(_WIN32)
 		if (ptr->ai_family == AF_INET6) {
 			y = 1;
@@ -130,6 +133,8 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 				perror("setsockopt(IP_DF) failed");
 #endif
 		}
+
+		set_cloexec_flag (s, 1);
 
 		if (bind(s, ptr->ai_addr, ptr->ai_addrlen) < 0) {
 			perror("bind() failed");
@@ -509,6 +514,7 @@ int main(int argc, char** argv)
 					       strerror(errno));
 					continue;
 				}
+				set_cloexec_flag (fd, 1);
 				
 				if (config.max_clients > 0 && active_clients >= config.max_clients) {
 					close(fd);
@@ -558,6 +564,8 @@ fork_failed:
 
 					ctmp->pid = pid;
 					ctmp->fd = cmd_fd[0];
+					set_cloexec_flag (cmd_fd[0], 1);
+
 					list_add(&(ctmp->list), &(clist.list));
 					active_clients++;
 				}
@@ -608,4 +616,3 @@ fork_failed:
 
 	return 0;
 }
-

@@ -75,10 +75,6 @@ int ret;
 				exit(1);
 		}
 		
-		/* FIXME: using close on exec should be more efficient
-		 * than that */
-		clear_lists(s);
-
 		ret = execlp(s->config->disconnect_script, s->config->disconnect_script,
 			proc->username, proc->lease->name, real, local, remote, NULL);
 		if (ret == -1)
@@ -98,7 +94,6 @@ int ret, status;
 	if (s->config->connect_script == NULL)
 		return 0;
 
-	/* XXX: close fds */
 	pid = fork();
 	if (pid == 0) {
 		char real[64];
@@ -123,8 +118,6 @@ int ret, status;
 			if (getnameinfo((void*)&proc->lease->rip6, proc->lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
-
-		clear_lists(s);
 
 		ret = execlp(s->config->connect_script, s->config->connect_script,
 			proc->username, proc->lease->name, real, local, remote, NULL);

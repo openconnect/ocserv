@@ -17,7 +17,7 @@ fi
 
 AC_CHECK_SIZEOF([unsigned long])
 
-PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.0])
+PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.28])
 
 LIBS="$oldlibs -lgdbm"
 AC_MSG_CHECKING([for gdbm library])

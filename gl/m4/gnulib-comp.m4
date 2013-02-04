@@ -39,9 +39,16 @@ AC_DEFUN([gl_EARLY],
   m4_pattern_allow([^gl_LTLIBOBJS$])dnl a variable
   AC_REQUIRE([gl_PROG_AR_RANLIB])
   # Code from module clock-time:
+  # Code from module cloexec:
+  # Code from module close:
+  # Code from module dup2:
   # Code from module extensions:
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   # Code from module extern-inline:
+  # Code from module fcntl:
+  # Code from module fcntl-h:
+  # Code from module fd-hook:
+  # Code from module getdtablesize:
   # Code from module gettime:
   # Code from module gettimeofday:
   # Code from module hash-pjw-bare:
@@ -49,16 +56,22 @@ AC_DEFUN([gl_EARLY],
   # Code from module memchr:
   # Code from module memmem:
   # Code from module memmem-simple:
+  # Code from module msvc-inval:
+  # Code from module msvc-nothrow:
   # Code from module multiarch:
   # Code from module snippet/arg-nonnull:
   # Code from module snippet/c++defs:
   # Code from module snippet/warn-on-use:
+  # Code from module ssize_t:
+  # Code from module stdbool:
   # Code from module stddef:
   # Code from module stdint:
   # Code from module string:
   # Code from module sys_time:
+  # Code from module sys_types:
   # Code from module time:
   # Code from module timespec:
+  # Code from module unistd:
 ])
 
 # This macro should be invoked from ./configure.ac, in the section
@@ -78,7 +91,31 @@ AC_DEFUN([gl_INIT],
   gl_COMMON
   gl_source_base='gl'
   gl_CLOCK_TIME
+  gl_MODULE_INDICATOR_FOR_TESTS([cloexec])
+  gl_FUNC_CLOSE
+  if test $REPLACE_CLOSE = 1; then
+    AC_LIBOBJ([close])
+  fi
+  gl_UNISTD_MODULE_INDICATOR([close])
+  gl_FUNC_DUP2
+  if test $HAVE_DUP2 = 0 || test $REPLACE_DUP2 = 1; then
+    AC_LIBOBJ([dup2])
+    gl_PREREQ_DUP2
+  fi
+  gl_UNISTD_MODULE_INDICATOR([dup2])
   AC_REQUIRE([gl_EXTERN_INLINE])
+  gl_FUNC_FCNTL
+  if test $HAVE_FCNTL = 0 || test $REPLACE_FCNTL = 1; then
+    AC_LIBOBJ([fcntl])
+  fi
+  gl_FCNTL_MODULE_INDICATOR([fcntl])
+  gl_FCNTL_H
+  gl_FUNC_GETDTABLESIZE
+  if test $HAVE_GETDTABLESIZE = 0; then
+    AC_LIBOBJ([getdtablesize])
+    gl_PREREQ_GETDTABLESIZE
+  fi
+  gl_UNISTD_MODULE_INDICATOR([getdtablesize])
   gl_GETTIME
   gl_FUNC_GETTIMEOFDAY
   if test $HAVE_GETTIMEOFDAY = 0 || test $REPLACE_GETTIMEOFDAY = 1; then
@@ -101,14 +138,27 @@ AC_DEFUN([gl_INIT],
     AC_LIBOBJ([memmem])
   fi
   gl_STRING_MODULE_INDICATOR([memmem])
+  gl_MSVC_INVAL
+  if test $HAVE_MSVC_INVALID_PARAMETER_HANDLER = 1; then
+    AC_LIBOBJ([msvc-inval])
+  fi
+  gl_MSVC_NOTHROW
+  if test $HAVE_MSVC_INVALID_PARAMETER_HANDLER = 1; then
+    AC_LIBOBJ([msvc-nothrow])
+  fi
   gl_MULTIARCH
+  gt_TYPE_SSIZE_T
+  AM_STDBOOL_H
   gl_STDDEF_H
   gl_STDINT_H
   gl_HEADER_STRING_H
   gl_HEADER_SYS_TIME_H
   AC_PROG_MKDIR_P
+  gl_SYS_TYPES_H
+  AC_PROG_MKDIR_P
   gl_HEADER_TIME_H
   gl_TIMESPEC
+  gl_UNISTD_H
   # End of code from modules
   m4_ifval(gl_LIBSOURCES_LIST, [
     m4_syscmd([test ! -d ]m4_defn([gl_LIBSOURCES_DIR])[ ||
@@ -252,6 +302,15 @@ AC_DEFUN([gl_FILE_LIST], [
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
+  lib/cloexec.c
+  lib/cloexec.h
+  lib/close.c
+  lib/dup2.c
+  lib/fcntl.c
+  lib/fcntl.in.h
+  lib/fd-hook.c
+  lib/fd-hook.h
+  lib/getdtablesize.c
   lib/gettime.c
   lib/gettimeofday.c
   lib/hash-pjw-bare.c
@@ -259,18 +318,32 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/memchr.c
   lib/memchr.valgrind
   lib/memmem.c
+  lib/msvc-inval.c
+  lib/msvc-inval.h
+  lib/msvc-nothrow.c
+  lib/msvc-nothrow.h
+  lib/stdbool.in.h
   lib/stddef.in.h
   lib/stdint.in.h
   lib/str-two-way.h
   lib/string.in.h
   lib/sys_time.in.h
+  lib/sys_types.in.h
   lib/time.in.h
   lib/timespec.c
   lib/timespec.h
+  lib/unistd.c
+  lib/unistd.in.h
   m4/00gnulib.m4
   m4/clock_time.m4
+  m4/close.m4
+  m4/dup2.m4
   m4/extensions.m4
   m4/extern-inline.m4
+  m4/fcntl-o.m4
+  m4/fcntl.m4
+  m4/fcntl_h.m4
+  m4/getdtablesize.m4
   m4/gettime.m4
   m4/gettimeofday.m4
   m4/gnulib-common.m4
@@ -279,14 +352,21 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/memchr.m4
   m4/memmem.m4
   m4/mmap-anon.m4
+  m4/msvc-inval.m4
+  m4/msvc-nothrow.m4
   m4/multiarch.m4
+  m4/off_t.m4
+  m4/ssize_t.m4
+  m4/stdbool.m4
   m4/stddef_h.m4
   m4/stdint.m4
   m4/string_h.m4
   m4/sys_socket_h.m4
   m4/sys_time_h.m4
+  m4/sys_types_h.m4
   m4/time_h.m4
   m4/timespec.m4
+  m4/unistd_h.m4
   m4/warn-on-use.m4
   m4/wchar_t.m4
 ])

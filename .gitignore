@@ -21,3 +21,6 @@ src/ocserv.1
 libopts/libopts.a
 gl/time.h
 gl/sys/time.h
+gl/unistd.h
+gl/fcntl.h
+gl/sys/types.h

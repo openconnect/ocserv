@@ -56,11 +56,7 @@ int send_resume_fetch_reply(main_server_st* s, struct proc_list_st * proc,
 	hdr.msg_iovlen++;
 
 	iov[1].iov_base = reply;
-	iov[1].iov_len = sizeof(*reply);
-	hdr.msg_iovlen++;
-
-	iov[2].iov_base = reply;
-	iov[2].iov_len = sizeof(*reply);
+	iov[1].iov_len = 3 + reply->session_data_size;
 	hdr.msg_iovlen++;
 
 	hdr.msg_iov = iov;

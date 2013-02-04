@@ -38,8 +38,9 @@
 #include <tlslib.h>
 
 
-static int send_resume_fetch_req(worker_st * ws, const struct cmd_resume_fetch_req_st* r,
-					int delete)
+static int send_resume_fetch_req(worker_st * ws, 
+				const struct cmd_resume_fetch_req_st* r,
+				int delete)
 {
 	struct iovec iov[2];
 	uint8_t cmd;
@@ -78,7 +79,7 @@ static int send_resume_store_req(worker_st * ws, const struct cmd_resume_store_r
 	iov[0].iov_len = 1;
 
 	iov[1].iov_base = (void*)r;
-	iov[1].iov_len = sizeof(*r);
+	iov[1].iov_len = 3+r->session_data_size;
 	
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
@@ -104,7 +105,7 @@ static int recv_resume_fetch_reply(worker_st *ws, struct cmd_resume_fetch_reply_
 	hdr.msg_iovlen = 2;
 
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	if (ret < sizeof(*resp)+1) {
+	if (ret <= sizeof(*resp)-MAX_SESSION_DATA_SIZE) {
 		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
 		return -1;
 	}

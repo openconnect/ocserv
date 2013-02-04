@@ -233,7 +233,7 @@ int handle_commands(main_server_st *s, struct proc_list_st* proc)
 	
 	switch(cmd) {
 		case RESUME_STORE_REQ:
-			if (cmd_data_len != sizeof(cmd_data.sresume)) {
+			if (cmd_data_len <= sizeof(cmd_data.sresume)-MAX_SESSION_DATA_SIZE) {
 				syslog(LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
 				return -2;
 			}

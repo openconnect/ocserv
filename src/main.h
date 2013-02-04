@@ -11,6 +11,11 @@
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 
+struct listen_list_st {
+	struct list_head list;
+	int fd;
+};
+
 struct proc_list_st {
 	struct list_head list;
 	int fd;
@@ -29,7 +34,12 @@ typedef struct main_server_st {
 	struct cfg_st *config;
 	struct tun_st *tun;
 	tls_cache_db_st *tls_db;
+	
+	struct listen_list_st* llist;
+	struct proc_list_st* clist;
 } main_server_st;
+
+void clear_lists(main_server_st *s);
 
 int handle_commands(main_server_st *s, struct proc_list_st* cur);
 

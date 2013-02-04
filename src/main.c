@@ -47,11 +47,6 @@ static unsigned int terminate = 0;
 static unsigned int need_maintainance = 0;
 static unsigned int need_children_cleanup = 0;
 
-struct listen_list_st {
-	struct list_head list;
-	int fd;
-};
-
 static void tls_log_func(int level, const char *str)
 {
 	syslog(LOG_DEBUG, "Debug[<%d>]: %s", level, str);
@@ -285,26 +280,21 @@ static void drop_privileges(struct cfg_st *config)
 	}
 }
 
-static void clear_listen_list(struct listen_list_st* llist)
+/* clears the server llist and clist. To be used after fork() */
+void clear_lists(main_server_st *s)
 {
 	struct list_head *cq;
 	struct list_head *pos;
 	struct listen_list_st *ltmp;
+	struct proc_list_st *ctmp;
 
-	list_for_each_safe(pos, cq, &llist->list) {
+	list_for_each_safe(pos, cq, &s->llist->list) {
 		ltmp = list_entry(pos, struct listen_list_st, list);
 		close(ltmp->fd);
 		list_del(&ltmp->list);
 	}
-}
 
-static void clear_proc_list(struct proc_list_st* clist)
-{
-	struct list_head *cq;
-	struct list_head *pos;
-	struct proc_list_st *ctmp;
-
-	list_for_each_safe(pos, cq, &clist->list) {
+	list_for_each_safe(pos, cq, &s->clist->list) {
 		ctmp = list_entry(pos, struct proc_list_st, list);
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
@@ -390,6 +380,8 @@ int main(int argc, char** argv)
 	s.config = &config;
 	s.tun = &tun;
 	s.tls_db = tls_db;
+	s.llist = &llist;
+	s.clist = &clist;
 	
 	/* Listen to network ports */
 	ret = listen_ports(&config, &llist, config.name, config.port, SOCK_STREAM);
@@ -542,8 +534,7 @@ int main(int argc, char** argv)
 					 * running the server
 					 */
 					close(cmd_fd[0]);
-					clear_listen_list(&llist);
-					clear_proc_list(&clist);
+					clear_lists(&s);
 					
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];
@@ -599,8 +590,7 @@ fork_failed:
 			pid = fork();
 			if (pid == 0) {	/* child */
 				syslog(LOG_INFO, "Performing maintainance");
-				clear_listen_list(&llist);
-				clear_proc_list(&clist);
+				clear_lists(&s);
 
 				expire_cookies(&config);
 				expire_tls_sessions(&s);

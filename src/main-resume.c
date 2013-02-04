@@ -191,7 +191,6 @@ time_t now, exp;
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
 
-fprintf(stderr, "session removed\n");          
 	          	hash_del(&cache->list);
 	          	free(cache);
 			s->tls_db->entries--;

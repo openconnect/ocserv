@@ -297,12 +297,20 @@ int handle_commands(main_server_st *s, struct proc_list_st* proc)
 			}
 
 			if (ret == 0) {
+				ret = call_connect_script(s, proc);
+				if (ret < 0) {
+					syslog(LOG_INFO, "User '%s' disconnected due to script", proc->username);
+				}
+			}
+
+			if (ret == 0) {
 				if (cmd == AUTH_REQ) {
 					/* generate and store cookie */
 					ret = generate_and_store_vals(s, proc);
 					if (ret < 0)
 						return -2;
 				}
+				
 
 				syslog(LOG_INFO, "User '%s' authenticated", proc->username);
 				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);

@@ -92,6 +92,14 @@ auth-timeout = 40
 # of that cookie.
 cookie-validity = 14400
 
+# Script to call when a client connects and obtains an IP
+# Parameters: username device IP-REAL IP-LOCAL IP-REMOTE
+# IP-REAL is the remote IP of the client,
+# IP-LOCAL is the local IP in the P-t-P connection and IP-REMOTE
+# is the VPN client IP.
+connect-script = /bin/echo
+disconnect-script = /bin/echo
+
 # Cookie database file. Where to store the cookies.
 cookie-db = /path/to/db
 

@@ -45,6 +45,7 @@
 int syslog_open = 0;
 static unsigned int terminate = 0;
 static unsigned int need_maintainance = 0;
+static unsigned int need_children_cleanup = 0;
 
 struct listen_list_st {
 	struct list_head list;
@@ -159,7 +160,7 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 	return 0;
 }
 
-static void handle_children(int signo)
+static void cleanup_children(main_server_st *s)
 {
 int status;
 pid_t pid;
@@ -174,6 +175,12 @@ pid_t pid;
 		} else
 			syslog(LOG_DEBUG, "Child %u died peacefully\n", (unsigned)pid);
 	}
+	need_children_cleanup = 0;
+}
+
+static void handle_children(int signo)
+{
+	need_children_cleanup = 1;
 }
 
 static void handle_alarm(int signo)
@@ -579,6 +586,7 @@ fork_failed:
 						/* received a bad command from worker */
 						kill(ctmp->pid, SIGTERM);
 					}
+					call_disconnect_script(&s, ctmp);
 					remove_proc(ctmp);
 					active_clients--;
 				}
@@ -601,6 +609,11 @@ fork_failed:
 			}
 			alarm(MAINTAINANCE_TIME);
 		}
+		
+		if (need_children_cleanup != 0) {
+			cleanup_children(&s);
+		}
+
 	}
 
 	return 0;

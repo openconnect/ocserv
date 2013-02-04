@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <net/if.h>
+#include "ipc.h"
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 
@@ -17,7 +18,7 @@ struct proc_list_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 	char username[MAX_USERNAME_SIZE]; /* the owner */
-	uint8_t cookie[COOKIE_SIZE]; /* the cookie associate with the session */
+	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	
 	/* the tun lease this process has */
@@ -31,6 +32,9 @@ typedef struct main_server_st {
 } main_server_st;
 
 int handle_commands(main_server_st *s, struct proc_list_st* cur);
+
+int call_connect_script(main_server_st *s, struct proc_list_st* cur);
+void call_disconnect_script(main_server_st *s, struct proc_list_st* cur);
 
 void expire_tls_sessions(main_server_st *s);
 

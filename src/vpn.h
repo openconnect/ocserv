@@ -61,6 +61,9 @@ struct cfg_st {
 	unsigned foreground;
 	unsigned max_clients;
 
+	const char *connect_script;
+	const char *disconnect_script;
+
 	uid_t uid;
 	gid_t gid;
 

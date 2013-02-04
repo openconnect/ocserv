@@ -122,6 +122,9 @@ unsigned j;
 	READ_STRING("crl", config->crl, 0);
 	READ_STRING("cert-user-oid", config->cert_user_oid, 0);
 
+	READ_STRING("connect-script", config->connect_script, 0);
+	READ_STRING("disconnect-script", config->disconnect_script, 0);
+
 	READ_STRING("tls-priorities", config->priorities, 0);
 	READ_STRING("chroot-dir", config->chroot_dir, 0);
 

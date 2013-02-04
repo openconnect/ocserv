@@ -9,7 +9,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c http-parser/http_parser.c \
 	vpn.h cookies.h tlslib.h http-parser/http_parser.h log.c tun.c tun.h \
 	config.c worker-auth.h pam.c pam.h worker-resume.c worker.h hash.h \
-	hashtable.h main-resume.c main.h
+	hashtable.h main-resume.c main.h main-script.c
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 

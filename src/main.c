@@ -162,16 +162,17 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 static void handle_children(int signo)
 {
 int status;
+pid_t pid;
 
-	while (waitpid(-1, &status, WNOHANG) > 0) {
+	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		if (WEXITSTATUS(status) != 0 ||
 			(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV)) {
 			if (WIFSIGNALED(status))
-				syslog(LOG_ERR, "Child died with sigsegv\n");
+				syslog(LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
 			else
-				syslog(LOG_DEBUG, "Child died with status %d\n", WEXITSTATUS(status));
+				syslog(LOG_DEBUG, "Child %u died with status %d\n", (unsigned)pid, WEXITSTATUS(status));
 		} else
-			syslog(LOG_DEBUG, "Child died peacefully\n");
+			syslog(LOG_DEBUG, "Child %u died peacefully\n", (unsigned)pid);
 	}
 }
 

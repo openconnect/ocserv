@@ -370,15 +370,15 @@ int main(int argc, char** argv)
 	signal(SIGCHLD, handle_children);
 	signal(SIGALRM, handle_alarm);
 
-	if (getuid() != 0) {
-		fprintf(stderr, "This server requires root access to operate.\n");
-		exit(1);
-	}
-
 	/* load configuration */
 	ret = cmd_parser(argc, argv, &config);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
+		exit(1);
+	}
+
+	if (getuid() != 0) {
+		fprintf(stderr, "This server requires root access to operate.\n");
 		exit(1);
 	}
 	

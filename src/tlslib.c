@@ -125,6 +125,7 @@ tls_cache_db_st * db;
 		exit(1);
 
 	hash_init(db->entry);
-	
+	db->entries = 0;
+
 	*_db = db;
 }

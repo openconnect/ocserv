@@ -44,7 +44,7 @@
 
 int syslog_open = 0;
 static unsigned int terminate = 0;
-static unsigned int need_to_expire_cookies = 0;
+static unsigned int need_maintainance = 0;
 
 struct listen_list_st {
 	struct list_head list;
@@ -177,7 +177,7 @@ int status;
 
 static void handle_alarm(int signo)
 {
-	need_to_expire_cookies = 1;
+	need_maintainance = 1;
 }
 
 
@@ -448,7 +448,8 @@ int main(int argc, char** argv)
 	if (config.foreground == 0)
 		daemon(0, 0);
 
-	alarm(config.cookie_validity + 300);
+#define MAINTAINANCE_TIME (config.cookie_validity + 300)
+	alarm(MAINTAINANCE_TIME);
 	openlog("ocserv", LOG_PID|LOG_NDELAY, LOG_LOCAL0);
 	syslog_open = 1;
 
@@ -509,7 +510,7 @@ int main(int argc, char** argv)
 					continue;
 				}
 				
-				if (config.max_clients > 0 && active_clients > config.max_clients) {
+				if (config.max_clients > 0 && active_clients >= config.max_clients) {
 					close(fd);
 					syslog(LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
 					break;
@@ -584,16 +585,20 @@ fork_failed:
 		}
 
 		/* Check if we need to expire any cookies */
-		if (need_to_expire_cookies != 0) {
-			need_to_expire_cookies = 0;
+		if (need_maintainance != 0) {
+			need_maintainance = 0;
 			pid = fork();
 			if (pid == 0) {	/* child */
+				syslog(LOG_INFO, "Performing maintainance");
 				clear_listen_list(&llist);
 				clear_proc_list(&clist);
 
 				expire_cookies(&config);
+				expire_tls_sessions(&s);
+
 				exit(0);
 			}
+			alarm(MAINTAINANCE_TIME);
 		}
 	}
 

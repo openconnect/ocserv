@@ -32,6 +32,7 @@ typedef struct main_server_st {
 
 int handle_commands(main_server_st *s, struct proc_list_st* cur);
 
+void expire_tls_sessions(main_server_st *s);
 
 int send_resume_fetch_reply(main_server_st* s, struct proc_list_st* proc,
 		cmd_resume_reply_t r, struct cmd_resume_fetch_reply_st * reply);

@@ -81,12 +81,12 @@ struct hlist_node *pos, *tmp;
 	          
 	          	hash_del(&cache->list);
 	          	free(cache);
+			s->tls_db->entries--;
 	          	return 0;
 		}
         }
 
         return 0;
-
 }
 
 static int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n)
@@ -141,6 +141,12 @@ size_t key;
 	if (req->session_data_size > MAX_SESSION_DATA_SIZE)
 		return -1;
 
+	if ((s->config->max_clients != 0 && 
+		s->tls_db->entries >= MAX(s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS(s->tls_db))) ||
+		(s->config->max_clients == 0 && 
+		s->tls_db->entries >= DEFAULT_MAX_CACHED_TLS_SESSIONS(s->tls_db)))
+		return -1;
+
 	key = hash_pjw_bare(req->session_id, req->session_id_size);
 	
 	cache = malloc(sizeof(*cache));
@@ -156,6 +162,41 @@ size_t key;
 	memcpy(&cache->remote_addr, &proc->remote_addr, proc->remote_addr_len);
 	
 	hash_add(s->tls_db->entry, &cache->list, key);
+	s->tls_db->entries++;
 
 	return 0;
+}
+
+void expire_tls_sessions(main_server_st *s)
+{
+tls_cache_st* cache;
+int bkt;
+struct hlist_node *pos, *tmp;
+time_t now, exp;
+
+	now = time(0);
+
+	hash_for_each_safe(s->tls_db->entry, bkt, pos, tmp, cache, list) {
+#if GNUTLS_VERSION_NUMBER >= 0x030107
+		gnutls_datum_t d;
+
+		d.data = (void*)cache->session_data;
+		d.size = cache->session_data_size;
+
+		exp = gnutls_db_check_entry_time(&d);
+#else
+		exp = 0;
+#endif
+		if (now-exp > TLS_SESSION_EXPIRATION_TIME) {
+	          	cache->session_data_size = 0;
+	          	cache->session_id_size = 0;
+
+fprintf(stderr, "session removed\n");          
+	          	hash_del(&cache->list);
+	          	free(cache);
+			s->tls_db->entries--;
+		}
+        }
+
+        return;
 }

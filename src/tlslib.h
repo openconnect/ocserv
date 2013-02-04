@@ -50,9 +50,12 @@ typedef struct
   struct hlist_node list;
 } tls_cache_st;
 
+#define TLS_SESSION_EXPIRATION_TIME 600
+#define DEFAULT_MAX_CACHED_TLS_SESSIONS(db) HASH_SIZE(db->entry)
 typedef struct 
 {
 	DECLARE_HASHTABLE(entry, 7);
+	unsigned int entries;
 } tls_cache_db_st;
 
 void tls_cache_init(struct cfg_st* config, tls_cache_db_st** db);

@@ -345,6 +345,7 @@ void vpn_server(struct worker_st* ws)
 	set_resume_db_funcs(session);
 	gnutls_session_set_ptr(session, ws);
 	gnutls_db_set_ptr (session, ws);
+	gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME);
 
 	do {
 		ret = gnutls_handshake(session);

@@ -870,6 +870,11 @@ gnutls_session_t ts;
 				}
 				continue;
 			}
+			
+			if (l == 0) { /* disconnect */
+				oclog(ws, LOG_INFO, "Client disconnected");
+				exit(1);
+			}
 
 			buffer[0] = 'S';
 			buffer[1] = 'T';

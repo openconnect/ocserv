@@ -268,6 +268,8 @@ int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size)
 int ret;
 struct cmd_auth_cookie_req_st areq;
 
+	memset(&areq, 0, sizeof(areq));
+
 	if (cookie_size != sizeof(areq.cookie))
 		return -1;
 

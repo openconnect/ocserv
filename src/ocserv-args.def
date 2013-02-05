@@ -34,6 +34,13 @@ flag = {
 };
 
 flag = {
+    name      = debug;
+    value     = d;
+    descrip   = "Enable verbose network debugging information.";
+    doc      = "";
+};
+
+flag = {
     name      = config;
     value     = c;
     arg-type  = file;

@@ -60,6 +60,7 @@ struct cfg_st {
 	const char *cookie_db;
 	unsigned foreground;
 	unsigned tls_debug;
+	unsigned debug;
 	unsigned max_clients;
 
 	const char *connect_script;

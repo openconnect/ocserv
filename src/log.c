@@ -72,6 +72,9 @@ void __attribute__ ((format(printf, 3, 4)))
 	char ipbuf[128];
 	const char* ip;
 	va_list args;
+	
+	if (priority == LOG_DEBUG && ws->config->debug == 0)
+		return;
 
 	ip = human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
 			    ipbuf, sizeof(ipbuf));

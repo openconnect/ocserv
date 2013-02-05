@@ -133,6 +133,8 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 		req->next_header = HEADER_COOKIE;
 	} else if (strncmp(at, "X-DTLS-Master-Secret:", length) == 0) {
 		req->next_header = HEADER_MASTER_SECRET;
+	} else if (strncmp(at, "X-CSTP-Hostname:", length) == 0) {
+		req->next_header = HEADER_HOSTNAME;
 	} else {
 		req->next_header = 0;
 	}
@@ -160,6 +162,15 @@ size_t nlen;
 
 				gnutls_hex2bin(at, length, req->master_secret, &nlen);
 				req->master_secret_set = 1;
+				break;
+			case HEADER_HOSTNAME:
+				if (length >- MAX_HOSTNAME_SIZE) {
+					req->hostname[0] = 0;
+					return 0;
+				}
+				memcpy(req->hostname, at, length);
+				req->hostname[length] = 0;
+
 				break;
 			case HEADER_COOKIE:
 				p = memmem(at, length, "webvpn=", 7);
@@ -762,8 +773,7 @@ gnutls_session_t ts;
 
 	tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
 
-	oclog(ws, LOG_DEBUG, "sending mtu %d", vinfo.mtu);
-	tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
+	tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
 	tls_puts(ws->session, "X-CSTP-DPD: 60\r\n");
 
 	ws->udp_state = UP_DISABLED;
@@ -813,6 +823,7 @@ gnutls_session_t ts;
 		}
 		tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
 
+		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", vinfo.mtu);
 		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->udp_port);
 		tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
 		tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);

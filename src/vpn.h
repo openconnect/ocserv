@@ -91,6 +91,8 @@ typedef enum {
 	UP_ACTIVE
 } udp_port_state_t;
 
+#define MAX_HOSTNAME_SIZE MAX_USERNAME_SIZE
+
 typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
@@ -113,6 +115,7 @@ typedef struct worker_st {
 	/* the following are set only if authentication is complete */
 	char tun_name[IFNAMSIZ];
 	char username[MAX_USERNAME_SIZE];
+	char hostname[MAX_HOSTNAME_SIZE];
 	uint8_t cookie[COOKIE_SIZE];
 	uint8_t master_secret[TLS_MASTER_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
@@ -123,11 +126,13 @@ typedef struct worker_st {
 
 enum {
 	HEADER_COOKIE = 1,
-	HEADER_MASTER_SECRET = 2,
+	HEADER_MASTER_SECRET,
+	HEADER_HOSTNAME,
 };
 
 struct req_data_st {
 	char url[256];
+	char hostname[MAX_HOSTNAME_SIZE];
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;

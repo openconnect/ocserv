@@ -129,3 +129,23 @@ tls_cache_db_st * db;
 
 	*_db = db;
 }
+
+void tls_cache_deinit(tls_cache_db_st* db)
+{
+tls_cache_st* cache;
+int bkt;
+struct hlist_node *pos, *tmp;
+
+	hash_for_each_safe(db->entry, bkt, pos, tmp, cache, list) {
+		if (cache->session_data_size > 0) {
+	          	memset(cache->session_data, 0, cache->session_data_size);
+	          	cache->session_data_size = 0;
+	          	cache->session_id_size = 0;
+		}
+          	hash_del(&cache->list);
+          	free(cache);
+		db->entries--;
+        }
+
+        return;
+}

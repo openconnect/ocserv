@@ -59,5 +59,6 @@ typedef struct
 } tls_cache_db_st;
 
 void tls_cache_init(struct cfg_st* config, tls_cache_db_st** db);
+void tls_cache_deinit(tls_cache_db_st* db);
 
 #endif

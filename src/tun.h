@@ -37,6 +37,18 @@ inline static void tun_st_init(struct tun_st* ts)
 	INIT_LIST_HEAD(&ts->lease_list.list);
 }
 
+inline static void tun_st_deinit(struct tun_st* ts)
+{
+	struct list_head *cq;
+	struct list_head *pos;
+	struct lease_st *ltmp;
+
+	list_for_each_safe(pos, cq, &ts->lease_list.list) {
+		ltmp = list_entry(pos, struct lease_st, list);
+		list_del(&ltmp->list);
+	}
+}
+
 int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st **lease);
 
 #endif

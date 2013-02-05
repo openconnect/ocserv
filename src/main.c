@@ -305,6 +305,8 @@ void clear_lists(main_server_st *s)
 			close(ctmp->fd);
 		list_del(&ctmp->list);
 	}
+	
+	tls_cache_deinit(s->tls_db);
 }
 
 static void kill_children(struct proc_list_st* clist)

@@ -45,6 +45,7 @@ struct __attribute__ ((__packed__)) cmd_auth_req_st {
 	char pass[MAX_PASSWORD_SIZE];
 	uint8_t tls_auth_ok;
 	char cert_user[MAX_USERNAME_SIZE];
+	char hostname[MAX_HOSTNAME_SIZE];
 };
 
 /* AUTH_REP */

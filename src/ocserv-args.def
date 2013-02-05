@@ -99,7 +99,8 @@ auth-timeout = 40
 cookie-validity = 14400
 
 # Script to call when a client connects and obtains an IP
-# Parameters: username device IP-REAL IP-LOCAL IP-REMOTE
+# Parameters: username hostname device IP-REAL IP-LOCAL IP-REMOTE
+# hostname is the hostname selected by the client
 # IP-REAL is the remote IP of the client,
 # IP-LOCAL is the local IP in the P-t-P connection and IP-REMOTE
 # is the VPN client IP.
@@ -129,7 +130,7 @@ ipv4-dns = local
 # Leave empty to assign the default MTU of the device
 # mtu = 
 
-route = 192.168.2.0/255.255.255.0
+route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 
 @end example

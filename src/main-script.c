@@ -79,7 +79,7 @@ int ret;
 		}
 		
 		ret = execlp(s->config->disconnect_script, s->config->disconnect_script,
-			proc->username, proc->lease->name, real, local, remote, NULL);
+			proc->username, proc->hostname, proc->lease->name, real, local, remote, NULL);
 		if (ret == -1)
 			exit(1);
 			
@@ -126,7 +126,7 @@ int ret, status;
 		}
 
 		ret = execlp(s->config->connect_script, s->config->connect_script,
-			proc->username, lease->name, real, local, remote, NULL);
+			proc->username, proc->hostname, lease->name, real, local, remote, NULL);
 		if (ret == -1)
 			exit(1);
 			

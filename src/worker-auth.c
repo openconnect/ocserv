@@ -343,6 +343,10 @@ struct cmd_auth_req_st areq;
 		snprintf(areq.user, sizeof(areq.user), "%s", username);
 		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 	}
+	
+	if (req->hostname[0] != 0) {
+		memcpy(areq.hostname, req->hostname, sizeof(areq.hostname));
+	}
 
 	ret = auth_user(ws, &areq);
 	if (ret < 0) {

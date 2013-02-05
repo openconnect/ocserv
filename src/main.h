@@ -23,6 +23,7 @@ struct proc_list_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 	char username[MAX_USERNAME_SIZE]; /* the owner */
+	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	

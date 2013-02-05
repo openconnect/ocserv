@@ -5,6 +5,7 @@
 
 struct __attribute__ ((__packed__)) stored_cookie_st {
 	char username[MAX_USERNAME_SIZE];
+	char hostname[MAX_USERNAME_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	time_t expiration;
 };

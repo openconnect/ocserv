@@ -139,6 +139,7 @@ struct stored_cookie_st sc;
 	sc.expiration = time(0) + s->config->cookie_validity;
 	
 	memcpy(sc.username, proc->username, sizeof(sc.username));
+	memcpy(sc.hostname, proc->hostname, sizeof(sc.hostname));
 	memcpy(sc.session_id, proc->session_id, sizeof(sc.session_id));
 	
 	ret = store_cookie(s->config, proc->cookie, sizeof(proc->cookie), &sc);
@@ -179,6 +180,9 @@ unsigned username_set = 0;
 	}
 	
 	if (ret == 0) { /* open tun */
+		if (req->hostname[0] != 0)
+			memcpy(proc->hostname, req->hostname, MAX_HOSTNAME_SIZE);
+
 		ret = open_tun(s->config, s->tun, lease);
 		if (ret < 0)
 		  ret = -1; /* sorry */

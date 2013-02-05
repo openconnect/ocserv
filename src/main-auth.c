@@ -297,7 +297,7 @@ int handle_commands(main_server_st *s, struct proc_list_st* proc)
 			}
 
 			if (ret == 0) {
-				ret = call_connect_script(s, proc);
+				ret = call_connect_script(s, proc, lease);
 				if (ret < 0) {
 					syslog(LOG_INFO, "User '%s' disconnected due to script", proc->username);
 				}

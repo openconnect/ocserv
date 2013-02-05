@@ -55,6 +55,9 @@ int ret;
 		char real[64];
 		char local[64];
 		char remote[64];
+
+		if (proc->lease == NULL)
+			exit(1);
 		
 		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
 			exit(1);
@@ -86,7 +89,7 @@ int ret;
 	}
 }
 
-int call_connect_script(main_server_st *s, struct proc_list_st* proc)
+int call_connect_script(main_server_st *s, struct proc_list_st* proc, struct lease_st* lease)
 {
 pid_t pid;
 int ret, status;
@@ -100,27 +103,30 @@ int ret, status;
 		char local[64];
 		char remote[64];
 		
+		/* Note we don't use proc->lease and accept lease directly
+		 * because we are called before proc population is completed */
+		
 		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
 			exit(1);
 
-		if (proc->lease->lip4_len > 0) {
-			if (getnameinfo((void*)&proc->lease->lip4, proc->lease->lip4_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+		if (lease->lip4_len > 0) {
+			if (getnameinfo((void*)&lease->lip4, lease->lip4_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		} else {
-			if (getnameinfo((void*)&proc->lease->lip6, proc->lease->lip6_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&lease->lip6, lease->lip6_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
 
-		if (proc->lease->rip4_len > 0) {
-			if (getnameinfo((void*)&proc->lease->rip4, proc->lease->rip4_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+		if (lease->rip4_len > 0) {
+			if (getnameinfo((void*)&lease->rip4, lease->rip4_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		} else {
-			if (getnameinfo((void*)&proc->lease->rip6, proc->lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&lease->rip6, lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
 
 		ret = execlp(s->config->connect_script, s->config->connect_script,
-			proc->username, proc->lease->name, real, local, remote, NULL);
+			proc->username, lease->name, real, local, remote, NULL);
 		if (ret == -1)
 			exit(1);
 			

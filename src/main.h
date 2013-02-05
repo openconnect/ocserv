@@ -43,7 +43,7 @@ void clear_lists(main_server_st *s);
 
 int handle_commands(main_server_st *s, struct proc_list_st* cur);
 
-int call_connect_script(main_server_st *s, struct proc_list_st* cur);
+int call_connect_script(main_server_st *s, struct proc_list_st* cur, struct lease_st*);
 void call_disconnect_script(main_server_st *s, struct proc_list_st* cur);
 
 void expire_tls_sessions(main_server_st *s);

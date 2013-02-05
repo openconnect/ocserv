@@ -170,10 +170,7 @@ pid_t pid;
 			(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV)) {
 			if (WIFSIGNALED(status))
 				syslog(LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
-			else
-				syslog(LOG_DEBUG, "Child %u died with status %d\n", (unsigned)pid, WEXITSTATUS(status));
-		} else
-			syslog(LOG_DEBUG, "Child %u died peacefully\n", (unsigned)pid);
+		}
 	}
 	need_children_cleanup = 0;
 }

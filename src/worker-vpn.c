@@ -58,7 +58,7 @@
 #define MAX_HTTP_REQUESTS 8
 
 static int handle_worker_commands(struct worker_st *ws);
-static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size);
+static int parse_cstp_data(struct worker_st* ws, gnutls_session_t, uint8_t* buf, size_t buf_size);
 
 static void handle_alarm(int signo)
 {
@@ -925,7 +925,7 @@ gnutls_session_t ts;
 
 			l = ret;
 
-			ret = parse_cstp_data(ws, buffer, l);
+			ret = parse_cstp_data(ws, ws->session, buffer, l);
 			if (ret < 0) {
 				oclog(ws, LOG_INFO, "Error parsing CSTP data");
 				exit(1);
@@ -955,7 +955,7 @@ gnutls_session_t ts;
 
 					ws->udp_state = UP_ACTIVE;
 
-					ret = parse_cstp_data(ws, buffer, l);
+					ret = parse_cstp_data(ws, ws->dtls_session, buffer, l);
 					if (ret < 0) {
 						oclog(ws, LOG_INFO, "Error parsing CSTP data");
 						exit(1);
@@ -1057,10 +1057,11 @@ int handle_worker_commands(struct worker_st *ws)
 	return 0;
 }
 
-static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size)
+static int parse_cstp_data(struct worker_st* ws, 
+				gnutls_session_t ts, /* the interface of recv */
+				uint8_t* buf, size_t buf_size)
 {
 int pktlen, ret, e;
-gnutls_session_t ts;
 
 	if (buf_size < 8) {
 		oclog(ws, LOG_INFO, "Can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
@@ -1085,12 +1086,6 @@ gnutls_session_t ts;
 			break;
 
 		case AC_PKT_DPD_OUT:
-			if (ws->udp_state == UP_ACTIVE) {
-				ts = ws->dtls_session;
-			} else {
-				ts = ws->session;
-			}
-
 			ret =
 			    tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
 			if (ret < 0) {

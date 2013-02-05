@@ -1,12 +1,12 @@
 #ifndef MAIN_H
 # define MAIN_H
 
-#include <vpn.h>
-#include <tlslib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <net/if.h>
+#include <vpn.h>
+#include <tlslib.h>
 #include "ipc.h"
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
@@ -61,5 +61,7 @@ int handle_resume_fetch_req(main_server_st* s, struct proc_list_st* proc,
 
 int handle_resume_store_req(main_server_st* s, struct proc_list_st *proc,
   			   const struct cmd_resume_store_req_st * req);
+
+void expire_cookies(main_server_st* s);
 
 #endif

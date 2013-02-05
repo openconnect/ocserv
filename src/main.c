@@ -38,7 +38,7 @@
 #include "ipc.h"
 
 #include <main.h>
-#include <vpn.h>
+#include <worker.h>
 #include <cookies.h>
 #include <tun.h>
 #include <list.h>

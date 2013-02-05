@@ -1,11 +1,9 @@
-#ifndef TLS_H
-#define TLS_H
+#ifndef TLSLIB_H
+#define TLSLIB_H
 
 #include <gnutls/gnutls.h>
 #include <vpn.h>
 #include <hashtable.h>
-
-#define MAX_SESSION_DATA_SIZE (4*1024)
 
 #define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
 	
@@ -31,8 +29,6 @@ void tls_close(gnutls_session_t session);
 
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
-
-#define MAX_SESSION_DATA_SIZE (4*1024)
 
 typedef struct
 {

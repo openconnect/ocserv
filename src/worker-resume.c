@@ -33,6 +33,7 @@
 #include <limits.h>
 
 #include <vpn.h>
+#include <worker.h>
 #include "ipc.h"
 #include <cookies.h>
 #include <tlslib.h>

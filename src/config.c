@@ -201,6 +201,9 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
   
 	if (HAVE_OPT(FOREGROUND))
 		config->foreground = 1;
+
+	if (HAVE_OPT(TLS_DEBUG))
+		config->tls_debug = 1;
 	
 	if (HAVE_OPT(CONFIG)) {
 		cfg_file = OPT_ARG(CONFIG);

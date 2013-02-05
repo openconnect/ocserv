@@ -28,6 +28,12 @@ flag = {
 };
 
 flag = {
+    name      = tls-debug;
+    descrip   = "Enable verbose TLS debugging information.";
+    doc      = "";
+};
+
+flag = {
     name      = config;
     value     = c;
     arg-type  = file;

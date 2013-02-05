@@ -685,14 +685,14 @@ fail:
 	return -1;
 }
 
-static ssize_t sock_send(int sockfd, const void *buf, size_t len)
+static ssize_t tun_write(int sockfd, const void *buf, size_t len)
 {
 int left = len;
 int ret;
 const uint8_t * p = buf;
 
 	while(left > 0) {
-		ret = send(sockfd, p, left, 0);
+		ret = write(sockfd, p, left);
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
@@ -814,6 +814,7 @@ gnutls_session_t ts;
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
 	}
 	tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);
+	tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
 
 	if (ws->udp_state != UP_DISABLED) {
 		p = (char*)buffer;
@@ -823,20 +824,22 @@ gnutls_session_t ts;
 		}
 		tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
 
-		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", vinfo.mtu);
 		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->udp_port);
 		tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
 		tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
 		tls_puts(ws->session, "X-DTLS-CipherSuite: "OPENSSL_CIPHERSUITE"\r\n");
+
+		if (ws->udp_port_proto == AF_INET)
+			mtu_overhead = 20+8;
+		else
+			mtu_overhead = 40+8;
+		effective_mtu = vinfo.mtu - mtu_overhead;
+
+		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", effective_mtu);
 	}
 
-	tls_puts(ws->session, "X-CSTP-Banner: Hello there\r\n");
+	tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
 	tls_puts(ws->session, "\r\n");
-	
-	if (ws->udp_port_proto == AF_INET)
-		mtu_overhead = 20+8;
-	else
-		mtu_overhead = 40+8;
 	
 	for(;;) {
 		FD_ZERO(&rfds);
@@ -863,6 +866,7 @@ gnutls_session_t ts;
 		}
 		
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
+
 			if (ws->udp_state == UP_ACTIVE) {
 				l = effective_mtu;
 				ts = ws->dtls_session;
@@ -871,7 +875,7 @@ gnutls_session_t ts;
 				ts = ws->session;
 			}
 				
-			l = recv(ws->tun_fd, buffer + 8, l - 8, 0);
+			l = read(ws->tun_fd, buffer + 8, l - 8);
 			if (l < 0) {
 				e = errno;
 				
@@ -883,7 +887,7 @@ gnutls_session_t ts;
 			}
 			
 			if (l == 0) { /* disconnect */
-				oclog(ws, LOG_INFO, "Client disconnected");
+				oclog(ws, LOG_INFO, "TUN device returned zero");
 				exit(1);
 			}
 
@@ -898,11 +902,11 @@ gnutls_session_t ts;
 
 			ret = tls_send(ts, buffer, l + 8);
 			GNUTLS_FATAL_ERR(ret);
-			
+
 			if (ret == GNUTLS_E_LARGE_PACKET) {
 				/* XXX: we have to do something better than that.
 				 * adjust mtu */
-				if (effective_mtu > 100)
+				if (effective_mtu > 128)
 					effective_mtu -= 32;
 
 				ret = tls_send(ws->session, buffer, l + 8);
@@ -913,9 +917,17 @@ gnutls_session_t ts;
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
 			ret = tls_recv(ws->session, buffer, sizeof(buffer));
 			GNUTLS_FATAL_ERR(ret);
-			
-			ret = parse_cstp_data(ws, buffer, ret);
+
+			if (ret == 0) { /* disconnect */
+				oclog(ws, LOG_INFO, "Client disconnected");
+				exit(1);
+			}
+
+			l = ret;
+
+			ret = parse_cstp_data(ws, buffer, l);
 			if (ret < 0) {
+				oclog(ws, LOG_INFO, "Error parsing CSTP data");
 				exit(1);
 			}
 			
@@ -927,18 +939,27 @@ gnutls_session_t ts;
 		}
 
 		if (ws->udp_state != UP_DISABLED && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
-		
+
 			switch (ws->udp_state) {
 				case UP_ACTIVE:
 				case UP_INACTIVE:
 					ret = tls_recv(ws->dtls_session, buffer, sizeof(buffer));
 					GNUTLS_FATAL_ERR(ret);
-				
+
+
+					if (ret == 0) { /* disconnect */
+						oclog(ws, LOG_INFO, "Client disconnected");
+						exit(1);
+					}
+					l = ret;
+
 					ws->udp_state = UP_ACTIVE;
 
-					ret = parse_cstp_data(ws, buffer, ret);
-					if (ret < 0)
+					ret = parse_cstp_data(ws, buffer, l);
+					if (ret < 0) {
+						oclog(ws, LOG_INFO, "Error parsing CSTP data");
 						exit(1);
+					}
 					
 					udp_recv_time = time(0);
 					break;
@@ -947,20 +968,27 @@ gnutls_session_t ts;
 					if (ret < 0)
 						exit(1);
 					
-					gnutls_dtls_set_mtu (ws->dtls_session, vinfo.mtu-mtu_overhead);
+					gnutls_dtls_set_mtu (ws->dtls_session, effective_mtu);
 					break;
 				case UP_HANDSHAKE:
 					ret = gnutls_handshake(ws->dtls_session);
-					
 					if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
 						oclog(ws, LOG_ERR, "Error in DTLS handshake: %s\n", gnutls_strerror(ret));
 						ws->udp_state = UP_DISABLED;
 						break;
 					}
-					
+
+					if (ret == GNUTLS_E_LARGE_PACKET) {
+						/* adjust mtu */
+						if (effective_mtu > 256)
+							effective_mtu -= 128;
+
+					}
+
 					if (ret == 0) {
 						ws->udp_state = UP_ACTIVE;
 						effective_mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
+						oclog(ws, LOG_DEBUG, "DTLS handshake complete (MTU: %u)\n", effective_mtu);
 					}
 					
 					break;
@@ -1032,9 +1060,10 @@ int handle_worker_commands(struct worker_st *ws)
 static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size)
 {
 int pktlen, ret, e;
+gnutls_session_t ts;
 
 	if (buf_size < 8) {
-		oclog(ws, LOG_INFO, "Can't read CSTP header\n");
+		oclog(ws, LOG_INFO, "Can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
 		return -1;
 	}
 
@@ -1056,15 +1085,24 @@ int pktlen, ret, e;
 			break;
 
 		case AC_PKT_DPD_OUT:
+			if (ws->udp_state == UP_ACTIVE) {
+				ts = ws->dtls_session;
+			} else {
+				ts = ws->session;
+			}
+
 			ret =
-			    tls_send(ws->session, "STF\x1\x0\x0\x4\x0", 8);
-			GNUTLS_FATAL_ERR(ret);
+			    tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "Could not send TLS data: %s", gnutls_strerror(ret));
+				return -1;
+			}
 			break;
 		case AC_PKT_DISCONN:
 			oclog(ws, LOG_INFO, "Received BYE packet\n");
 			break;
 		case AC_PKT_DATA:
-			ret = sock_send(ws->tun_fd, buf + 8, pktlen);
+			ret = tun_write(ws->tun_fd, buf + 8, pktlen);
 			if (ret == -1) {
 				e = errno;
 				oclog(ws, LOG_ERR, "Could not write data to tun: %s", strerror(e));

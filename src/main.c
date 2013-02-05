@@ -50,7 +50,7 @@ static unsigned int need_children_cleanup = 0;
 
 static void tls_log_func(int level, const char *str)
 {
-	syslog(LOG_DEBUG, "Debug[<%d>]: %s", level, str);
+	syslog(LOG_DEBUG, "TLS[<%d>]: %s", level, str);
 }
 
 /* Returns 0 on success or negative value on error.
@@ -395,9 +395,11 @@ int main(int argc, char** argv)
 	}
 
 	/* Initialize GnuTLS */
-	gnutls_global_set_log_function(tls_log_func);
 	gnutls_global_set_audit_log_function(tls_audit_log_func);
-	gnutls_global_set_log_level(0);
+	if (config.tls_debug) {
+		gnutls_global_set_log_function(tls_log_func);
+		gnutls_global_set_log_level(9);
+	}
 
 	ret = gnutls_global_init();
 	GNUTLS_FATAL_ERR(ret);

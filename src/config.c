@@ -69,6 +69,18 @@
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 	}
+	
+#define READ_TF(name, s_name, mand, def) \
+	{ char* tmp_tf = NULL; \
+		READ_STRING(name, tmp_tf, mand); \
+		if (tmp_tf == NULL) s_name = def; \
+		else { \
+			if (strcasecmp(tmp_tf, "true") == 0 || strcasecmp(tmp_tf, "yes") == 0) \
+				s_name = 1; \
+			else \
+				s_name = 0; \
+		} \
+	}
 
 #define READ_NUMERIC(name, s_name, mand) \
 	val = optionGetValue(pov, name); \
@@ -124,6 +136,8 @@ unsigned j;
 
 	READ_STRING("connect-script", config->connect_script, 0);
 	READ_STRING("disconnect-script", config->disconnect_script, 0);
+
+	READ_TF("use-utmp", config->use_utmp, 0, 1);
 
 	READ_STRING("tls-priorities", config->priorities, 0);
 	READ_STRING("chroot-dir", config->chroot_dir, 0);

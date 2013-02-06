@@ -575,7 +575,7 @@ fork_failed:
 						/* received a bad command from worker */
 						kill(ctmp->pid, SIGTERM);
 					}
-					call_disconnect_script(&s, ctmp);
+					user_disconnected(&s, ctmp);
 					remove_proc(ctmp);
 					active_clients--;
 				}

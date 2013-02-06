@@ -62,6 +62,7 @@ struct cfg_st {
 	unsigned tls_debug;
 	unsigned debug;
 	unsigned max_clients;
+	unsigned use_utmp;
 
 	const char *connect_script;
 	const char *disconnect_script;

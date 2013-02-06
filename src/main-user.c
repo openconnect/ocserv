@@ -34,6 +34,8 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
+#include <utmpx.h>
+#include <timespec.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -41,6 +43,7 @@
 #include <main.h>
 #include <ccan/list/list.h>
 
+static
 void call_disconnect_script(main_server_st *s, struct proc_st* proc)
 {
 pid_t pid;
@@ -89,6 +92,7 @@ int ret;
 	}
 }
 
+static
 int call_connect_script(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
 {
 pid_t pid;
@@ -96,6 +100,16 @@ int ret, status;
 
 	if (s->config->connect_script == NULL)
 		return 0;
+
+	if (s->config->auth_types & AUTH_TYPE_PAM) {
+		static int warned = 0;
+		
+		if (warned == 0) {
+			syslog(LOG_WARNING, "PAM authentication and UTMP are mutually exclusive. Turn off UTMP and use PAM for accounting.");
+			warned = 1;
+		}
+		return 0;
+	}
 
 	pid = fork();
 	if (pid == 0) {
@@ -141,3 +155,73 @@ int ret, status;
 		return 0;
 	return -1;
 }
+
+static void
+add_utmp_entry(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
+{
+	struct utmpx entry;
+	struct timespec tv;
+	
+	if (s->config->use_utmp == 0)
+		return;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.ut_type = USER_PROCESS;
+	entry.ut_pid = proc->pid;
+	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", lease->name);
+	snprintf(entry.ut_user, sizeof(entry.ut_user), "%s", proc->username);
+	if (proc->remote_addr_len == sizeof(struct sockaddr_in))
+		memcpy(entry.ut_addr_v6, SA_IN_P(&proc->remote_addr), sizeof(struct in_addr));
+	else
+		memcpy(entry.ut_addr_v6, SA_IN6_P(&proc->remote_addr), sizeof(struct in6_addr));
+
+	gettime(&tv);
+	entry.ut_tv.tv_sec = tv.tv_sec;
+	entry.ut_tv.tv_usec = tv.tv_nsec / 1000;
+	getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, entry.ut_host, sizeof(entry.ut_host), NULL, 0, NI_NUMERICHOST);
+
+	setutxent();
+	pututxline(&entry);
+	endutxent();
+	
+	return;
+}
+
+static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
+{
+	struct utmpx entry;
+
+	if (s->config->use_utmp == 0)
+		return;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.ut_type = DEAD_PROCESS;
+	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
+	entry.ut_pid = proc->pid;
+
+	setutxent();
+	pututxline(&entry);
+	endutxent();
+	
+	return;
+}
+
+int user_connected(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
+{
+int ret;
+
+	add_utmp_entry(s, proc, lease);
+
+	ret = call_connect_script(s, proc, lease);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+void user_disconnected(main_server_st *s, struct proc_st* proc)
+{
+	remove_utmp_entry(s, proc);
+	call_disconnect_script(s, proc);
+}
+

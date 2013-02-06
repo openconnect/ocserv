@@ -117,6 +117,9 @@ disconnect-script = /bin/echo
 # Cookie database file. Where to store the cookies.
 cookie-db = /path/to/db
 
+# UTMP
+use-utmp = true
+
 run-as-user = nobody
 run-as-group = nogroup
 

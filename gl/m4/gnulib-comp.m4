@@ -51,7 +51,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module getdtablesize:
   # Code from module gettime:
   # Code from module gettimeofday:
-  # Code from module hash-pjw-bare:
   # Code from module include_next:
   # Code from module memchr:
   # Code from module memmem:
@@ -313,8 +312,6 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/getdtablesize.c
   lib/gettime.c
   lib/gettimeofday.c
-  lib/hash-pjw-bare.c
-  lib/hash-pjw-bare.h
   lib/memchr.c
   lib/memchr.valgrind
   lib/memmem.c

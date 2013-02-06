@@ -31,6 +31,7 @@
 #include <limits.h>
 
 #include <tlslib.h>
+#include <ccan/hash/hash.h>
 #include <vpn.h>
 
 
@@ -116,6 +117,13 @@ void tls_fatal_close(gnutls_session_t session,
 	gnutls_deinit(session);
 }
 
+static size_t rehash(const void *_e, void *unused)
+{
+const tls_cache_st *e = _e;
+
+	return hash_stable_8(e->session_id, e->session_id_size, 0);
+}
+
 void tls_cache_init(struct cfg_st* config, tls_cache_db_st** _db)
 {
 tls_cache_db_st * db;
@@ -124,7 +132,7 @@ tls_cache_db_st * db;
 	if (db == NULL)
 		exit(1);
 
-	hash_init(db->entry);
+	htable_init(&db->ht, rehash, NULL);
 	db->entries = 0;
 
 	*_db = db;
@@ -133,19 +141,21 @@ tls_cache_db_st * db;
 void tls_cache_deinit(tls_cache_db_st* db)
 {
 tls_cache_st* cache;
-int bkt;
-struct hlist_node *pos, *tmp;
+struct htable_iter iter;
 
-	hash_for_each_safe(db->entry, bkt, pos, tmp, cache, list) {
+	cache = htable_first(&db->ht, &iter);
+	while(cache != NULL) {
 		if (cache->session_data_size > 0) {
 	          	memset(cache->session_data, 0, cache->session_data_size);
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
 		}
-          	hash_del(&cache->list);
           	free(cache);
-		db->entries--;
+          	
+          	cache = htable_next(&db->ht, &iter);
         }
+        htable_clear(&db->ht);
+	db->entries = 0;
 
         return;
 }

@@ -39,9 +39,9 @@
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
-#include <list.h>
+#include <ccan/list/list.h>
 
-void call_disconnect_script(main_server_st *s, struct proc_list_st* proc)
+void call_disconnect_script(main_server_st *s, struct proc_st* proc)
 {
 pid_t pid;
 int ret;
@@ -89,7 +89,7 @@ int ret;
 	}
 }
 
-int call_connect_script(main_server_st *s, struct proc_list_st* proc, struct lease_st* lease)
+int call_connect_script(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
 {
 pid_t pid;
 int ret, status;

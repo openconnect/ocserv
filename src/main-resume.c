@@ -35,14 +35,13 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include "ipc.h"
-#include <hash.h>
-#include <hash-pjw-bare.h>
+#include <ccan/hash/hash.h>
 
 #include <vpn.h>
 #include <main.h>
 #include <tlslib.h>
 
-int send_resume_fetch_reply(main_server_st* s, struct proc_list_st * proc,
+int send_resume_fetch_reply(main_server_st* s, struct proc_st * proc,
 		cmd_resume_reply_t r, struct cmd_resume_fetch_reply_st * reply)
 {
 	struct iovec iov[3];
@@ -64,26 +63,30 @@ int send_resume_fetch_reply(main_server_st* s, struct proc_list_st * proc,
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
-int handle_resume_delete_req(main_server_st* s, struct proc_list_st * proc,
+int handle_resume_delete_req(main_server_st* s, struct proc_st * proc,
   			   const struct cmd_resume_fetch_req_st * req)
 {
-size_t key;
 tls_cache_st* cache;
-struct hlist_node *pos, *tmp;
-	key = hash_pjw_bare(req->session_id, req->session_id_size);
+struct htable_iter iter;
+size_t key;
 
-	hash_for_each_possible_safe(s->tls_db->entry, cache, pos, tmp, list, key) {
+	key = hash_stable_8(req->session_id, req->session_id_size, 0);
+
+	cache = htable_firstval(&s->tls_db->ht, &iter, key);
+	while(cache != NULL) {
 		if (req->session_id_size == cache->session_id_size &&
 	          memcmp (req->session_id, cache->session_id, req->session_id_size) == 0) {
 
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
 	          
-	          	hash_del(&cache->list);
+	          	htable_delval(&s->tls_db->ht, &iter);
 	          	free(cache);
 			s->tls_db->entries--;
 	          	return 0;
 		}
+          	
+          	cache = htable_nextval(&s->tls_db->ht, &iter, key);
         }
 
         return 0;
@@ -98,18 +101,20 @@ static int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_stora
 	}
 }
 
-int handle_resume_fetch_req(main_server_st* s, struct proc_list_st * proc,
+int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
   			   const struct cmd_resume_fetch_req_st * req, 
   			   struct cmd_resume_fetch_reply_st * rep)
 {
-size_t key;
 tls_cache_st* cache;
-struct hlist_node *pos;
+struct htable_iter iter;
+size_t key;
 
-	key = hash_pjw_bare(req->session_id, req->session_id_size);
 	rep->reply = REP_RESUME_FAILED;
 
-	hash_for_each_possible(s->tls_db->entry, cache, pos, list, key) {
+	key = hash_stable_8(req->session_id, req->session_id_size, 0);
+
+	cache = htable_firstval(&s->tls_db->ht, &iter, key);
+	while(cache != NULL) {
 		if (req->session_id_size == cache->session_id_size &&
 	          memcmp (req->session_id, cache->session_id, req->session_id_size) == 0) {
 
@@ -124,13 +129,15 @@ struct hlist_node *pos;
 		          	return 0;
 			}
 		}
+
+          	cache = htable_nextval(&s->tls_db->ht, &iter, key);
         }
 
         return 0;
 
 }
 
-int handle_resume_store_req(main_server_st* s, struct proc_list_st * proc,
+int handle_resume_store_req(main_server_st* s, struct proc_st * proc,
   			   const struct cmd_resume_store_req_st * req)
 {
 tls_cache_st* cache;
@@ -147,7 +154,7 @@ size_t key;
 		s->tls_db->entries >= DEFAULT_MAX_CACHED_TLS_SESSIONS(s->tls_db)))
 		return -1;
 
-	key = hash_pjw_bare(req->session_id, req->session_id_size);
+	key = hash_stable_8(req->session_id, req->session_id_size, 0);
 	
 	cache = malloc(sizeof(*cache));
 	if (cache == NULL)
@@ -161,7 +168,7 @@ size_t key;
 	memcpy(cache->session_data, req->session_data, req->session_data_size);
 	memcpy(&cache->remote_addr, &proc->remote_addr, proc->remote_addr_len);
 	
-	hash_add(s->tls_db->entry, &cache->list, key);
+	htable_add(&s->tls_db->ht, key, cache);
 	s->tls_db->entries++;
 
 	return 0;
@@ -170,13 +177,13 @@ size_t key;
 void expire_tls_sessions(main_server_st *s)
 {
 tls_cache_st* cache;
-int bkt;
-struct hlist_node *pos, *tmp;
+struct htable_iter iter;
 time_t now, exp;
 
 	now = time(0);
 
-	hash_for_each_safe(s->tls_db->entry, bkt, pos, tmp, cache, list) {
+	cache = htable_first(&s->tls_db->ht, &iter);
+	while(cache != NULL) {
 #if GNUTLS_VERSION_NUMBER >= 0x030107
 		gnutls_datum_t d;
 
@@ -191,10 +198,11 @@ time_t now, exp;
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
 
-	          	hash_del(&cache->list);
+	          	htable_delval(&s->tls_db->ht, &iter);
 	          	free(cache);
 			s->tls_db->entries--;
 		}
+          	cache = htable_next(&s->tls_db->ht, &iter);
         }
 
         return;

@@ -2,10 +2,10 @@
 # define TUN_H
 
 #include <vpn.h>
-#include <list.h>
+#include <ccan/list/list.h>
 
 struct lease_st {
-	struct list_head list;
+	struct list_node list;
 
 	char name[IFNAMSIZ];
 	unsigned int tun_nr;
@@ -28,24 +28,23 @@ struct lease_st {
 };
 
 struct tun_st {
-	struct lease_st lease_list;
+	struct list_head head;
+	unsigned total;
 };
 
 inline static void tun_st_init(struct tun_st* ts)
 {
 	memset(ts, 0, sizeof(*ts));
-	INIT_LIST_HEAD(&ts->lease_list.list);
+	list_head_init(&ts->head);
 }
 
 inline static void tun_st_deinit(struct tun_st* ts)
 {
-	struct list_head *cq;
-	struct list_head *pos;
-	struct lease_st *ltmp;
+	struct lease_st *ltmp, *pos;
 
-	list_for_each_safe(pos, cq, &ts->lease_list.list) {
-		ltmp = list_entry(pos, struct lease_st, list);
+	list_for_each_safe(&ts->head, ltmp, pos, list) {
 		list_del(&ltmp->list);
+		ts->total--;
 	}
 }
 

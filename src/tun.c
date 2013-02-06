@@ -33,7 +33,7 @@
 
 #include <vpn.h>
 #include <tun.h>
-#include <list.h>
+#include <ccan/list/list.h>
 
 static int bignum_add1 (uint8_t * num, unsigned size)
 {
@@ -313,11 +313,10 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 	struct ifreq ifr;
 	unsigned int t;
 	struct lease_st *lease = NULL;
-	struct list_head *pos;
 	struct lease_st *last4, *tmp;
 	struct lease_st *last6;
 	
-	if (list_empty(&tun->lease_list.list)) {
+	if (list_empty(&tun->head)) {
 		lease = calloc(1, sizeof(*lease));
 		if (lease == NULL)
 		        return -1;
@@ -330,13 +329,13 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 		}
 
 		/* Add into the list */
-		list_add_tail( &lease->list, &tun->lease_list.list);
+		list_add_tail( &tun->head, &lease->list);
+		tun->total++;
 	} else {
 		last4 = last6 = NULL;
 		
 		/* try to re-use an address */
-                list_for_each(pos, &tun->lease_list.list) {
-			tmp = list_entry(pos, struct lease_st, list);
+                list_for_each(&tun->head, tmp, list) {
 			if (tmp->in_use == 0) {
 				lease = tmp;
 				break;
@@ -348,8 +347,7 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 			if (lease == NULL)
 			        return -1;
 
-	                list_for_each_prev(pos, &tun->lease_list.list) {
-				tmp = list_entry(pos, struct lease_st, list);
+	                list_for_each_rev(&tun->head, tmp, list) {
 				if (tmp->rip4_len > 0)
 					last4 = tmp;
 
@@ -367,7 +365,8 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 			}
 
 			/* Add into the list */
-			list_add_tail( &lease->list, &tun->lease_list.list);
+			list_add_tail( &tun->head, &lease->list);
+			tun->total++;
 		}
 	}
 	

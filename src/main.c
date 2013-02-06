@@ -41,7 +41,7 @@
 #include <worker.h>
 #include <cookies.h>
 #include <tun.h>
-#include <list.h>
+#include <ccan/list/list.h>
 
 int syslog_open = 0;
 static unsigned int terminate = 0;
@@ -63,9 +63,10 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 	char portname[6];
 	int s, y;
 	char buf[512];
-	struct listen_list_st *tmp;
+	struct listener_st *tmp;
 
-	INIT_LIST_HEAD(&list->list);
+	list_head_init(&list->head);
+	list->total = 0;
 
 	snprintf(portname, sizeof(portname), "%d", listen_port);
 
@@ -149,9 +150,10 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 			}
 		}
 
-		tmp = calloc(1, sizeof(struct listen_list_st));
+		tmp = calloc(1, sizeof(struct listener_st));
 		tmp->fd = s;
-		list_add(&(tmp->list), &(list->list));
+		list_add(&list->head, &(tmp->list));
+		list->total++;
 	}
 
 	fflush(stderr);
@@ -285,22 +287,20 @@ static void drop_privileges(struct cfg_st *config)
 /* clears the server llist and clist. To be used after fork() */
 void clear_lists(main_server_st *s)
 {
-	struct list_head *cq;
-	struct list_head *pos;
-	struct listen_list_st *ltmp;
-	struct proc_list_st *ctmp;
+	struct listener_st *ltmp, *lpos;
+	struct proc_st *ctmp, *cpos;
 
-	list_for_each_safe(pos, cq, &s->llist->list) {
-		ltmp = list_entry(pos, struct listen_list_st, list);
+	list_for_each_safe(&s->llist->head, ltmp, lpos, list) {
 		close(ltmp->fd);
 		list_del(&ltmp->list);
+		s->llist->total--;
 	}
 
-	list_for_each_safe(pos, cq, &s->clist->list) {
-		ctmp = list_entry(pos, struct proc_list_st, list);
+	list_for_each_safe(&s->clist->head, ctmp, cpos, list) {
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
 		list_del(&ctmp->list);
+		s->clist->total--;
 	}
 	
 	tls_cache_deinit(s->tls_db);
@@ -308,17 +308,15 @@ void clear_lists(main_server_st *s)
 
 static void kill_children(struct proc_list_st* clist)
 {
-	struct list_head *pos;
-	struct proc_list_st *ctmp;
+	struct proc_st *ctmp;
 
-	list_for_each(pos, &clist->list) {
-		ctmp = list_entry(pos, struct proc_list_st, list);
+	list_for_each(&clist->head, ctmp, list) {
 		if (ctmp->pid != -1)
 			kill(ctmp->pid, SIGTERM);
 	}
 }
 
-static void remove_proc(struct proc_list_st *ctmp)
+static void remove_proc(struct proc_st *ctmp)
 {
 	/* close the intercomm fd */
 	if (ctmp->fd >= 0)
@@ -343,10 +341,8 @@ int main(int argc, char** argv)
 	struct tls_st creds;
 	struct listen_list_st llist;
 	struct proc_list_st clist;
-	struct listen_list_st *ltmp;
-	struct proc_list_st *ctmp;
-	struct list_head *cq;
-	struct list_head *pos;
+	struct listener_st *ltmp;
+	struct proc_st *ctmp, *cpos;
 	struct tun_st tun;
 	fd_set rd;
 	int val, n = 0, ret;
@@ -358,7 +354,7 @@ int main(int argc, char** argv)
 	main_server_st s;
 	tls_cache_db_st* tls_db;
 	
-	INIT_LIST_HEAD(&clist.list);
+	list_head_init(&clist.head);
 	tun_st_init(&tun);
 	tls_cache_init(&config, &tls_db);
 
@@ -468,9 +464,7 @@ int main(int argc, char** argv)
 
 		FD_ZERO(&rd);
 
-		list_for_each(pos, &llist.list) {
-			ltmp = list_entry(pos, struct listen_list_st, list);
-
+		list_for_each(&llist.head, ltmp, list) {
 			val = fcntl(ltmp->fd, F_GETFL, 0);
 			if ((val == -1)
 			    || (fcntl(ltmp->fd, F_SETFL, val | O_NONBLOCK) <
@@ -483,9 +477,7 @@ int main(int argc, char** argv)
 			n = MAX(n, ltmp->fd);
 		}
 
-		list_for_each(pos, &clist.list) {
-			ctmp = list_entry(pos, struct proc_list_st, list);
-
+		list_for_each(&clist.head, ctmp, list) {
 			FD_SET(ctmp->fd, &rd);
 			n = MAX(n, ctmp->fd);
 		}
@@ -504,8 +496,7 @@ int main(int argc, char** argv)
 		}
 
 		/* Check for new connections to accept */
-		list_for_each(pos, &llist.list) {
-			ltmp = list_entry(pos, struct listen_list_st, list);
+		list_for_each(&llist.head, ltmp, list) {
 			if (FD_ISSET(ltmp->fd, &rd)) {
 				ws.remote_addr_len = sizeof(ws.remote_addr);
 				fd = accept(ltmp->fd, (void*)&ws.remote_addr, &ws.remote_addr_len);
@@ -555,7 +546,7 @@ int main(int argc, char** argv)
 fork_failed:
 					close(cmd_fd[0]);
 				} else { /* parent */
-					ctmp = calloc(1, sizeof(struct proc_list_st));
+					ctmp = calloc(1, sizeof(struct proc_st));
 					if (ctmp == NULL) {
 						kill(pid, SIGTERM);
 						goto fork_failed;
@@ -567,7 +558,7 @@ fork_failed:
 					ctmp->fd = cmd_fd[0];
 					set_cloexec_flag (cmd_fd[0], 1);
 
-					list_add(&(ctmp->list), &(clist.list));
+					list_add(&clist.head, &(ctmp->list));
 					active_clients++;
 				}
 				close(cmd_fd[1]);
@@ -576,9 +567,7 @@ fork_failed:
 		}
 
 		/* Check for any pending commands */
-		list_for_each_safe(pos, cq, &clist.list) {
-			ctmp = list_entry(pos, struct proc_list_st, list);
-			
+		list_for_each_safe(&clist.head, ctmp, cpos, list) {
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {

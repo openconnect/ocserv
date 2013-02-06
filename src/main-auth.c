@@ -40,10 +40,10 @@
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
-#include <list.h>
+#include <ccan/list/list.h>
 #include "pam.h"
 
-static int send_auth_reply(main_server_st* s, struct proc_list_st* proc,
+static int send_auth_reply(main_server_st* s, struct proc_st* proc,
 				cmd_auth_reply_t r, struct lease_st* lease)
 {
 	struct iovec iov[6];
@@ -98,7 +98,7 @@ static int send_auth_reply(main_server_st* s, struct proc_list_st* proc,
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
-static int handle_auth_cookie_req(main_server_st* s, struct proc_list_st* proc,
+static int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
   			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease)
 {
 int ret;
@@ -123,7 +123,7 @@ struct stored_cookie_st sc;
 }
 
 static
-int generate_and_store_vals(main_server_st *s, struct proc_list_st* proc)
+int generate_and_store_vals(main_server_st *s, struct proc_st* proc)
 {
 int ret;
 struct stored_cookie_st sc;
@@ -149,7 +149,7 @@ struct stored_cookie_st sc;
 	return 0;
 }
 
-static int handle_auth_req(main_server_st *s, struct proc_list_st* proc,
+static int handle_auth_req(main_server_st *s, struct proc_st* proc,
   			   const struct cmd_auth_req_st * req, struct lease_st **lease)
 {
 int ret = -1;
@@ -191,7 +191,7 @@ unsigned username_set = 0;
 	return ret;
 }
 
-int handle_commands(main_server_st *s, struct proc_list_st* proc)
+int handle_commands(main_server_st *s, struct proc_st* proc)
 {
 	struct iovec iov[2];
 	char buf[128];

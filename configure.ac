@@ -16,6 +16,7 @@ if [ test "$GCC" = "yes" ];then
 fi
 
 AC_CHECK_SIZEOF([unsigned long])
+AC_C_BIGENDIAN
 
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.28])
 

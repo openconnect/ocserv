@@ -3,7 +3,7 @@
 
 #include <gnutls/gnutls.h>
 #include <vpn.h>
-#include <hashtable.h>
+#include <ccan/htable/htable.h>
 
 #define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
 	
@@ -42,15 +42,13 @@ typedef struct
 
   char session_data[MAX_SESSION_DATA_SIZE];
   unsigned int session_data_size;
-  
-  struct hlist_node list;
 } tls_cache_st;
 
 #define TLS_SESSION_EXPIRATION_TIME 600
-#define DEFAULT_MAX_CACHED_TLS_SESSIONS(db) HASH_SIZE(db->entry)
+#define DEFAULT_MAX_CACHED_TLS_SESSIONS(db) 256
 typedef struct 
 {
-	DECLARE_HASHTABLE(entry, 7);
+	struct htable ht;
 	unsigned int entries;
 } tls_cache_db_st;
 

@@ -73,6 +73,5 @@ AC_MSG_NOTICE([summary of build options:
   Install prefix:   ${prefix}
   Compiler:         ${CC}
   CFlags:           ${CFLAGS}
-  Library types:    Shared=${enable_shared}, Static=${enable_static}
 ])
 

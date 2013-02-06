@@ -46,13 +46,8 @@ typedef struct
 
 #define TLS_SESSION_EXPIRATION_TIME 600
 #define DEFAULT_MAX_CACHED_TLS_SESSIONS(db) 256
-typedef struct 
-{
-	struct htable ht;
-	unsigned int entries;
-} tls_cache_db_st;
 
-void tls_cache_init(struct cfg_st* config, tls_cache_db_st** db);
-void tls_cache_deinit(tls_cache_db_st* db);
+void tls_cache_init(hash_db_st** db);
+void tls_cache_deinit(hash_db_st* db);
 
 #endif

@@ -68,7 +68,11 @@ An example configuration file follows.
 auth = "pam"
 
 # Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
-# listen-host = [IP|HOSTNAME]
+#listen-host = [IP|HOSTNAME]
+
+# Limit the number of clients. Unset or set to zero for unlimited.
+#max-clients = 1024
+max-clients = 16
 
 # TCP port number
 tcp-port = 3333
@@ -113,9 +117,6 @@ cookie-validity = 14400
 # is the VPN client IP.
 connect-script = /bin/echo
 disconnect-script = /bin/echo
-
-# Cookie database file. Where to store the cookies.
-cookie-db = /path/to/db
 
 # UTMP
 use-utmp = true

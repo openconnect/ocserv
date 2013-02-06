@@ -4,6 +4,7 @@
 #include <config.h>
 #include <gnutls/gnutls.h>
 #include <http-parser/http_parser.h>
+#include <ccan/htable/htable.h>
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -26,6 +27,13 @@ extern int syslog_open;
 #define AUTH_TYPE_USERNAME_PASS (1<<0)
 #define AUTH_TYPE_PAM (1<<1 | AUTH_TYPE_USERNAME_PASS)
 #define AUTH_TYPE_CERTIFICATE (1<<2)
+
+typedef struct 
+{
+	struct htable ht;
+	unsigned int entries;
+} hash_db_st;
+
 
 struct vpn_st {
 	const char *name;	/* device name */
@@ -57,7 +65,6 @@ struct cfg_st {
 	time_t cookie_validity;	/* in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;
-	const char *cookie_db;
 	unsigned foreground;
 	unsigned tls_debug;
 	unsigned debug;

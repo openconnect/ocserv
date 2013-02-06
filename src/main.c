@@ -352,11 +352,11 @@ int main(int argc, char** argv)
 	struct cfg_st config;
 	unsigned active_clients = 0;
 	main_server_st s;
-	tls_cache_db_st* tls_db;
 	
 	list_head_init(&clist.head);
 	tun_st_init(&tun);
-	tls_cache_init(&config, &tls_db);
+	tls_cache_init(&s.tls_db);
+	cookie_db_init(&s.cookie_db);
 
 	signal(SIGINT, handle_term);
 	signal(SIGTERM, handle_term);
@@ -379,7 +379,6 @@ int main(int argc, char** argv)
 	
 	s.config = &config;
 	s.tun = &tun;
-	s.tls_db = tls_db;
 	s.llist = &llist;
 	s.clist = &clist;
 	

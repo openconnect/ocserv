@@ -104,7 +104,7 @@ static int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 int ret;
 struct stored_cookie_st sc;
 
-	ret = retrieve_cookie(s->config, req->cookie, sizeof(req->cookie), &sc);
+	ret = retrieve_cookie(s, req->cookie, sizeof(req->cookie), &sc);
 	if (ret < 0) {
 		return -1;
 	}
@@ -126,7 +126,7 @@ static
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc)
 {
 int ret;
-struct stored_cookie_st sc;
+struct stored_cookie_st *sc;
 
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, proc->cookie, sizeof(proc->cookie));
 	if (ret < 0)
@@ -135,16 +135,23 @@ struct stored_cookie_st sc;
 	if (ret < 0)
 		return -2;
 	
-	memset(&sc, 0, sizeof(sc));
-	sc.expiration = time(0) + s->config->cookie_validity;
+	sc = calloc(1, sizeof(*sc));
+	if (sc == NULL)
+		return -2;
+
+	sc->expiration = time(0) + s->config->cookie_validity;
 	
-	memcpy(sc.username, proc->username, sizeof(sc.username));
-	memcpy(sc.hostname, proc->hostname, sizeof(sc.hostname));
-	memcpy(sc.session_id, proc->session_id, sizeof(sc.session_id));
+	memcpy(sc->cookie, proc->cookie, sizeof(proc->cookie));
+	memcpy(sc->username, proc->username, sizeof(sc->username));
+	memcpy(sc->hostname, proc->hostname, sizeof(sc->hostname));
+	memcpy(sc->session_id, proc->session_id, sizeof(sc->session_id));
 	
-	ret = store_cookie(s->config, proc->cookie, sizeof(proc->cookie), &sc);
-	if (ret < 0)
+	/* the sc pointer stays there */
+	ret = store_cookie(s, sc);
+	if (ret < 0) {
+		free(sc);
 		return -1;
+	}
 	
 	return 0;
 }

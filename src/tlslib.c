@@ -124,9 +124,9 @@ const tls_cache_st *e = _e;
 	return hash_stable_8(e->session_id, e->session_id_size, 0);
 }
 
-void tls_cache_init(struct cfg_st* config, tls_cache_db_st** _db)
+void tls_cache_init(hash_db_st** _db)
 {
-tls_cache_db_st * db;
+hash_db_st * db;
 
 	db = malloc(sizeof(*db));
 	if (db == NULL)
@@ -138,7 +138,7 @@ tls_cache_db_st * db;
 	*_db = db;
 }
 
-void tls_cache_deinit(tls_cache_db_st* db)
+void tls_cache_deinit(hash_db_st* db)
 {
 tls_cache_st* cache;
 struct htable_iter iter;

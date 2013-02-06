@@ -44,8 +44,9 @@ struct proc_list_st {
 typedef struct main_server_st {
 	struct cfg_st *config;
 	struct tun_st *tun;
-	tls_cache_db_st *tls_db;
-	
+	hash_db_st *tls_db;
+	hash_db_st *cookie_db;
+
 	struct listen_list_st* llist;
 	struct proc_list_st* clist;
 } main_server_st;

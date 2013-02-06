@@ -30,116 +30,111 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <gdbm.h>
 #include <sys/stat.h>
 
 #include <main.h>
 #include <cookies.h>
+#include <ccan/htable/htable.h>
+#include <ccan/hash/hash.h>
 
-/* All the functions return zero on success and a negative value on error */
+#define MAX_COOKIES(n) ((n>0)?(2*n):4096)
 
-int store_cookie(const struct cfg_st *config, const void* cookie, unsigned cookie_size, 
-		const struct stored_cookie_st* sc)
+/* receives allocated data and stores them.
+ */
+int store_cookie(main_server_st *s, struct stored_cookie_st* sc)
 {
-GDBM_FILE dbf;
-datum key;
-datum data;
-int ret;
+size_t key;
 
-	dbf = gdbm_open((char*)config->cookie_db, 0, GDBM_WRCREAT, S_IRUSR|S_IWUSR, NULL);
-	if (dbf == NULL) {
-		syslog(LOG_ERR, "Cannot open cookie database: %s", config->cookie_db);
+	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
+		syslog(LOG_INFO, "Maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
 		return -1;
 	}
 
-	key.dptr = (void*)cookie;
-	key.dsize = cookie_size;
-	data.dptr = (void*)sc;
-	data.dsize = sizeof(*sc);
+	key = hash_stable_8(sc->cookie, COOKIE_SIZE, 0);
 
-	ret = gdbm_store( dbf, key, data, GDBM_INSERT);
-	if (ret != 0) {
-		ret = -1;
-		goto finish;
-	}
+	htable_add(&s->cookie_db->ht, key, sc);
+	s->cookie_db->entries++;
 
-	ret = 0;
-
-finish:
-	gdbm_close(dbf);
-	return ret;
+	return 0;
 }
 
-int retrieve_cookie(const struct cfg_st *config, const void* cookie, unsigned cookie_size, 
-			struct stored_cookie_st* sc)
+int retrieve_cookie(main_server_st *s, const void* cookie, unsigned cookie_size, 
+			struct stored_cookie_st* rsc)
 {
-GDBM_FILE dbf;
-datum key;
-datum data;
-int ret;
+size_t key;
+struct htable_iter iter;
+struct stored_cookie_st * sc;
 
-	dbf = gdbm_open((char*)config->cookie_db, 0, GDBM_READER, 0, NULL);
-	if (dbf == NULL) {
-		syslog(LOG_ERR, "Cannot open cookie database: %s", config->cookie_db);
-		return -1;
-	}
+	key = hash_stable_8(cookie, cookie_size, 0);
 
-	key.dptr = (void*)cookie;
-	key.dsize = cookie_size;
+	sc = htable_firstval(&s->cookie_db->ht, &iter, key);
+	while(sc != NULL) {
+		if (cookie_size == COOKIE_SIZE &&
+	          memcmp (cookie, sc->cookie, COOKIE_SIZE) == 0) {
 
-	data = gdbm_fetch( dbf, key);
-	if (data.dsize != sizeof(*sc)) {
-		ret = -1;
-		goto finish;
-	}
-	memcpy(sc, data.dptr, data.dsize);
+			if (sc->expiration < time(0))
+				return -1;
+			
+			memcpy(rsc, sc, sizeof(*sc));
+	          	return 0;
+		}
 
-	if (sc->expiration >= time(0))
-		ret = 0;
-	else
-		ret = -1;
+          	sc = htable_nextval(&s->cookie_db->ht, &iter, key);
+        }
 
-finish:
-	gdbm_close(dbf);
-	return ret;
+	return -1;
 }
 
 void expire_cookies(main_server_st* s)
 {
-GDBM_FILE dbf;
-datum key;
-datum data;
-int deleted = 0;
-struct stored_cookie_st sc;
+struct stored_cookie_st *sc;
+struct htable_iter iter;
 time_t now = time(0);
 
-	dbf = gdbm_open((char*)s->config->cookie_db, 0, GDBM_WRITER, 0, NULL);
-	if (dbf == NULL)
-		return;
-
-	key = gdbm_firstkey(dbf);
-	if (key.dptr == NULL)
-		goto finish;
-
-	while(key.dptr != NULL) {
-		data = gdbm_fetch( dbf, key);
-		if (data.dsize != sizeof(sc)) {
-			gdbm_delete(dbf, key);
-			deleted++;
-		} else {
-			memcpy(&sc, data.dptr, data.dsize);
-			if (sc.expiration <= now) {
-				gdbm_delete(dbf, key);
-				deleted++;
-			}
+	sc = htable_first(&s->cookie_db->ht, &iter);
+	while(sc != NULL) {
+		if (sc->expiration <= now) {
+	          	htable_delval(&s->cookie_db->ht, &iter);
+	          	free(sc);
+			s->cookie_db->entries--;
 		}
+          	sc = htable_next(&s->cookie_db->ht, &iter);
+        }
+}
 
-		key = gdbm_nextkey(dbf, key);
-	}
-	
-	if (deleted > 0)
-		gdbm_reorganize(dbf);
+static size_t rehash(const void *_e, void *unused)
+{
+const struct stored_cookie_st *e = _e;
 
-finish:
-	gdbm_close(dbf);
+	return hash_stable_8(e->cookie, COOKIE_SIZE, 0);
+}
+
+void cookie_db_init(hash_db_st** _db)
+{
+hash_db_st * db;
+
+	db = malloc(sizeof(*db));
+	if (db == NULL)
+		exit(1);
+
+	htable_init(&db->ht, rehash, NULL);
+	db->entries = 0;
+
+	*_db = db;
+}
+
+void cookie_db_deinit(hash_db_st* db)
+{
+struct stored_cookie_st* cache;
+struct htable_iter iter;
+
+	cache = htable_first(&db->ht, &iter);
+	while(cache != NULL) {
+          	free(cache);
+          	cache = htable_next(&db->ht, &iter);
+        }
+        htable_clear(&db->ht);
+	db->entries = 0;
+
+        return;
 }

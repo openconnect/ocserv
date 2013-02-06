@@ -1,6 +1,8 @@
+* Add single UDP port
 * Add a simple username/password back-end
-* Add path MTU discovery
+* Certificate authentication to the main process (can it be done without
+  moving the TLS handshake over the main thread?)
 * Keep the TLS key and certificates into the privileged process and use IPC
   for operations (this will make the privileged process a bottleneck).
 * Handle multiple clients in a single tun device (check if needed at all)
-* Add UDP port range
+* Add path MTU discovery

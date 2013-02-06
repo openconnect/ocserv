@@ -196,7 +196,8 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = DEAD_PROCESS;
-	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
+	if (proc->lease && proc->lease->name)
+		snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
 	entry.ut_pid = proc->pid;
 
 	setutxent();

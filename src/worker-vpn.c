@@ -1018,6 +1018,9 @@ unsigned mtu_overhead, dtls_mtu = 0;
 		}
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
+			/* FIXME: retry and receive the correct amount of data
+			 * on short reads.
+			 */
 			ret = tls_recv(ws->session, buffer, sizeof(buffer));
 			oclog(ws, LOG_DEBUG, "Received %d bytes (TLS)\n", ret);
 

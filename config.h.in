@@ -111,6 +111,9 @@
 /* Define to 1 if you have the `fstat' function. */
 #undef HAVE_FSTAT
 
+/* Enable the GDBM library */
+#undef HAVE_GDBM
+
 /* Define to 1 if you have the `getdtablesize' function. */
 #undef HAVE_GETDTABLESIZE
 

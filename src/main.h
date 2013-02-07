@@ -84,8 +84,6 @@ int handle_resume_fetch_req(main_server_st* s, struct proc_st* proc,
 int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
   			   const struct cmd_resume_store_req_st * req);
 
-void expire_cookies(main_server_st* s);
-
 void 
 __attribute__ ((format(printf, 4, 5)))
     mslog(const main_server_st * s, const struct proc_st* proc,

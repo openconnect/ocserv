@@ -540,7 +540,6 @@ int main(int argc, char** argv)
 	list_head_init(&clist.head);
 	tun_st_init(&tun);
 	tls_cache_init(&s.tls_db);
-	cookie_db_init(&s.cookie_db);
 
 	signal(SIGINT, handle_term);
 	signal(SIGTERM, handle_term);
@@ -560,11 +559,17 @@ int main(int argc, char** argv)
 		fprintf(stderr, "This server requires root access to operate.\n");
 		exit(1);
 	}
-	
+
 	s.config = &config;
 	s.tun = &tun;
 	s.llist = &llist;
 	s.clist = &clist;
+
+	ret = cookie_db_init(&s);
+	if (ret < 0) {
+		fprintf(stderr, "Could not initialize cookie database.\n");
+		exit(1);
+	}
 	
 	/* Listen to network ports */
 	ret = listen_ports(&config, &llist, config.name);

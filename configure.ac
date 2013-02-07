@@ -20,6 +20,25 @@ AC_C_BIGENDIAN
 
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.28])
 
+gdbm_enabled=no
+LIBS="$oldlibs -lgdbm"
+AC_MSG_CHECKING([for gdbm library])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+		   #include <gdbm.h>],[
+		   GDBM_FILE dbf;
+		   dbf = gdbm_open("",0,0,0,0);])],
+		  [AC_MSG_RESULT(yes)
+		   AC_SUBST([GDBM_LIBS], [-lgdbm])
+		   AC_SUBST([GDBM_CFLAGS], [])
+		   gdbm_enabled=yes
+		   AC_DEFINE([HAVE_GDBM], 1, [Enable the GDBM library])],
+		  [AC_MSG_RESULT(no)
+   	           AC_MSG_WARN([[
+*** 
+*** gdbm was not found. The server will not be able to maintain state across restarts.
+*** ]])])
+LIBS="$oldlibs"
+
 LIBS="$oldlibs -lpam"
 AC_MSG_CHECKING([for pam library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -56,5 +75,6 @@ AC_MSG_NOTICE([summary of build options:
   Install prefix:   ${prefix}
   Compiler:         ${CC}
   CFlags:           ${CFLAGS}
+  GDBM backend:     ${gdbm_enabled}
 ])
 

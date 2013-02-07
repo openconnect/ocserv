@@ -30,111 +30,32 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
+#include <gdbm.h>
 #include <sys/stat.h>
 
 #include <main.h>
 #include <cookies.h>
-#include <ccan/htable/htable.h>
-#include <ccan/hash/hash.h>
 
-#define MAX_COOKIES(n) ((n>0)?(2*n):4096)
+cookie_store_fn store_cookie;
+cookie_retrieve_fn retrieve_cookie;
+cookie_db_deinit_fn cookie_db_deinit;
+cookie_expire_fn expire_cookies;
 
-/* receives allocated data and stores them.
- */
-int store_cookie(main_server_st *s, struct stored_cookie_st* sc)
+int cookie_db_init(main_server_st* s)
 {
-size_t key;
+struct cookie_storage_st* funcs;
 
-	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
-		syslog(LOG_INFO, "Maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
-		return -1;
-	}
+#ifdef HAVE_GDBM
+	if (s->config->cookie_db_name != NULL)
+		funcs = &gdbm_cookie_funcs;
+	else
+#endif
+		funcs = &hash_cookie_funcs;
 
-	key = hash_stable_8(sc->cookie, COOKIE_SIZE, 0);
+	cookie_db_deinit = funcs->deinit;
+	expire_cookies = funcs->expire;
+	store_cookie = funcs->store;
+	retrieve_cookie = funcs->retrieve;
 
-	htable_add(&s->cookie_db->ht, key, sc);
-	s->cookie_db->entries++;
-
-	return 0;
-}
-
-int retrieve_cookie(main_server_st *s, const void* cookie, unsigned cookie_size, 
-			struct stored_cookie_st* rsc)
-{
-size_t key;
-struct htable_iter iter;
-struct stored_cookie_st * sc;
-
-	key = hash_stable_8(cookie, cookie_size, 0);
-
-	sc = htable_firstval(&s->cookie_db->ht, &iter, key);
-	while(sc != NULL) {
-		if (cookie_size == COOKIE_SIZE &&
-	          memcmp (cookie, sc->cookie, COOKIE_SIZE) == 0) {
-
-			if (sc->expiration < time(0))
-				return -1;
-			
-			memcpy(rsc, sc, sizeof(*sc));
-	          	return 0;
-		}
-
-          	sc = htable_nextval(&s->cookie_db->ht, &iter, key);
-        }
-
-	return -1;
-}
-
-void expire_cookies(main_server_st* s)
-{
-struct stored_cookie_st *sc;
-struct htable_iter iter;
-time_t now = time(0);
-
-	sc = htable_first(&s->cookie_db->ht, &iter);
-	while(sc != NULL) {
-		if (sc->expiration <= now) {
-	          	htable_delval(&s->cookie_db->ht, &iter);
-	          	free(sc);
-			s->cookie_db->entries--;
-		}
-          	sc = htable_next(&s->cookie_db->ht, &iter);
-        }
-}
-
-static size_t rehash(const void *_e, void *unused)
-{
-const struct stored_cookie_st *e = _e;
-
-	return hash_stable_8(e->cookie, COOKIE_SIZE, 0);
-}
-
-void cookie_db_init(hash_db_st** _db)
-{
-hash_db_st * db;
-
-	db = malloc(sizeof(*db));
-	if (db == NULL)
-		exit(1);
-
-	htable_init(&db->ht, rehash, NULL);
-	db->entries = 0;
-
-	*_db = db;
-}
-
-void cookie_db_deinit(hash_db_st* db)
-{
-struct stored_cookie_st* cache;
-struct htable_iter iter;
-
-	cache = htable_first(&db->ht, &iter);
-	while(cache != NULL) {
-          	free(cache);
-          	cache = htable_next(&db->ht, &iter);
-        }
-        htable_clear(&db->ht);
-	db->entries = 0;
-
-        return;
+	return funcs->init(s);
 }

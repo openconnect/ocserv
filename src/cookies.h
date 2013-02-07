@@ -12,12 +12,31 @@ struct stored_cookie_st {
 	time_t expiration;
 };
 
-int store_cookie(main_server_st *, struct stored_cookie_st* sc);
+typedef int (*cookie_store_fn)(main_server_st *, const struct stored_cookie_st* sc);
 
-int retrieve_cookie(main_server_st *, const void* cookie, unsigned cookie_size, 
+typedef int (*cookie_retrieve_fn)(main_server_st *, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc);
 
-void cookie_db_deinit(hash_db_st* db);
-void cookie_db_init(hash_db_st** _db);
+typedef void (*cookie_db_deinit_fn)(main_server_st*);
+typedef void (*cookie_expire_fn)(main_server_st* s);
+
+extern cookie_store_fn store_cookie;
+extern cookie_retrieve_fn retrieve_cookie;
+extern cookie_db_deinit_fn cookie_db_deinit;
+extern cookie_expire_fn expire_cookies;
+
+int cookie_db_init(main_server_st*);
+
+
+struct cookie_storage_st {
+	cookie_store_fn store;
+	cookie_retrieve_fn retrieve;
+	cookie_expire_fn expire;
+	int (*init)(main_server_st *);
+	cookie_db_deinit_fn deinit;
+};
+
+extern struct cookie_storage_st gdbm_cookie_funcs;
+extern struct cookie_storage_st hash_cookie_funcs;
 
 #endif

@@ -73,6 +73,9 @@ struct cfg_st {
 	unsigned max_clients;
 	unsigned use_utmp;
 
+	/* if gdbm is there */
+	const char* cookie_db_name;
+
 	const char *connect_script;
 	const char *disconnect_script;
 

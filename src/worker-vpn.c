@@ -133,6 +133,10 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 		req->next_header = HEADER_COOKIE;
 	} else if (strncmp(at, "X-DTLS-Master-Secret:", length) == 0) {
 		req->next_header = HEADER_MASTER_SECRET;
+	} else if (strncmp(at, "X-DTLS-MTU:", length) == 0) {
+		req->next_header = HEADER_DTLS_MTU;
+	} else if (strncmp(at, "X-CSTP-MTU:", length) == 0) {
+		req->next_header = HEADER_CSTP_MTU;
 	} else if (strncmp(at, "X-CSTP-Hostname:", length) == 0) {
 		req->next_header = HEADER_HOSTNAME;
 	} else {
@@ -171,6 +175,12 @@ size_t nlen;
 				memcpy(req->hostname, at, length);
 				req->hostname[length] = 0;
 
+				break;
+			case HEADER_CSTP_MTU:
+				req->cstp_mtu = atoi(at);
+				break;
+			case HEADER_DTLS_MTU:
+				req->dtls_mtu = atoi(at);
 				break;
 			case HEADER_COOKIE:
 				p = memmem(at, length, "webvpn=", 7);
@@ -721,6 +731,10 @@ unsigned mtu_overhead, dtls_mtu = 0;
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
+	
+	if (req->cstp_mtu > 0) {
+		vinfo.mtu = MIN(vinfo.mtu, req->cstp_mtu);
+	}
 
 	tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
 
@@ -781,6 +795,10 @@ unsigned mtu_overhead, dtls_mtu = 0;
 		else
 			mtu_overhead = 40+8;
 		dtls_mtu = vinfo.mtu - mtu_overhead;
+
+		if (req->dtls_mtu > 0) {
+			dtls_mtu = MIN(req->dtls_mtu, dtls_mtu);
+		}
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 	}

@@ -22,6 +22,7 @@
 extern int syslog_open;
 
 #define MAX(x,y) ((x)>(y)?(x):(y))
+#define MIN(x,y) ((x)<(y)?(x):(y))
 
 /* the first is generic, for the methods that require a username password */
 #define AUTH_TYPE_USERNAME_PASS (1<<0)

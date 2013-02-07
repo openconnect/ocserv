@@ -30,6 +30,8 @@ enum {
 	HEADER_COOKIE = 1,
 	HEADER_MASTER_SECRET,
 	HEADER_HOSTNAME,
+	HEADER_CSTP_MTU,
+	HEADER_DTLS_MTU,
 };
 
 typedef struct worker_st {
@@ -87,6 +89,8 @@ struct req_data_st {
 	char *body;
 	unsigned int headers_complete;
 	unsigned int message_complete;
+	unsigned dtls_mtu;
+	unsigned cstp_mtu;
 };
 
 void __attribute__ ((format(printf, 3, 4)))

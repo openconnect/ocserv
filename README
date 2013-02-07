@@ -3,6 +3,11 @@ To build from the git repository use:
 $ autoreconf -fvi
 $ ./configure && make
 
+Now you need to generate a certificate. E.g.
+$ certtool --generate-privkey > ./test-key.pem
+$ certtool --generate-self-signed --load-privkey test-key.pem --outfile test-cert.pem
+(make sure you enable encryption or signing)
+
 To run the server edit the src/sample.config and then run:
 # src/ocserv -f -c src/sample.config
 

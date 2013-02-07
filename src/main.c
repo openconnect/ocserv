@@ -586,7 +586,6 @@ int main(int argc, char** argv)
 	ret = gnutls_certificate_allocate_credentials(&creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
 
-#warning Handle keys using the communication interface
 	ret =
 	    gnutls_certificate_set_x509_key_file(creds.xcred, config.cert,
 						 config.key,

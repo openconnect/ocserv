@@ -53,6 +53,7 @@ struct vpn_st {
 struct cfg_st {
 	const char *name;
 	unsigned int port;
+	unsigned int udp_port;
 	const char *cert;
 	const char *key;
 	const char *ca;
@@ -102,4 +103,6 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 #define SA_IN_PORT(p) (((struct sockaddr_in *)(p))->sin_port)
 #define SA_IN6_PORT(p) (((struct sockaddr_in6 *)(p))->sin6_port)
 
+#define SA_IN_P_GENERIC(addr, size) ((size==sizeof(struct sockaddr_in))?SA_IN_U8_P(addr):SA_IN6_U8_P(addr))
+#define SA_IN_SIZE(size) ((size==sizeof(struct sockaddr_in))?sizeof(struct in_addr):sizeof(struct in6_addr))
 #endif

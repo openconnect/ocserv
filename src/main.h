@@ -14,6 +14,12 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config);
 struct listener_st {
 	struct list_node list;
 	int fd;
+	int socktype;
+
+	struct sockaddr_storage addr; /* local socket address */
+	socklen_t addr_len;
+	int family;
+	int protocol;
 };
 
 struct listen_list_st {
@@ -30,7 +36,10 @@ struct proc_st {
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
+	/* The DTLS session ID associated with the TLS session */
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
+	unsigned session_id_size; /* would act as a flag if session_id is set */
+	unsigned udp_fd_received;
 	
 	/* the tun lease this process has */
 	struct lease_st* lease;
@@ -63,6 +72,8 @@ void expire_tls_sessions(main_server_st *s);
 int send_resume_fetch_reply(main_server_st* s, struct proc_st* proc,
 		cmd_resume_reply_t r, struct cmd_resume_fetch_reply_st * reply);
 
+int send_udp_fd(main_server_st* s, struct proc_st* proc, void* cli_addr, socklen_t cli_addr_size, int fd);
+
 int handle_resume_delete_req(main_server_st* s, struct proc_st* proc,
   			   const struct cmd_resume_fetch_req_st * req);
 
@@ -74,5 +85,12 @@ int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
   			   const struct cmd_resume_store_req_st * req);
 
 void expire_cookies(main_server_st* s);
+
+void 
+__attribute__ ((format(printf, 4, 5)))
+    mslog(const main_server_st * s, const struct proc_st* proc,
+    	int priority, const char *fmt, ...);
+
+int open_tun(main_server_st* s, struct lease_st** l);
 
 #endif

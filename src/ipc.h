@@ -18,6 +18,7 @@ typedef enum {
 	RESUME_DELETE_REQ,
 	RESUME_FETCH_REQ,
 	RESUME_FETCH_REP,
+	CMD_UDP_FD,
 	CMD_TERMINATE,
 } cmd_request_t;
 

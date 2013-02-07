@@ -74,8 +74,9 @@ auth = "pam"
 #max-clients = 1024
 max-clients = 16
 
-# TCP port number
+# TCP and UDP port number
 tcp-port = 3333
+udp-port = 3333
 
 # The key and the certificates of the server
 server-cert = /path/to/cert.pem

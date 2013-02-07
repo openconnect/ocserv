@@ -44,12 +44,11 @@ typedef struct worker_st {
 
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
+	int proto; /* AF_INET or AF_INET6 */
 
 	/* set after authentication */
 	int udp_fd;
 	udp_port_state_t udp_state;
-	unsigned int udp_port;
-	int udp_port_proto;
 	
 	/* for mtu trials */
 	unsigned last_good_mtu;

@@ -31,8 +31,11 @@
 #include <errno.h>
 #include <cloexec.h>
 
+#include <netdb.h>
+
 #include <vpn.h>
 #include <tun.h>
+#include <main.h>
 #include <ccan/list/list.h>
 
 static int bignum_add1 (uint8_t * num, unsigned size)
@@ -60,9 +63,7 @@ static int bignum_add1 (uint8_t * num, unsigned size)
 static int get_avail_network_addresses(const struct cfg_st *config, const struct lease_st *last4,
 					const struct lease_st *last6, struct lease_st* lease)
 {
-	struct sockaddr_storage tmp, mask;
-	struct sockaddr_in *t4;
-	struct sockaddr_in6 *t6;
+	struct sockaddr_storage tmp, mask, network;
 	unsigned i;
 	int ret;
 
@@ -73,13 +74,9 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 	
 	memset(&tmp, 0, sizeof(tmp));
 
-	/* read the network */
-	if (last4 == NULL && (config->network.ipv4 && config->network.ipv4_netmask)) {
-		t4 = (void*)&tmp;
-		t4->sin_family = AF_INET;
-
+	if (config->network.ipv4 && config->network.ipv4_netmask) {
 		ret =
-		    inet_pton(AF_INET, config->network.ipv4, SA_IN_P(t4));
+		    inet_pton(AF_INET, config->network.ipv4, SA_IN_P(&network));
 
 		if (ret != 1) {
 			syslog(LOG_ERR, "Error reading IP: %s\n", config->network.ipv4);
@@ -93,40 +90,37 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 			syslog(LOG_ERR, "Error reading mask: %s\n", config->network.ipv4_netmask);
 			return -1;
 		}
-	
-		/* mask the network */
+
+		/* mask the network (just in case it is wrong) */
 		for (i=0;i<sizeof(struct in_addr);i++)
-			SA_IN_U8_P(t4)[i] &= (SA_IN_U8_P(&mask)[i]);
+			SA_IN_U8_P(&network)[i] &= (SA_IN_U8_P(&mask)[i]);
+
+		memcpy(&tmp, &network, sizeof(tmp));
+		((struct sockaddr_in*)&tmp)->sin_family = AF_INET;
+		((struct sockaddr_in*)&network)->sin_family = AF_INET;
+	}
+	
+
+	/* read the network */
+	if (last4 == NULL && (config->network.ipv4 && config->network.ipv4_netmask)) {
 	
 		/* add one to get local IP */
 		i = sizeof(struct in_addr)-1;
-		SA_IN_U8_P(t4)[i]++;
+		SA_IN_U8_P(&tmp)[i]++;
 	
 		lease->lip4_len = sizeof(struct sockaddr_in);
-		memcpy(&lease->lip4, t4, lease->lip4_len);
+		memcpy(&lease->lip4, &tmp, lease->lip4_len);
 
 		/* add one to get remote IP */
 		i = sizeof(struct in_addr)-1;
-		SA_IN_U8_P(t4)[i]++;
-	
+		SA_IN_U8_P(&tmp)[i]++;
+
 		lease->rip4_len = sizeof(struct sockaddr_in);
-		memcpy(&lease->rip4, t4, lease->rip4_len);
-
+		memcpy(&lease->rip4, &tmp, lease->rip4_len);
 	} else if (last4 != NULL) {
-		t4 = (void*)&tmp;
-		t4->sin_family = AF_INET;
 
-		ret =
-		    inet_pton(AF_INET, config->network.ipv4_netmask, SA_IN_P(&mask));
-	
-		if (ret != 1) {
-			syslog(LOG_ERR, "Error reading mask: %s\n", config->network.ipv4_netmask);
-			return -1;
-		}
-	
-		/* mask the network */
 		lease->lip4_len = last4->rip4_len;
-		memcpy(&lease->lip4, &last4->rip4, lease->rip4_len);
+		memcpy(&lease->lip4, &last4->rip4, last4->rip4_len);
 
 		bignum_add1(SA_IN_U8_P(&lease->lip4), sizeof(struct in_addr));
 		if (SA_IN_U8_P(&lease->lip4)[3] == 255) /* broadcast */
@@ -136,23 +130,21 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 		memcpy(&lease->rip4, &lease->lip4, lease->rip4_len);
 		bignum_add1(SA_IN_U8_P(&lease->rip4), sizeof(struct in_addr));
 
-		/* mask the last IP with the complement of netmask */
+		/* mask the last IP with the netmask */
 		memcpy(&tmp, &lease->rip4, lease->rip4_len);
 		for (i=0;i<sizeof(struct in_addr);i++)
-			SA_IN_U8_P(t4)[i] &= ~(SA_IN_U8_P(&mask)[i]);
-
-		if (memcmp(&tmp, &lease->rip4, lease->rip4_len) != 0) {
-			syslog(LOG_ERR, "Reached limit of maximum IPs.\n");
+			SA_IN_U8_P(&tmp)[i] &= (SA_IN_U8_P(&mask)[i]);
+		
+		/* the result should match the network */
+		if (memcmp(SA_IN_U8_P(&network), SA_IN_U8_P(&tmp), sizeof(struct in_addr)) != 0) {
+			syslog(LOG_ERR, "Reached limit of maximum (v4) IPs.\n");
 			return -1;
 		}
 	}
 
-	if (last6 == NULL && (config->network.ipv6 && config->network.ipv6_netmask)) {
-		t6 = (void*)&tmp;
-		t6->sin6_family = AF_INET6;
-
+	if (config->network.ipv6 && config->network.ipv6_netmask) {
 		ret =
-		    inet_pton(AF_INET6, config->network.ipv6, SA_IN6_P(t6));
+		    inet_pton(AF_INET6, config->network.ipv6, SA_IN6_P(&network));
 
 		if (ret != 1) {
 			syslog(LOG_ERR, "Error reading IP: %s\n", config->network.ipv6);
@@ -169,49 +161,45 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 	
 		/* mask the network */
 		for (i=0;i<sizeof(struct in6_addr);i++)
-			SA_IN6_U8_P(t6)[i] &= (SA_IN6_U8_P(&mask)[i]);
+			SA_IN6_U8_P(&network)[i] &= (SA_IN6_U8_P(&mask)[i]);
 	
+		memcpy(&tmp, &network, sizeof(tmp));
+		((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
+		((struct sockaddr_in6*)&network)->sin6_family = AF_INET6;
+	}
+
+	if (last6 == NULL && (config->network.ipv6 && config->network.ipv6_netmask)) {
 		/* add one to get local IP */
 		i = sizeof(struct in6_addr)-1;
-		SA_IN6_U8_P(t6)[i]++;
+		SA_IN6_U8_P(&tmp)[i]++;
 	
 		lease->lip6_len = sizeof(struct sockaddr_in6);
-		memcpy(&lease->lip6, t6, lease->lip6_len);
+		memcpy(&lease->lip6, &tmp, lease->lip6_len);
 
 		/* add one to get remote IP */
 		i = sizeof(struct in6_addr)-1;
-		SA_IN6_U8_P(t6)[i]++;
+		SA_IN6_U8_P(&tmp)[i]++;
 	
 		lease->rip6_len = sizeof(struct sockaddr_in6);
-		memcpy(&lease->rip6, t6, lease->rip6_len);
+		memcpy(&lease->rip6, &tmp, lease->rip6_len);
 	} else if (last6 != NULL) {
-		t6 = (void*)&tmp;
-		t6->sin6_family = AF_INET6;
 
-		ret =
-		    inet_pton(AF_INET6, config->network.ipv6_netmask, SA_IN6_P(&mask));
-	
-		if (ret != 1) {
-			syslog(LOG_ERR, "Error reading mask: %s\n", config->network.ipv6_netmask);
-			return -1;
-		}
-	
-		/* mask the network */
 		lease->lip6_len = last6->rip6_len;
-		memcpy(&lease->lip6, &last6->rip6, lease->rip6_len);
+		memcpy(&lease->lip6, &last6->rip6, last6->rip6_len);
 		bignum_add1(SA_IN6_U8_P(&lease->lip6), sizeof(struct in6_addr));
 
 		lease->rip6_len = last6->rip6_len;
 		memcpy(&lease->rip6, &lease->lip6, lease->rip6_len);
 		bignum_add1(SA_IN6_U8_P(&lease->rip6), sizeof(struct in6_addr));
 
-		/* mask the last IP with the complement of netmask */
+		/* mask the last IP with the netmask */
 		memcpy(&tmp, &lease->rip6, lease->rip6_len);
 		for (i=0;i<sizeof(struct in6_addr);i++)
-			SA_IN6_U8_P(t6)[i] &= ~(SA_IN6_U8_P(&mask)[i]);
+			SA_IN6_U8_P(&tmp)[i] &= (SA_IN6_U8_P(&mask)[i]);
 
-		if (memcmp(&tmp, &lease->rip6, lease->rip6_len) != 0) {
-			syslog(LOG_ERR, "Reached limit of maximum IPs.\n");
+		/* the result should match the network */
+		if (memcmp(SA_IN6_U8_P(&network), SA_IN6_U8_P(&tmp), sizeof(struct in6_addr)) != 0) {
+			syslog(LOG_ERR, "Reached limit of maximum (v6) IPs.\n");
 			return -1;
 		}
 	}
@@ -230,7 +218,7 @@ static int get_avail_network_addresses(const struct cfg_st *config, const struct
 	return 0;
 }
 
-static int set_network_info( const struct lease_st *lease)
+static int set_network_info( main_server_st* s, const struct lease_st *lease)
 {
 	struct ifreq ifr;
 	int fd, ret;
@@ -248,7 +236,7 @@ static int set_network_info( const struct lease_st *lease)
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
-			syslog(LOG_ERR, "%s: Error setting IPv4.\n", lease->name);
+			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv4.\n", lease->name);
 		}
 
 		memset(&ifr, 0, sizeof(ifr));
@@ -258,7 +246,7 @@ static int set_network_info( const struct lease_st *lease)
 
 		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
 		if (ret != 0) {
-			syslog(LOG_ERR, "%s: Error setting DST IPv4.\n", lease->name);
+			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv4.\n", lease->name);
 		}
 	}
 
@@ -271,7 +259,7 @@ static int set_network_info( const struct lease_st *lease)
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
-			syslog(LOG_ERR, "%s: Error setting IPv6.\n", lease->name);
+			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6.\n", lease->name);
 		}
 
 		memset(&ifr, 0, sizeof(ifr));
@@ -281,12 +269,12 @@ static int set_network_info( const struct lease_st *lease)
 
 		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
 		if (ret != 0) {
-			syslog(LOG_ERR, "%s: Error setting DST IPv6.\n", lease->name);
+			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv6.\n", lease->name);
 		}
 	}
 	
 	if (lease->lip6_len == 0 && lease->lip4_len == 0) {
-		syslog(LOG_ERR, "%s: Could not set any IP.\n", lease->name);
+		mslog(s, NULL, LOG_ERR, "%s: Could not set any IP.\n", lease->name);
 		ret = -1;
 	} else
 		ret = 0;
@@ -299,7 +287,7 @@ static int set_network_info( const struct lease_st *lease)
 
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret != 0) {
-		syslog(LOG_ERR, "%s: Could not bring up interface.\n", lease->name);
+		mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface.\n", lease->name);
 	}
 
 	close(fd);
@@ -307,7 +295,7 @@ static int set_network_info( const struct lease_st *lease)
 }
 
 
-int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** l)
+int open_tun(main_server_st* s, struct lease_st** l)
 {
 	int tunfd, ret, e;
 	struct ifreq ifr;
@@ -315,27 +303,28 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 	struct lease_st *lease = NULL;
 	struct lease_st *last4, *tmp;
 	struct lease_st *last6;
+	unsigned current = s->tun->total;
 	
-	if (list_empty(&tun->head)) {
+	if (list_empty(&s->tun->head)) {
 		lease = calloc(1, sizeof(*lease));
 		if (lease == NULL)
 		        return -1;
 
 		/* find the first IP address */
-		ret = get_avail_network_addresses(config, NULL, NULL, lease);
+		ret = get_avail_network_addresses(s->config, NULL, NULL, lease);
 		if (ret < 0) {
 			free(lease);
 			return -1;
 		}
 
 		/* Add into the list */
-		list_add_tail( &tun->head, &lease->list);
-		tun->total++;
+		list_add_tail( &s->tun->head, &lease->list);
+		s->tun->total++;
 	} else {
 		last4 = last6 = NULL;
 		
 		/* try to re-use an address */
-                list_for_each(&tun->head, tmp, list) {
+                list_for_each(&s->tun->head, tmp, list) {
 			if (tmp->in_use == 0) {
 				lease = tmp;
 				break;
@@ -347,26 +336,27 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 			if (lease == NULL)
 			        return -1;
 
-	                list_for_each_rev(&tun->head, tmp, list) {
-				if (tmp->rip4_len > 0)
+	                list_for_each_rev(&s->tun->head, tmp, list) {
+				if (last4 == NULL && tmp->rip4_len > 0)
 					last4 = tmp;
 
-				if (tmp->rip6_len > 0)
+
+				if (last6 == NULL && tmp->rip6_len > 0)
 					last6 = tmp;
 			
 				if (last4 && last6)
 					break;
 			}
 
-			ret = get_avail_network_addresses(config, last4, last6, lease);
+			ret = get_avail_network_addresses(s->config, last4, last6, lease);
 			if (ret < 0) {
 				free(lease);
 				return -1;
 			}
 
 			/* Add into the list */
-			list_add_tail( &tun->head, &lease->list);
-			tun->total++;
+			list_add_tail( &s->tun->head, &lease->list);
+			s->tun->total++;
 		}
 	}
 	
@@ -376,7 +366,7 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
 		int e = errno;
-		syslog(LOG_ERR, "Can't open /dev/net/tun: %s\n",
+		mslog(s, NULL, LOG_ERR, "Can't open /dev/net/tun: %s\n",
 		       strerror(e));
 		return -1;
 	}
@@ -386,39 +376,39 @@ int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st** 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 
-	snprintf(lease->name, sizeof(lease->name), "%s%u", config->network.name, 0);
+	snprintf(lease->name, sizeof(lease->name), "%s%u", s->config->network.name, current);
         memcpy(ifr.ifr_name, lease->name, sizeof(ifr.ifr_name));
 
 	if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
 		e = errno;
-		syslog(LOG_ERR, "TUNSETIFF: %s\n", strerror(e));
+		mslog(s, NULL, LOG_ERR, "%s: TUNSETIFF: %s\n", lease->name, strerror(e));
 		goto fail;
 	}
 
-	if (config->uid != -1) {
-		t = config->uid;
+	if (s->config->uid != -1) {
+		t = s->config->uid;
 		ret = ioctl(tunfd, TUNSETOWNER, t);
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_INFO, "TUNSETOWNER: %s\n",
-			       strerror(e));
+			mslog(s, NULL, LOG_INFO, "%s: TUNSETOWNER: %s\n",
+			       lease->name, strerror(e));
 			goto fail;
 		}
 	}
 
-	if (config->gid != -1) {
-		t = config->uid;
+	if (s->config->gid != -1) {
+		t = s->config->uid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_ERR, "TUNSETGROUP: %s\n",
-			       strerror(e));
+			mslog(s, NULL, LOG_ERR, "%s: TUNSETGROUP: %s\n",
+			       lease->name, strerror(e));
 			goto fail;
 		}
 	}
 
 	/* set IP/mask */
-	ret = set_network_info(lease);
+	ret = set_network_info(s, lease);
 	if (ret < 0) {
 		goto fail;
 	}

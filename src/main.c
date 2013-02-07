@@ -53,46 +53,31 @@ static void tls_log_func(int level, const char *str)
 	syslog(LOG_DEBUG, "TLS[<%d>]: %s", level, str);
 }
 
-/* Returns 0 on success or negative value on error.
- */
-static int
-listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *node,
-	     int listen_port, int socktype)
+static 
+int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_list_st *list)
 {
-	struct addrinfo hints, *res, *ptr;
-	char portname[6];
+	struct addrinfo *ptr;
 	int s, y;
+	const char* type = NULL;
 	char buf[512];
 	struct listener_st *tmp;
-
-	list_head_init(&list->head);
-	list->total = 0;
-
-	snprintf(portname, sizeof(portname), "%d", listen_port);
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_socktype = socktype;
-	hints.ai_flags = AI_PASSIVE
-#ifdef AI_ADDRCONFIG
-	    | AI_ADDRCONFIG
-#endif
-	    ;
-
-	s = getaddrinfo(node, portname, &hints, &res);
-	if (s != 0) {
-		fprintf(stderr, "getaddrinfo() failed: %s\n",
-			gai_strerror(s));
-		return -1;
-	}
 
 	for (ptr = res; ptr != NULL; ptr = ptr->ai_next) {
 #ifndef HAVE_IPV6
 		if (ptr->ai_family != AF_INET)
 			continue;
 #endif
+
+		if (ptr->ai_socktype == SOCK_STREAM)
+			type = "TCP";
+		else if (ptr->ai_socktype == SOCK_DGRAM)
+			type = "UDP";
+		else
+			continue;
+			
 		if (config->foreground != 0)
-			fprintf(stderr, "listening on %s...\n",
-				human_addr(ptr->ai_addr, ptr->ai_addrlen,
+			fprintf(stderr, "listening (%s) on %s...\n",
+				type, human_addr(ptr->ai_addr, ptr->ai_addrlen,
 					   buf, sizeof(buf)));
 
 		s = socket(ptr->ai_family, ptr->ai_socktype,
@@ -113,7 +98,7 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 		}
 #endif
 
-		if (socktype == SOCK_STREAM) {
+		if (ptr->ai_socktype == SOCK_STREAM) {
 			y = 1;
 			if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
 				       (const void *) &y, sizeof(y)) < 0) {
@@ -122,6 +107,8 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 				continue;
 			}
 		} else {
+			y = 1;
+			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
 #if defined(IP_DONTFRAG)
 			y = 1;
 			if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG,
@@ -143,24 +130,150 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 			continue;
 		}
 
-		if (socktype == SOCK_STREAM) {
+		if (ptr->ai_socktype == SOCK_STREAM) {
 			if (listen(s, 10) < 0) {
 				perror("listen() failed");
-				exit(1);
+				return -1;
 			}
 		}
 
+
+
 		tmp = calloc(1, sizeof(struct listener_st));
 		tmp->fd = s;
+		tmp->family = ptr->ai_family;
+		tmp->socktype = ptr->ai_socktype;
+		tmp->protocol = ptr->ai_protocol;
+		tmp->addr_len = ptr->ai_addrlen;
+		memcpy(&tmp->addr, ptr->ai_addr, tmp->addr_len);
+
 		list_add(&list->head, &(tmp->list));
 		list->total++;
 	}
 
 	fflush(stderr);
+
+	return 0;
+}
+
+/* Returns 0 on success or negative value on error.
+ */
+static int
+listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *node)
+{
+	struct addrinfo hints, *res;
+	char portname[6];
+	int ret;
+
+	list_head_init(&list->head);
+	list->total = 0;
+
+	snprintf(portname, sizeof(portname), "%d", config->port);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE
+#ifdef AI_ADDRCONFIG
+	    | AI_ADDRCONFIG
+#endif
+	    ;
+
+	ret = getaddrinfo(node, portname, &hints, &res);
+	if (ret != 0) {
+		fprintf(stderr, "getaddrinfo() failed: %s\n",
+			gai_strerror(ret));
+		return -1;
+	}
+
+	ret = _listen_ports(config, res, list);
+	if (ret < 0) {
+		return -1;
+	}
+
+	freeaddrinfo(res);
+
+	snprintf(portname, sizeof(portname), "%d", config->udp_port);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_PASSIVE
+#ifdef AI_ADDRCONFIG
+	    | AI_ADDRCONFIG
+#endif
+	    ;
+
+	ret = getaddrinfo(node, portname, &hints, &res);
+	if (ret != 0) {
+		fprintf(stderr, "getaddrinfo() failed: %s\n",
+			gai_strerror(ret));
+		return -1;
+	}
+
+	ret = _listen_ports(config, res, list);
+	if (ret < 0) {
+		return -1;
+	}
+	
 	freeaddrinfo(res);
 
 	return 0;
 }
+
+/* This is a hack. I tried to use connect() on the worker
+ * and use connect() with unspec on the master process but all packets
+ * were received by master. Reopening the socket seems to resolve
+ * that.
+ */
+static
+int reopen_udp_port(struct listener_st *l)
+{
+int s, y, e;
+
+	close(l->fd);
+	l->fd = -1;
+
+	s = socket(l->family, l->socktype, l->protocol);
+	if (s < 0) {
+		perror("socket() failed");
+		return -1;
+	}
+
+#if defined(HAVE_IPV6) && !defined(_WIN32)
+	if (ptr->ai_family == AF_INET6) {
+		y = 1;
+		/* avoid listen on ipv6 addresses failing
+		 * because already listening on ipv4 addresses: */
+		setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
+			   (const void *) &y, sizeof(y));
+	}
+#endif
+
+	y = 1;
+	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
+
+#if defined(IP_DONTFRAG)
+	y = 1;
+	setsockopt(s, IPPROTO_IP, IP_DONTFRAG,
+		       (const void *) &y, sizeof(y));
+#elif defined(IP_MTU_DISCOVER)
+	y = IP_PMTUDISC_DO;
+	setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER,
+		       (const void *) &y, sizeof(y));
+#endif
+	set_cloexec_flag (s, 1);
+
+	if (bind(s, (void*)&l->addr, l->addr_len) < 0) {
+		e = errno;
+		syslog(LOG_ERR, "bind() failed: %s", strerror(e));
+		close(s);
+		return -1;
+	}
+	
+	l->fd = s;
+
+	return 0;
+}
+
 
 static void cleanup_children(main_server_st *s)
 {
@@ -171,7 +284,7 @@ pid_t pid;
 		if (WEXITSTATUS(status) != 0 ||
 			(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV)) {
 			if (WIFSIGNALED(status))
-				syslog(LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
+				mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
 		}
 	}
 	need_children_cleanup = 0;
@@ -248,36 +361,36 @@ static int verify_certificate_cb(gnutls_session_t session)
 	return 0;
 }
 
-static void drop_privileges(struct cfg_st *config)
+static void drop_privileges(main_server_st* s)
 {
 	int ret, e;
 
-	if (config->chroot_dir) {
-		ret = chroot(config->chroot_dir);
+	if (s->config->chroot_dir) {
+		ret = chroot(s->config->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			syslog(LOG_ERR, "Cannot chroot to %s: %s", config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "Cannot chroot to %s: %s", s->config->chroot_dir, strerror(e));
 			exit(1);
 		}
 	}
 
-	if (config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
-		ret = setgid(config->gid);
+	if (s->config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
+		ret = setgid(s->config->gid);
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_ERR, "Cannot set gid to %d: %s\n",
-			       (int) config->gid, strerror(e));
+			mslog(s, NULL, LOG_ERR, "Cannot set gid to %d: %s\n",
+			       (int) s->config->gid, strerror(e));
 			exit(1);
 
 		}
 	}
 
-	if (config->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
-		ret = setuid(config->uid);
+	if (s->config->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
+		ret = setuid(s->config->uid);
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_ERR, "Cannot set uid to %d: %s\n",
-			       (int) config->uid, strerror(e));
+			mslog(s, NULL, LOG_ERR, "Cannot set uid to %d: %s\n",
+			       (int) s->config->uid, strerror(e));
 			exit(1);
 
 		}
@@ -335,6 +448,76 @@ static void handle_term(int signo)
 	terminate = 1;
 }
 
+#define RECORD_PAYLOAD_POS 13
+#define HANDSHAKE_SESSION_ID_POS 46
+static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
+{
+int ret;
+struct sockaddr_storage cli_addr;
+struct proc_st *ctmp;
+socklen_t cli_addr_size;
+uint8_t buffer[1024];
+uint8_t  *session_id;
+int session_id_size;
+ssize_t buffer_size;
+int connected = 0;
+
+	/* first receive from the correct client and connect socket */
+	cli_addr_size = sizeof(cli_addr);
+	ret = recvfrom(listener->fd, buffer, sizeof(buffer), MSG_PEEK, (void*)&cli_addr, &cli_addr_size);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_INFO, "Error receiving in UDP socket");
+		return -1;
+	}
+	
+	buffer_size = ret;
+	
+	/* obtain the session id */
+	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2)
+		goto fail;
+
+	/* check version */
+	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[0] != 0)) {
+		mslog(s, NULL, LOG_ERR, "Unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
+		goto fail;
+	}
+
+	/* read session_id */
+	session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
+	session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
+	
+	/* search for the IP and the session ID in all procs */
+	list_for_each(&s->clist->head, ctmp, list) {
+		if (ctmp->udp_fd_received == 0 && session_id_size == ctmp->session_id_size &&
+			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
+			
+			ret = send_udp_fd(s, ctmp, (void*)&cli_addr, cli_addr_size, listener->fd);
+			if (ret < 0) {
+				mslog(s, ctmp, LOG_ERR, "Error passing UDP socket");
+				return -1;
+			}
+			ctmp->udp_fd_received = 1;
+			connected = 1;
+			
+			reopen_udp_port(listener);
+
+			break;
+		}
+	}
+
+fail:
+	if (connected == 0) {
+		/* received packet from unknown host */
+//		mslog(s, NULL, LOG_ERR, "Received UDP packet from unexpected host; discarding it");
+		recv(listener->fd, buffer, buffer_size, 0);
+
+		return -1;
+	}
+	
+	return 0;
+
+}
+
 int main(int argc, char** argv)
 {
 	int fd, pid, e;
@@ -344,13 +527,14 @@ int main(int argc, char** argv)
 	struct listener_st *ltmp;
 	struct proc_st *ctmp, *cpos;
 	struct tun_st tun;
+	const char* perr;
 	fd_set rd;
 	int val, n = 0, ret;
 	struct timeval tv;
 	int cmd_fd[2];
 	struct worker_st ws;
 	struct cfg_st config;
-	unsigned active_clients = 0;
+	unsigned active_clients = 0, set;
 	main_server_st s;
 	
 	list_head_init(&clist.head);
@@ -383,7 +567,7 @@ int main(int argc, char** argv)
 	s.clist = &clist;
 	
 	/* Listen to network ports */
-	ret = listen_ports(&config, &llist, config.name, config.port, SOCK_STREAM);
+	ret = listen_ports(&config, &llist, config.name);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -413,35 +597,36 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	if (config.ca != NULL) {
-		ret =
-		    gnutls_certificate_set_x509_trust_file(creds.xcred,
-							   config.ca,
-							   GNUTLS_X509_FMT_PEM);
-		if (ret < 0) {
-			fprintf(stderr, "Error setting the CA (%s) file.\n",
-				config.ca);
-			exit(1);
+	if (config.cert_req != GNUTLS_CERT_IGNORE) {
+		if (config.ca != NULL) {
+			ret =
+			    gnutls_certificate_set_x509_trust_file(creds.xcred,
+								   config.ca,
+								   GNUTLS_X509_FMT_PEM);
+			if (ret < 0) {
+				fprintf(stderr, "Error setting the CA (%s) file.\n",
+					config.ca);
+				exit(1);
+			}
+
+			printf("Processed %d CA certificate(s).\n", ret);
 		}
 
-		printf("Processed %d CA certificate(s).\n", ret);
-	}
+		if (config.crl != NULL) {
+			ret =
+			    gnutls_certificate_set_x509_crl_file(creds.xcred,
+								 config.crl,
+								 GNUTLS_X509_FMT_PEM);
+			GNUTLS_FATAL_ERR(ret);
+		}
 
-	if (config.crl != NULL) {
-		ret =
-		    gnutls_certificate_set_x509_crl_file(creds.xcred,
-							 config.crl,
-							 GNUTLS_X509_FMT_PEM);
-		GNUTLS_FATAL_ERR(ret);
-	}
-
-
-	if (config.cert_req != GNUTLS_CERT_IGNORE) {
 		gnutls_certificate_set_verify_function(creds.xcred,
 						       verify_certificate_cb);
 	}
 
-	ret = gnutls_priority_init(&creds.cprio, config.priorities, NULL);
+	ret = gnutls_priority_init(&creds.cprio, config.priorities, &perr);
+	if (ret == GNUTLS_E_PARSING_ERROR)
+		fprintf(stderr, "Error in TLS priority string: %s\n", perr);
 	GNUTLS_FATAL_ERR(ret);
 
 	memset(&ws, 0, sizeof(ws));
@@ -464,11 +649,14 @@ int main(int argc, char** argv)
 		FD_ZERO(&rd);
 
 		list_for_each(&llist.head, ltmp, list) {
+			if (ltmp->fd == -1) continue;
+
 			val = fcntl(ltmp->fd, F_GETFL, 0);
 			if ((val == -1)
 			    || (fcntl(ltmp->fd, F_SETFL, val | O_NONBLOCK) <
 				0)) {
-				perror("fcntl()");
+				e = errno;
+				mslog(&s, NULL, LOG_ERR, "fcntl() error: %s", strerror(e));
 				exit(1);
 			}
 
@@ -489,18 +677,20 @@ int main(int argc, char** argv)
 
 		if (ret < 0) {
 			e = errno;
-			syslog(LOG_ERR, "Error in select(): %s",
+			mslog(&s, NULL, LOG_ERR, "Error in select(): %s",
 			       strerror(e));
 			exit(1);
 		}
 
 		/* Check for new connections to accept */
 		list_for_each(&llist.head, ltmp, list) {
-			if (FD_ISSET(ltmp->fd, &rd)) {
+			set = FD_ISSET(ltmp->fd, &rd);
+			if (set && ltmp->socktype == SOCK_STREAM) {
+				/* connection on TCP port */
 				ws.remote_addr_len = sizeof(ws.remote_addr);
 				fd = accept(ltmp->fd, (void*)&ws.remote_addr, &ws.remote_addr_len);
 				if (fd < 0) {
-					syslog(LOG_ERR,
+					mslog(&s, NULL, LOG_ERR,
 					       "Error in accept(): %s",
 					       strerror(errno));
 					continue;
@@ -509,14 +699,14 @@ int main(int argc, char** argv)
 				
 				if (config.max_clients > 0 && active_clients >= config.max_clients) {
 					close(fd);
-					syslog(LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
+					mslog(&s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
 					break;
 				}
 
 				/* Create a command socket */
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
 				if (ret < 0) {
-					syslog(LOG_ERR, "Error creating command socket");
+					mslog(&s, NULL, LOG_ERR, "Error creating command socket");
 					close(fd);
 					break;
 				}
@@ -525,7 +715,7 @@ int main(int argc, char** argv)
 				if (pid == 0) {	/* child */
 				
 					/* Drop privileges after this point */
-					drop_privileges(&config);
+					drop_privileges(&s);
 
 					/* close any open descriptors before
 					 * running the server
@@ -536,6 +726,7 @@ int main(int argc, char** argv)
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];
 					ws.tun_fd = -1;
+					ws.udp_fd = -1;
 					ws.conn_fd = fd;
 					ws.creds = &creds;
 
@@ -562,6 +753,12 @@ fork_failed:
 				}
 				close(cmd_fd[1]);
 				close(fd);
+			} else if (set && ltmp->socktype == SOCK_DGRAM) {
+				/* connection on UDP port */
+				ret = forward_udp_to_owner(&s, ltmp);
+				if (ret < 0) {
+					mslog(&s, NULL, LOG_INFO, "Could not determine the owner of received UDP packet");
+				}
 			}
 		}
 
@@ -586,7 +783,7 @@ fork_failed:
 			need_maintainance = 0;
 			pid = fork();
 			if (pid == 0) {	/* child */
-				syslog(LOG_INFO, "Performing maintainance");
+				mslog(&s, NULL, LOG_INFO, "Performing maintainance");
 				clear_lists(&s);
 
 				expire_cookies(&s);

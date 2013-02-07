@@ -48,6 +48,4 @@ inline static void tun_st_deinit(struct tun_st* ts)
 	}
 }
 
-int open_tun(const struct cfg_st *config, struct tun_st* tun, struct lease_st **lease);
-
 #endif

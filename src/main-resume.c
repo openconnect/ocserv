@@ -63,6 +63,42 @@ int send_resume_fetch_reply(main_server_st* s, struct proc_st * proc,
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
+int send_udp_fd(main_server_st* s, struct proc_st * proc, 
+		void* cli_addr, socklen_t cli_addr_size, int fd)
+{
+	struct iovec iov[2];
+	uint8_t cmd = CMD_UDP_FD;
+	struct msghdr hdr;
+	union {
+		struct cmsghdr    cm;
+		char control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;	
+
+
+	memset(&hdr, 0, sizeof(hdr));
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+	hdr.msg_iovlen++;
+
+	iov[1].iov_base = cli_addr;
+	iov[1].iov_len = cli_addr_size;
+	hdr.msg_iovlen++;
+
+	hdr.msg_iov = iov;
+
+	hdr.msg_control = control_un.control;
+	hdr.msg_controllen = sizeof(control_un.control);
+	
+	cmptr = CMSG_FIRSTHDR(&hdr);
+	cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+	cmptr->cmsg_level = SOL_SOCKET;
+	cmptr->cmsg_type = SCM_RIGHTS;
+	memcpy(CMSG_DATA(cmptr), &fd, sizeof(int));
+	
+	return(sendmsg(proc->fd, &hdr, 0));
+}
+
 int handle_resume_delete_req(main_server_st* s, struct proc_st * proc,
   			   const struct cmd_resume_fetch_req_st * req)
 {

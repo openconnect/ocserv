@@ -1,4 +1,3 @@
-* Use a single UDP port
 * Add a simple username/password back-end
 * Certificate authentication to the main process (can it be done without
   moving the TLS handshake over the main thread?)

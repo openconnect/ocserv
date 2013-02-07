@@ -125,6 +125,7 @@ unsigned j;
 	READ_STRING("listen-host", config->name, 0);
 
 	READ_NUMERIC("tcp-port", config->port, 1);
+	READ_NUMERIC("udp-port", config->udp_port, 0);
 	READ_NUMERIC("keepalive", config->keepalive, 0);
 
 	READ_STRING("server-cert", config->cert, 1);
@@ -199,6 +200,9 @@ static void check_cfg( struct cfg_st *config)
 	
 	if (config->keepalive == 0)
 		config->keepalive = 30;
+
+	if (config->udp_port == 0)
+		config->udp_port = config->port;
 	
 	if (config->priorities == NULL)
 		config->priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT";

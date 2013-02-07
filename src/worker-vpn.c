@@ -237,57 +237,11 @@ char* tmp = malloc(length+1);
 
 static int setup_dtls_connection(struct worker_st *ws)
 {
-int ret, e;
+int ret;
 gnutls_session_t session;
-struct sockaddr_storage cli_addr;
-socklen_t cli_addr_size;
-uint8_t buffer[512];
-ssize_t buffer_size;
 gnutls_datum_t master = { ws->master_secret, sizeof(ws->master_secret) };
 gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
-unsigned port;
 
-	/* first receive from the correct client and connect socket */
-	cli_addr_size = sizeof(cli_addr);
-	ret = recvfrom(ws->udp_fd, buffer, sizeof(buffer), MSG_PEEK, (void*)&cli_addr, &cli_addr_size);
-	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Error receiving in UDP socket");
-		return -1;
-	}
-	
-	if (cli_addr_size == sizeof(struct sockaddr_in6)) {
-		port = SA_IN6_PORT(&cli_addr);
-	} else {
-		port = SA_IN_PORT(&cli_addr);
-	}
-	port = ntohs(port);
-	
-	buffer_size = ret;
-
-	if ( (ws->remote_addr_len == sizeof(struct sockaddr_in) && memcmp(SA_IN_P(&cli_addr), 
-		SA_IN_P(&ws->remote_addr), sizeof(struct in_addr)) == 0) ||
-		(ws->remote_addr_len == sizeof(struct sockaddr_in6) && memcmp(SA_IN6_P(&cli_addr), 
-		SA_IN6_P(&ws->remote_addr), sizeof(struct in6_addr)) == 0)) {
-
-		/* connect to host */
-#if 1
-		oclog(ws, LOG_ERR, "Connecting to UDP port %u", port);
-		ret = connect(ws->udp_fd, (void*)&cli_addr, cli_addr_size);
-		if (ret < 0) {
-			e = errno;
-			oclog(ws, LOG_ERR, "Error connecting: %s", strerror(e));
-			return -1;
-		}
-#endif
-	} else {
-		/* received packet from unknown host */
-
-		oclog(ws, LOG_ERR, "Received UDP packet from unexpected host; discarding it");
-		recv(ws->udp_fd, buffer, buffer_size, 0);
-
-		return 0;
-	}
-	
 	/* DTLS cookie verified.
 	 * Initialize session.
 	 */
@@ -354,6 +308,10 @@ void vpn_server(struct worker_st* ws)
 	syslog(LOG_INFO, "Accepted connection from %s", 
 		human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
 		    buf, sizeof(buf)));
+	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
+		ws->proto = AF_INET;
+	else
+		ws->proto = AF_INET6;
 
 	/* initialize the session */
 	ret = gnutls_init(&session, GNUTLS_SERVER);
@@ -631,103 +589,6 @@ fail:
 	return ret;
 }
 
-static int open_udp_port(worker_st *ws)
-{
-int s, e, ret;
-struct sockaddr_storage si;
-struct sockaddr_storage stcp;
-socklen_t len;
-int proto;
-
-	len = sizeof(stcp);
-	ret = getsockname(ws->conn_fd, (void*)&stcp, &len);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Error in getsockname: %s", strerror(e));
-		return -1;
-	}
-
-	proto = ((struct sockaddr*)&stcp)->sa_family;
-
-	s = socket(proto, SOCK_DGRAM, IPPROTO_UDP);
-	if (s == -1) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Could not open a UDP socket: %s", strerror(e));
-		return -1;
-	}
-
-	/* listen on the same IP the client connected at */
-	memset(&si, 0, sizeof(si));
-	((struct sockaddr*)&si)->sa_family = proto;
-
-	if (proto == AF_INET) {
-		memcpy(SA_IN_P(&si), SA_IN_P(&stcp), sizeof(*SA_IN_P(&si)));
-	} else if (proto == AF_INET6) {
-		memcpy(SA_IN6_P(&si), SA_IN6_P(&stcp), sizeof(*SA_IN6_P(&si)));
-	} else {
-		oclog(ws, LOG_ERR, "Unknown protocol family: %d", proto);
-		goto fail;
-	}
-
-	/* make sure we don't fragment packets */
-#if defined(IP_DONTFRAG)
-	ret = 1;
-        if (setsockopt (s, IPPROTO_IP, IP_DONTFRAG,
-                          (const void *) &ret, sizeof (ret)) < 0)
-	if (ret < 0) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Error in setsockopt (IP_DF): %s", strerror(e));
-		goto fail;
-	}
-#elif defined(IP_MTU_DISCOVER)
-	ret = IP_PMTUDISC_DO;
-	if (setsockopt (s, IPPROTO_IP, IP_MTU_DISCOVER,
-                          (const void *) &ret, sizeof (ret)) < 0)
-	if (ret < 0) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Error in setsockopt (IP_MTU_DISCOVER): %s", strerror(e));
-		goto fail;
-	}
-#endif
-#ifdef SO_REUSEPORT
-	ret = 1;
-	ret = setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &ret, sizeof(ret));
-	if (ret < 0) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Error in setsockopt (SO_REUSEPORT): %s", strerror(e));
-		goto fail;
-	}
-#endif
-	ret = bind(s, (void*)&si, len);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Could not bind on a UDP port: %s", strerror(e));
-		goto fail;
-	}
-
-	len = sizeof(si);
-	ret = getsockname(s, (void*)&si, &len);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_ERR, "Could not obtain UDP port number: %s", strerror(e));
-		goto fail;
-	}
-
-	if (proto == AF_INET) {
-		ws->udp_port = ntohs(SA_IN_PORT(&si));
-	} else {
-		ws->udp_port = ntohs(SA_IN6_PORT(&si));
-	}
-	ws->udp_port_proto = proto;
-
-	ws->udp_fd = s;
-	
-	return 0;
-fail:
-	close(s);
-	return -1;
-}
-
 static ssize_t tun_write(int sockfd, const void *buf, size_t len)
 {
 int left = len;
@@ -845,7 +706,7 @@ unsigned mtu_overhead, dtls_mtu = 0;
 	}
 	
 	if (ws->config->network.name == NULL) {
-		oclog(ws, LOG_ERR, "No networks are configured. Rejecting client");
+		oclog(ws, LOG_ERR, "No networks are configured; rejecting client");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
@@ -869,12 +730,7 @@ unsigned mtu_overhead, dtls_mtu = 0;
 	ws->udp_state = UP_DISABLED;
 	if (req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
-
-		ret = open_udp_port(ws);
-		if (ret < 0) {
-			oclog(ws, LOG_NOTICE, "Could not open UDP port");
-		} else
-			ws->udp_state = UP_SETUP;
+		ws->udp_state = UP_SETUP;
 	}
 	
 
@@ -914,12 +770,13 @@ unsigned mtu_overhead, dtls_mtu = 0;
 		}
 		tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
 
-		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->udp_port);
+		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->config->udp_port);
 		tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
 		tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
 		tls_puts(ws->session, "X-DTLS-CipherSuite: "OPENSSL_CIPHERSUITE"\r\n");
 
-		if (ws->udp_port_proto == AF_INET)
+		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
+		if (ws->proto == AF_INET)
 			mtu_overhead = 20+8;
 		else
 			mtu_overhead = 40+8;
@@ -940,7 +797,7 @@ unsigned mtu_overhead, dtls_mtu = 0;
 		max = MAX(ws->cmd_fd,ws->conn_fd);
 		max = MAX(max,ws->tun_fd);
 
-		if (ws->udp_state != UP_DISABLED) {
+		if (ws->udp_state != UP_DISABLED && ws->udp_fd != -1) {
 			FD_SET(ws->udp_fd, &rfds);
 			max = MAX(max,ws->udp_fd);
 		}
@@ -1046,7 +903,7 @@ unsigned mtu_overhead, dtls_mtu = 0;
 			}
 		}
 
-		if (ws->udp_state != UP_DISABLED && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
+		if (ws->udp_fd != -1 && ws->udp_state != UP_DISABLED && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
 
 			switch (ws->udp_state) {
 				case UP_ACTIVE:
@@ -1135,10 +992,16 @@ int handle_worker_commands(struct worker_st *ws)
 	uint8_t cmd;
 	struct msghdr hdr;
 	union {
-		char x[20];
+		char x[32];
+		struct sockaddr_storage ss;
 	} cmd_data;
-	int ret;
-	/*int cmd_data_len;*/
+	union {
+		struct cmsghdr    cm;
+		char              control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;
+	int ret, e;
+	int cmd_data_len;
 
 	memset(&cmd_data, 0, sizeof(cmd_data));
 	
@@ -1151,6 +1014,9 @@ int handle_worker_commands(struct worker_st *ws)
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
+
+	hdr.msg_control = control_un.control;
+	hdr.msg_controllen = sizeof(control_un.control);
 	
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret == -1) {
@@ -1162,11 +1028,39 @@ int handle_worker_commands(struct worker_st *ws)
 		exit(1);
 	}
 
-	/*cmd_data_len = ret - 1;*/
+	cmd_data_len = ret - 1;
 	
 	switch(cmd) {
 		case CMD_TERMINATE:
 			exit(0);
+		case CMD_UDP_FD:
+			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+				if (cmptr->cmsg_level != SOL_SOCKET)
+					return -1;
+				if (cmptr->cmsg_type != SCM_RIGHTS)
+					return -1;
+				memcpy(&ws->udp_fd, CMSG_DATA(cmptr), sizeof(int));
+				if (cmd_data_len > 0) {
+					ret = connect(ws->udp_fd, (void*)&cmd_data.ss, cmd_data_len);
+					if (ret == -1) {
+						e = errno;
+						oclog(ws, LOG_ERR, "connect(): %s", strerror(e));
+						goto udp_fd_fail;
+					}
+				} else {
+					oclog(ws, LOG_ERR, "Didn't receive peer's UDP address");
+					goto udp_fd_fail;
+				}
+
+				return 0;
+udp_fd_fail:
+				close(ws->udp_fd);
+				ws->udp_fd = -1;
+				return -1;
+			} else {
+				return -1;
+			}
+			break;
 		default:
 			oclog(ws, LOG_ERR, "Unknown CMD 0x%x", (unsigned)cmd);
 			exit(1);

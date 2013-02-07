@@ -92,3 +92,35 @@ void __attribute__ ((format(printf, 3, 4)))
 	
 	return;
 }
+
+/* proc is optional */
+void __attribute__ ((format(printf, 4, 5)))
+    mslog(const main_server_st * s, const struct proc_st* proc,
+    	int priority, const char *fmt, ...)
+{
+	char buf[1024];
+	char ipbuf[128];
+	const char* ip = NULL;
+	va_list args;
+	
+	if (priority == LOG_DEBUG && s->config->debug == 0)
+		return;
+
+	if (proc) {
+		ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
+			    ipbuf, sizeof(ipbuf));
+	}
+
+	buf[1023] = 0;
+
+	va_start(args, fmt);
+	vsnprintf(buf, 1023, fmt, args);
+	va_end(args);
+
+	if (ip)
+		syslog(priority, "%s %s", ip, buf);
+	else
+		syslog(priority, "%s", buf);
+	
+	return;
+}

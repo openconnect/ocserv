@@ -157,8 +157,7 @@ static int recv_auth_reply(worker_st *ws)
 	uint8_t cmd = 0;
 	struct cmd_auth_reply_st resp;
 	struct msghdr hdr;
-	int ret;
-
+	int ret, cmdlen;
 	union {
 		struct cmsghdr    cm;
 		char              control[CMSG_SPACE(sizeof(int))];
@@ -179,15 +178,25 @@ static int recv_auth_reply(worker_st *ws)
 	hdr.msg_controllen = sizeof(control_un.control);
 	
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	if (ret < sizeof(resp)+1) {
-		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(resp)+1);
+	
+	cmdlen = ret;
+	
+	if (cmdlen < 2) {
+		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", cmdlen, (int)2);
 		return -1;
 	}
 	if (cmd != AUTH_REP)
 		return -1;
+		
+	cmdlen--;
 
 	switch(resp.reply) {
 		case REP_AUTH_OK:
+			if (cmdlen < sizeof(resp)) {
+				oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(resp)+1);
+				return -1;
+			}
+
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 				if (cmptr->cmsg_level != SOL_SOCKET)
 					return -1;

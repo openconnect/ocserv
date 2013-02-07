@@ -52,7 +52,6 @@ int ret;
 	if (s->config->disconnect_script == NULL)
 		return;
 
-	/* XXX: close fds */
 	pid = fork();
 	if (pid == 0) {
 		char real[64];
@@ -88,7 +87,7 @@ int ret;
 			
 		exit(0);
 	} else if (pid == -1) {
-		syslog(LOG_ERR, "Could not fork()");
+		mslog(s, proc, LOG_ERR, "Could not fork()");
 	}
 }
 
@@ -100,16 +99,6 @@ int ret, status;
 
 	if (s->config->connect_script == NULL)
 		return 0;
-
-	if (s->config->auth_types & AUTH_TYPE_PAM) {
-		static int warned = 0;
-		
-		if (warned == 0) {
-			syslog(LOG_WARNING, "PAM authentication and UTMP are mutually exclusive. Turn off UTMP and use PAM for accounting.");
-			warned = 1;
-		}
-		return 0;
-	}
 
 	pid = fork();
 	if (pid == 0) {
@@ -146,7 +135,7 @@ int ret, status;
 			
 		exit(0);
 	} else if (pid == -1) {
-		syslog(LOG_ERR, "Could not fork()");
+		mslog(s, proc, LOG_ERR, "Could not fork()");
 		return -1;
 	}
 	

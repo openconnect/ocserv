@@ -678,12 +678,12 @@ int l, e;
 int max;
 unsigned i;
 struct vpn_st vinfo;
-uint8_t buffer[16*1024];
+uint8_t buffer[4*1024];
 unsigned int buffer_size, tls_retry;
 char *p;
 unsigned tls_pending, dtls_pending = 0;
 time_t udp_recv_time = 0;
-unsigned mtu_overhead, dtls_mtu = 0;
+unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 	if (req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "Connect request without authentication");
@@ -732,10 +732,6 @@ unsigned mtu_overhead, dtls_mtu = 0;
 		return -1;
 	}
 	
-	if (req->cstp_mtu > 0) {
-		vinfo.mtu = MIN(vinfo.mtu, req->cstp_mtu);
-	}
-
 	tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
 
 	tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
@@ -774,7 +770,13 @@ unsigned mtu_overhead, dtls_mtu = 0;
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
 	}
 	tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);
-	tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", vinfo.mtu);
+
+	tls_mtu = vinfo.mtu - 8;
+	if (req->cstp_mtu > 0)
+		tls_mtu = MIN(tls_mtu, req->cstp_mtu);
+	tls_mtu = MIN(sizeof(buffer)-8, tls_mtu);
+
+	tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", tls_mtu);
 
 	if (ws->udp_state != UP_DISABLED) {
 		p = (char*)buffer;
@@ -791,20 +793,23 @@ unsigned mtu_overhead, dtls_mtu = 0;
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
 		if (ws->proto == AF_INET)
-			mtu_overhead = 20+8;
+			mtu_overhead = 20+1;
 		else
-			mtu_overhead = 40+8;
+			mtu_overhead = 40+1;
 		dtls_mtu = vinfo.mtu - mtu_overhead;
 
 		if (req->dtls_mtu > 0) {
 			dtls_mtu = MIN(req->dtls_mtu, dtls_mtu);
 		}
+		dtls_mtu = MIN(sizeof(buffer)-1, dtls_mtu);
+
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 	}
 
 	tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
 	tls_puts(ws->session, "\r\n");
+	
 	
 	for(;;) {
 		FD_ZERO(&rfds);
@@ -835,10 +840,10 @@ unsigned mtu_overhead, dtls_mtu = 0;
 			if (ws->udp_state == UP_ACTIVE) {
 				l = dtls_mtu;
 			} else {
-				l = sizeof(buffer);
+				l = tls_mtu;
 			}
 
-			l = read(ws->tun_fd, buffer + 8, l - 8);
+			l = read(ws->tun_fd, buffer + 8, l);
 			if (l < 0) {
 				e = errno;
 				
@@ -931,7 +936,6 @@ unsigned mtu_overhead, dtls_mtu = 0;
 
 					GNUTLS_FATAL_ERR(ret);
 
-
 					if (ret == 0) { /* disconnect */
 						oclog(ws, LOG_INFO, "Client disconnected");
 						exit(1);
@@ -969,7 +973,7 @@ hsk_restart:
 					if (ret == GNUTLS_E_LARGE_PACKET) {
 						/* adjust mtu */
 						ret = mtu_not_ok(ws, &dtls_mtu);
-						if (dtls_mtu < 0) {
+						if (ret < 0) {
 							oclog(ws, LOG_DEBUG, "DTLS handshake failed. MTU error\n");
 						} else {
 							goto hsk_restart;

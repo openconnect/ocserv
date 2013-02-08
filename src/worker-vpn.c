@@ -569,7 +569,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	ws->udp_state = UP_DISABLED;
 	if (req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
-		ws->udp_state = UP_SETUP;
+		ws->udp_state = UP_WAIT_FD;
 	}
 	
 
@@ -686,7 +686,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		max = MAX(ws->cmd_fd,ws->conn_fd);
 		max = MAX(max,ws->tun_fd);
 
-		if (ws->udp_state != UP_DISABLED && ws->udp_fd != -1) {
+		if (ws->udp_state > UP_WAIT_FD) {
 			FD_SET(ws->udp_fd, &rfds);
 			max = MAX(max,ws->udp_fd);
 		}
@@ -822,7 +822,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			}
 		}
 
-		if (ws->udp_fd != -1 && ws->udp_state != UP_DISABLED && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
+		if (ws->udp_state > UP_WAIT_FD && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
 
 			switch (ws->udp_state) {
 				case UP_ACTIVE:
@@ -967,6 +967,11 @@ int handle_worker_commands(struct worker_st *ws)
 		case CMD_TERMINATE:
 			exit(0);
 		case CMD_UDP_FD:
+			if (ws->udp_state != UP_WAIT_FD) {
+				oclog(ws, LOG_ERR, "didn't expect a UDP fd!");
+				goto fatal_error;
+			}
+
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 				if (cmptr->cmsg_level != SOL_SOCKET)
 					return -1;
@@ -981,15 +986,12 @@ int handle_worker_commands(struct worker_st *ws)
 						goto udp_fd_fail;
 					}
 				} else {
-					oclog(ws, LOG_ERR, "Didn't receive peer's UDP address");
+					oclog(ws, LOG_ERR, "didn't receive peer's UDP address");
 					goto udp_fd_fail;
 				}
+				ws->udp_state = UP_SETUP;
 
 				return 0;
-udp_fd_fail:
-				close(ws->udp_fd);
-				ws->udp_fd = -1;
-				return -1;
 			} else {
 				return -1;
 			}
@@ -1000,6 +1002,16 @@ udp_fd_fail:
 	}
 	
 	return 0;
+
+fatal_error:
+	closelog();
+	exit(1);
+
+udp_fd_fail:
+	ws->udp_state = UP_DISABLED;
+	close(ws->udp_fd);
+	ws->udp_fd = -1;
+	return -1;
 }
 
 static int parse_data(struct worker_st* ws, 

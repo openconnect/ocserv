@@ -13,6 +13,7 @@
 
 typedef enum {
 	UP_DISABLED,
+	UP_WAIT_FD,
 	UP_SETUP,
 	UP_HANDSHAKE,
 	UP_INACTIVE,

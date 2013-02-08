@@ -39,7 +39,7 @@
 #ifdef HAVE_GDBM
 
 static
-int store_cookie_gdbm(main_server_st *s, const struct stored_cookie_st* sc)
+int store_cookie_gdbm(main_server_st *s, struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;
 datum key;
@@ -66,6 +66,7 @@ int ret;
 	ret = 0;
 
 finish:
+	free(sc);
 	gdbm_close(dbf);
 	return ret;
 }

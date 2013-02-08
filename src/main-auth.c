@@ -46,42 +46,36 @@
 static int send_auth_reply(main_server_st* s, struct proc_st* proc,
 				cmd_auth_reply_t r, struct lease_st* lease)
 {
-	struct iovec iov[6];
+	struct iovec iov[2];
 	uint8_t cmd[2];
 	struct msghdr hdr;
 	union {
 		struct cmsghdr    cm;
 		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
+	struct cmd_auth_reply_st resp;
 	struct cmsghdr  *cmptr;	
 
 	memset(&control_un, 0, sizeof(control_un));
 	memset(&hdr, 0, sizeof(hdr));
 	
-	cmd[0] = AUTH_REP;
-	cmd[1] = r;
-
-	iov[0].iov_base = cmd;
-	iov[0].iov_len = 2;
-	hdr.msg_iovlen++;
-
 	hdr.msg_iov = iov;
 
 	if (r == REP_AUTH_OK && lease != NULL) {
-		iov[1].iov_base = proc->cookie;
-		iov[1].iov_len = sizeof(proc->cookie);
-		hdr.msg_iovlen++;
+		cmd[0] = AUTH_REP;
 
-		iov[2].iov_base = proc->session_id;
-		iov[2].iov_len = proc->session_id_size;
+		iov[0].iov_base = cmd;
+		iov[0].iov_len = 1;
 		hdr.msg_iovlen++;
+		
+		resp.reply = r;
+		memcpy(resp.cookie, proc->cookie, COOKIE_SIZE);
+		memcpy(resp.session_id, proc->session_id, sizeof(resp.session_id));
+		memcpy(resp.vname, lease->name, sizeof(resp.vname));
+		memcpy(resp.user, proc->username, sizeof(resp.user));
 
-		iov[3].iov_base = lease->name;
-		iov[3].iov_len = sizeof(lease->name);
-		hdr.msg_iovlen++;
-
-		iov[4].iov_base = proc->username;
-		iov[4].iov_len = MAX_USERNAME_SIZE;
+		iov[1].iov_base = &resp;
+		iov[1].iov_len = sizeof(resp);
 		hdr.msg_iovlen++;
 
 		/* Send the tun fd */
@@ -93,6 +87,13 @@ static int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		cmptr->cmsg_level = SOL_SOCKET;
 		cmptr->cmsg_type = SCM_RIGHTS;
 		memcpy(CMSG_DATA(cmptr), &lease->fd, sizeof(int));
+	} else {
+		cmd[0] = AUTH_REP;
+		cmd[1] = REP_AUTH_FAILED;
+	
+		iov[0].iov_base = cmd;
+		iov[0].iov_len = 2;
+		hdr.msg_iovlen++;
 	}
 	
 	return(sendmsg(proc->fd, &hdr, 0));
@@ -109,10 +110,9 @@ struct stored_cookie_st sc;
 		return -1;
 	}
 	
-	ret = 0; /* cookie was found and valid */
-	
 	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
 	memcpy(proc->username, sc.username, sizeof(proc->username));
+	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
 	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	proc->session_id_size = sizeof(proc->session_id);
 	
@@ -322,10 +322,11 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 					ret = generate_and_store_vals(s, proc);
 					if (ret < 0)
 						return -2;
+					mslog(s, proc, LOG_INFO, "User '%s' authenticated", proc->username);
+				} else {
+					mslog(s, proc, LOG_INFO, "User '%s' re-authenticated (using cookie)", proc->username);
 				}
 				
-
-				mslog(s, proc, LOG_INFO, "User '%s' authenticated", proc->username);
 				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
 				if (ret < 0) {
 					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);

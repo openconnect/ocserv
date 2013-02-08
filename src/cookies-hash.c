@@ -41,7 +41,7 @@
 
 /* receives allocated data and stores them.
  */
-int store_cookie_hash(main_server_st *s, const struct stored_cookie_st* sc)
+int store_cookie_hash(main_server_st *s, struct stored_cookie_st* sc)
 {
 size_t key;
 

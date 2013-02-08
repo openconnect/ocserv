@@ -12,7 +12,7 @@ struct stored_cookie_st {
 	time_t expiration;
 };
 
-typedef int (*cookie_store_fn)(main_server_st *, const struct stored_cookie_st* sc);
+typedef int (*cookie_store_fn)(main_server_st *, struct stored_cookie_st* sc);
 
 typedef int (*cookie_retrieve_fn)(main_server_st *, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc);

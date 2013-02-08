@@ -439,6 +439,7 @@ static int set_tun_mtu(struct worker_st* ws, unsigned mtu)
 int fd, ret, e;
 struct ifreq ifr;
 
+	oclog(ws, LOG_DEBUG, "setting tun MTU to %u", mtu);
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 		return -1;
@@ -450,7 +451,7 @@ struct ifreq ifr;
 	ret = ioctl(fd, SIOCSIFMTU, &ifr);
 	if (ret != 0) {
 		e = errno;
-		oclog(ws, LOG_DEBUG, "ioctl SIOCSIFMTU error: %s", strerror(e));
+		oclog(ws, LOG_INFO, "ioctl SIOCSIFMTU error: %s", strerror(e));
 		ret = -1;
 		goto fail;
 	}
@@ -630,6 +631,7 @@ static
 int mtu_not_ok(worker_st* ws, unsigned *mtu)
 {
 	ws->last_bad_mtu = *mtu;
+
 	
 	ws->last_good_mtu = (*mtu)/2;
 	
@@ -638,6 +640,9 @@ int mtu_not_ok(worker_st* ws, unsigned *mtu)
 
 	*mtu = ws->last_good_mtu;
 	gnutls_dtls_set_data_mtu (ws->dtls_session, *mtu);
+
+	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, *mtu);
+
 	set_tun_mtu(ws, *mtu);
 
 	return 0;
@@ -790,8 +795,10 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	SEND_ERR(ret);
 
 	tls_mtu = vinfo.mtu - 8;
-	if (req->cstp_mtu > 0)
+	if (req->cstp_mtu > 0) {
 		tls_mtu = MIN(tls_mtu, req->cstp_mtu);
+		oclog(ws, LOG_DEBUG, "peer CSTP MTU is %u", req->cstp_mtu);
+	}
 	tls_mtu = MIN(sizeof(buffer)-8, tls_mtu);
 
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", tls_mtu);
@@ -827,9 +834,10 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 		if (req->dtls_mtu > 0) {
 			dtls_mtu = MIN(req->dtls_mtu, dtls_mtu);
+			oclog(ws, LOG_DEBUG, "peer DTLS MTU is %u", req->dtls_mtu);
 		}
-		dtls_mtu = MIN(sizeof(buffer)-1, dtls_mtu);
 
+		dtls_mtu = MIN(sizeof(buffer)-1, dtls_mtu);
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 	}
 

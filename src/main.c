@@ -384,6 +384,7 @@ static void handle_term(int signo)
 	terminate = 1;
 }
 
+
 #define RECORD_PAYLOAD_POS 13
 #define HANDSHAKE_SESSION_ID_POS 46
 static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
@@ -413,17 +414,24 @@ int connected = 0;
 		goto fail;
 
 	/* check version */
-	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[0] != 0)) {
-		mslog(s, NULL, LOG_ERR, "Unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
+	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0)) {
+		mslog(s, NULL, LOG_INFO, "Unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
 		goto fail;
 	}
+	if (buffer[0] != 22) {
+		mslog(s, NULL, LOG_INFO, "Unexpected DTLS content type: %u", (unsigned int)buffer[0]);
+		goto fail;
+	}
+	mslog(s, NULL, LOG_DEBUG, "DTLS record version: %u.%u", (unsigned int)buffer[1], (unsigned int)buffer[2]);
+	mslog(s, NULL, LOG_DEBUG, "DTLS hello version: %u.%u", (unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
 
 	/* read session_id */
 	session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
 	session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
-	
+
 	/* search for the IP and the session ID in all procs */
 	list_for_each(&s->clist->head, ctmp, list) {
+
 		if (ctmp->udp_fd_received == 0 && session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
 			

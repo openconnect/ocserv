@@ -31,18 +31,24 @@ struct proc_st {
 	struct list_node list;
 	int fd;
 	pid_t pid;
+	unsigned udp_fd_received; /* if the corresponding process has received a UDP fd */
+
+	/* the tun lease this process has */
+	struct lease_st* lease;
+
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
+
+	/* The DTLS session ID associated with the TLS session 
+	 * it is either generated or restored from a cookie.
+	 */
+	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
+	unsigned session_id_size; /* would act as a flag if session_id is set */
+	
+	/* The following are set by the worker process (or by a stored cookie) */
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
-	/* The DTLS session ID associated with the TLS session */
-	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
-	unsigned session_id_size; /* would act as a flag if session_id is set */
-	unsigned udp_fd_received;
-	
-	/* the tun lease this process has */
-	struct lease_st* lease;
 };
 
 struct proc_list_st {

@@ -1,6 +1,7 @@
 #ifndef SETPROCTITLE_H
 # define SETPROCTITLE_H
 
-extern void setproctitle (const char *prog);
+void __attribute__ ((format(printf, 1, 2)))
+setproctitle(const char *fmt, ...);
 
 #endif

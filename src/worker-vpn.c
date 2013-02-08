@@ -901,6 +901,7 @@ exit:
 	if (ws->udp_state == UP_ACTIVE && ws->dtls_session)
 		tls_close(ws->dtls_session);
 exit_nomsg:
+	closelog();
 	exit(1);
 
 send_error:

@@ -537,6 +537,7 @@ int main(int argc, char** argv)
 		if (terminate != 0) {
 			mslog(&s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
 			kill_children(&clist);
+			closelog();
 			while (waitpid(-1, NULL, 0) > 0);
 			exit(0);
 		}

@@ -878,7 +878,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 		if (terminate != 0) {
 			if (ws->udp_state == UP_ACTIVE) {
-				buffer[7] = AC_PKT_DATA;
+				buffer[7] = AC_PKT_DISCONN;
 
 				ret = tls_send(ws->dtls_session, buffer + 7, 1);
 				GNUTLS_FATAL_ERR(ret);
@@ -890,7 +890,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			buffer[3] = 1;
 			buffer[4] = 0;
 			buffer[5] = 0;
-			buffer[6] = AC_PKT_DATA;
+			buffer[6] = AC_PKT_DISCONN;
 			buffer[7] = 0;
 
 			ret = tls_send(ws->session, buffer, 8);

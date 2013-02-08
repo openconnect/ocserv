@@ -669,6 +669,7 @@ int c;
 	return;
 }
 
+#define SEND_ERR(x) if (x<0) goto send_error
 static int connect_handler(worker_st *ws)
 {
 int ret;
@@ -732,10 +733,15 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		return -1;
 	}
 	
-	tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
+	tls_cork(ws->session);
+	ret = tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
+	SEND_ERR(ret);
 
-	tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
-	tls_puts(ws->session, "X-CSTP-DPD: 60\r\n");
+	ret = tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
+	SEND_ERR(ret);
+
+	ret = tls_puts(ws->session, "X-CSTP-DPD: 60\r\n");
+	SEND_ERR(ret);
 
 	ws->udp_state = UP_DISABLED;
 	if (req->master_secret_set != 0) {
@@ -746,37 +752,50 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 	if (vinfo.ipv4) {
 		oclog(ws, LOG_DEBUG, "sending IPv4 %s", vinfo.ipv4);
-		tls_printf(ws->session, "X-CSTP-Address: %s\r\n", vinfo.ipv4);
+		ret = tls_printf(ws->session, "X-CSTP-Address: %s\r\n", vinfo.ipv4);
+		SEND_ERR(ret);
 
-		if (vinfo.ipv4_netmask)
-			tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
-		if (vinfo.ipv4_dns)
-			tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
+		if (vinfo.ipv4_netmask) {
+			ret = tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
+			SEND_ERR(ret);
+		}
+		if (vinfo.ipv4_dns) {
+			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
+			SEND_ERR(ret);
+		}
 	}
 	
 	if (vinfo.ipv6) {
 		oclog(ws, LOG_DEBUG, "sending IPv6 %s", vinfo.ipv6);
-		tls_printf(ws->session, "X-CSTP-Address: %s\r\n", vinfo.ipv6);
+		ret = tls_printf(ws->session, "X-CSTP-Address: %s\r\n", vinfo.ipv6);
+		SEND_ERR(ret);
 
-		if (vinfo.ipv6_netmask)
-			tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
-		if (vinfo.ipv6_dns)
-			tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
+		if (vinfo.ipv6_netmask) {
+			ret = tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
+			SEND_ERR(ret);
+		}
+		if (vinfo.ipv6_dns) {
+			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
+			SEND_ERR(ret);
+		}
 	}
 
 	for (i=0;i<vinfo.routes_size;i++) {
 		oclog(ws, LOG_DEBUG, "adding route %s", vinfo.routes[i]);
-		tls_printf(ws->session,
+		ret = tls_printf(ws->session,
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
+		SEND_ERR(ret);
 	}
-	tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);
+	ret = tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);
+	SEND_ERR(ret);
 
 	tls_mtu = vinfo.mtu - 8;
 	if (req->cstp_mtu > 0)
 		tls_mtu = MIN(tls_mtu, req->cstp_mtu);
 	tls_mtu = MIN(sizeof(buffer)-8, tls_mtu);
 
-	tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", tls_mtu);
+	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", tls_mtu);
+	SEND_ERR(ret);
 
 	if (ws->udp_state != UP_DISABLED) {
 		p = (char*)buffer;
@@ -784,12 +803,20 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			sprintf(p, "%.2x", (unsigned int)ws->session_id[i]);
 			p+=2;
 		}
-		tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
+		ret = tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
+		SEND_ERR(ret);
 
-		tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->config->udp_port);
-		tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
-		tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
-		tls_puts(ws->session, "X-DTLS-CipherSuite: "OPENSSL_CIPHERSUITE"\r\n");
+		ret = tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->config->udp_port);
+		SEND_ERR(ret);
+
+		ret = tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
+		SEND_ERR(ret);
+
+		ret = tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
+		SEND_ERR(ret);
+
+		ret = tls_puts(ws->session, "X-DTLS-CipherSuite: "OPENSSL_CIPHERSUITE"\r\n");
+		SEND_ERR(ret);
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
 		if (ws->proto == AF_INET)
@@ -807,9 +834,14 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 	}
 
-	tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
-	tls_puts(ws->session, "\r\n");
-	
+	ret = tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
+	SEND_ERR(ret);
+
+	ret = tls_puts(ws->session, "\r\n");
+	SEND_ERR(ret);
+
+	ret = tls_uncork(ws->session);
+	SEND_ERR(ret);
 	
 	for(;;) {
 		FD_ZERO(&rfds);
@@ -1005,6 +1037,10 @@ hsk_restart:
 	}
 
 	return 0;
+
+send_error:
+	oclog(ws, LOG_DEBUG, "Error sending data\n");
+	exit(1);
 }
 
 static

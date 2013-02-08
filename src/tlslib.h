@@ -14,6 +14,9 @@ ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size);
 ssize_t tls_send(gnutls_session_t session, const void *data,
 			size_t data_size);
 
+void tls_cork(gnutls_session_t session);
+int tls_uncork(gnutls_session_t session);
+
 void tls_global_init(struct main_server_st* s);
 int tls_global_init_client(struct worker_st* ws);
 

@@ -56,14 +56,40 @@ const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
 
 int get_auth_handler(worker_st *ws)
 {
-	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
-	tls_puts(ws->session, "Connection: close\r\n");
-	tls_puts(ws->session, "Content-Type: text/xml\r\n");
-	tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)sizeof(login_msg)-1);
-	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
-	tls_puts(ws->session, "\r\n");
+int ret;
 
-	tls_send(ws->session, login_msg, sizeof(login_msg)-1);
+	tls_cork(ws->session);
+	ret = tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Connection: close\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)sizeof(login_msg)-1);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_send(ws->session, login_msg, sizeof(login_msg)-1);
+	if (ret < 0)
+		return -1;
+	
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
 	
 	return 0;
 
@@ -377,20 +403,41 @@ struct cmd_auth_req_st areq;
 	}
 
 	/* reply */
+	tls_cork(ws->session);
 
-	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
-	tls_puts(ws->session, "Content-Type: text/xml\r\n");
-        tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
-	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
-	tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
-	tls_puts(ws->session, "\r\n"SUCCESS_MSG);
+	ret = tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	if (ret < 0)
+		return -1;
+	
+	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "\r\n"SUCCESS_MSG);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
 
 	return 0;
 
 auth_fail:
-	tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 	tls_printf(ws->session,
-		   "X-Reason: %s\r\n\r\n", reason);
+		   "HTTP/1.1 503 Service Unavailable\r\nX-Reason: %s\r\n\r\n", reason);
 	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 	exit(1);
 }
@@ -472,13 +519,36 @@ struct cmd_auth_req_st areq;
 	}
 
 	/* reply */
+	tls_cork(ws->session);
 
-	tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
-	tls_puts(ws->session, "Content-Type: text/xml\r\n");
-        tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
-	tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
-	tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
-	tls_puts(ws->session, "\r\n"SUCCESS_MSG);
+	ret = tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	if (ret < 0)
+		return -1;
+	
+	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "\r\n"SUCCESS_MSG);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
+
 
 	return 0;
 
@@ -486,9 +556,8 @@ ask_auth:
 	return get_auth_handler(ws);
 
 auth_fail:
-	tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 	tls_printf(ws->session,
-		   "X-Reason: %s\r\n\r\n", reason);
+		   "HTTP/1.1 503 Service Unavailable\r\nX-Reason: %s\r\n\r\n", reason);
 	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 	exit(1);
 }

@@ -14,6 +14,9 @@ ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size);
 ssize_t tls_send(gnutls_session_t session, const void *data,
 			size_t data_size);
 
+void tls_global_init(struct main_server_st* s);
+int tls_global_init_client(struct worker_st* ws);
+
 ssize_t tls_send_file(gnutls_session_t session, const char *file);
 
 #define GNUTLS_FATAL_ERR(x) \
@@ -29,6 +32,11 @@ void tls_close(gnutls_session_t session);
 
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
+
+struct tls_st {
+	gnutls_certificate_credentials_t xcred;
+	gnutls_priority_t cprio;
+};
 
 typedef struct
 {

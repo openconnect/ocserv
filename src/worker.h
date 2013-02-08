@@ -11,13 +11,6 @@
 #include <cookies.h>
 #include <tlslib.h>
 
-
-struct tls_st {
-	gnutls_certificate_credentials_t xcred;
-	gnutls_priority_t cprio;
-};
-
-
 typedef enum {
 	UP_DISABLED,
 	UP_SETUP,

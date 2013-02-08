@@ -56,6 +56,9 @@ typedef struct main_server_st {
 	hash_db_st *tls_db;
 	hash_db_st *cookie_db;
 
+	/* tls credentials */
+	struct tls_st creds;
+
 	struct listen_list_st* llist;
 	struct proc_list_st* clist;
 } main_server_st;

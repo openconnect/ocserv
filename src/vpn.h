@@ -86,6 +86,10 @@ struct cfg_st {
 	struct vpn_st network;
 };
 
+/* generic thing to stop complaints */
+struct worker_st;
+struct main_server_st;
+
 #include <tun.h>
 
 #define MAX_USERNAME_SIZE 64

@@ -19,6 +19,7 @@
 #include <config.h>
 
 #include <gnutls/gnutls.h>
+#include <gnutls/pkcs11.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -29,10 +30,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-
 #include <tlslib.h>
 #include <ccan/hash/hash.h>
 #include <vpn.h>
+#include <main.h>
+#include <worker.h>
 
 
 ssize_t tls_send(gnutls_session_t session, const void *data,
@@ -158,4 +160,163 @@ struct htable_iter iter;
 	db->entries = 0;
 
         return;
+}
+
+static void tls_log_func(int level, const char *str)
+{
+	syslog(LOG_DEBUG, "TLS[<%d>]: %s", level, str);
+}
+
+static void tls_audit_log_func(gnutls_session_t session, const char *str)
+{
+worker_st * ws;
+
+	if (session == NULL)
+		syslog(LOG_AUTH, "Warning: %s", str);
+	else {
+		ws = gnutls_session_get_ptr(session);
+		
+		oclog(ws, LOG_ERR, "Warning: %s", str);
+	}
+}
+
+static int verify_certificate_cb(gnutls_session_t session)
+{
+	unsigned int status;
+	int ret;
+	worker_st * ws;
+
+	ws = gnutls_session_get_ptr(session);
+	if (ws == NULL) {
+		syslog(LOG_ERR, "%s:%d: Could not obtain worker state.", __func__, __LINE__);
+		return -1;
+	}
+
+	/* This verification function uses the trusted CAs in the credentials
+	 * structure. So you must have installed one or more CA certificates.
+	 */
+	ret = gnutls_certificate_verify_peers2(session, &status);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Error verifying client certificate");
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	}
+
+	if (status != 0) {
+#if GNUTLS_VERSION_NUMBER > 0x030106
+		type = gnutls_certificate_type_get(session);
+
+		ret =
+		    gnutls_certificate_verification_status_print(status, type,
+							 &out, 0);
+		if (ret < 0)
+			return GNUTLS_E_CERTIFICATE_ERROR;
+
+		oclog(ws, LOG_INFO, "Client certificate verification failed: %s", out.data);
+
+		gnutls_free(out.data);
+#else
+		oclog(ws, LOG_INFO, "Client certificate verification failed.");
+#endif
+
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	} else {
+		oclog(ws, LOG_INFO, "Client certificate verification succeeded");
+	}
+
+	/* notify gnutls to continue handshake normally */
+	return 0;
+}
+
+void tls_global_init(main_server_st* s)
+{
+int ret;
+const char* perr;
+
+	gnutls_global_set_audit_log_function(tls_audit_log_func);
+	if (s->config->tls_debug) {
+		gnutls_global_set_log_function(tls_log_func);
+		gnutls_global_set_log_level(9);
+	}
+
+	ret = gnutls_global_init();
+	GNUTLS_FATAL_ERR(ret);
+	
+	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
+	GNUTLS_FATAL_ERR(ret);
+	
+	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
+		ret =
+		    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert,
+						 s->config->key,
+						 GNUTLS_X509_FMT_PEM);
+		if (ret < 0) {
+			fprintf(stderr, "Error setting the certificate (%s) or key (%s) files: %s\n",
+				s->config->cert, s->config->key, gnutls_strerror(ret));
+			exit(1);
+		}
+	}
+
+	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
+		if (s->config->ca != NULL) {
+			ret =
+			    gnutls_certificate_set_x509_trust_file(s->creds.xcred,
+								   s->config->ca,
+								   GNUTLS_X509_FMT_PEM);
+			if (ret < 0) {
+				fprintf(stderr, "Error setting the CA (%s) file.\n",
+					s->config->ca);
+				exit(1);
+			}
+
+			fprintf(stderr, "Processed %d CA certificate(s).\n", ret);
+		}
+
+		if (s->config->crl != NULL) {
+			ret =
+			    gnutls_certificate_set_x509_crl_file(s->creds.xcred,
+								 s->config->crl,
+								 GNUTLS_X509_FMT_PEM);
+			GNUTLS_FATAL_ERR(ret);
+		}
+
+		gnutls_certificate_set_verify_function(s->creds.xcred,
+						       verify_certificate_cb);
+	}
+
+	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
+	if (ret == GNUTLS_E_PARSING_ERROR)
+		fprintf(stderr, "Error in TLS priority string: %s\n", perr);
+	GNUTLS_FATAL_ERR(ret);
+	
+	
+	return;
+}
+
+int tls_global_init_client(worker_st* ws)
+{
+int ret;
+
+	/* when we have PKCS #11 keys we cannot open them and then fork(), we need
+	 * to open them at the process they are going to be used. */
+	if (ws->config->key != NULL && strncmp(ws->config->key, "pkcs11:", 7) == 0) {
+		ret = gnutls_pkcs11_reinit();
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "Could not reinitialize PKCS #11 subsystem: %s\n",
+				gnutls_strerror(ret));
+			return -1;
+
+		}
+
+		ret =
+		    gnutls_certificate_set_x509_key_file(ws->creds->xcred, ws->config->cert,
+						 ws->config->key,
+						 GNUTLS_X509_FMT_PEM);
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "Error setting the certificate (%s) or key (%s) files: %s\n",
+				ws->config->cert, ws->config->key, gnutls_strerror(ret));
+			return -1;
+		}
+	}
+
+	return 0;
 }

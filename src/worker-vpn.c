@@ -563,7 +563,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	ret = tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
 	SEND_ERR(ret);
 
-	ret = tls_puts(ws->session, "X-CSTP-DPD: 60\r\n");
+	ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", ws->config->dpd);
 	SEND_ERR(ret);
 
 	ws->udp_state = UP_DISABLED;
@@ -631,10 +631,13 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		ret = tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
 		SEND_ERR(ret);
 
+		ret = tls_printf(ws->session, "X-DTLS-DPD: %u\r\n", ws->config->dpd);
+		SEND_ERR(ret);
+
 		ret = tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->config->udp_port);
 		SEND_ERR(ret);
 
-		ret = tls_puts(ws->session, "X-DTLS-ReKey-Time: 86400\r\n");
+		ret = tls_puts(ws->session, "X-DTLS-Rekey-Time: 86400\r\n");
 		SEND_ERR(ret);
 
 		ret = tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
@@ -690,9 +693,11 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 		if (terminate != 0) {
 			if (ws->udp_state == UP_ACTIVE) {
-				buffer[7] = AC_PKT_DISCONN;
+				buffer[0] = AC_PKT_TERM_SERVER;
+				
+				oclog(ws, LOG_DEBUG, "Sending disconnect message in DTLS channel");
 
-				ret = tls_send(ws->dtls_session, buffer + 7, 1);
+				ret = tls_send(ws->dtls_session, buffer, 1);
 				GNUTLS_FATAL_ERR(ret);
 			}
 
@@ -702,12 +707,13 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			buffer[3] = 1;
 			buffer[4] = 0;
 			buffer[5] = 0;
-			buffer[6] = AC_PKT_DISCONN;
+			buffer[6] = AC_PKT_TERM_SERVER;
 			buffer[7] = 0;
 
+			oclog(ws, LOG_DEBUG, "Sending disconnect message in TLS channel");
 			ret = tls_send(ws->session, buffer, 8);
 			GNUTLS_FATAL_ERR(ret);
-			
+
 			goto exit;
 		}
 
@@ -898,8 +904,11 @@ hsk_restart:
 
 exit:
 	tls_close(ws->session);
-	if (ws->udp_state == UP_ACTIVE && ws->dtls_session)
+	/*gnutls_deinit(ws->session);*/
+	if (ws->udp_state == UP_ACTIVE && ws->dtls_session) {
 		tls_close(ws->dtls_session);
+		/*gnutls_deinit(ws->dtls_session);*/
+	}
 exit_nomsg:
 	closelog();
 	exit(1);
@@ -1002,31 +1011,35 @@ int ret, e;
 
 	switch (head) {
 		case AC_PKT_DPD_RESP:
-		case AC_PKT_KEEPALIVE:
+			oclog(ws, LOG_INFO, "received DPD response");
 			break;
-
+		case AC_PKT_KEEPALIVE:
+			oclog(ws, LOG_INFO, "received keepalive");
+			break;
 		case AC_PKT_DPD_OUT:
-			oclog(ws, LOG_DEBUG, "Sending STF8\n");
+			oclog(ws, LOG_DEBUG, "received DPD; sending response");
 			ret =
 			    tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
 			if (ret < 0) {
-				oclog(ws, LOG_ERR, "Could not send TLS data: %s", gnutls_strerror(ret));
+				oclog(ws, LOG_ERR, "could not send TLS data: %s", gnutls_strerror(ret));
 				return -1;
 			}
 			break;
 		case AC_PKT_DISCONN:
-			oclog(ws, LOG_INFO, "Received BYE packet\n");
+			oclog(ws, LOG_INFO, "received BYE packet");
 			break;
 		case AC_PKT_DATA:
-			oclog(ws, LOG_DEBUG, "Writing %d bytes to TUN\n", (int)buf_size);
+			oclog(ws, LOG_DEBUG, "writing %d bytes to TUN", (int)buf_size);
 			ret = tun_write(ws->tun_fd, buf, buf_size);
 			if (ret == -1) {
 				e = errno;
-				oclog(ws, LOG_ERR, "Could not write data to tun: %s", strerror(e));
+				oclog(ws, LOG_ERR, "could not write data to tun: %s", strerror(e));
 				return -1;
 			}
 
 			break;
+		default:
+			oclog(ws, LOG_DEBUG, "received unknown packet %u", (unsigned)head);
 	}
 	
 	return head;

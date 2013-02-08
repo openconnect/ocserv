@@ -67,6 +67,7 @@ struct cfg_st {
 	time_t cookie_validity;	/* in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;
+	unsigned dpd;
 	unsigned foreground;
 	unsigned tls_debug;
 	unsigned debug;

@@ -78,6 +78,12 @@ max-clients = 16
 tcp-port = 3333
 udp-port = 3333
 
+# Keepalive in seconds
+keepalive = 3600
+
+# Dead peer detection in seconds
+dpd = 60
+
 # The key and the certificates of the server
 # The key may be a file, or any URL supported by GnuTLS (i.e., tpmkey or pkcs11)
 server-cert = /path/to/cert.pem

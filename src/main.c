@@ -414,7 +414,10 @@ int connected = 0;
 		goto fail;
 
 	/* check version */
-	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0)) {
+	mslog(s, NULL, LOG_DEBUG, "DTLS record version: %u.%u", (unsigned int)buffer[1], (unsigned int)buffer[2]);
+	mslog(s, NULL, LOG_DEBUG, "DTLS hello version: %u.%u", (unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
+	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
+		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
 		mslog(s, NULL, LOG_INFO, "Unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
 		goto fail;
 	}
@@ -422,8 +425,6 @@ int connected = 0;
 		mslog(s, NULL, LOG_INFO, "Unexpected DTLS content type: %u", (unsigned int)buffer[0]);
 		goto fail;
 	}
-	mslog(s, NULL, LOG_DEBUG, "DTLS record version: %u.%u", (unsigned int)buffer[1], (unsigned int)buffer[2]);
-	mslog(s, NULL, LOG_DEBUG, "DTLS hello version: %u.%u", (unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
 
 	/* read session_id */
 	session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];

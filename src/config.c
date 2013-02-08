@@ -127,6 +127,7 @@ unsigned j;
 	READ_NUMERIC("tcp-port", config->port, 1);
 	READ_NUMERIC("udp-port", config->udp_port, 0);
 	READ_NUMERIC("keepalive", config->keepalive, 0);
+	READ_NUMERIC("dpd", config->dpd, 0);
 
 	READ_STRING("server-cert", config->cert, 1);
 	READ_STRING("server-key", config->key, 1);
@@ -201,7 +202,10 @@ static void check_cfg( struct cfg_st *config)
 	}
 	
 	if (config->keepalive == 0)
-		config->keepalive = 30;
+		config->keepalive = 3600;
+
+	if (config->dpd == 0)
+		config->keepalive = 60;
 
 	if (config->udp_port == 0)
 		config->udp_port = config->port;

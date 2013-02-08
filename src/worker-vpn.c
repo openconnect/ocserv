@@ -830,9 +830,13 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		}
 		dtls_mtu = MIN(sizeof(buffer)-1, dtls_mtu);
 
-
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 	}
+
+	if (dtls_mtu == 0)
+		set_tun_mtu(ws, tls_mtu);
+	else
+		set_tun_mtu(ws, MIN(dtls_mtu, tls_mtu));
 
 	ret = tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
 	SEND_ERR(ret);

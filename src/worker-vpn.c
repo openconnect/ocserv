@@ -57,6 +57,7 @@
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 8
 
+static int terminate = 0;
 static int handle_worker_commands(struct worker_st *ws);
 static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size);
 static int parse_dtls_data(struct worker_st* ws, 
@@ -65,6 +66,11 @@ static int parse_dtls_data(struct worker_st* ws,
 static void handle_alarm(int signo)
 {
 	exit(1);
+}
+
+static void handle_term(int signo)
+{
+	terminate = 1;
 }
 
 static int connect_handler(worker_st *ws);
@@ -308,8 +314,8 @@ void vpn_server(struct worker_st* ws)
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
 
-	signal(SIGTERM, SIG_DFL);
-	signal(SIGINT, SIG_DFL);
+	signal(SIGTERM, handle_term);
+	signal(SIGINT, handle_term);
 	signal(SIGALRM, handle_alarm);
 
 	if (ws->config->auth_timeout)
@@ -855,6 +861,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	ret = tls_uncork(ws->session);
 	SEND_ERR(ret);
 	
+	/* main loop  */
 	for(;;) {
 		FD_ZERO(&rfds);
 		
@@ -869,15 +876,42 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			max = MAX(max,ws->udp_fd);
 		}
 
+		if (terminate != 0) {
+			if (ws->udp_state == UP_ACTIVE) {
+				buffer[7] = AC_PKT_DATA;
+
+				ret = tls_send(ws->dtls_session, buffer + 7, 1);
+				GNUTLS_FATAL_ERR(ret);
+			}
+
+			buffer[0] = 'S';
+			buffer[1] = 'T';
+			buffer[2] = 'F';
+			buffer[3] = 1;
+			buffer[4] = 0;
+			buffer[5] = 0;
+			buffer[6] = AC_PKT_DATA;
+			buffer[7] = 0;
+
+			ret = tls_send(ws->session, buffer, 8);
+			GNUTLS_FATAL_ERR(ret);
+			
+			goto exit;
+		}
+
 		tls_pending = gnutls_record_check_pending(ws->session);
 		
 		if (ws->dtls_session != NULL)
 			dtls_pending = gnutls_record_check_pending(ws->dtls_session);
 		if (tls_pending == 0 && dtls_pending == 0) {
 			ret = select(max + 1, &rfds, NULL, NULL, NULL);
-			if (ret <= 0)
-				break;
+			if (ret == -1) {
+				if (errno == EINTR)
+					continue;
+				goto exit;
+			}
 		}
+		
 		
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
 				
@@ -893,14 +927,14 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				
 				if (e != EAGAIN && e != EINTR) {
 					oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
-					exit(1);
+					goto exit;
 				}
 				continue;
 			}
 			
 			if (l == 0) { /* disconnect */
 				oclog(ws, LOG_INFO, "TUN device returned zero");
-				exit(1);
+				goto exit;
 			}
 
 			tls_retry = 0;
@@ -952,7 +986,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 			if (ret == 0) { /* disconnect */
 				oclog(ws, LOG_INFO, "Client disconnected");
-				exit(1);
+				goto exit_nomsg;
 			}
 
 			l = ret;
@@ -960,7 +994,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			ret = parse_cstp_data(ws, buffer, l);
 			if (ret < 0) {
 				oclog(ws, LOG_INFO, "Error parsing CSTP data");
-				exit(1);
+				goto exit;
 			}
 			
 			if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
@@ -982,7 +1016,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 					if (ret == 0) { /* disconnect */
 						oclog(ws, LOG_INFO, "Client disconnected");
-						exit(1);
+						goto exit_nomsg;
 					}
 					l = ret;
 
@@ -991,7 +1025,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 					ret = parse_dtls_data(ws, buffer, l);
 					if (ret < 0) {
 						oclog(ws, LOG_INFO, "Error parsing CSTP data");
-						exit(1);
+						goto exit;
 					}
 					
 					udp_recv_time = time(0);
@@ -999,7 +1033,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				case UP_SETUP:
 					ret = setup_dtls_connection(ws);
 					if (ret < 0)
-						exit(1);
+						goto exit;
 					
 					gnutls_dtls_set_mtu (ws->dtls_session, dtls_mtu);
 					mtu_set(ws, dtls_mtu);
@@ -1041,7 +1075,7 @@ hsk_restart:
 		if (FD_ISSET(ws->cmd_fd, &rfds)) {
 			ret = handle_worker_commands(ws);
 			if (ret < 0) {
-				exit(1);
+				goto exit;
 			}
 		}
 
@@ -1049,6 +1083,13 @@ hsk_restart:
 	}
 
 	return 0;
+
+exit:
+	tls_close(ws->session);
+	if (ws->udp_state == UP_ACTIVE && ws->dtls_session)
+		tls_close(ws->dtls_session);
+exit_nomsg:
+	exit(1);
 
 send_error:
 	oclog(ws, LOG_DEBUG, "Error sending data\n");

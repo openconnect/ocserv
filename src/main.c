@@ -499,8 +499,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	initproctitle(argc, argv);
-	setproctitle(PACKAGE_NAME, "main");
+	setproctitle(PACKAGE_NAME"-main");
 
 	if (getuid() != 0) {
 		fprintf(stderr, "This server requires root access to operate.\n");
@@ -617,7 +616,7 @@ int main(int argc, char** argv)
 					/* close any open descriptors before
 					 * running the server
 					 */
-					setproctitle(PACKAGE_NAME, "worker");
+					setproctitle(PACKAGE_NAME"-worker");
 					close(cmd_fd[0]);
 					clear_lists(&s);
 
@@ -688,7 +687,7 @@ fork_failed:
 			need_maintainance = 0;
 			pid = fork();
 			if (pid == 0) {	/* child */
-				setproctitle(PACKAGE_NAME, "maintainance");
+				setproctitle(PACKAGE_NAME"-maint");
 				mslog(&s, NULL, LOG_INFO, "Performing maintainance");
 				clear_lists(&s);
 

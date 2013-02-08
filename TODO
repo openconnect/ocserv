@@ -1,9 +1,8 @@
 * Add a simple username/password back-end
 * Certificate authentication to the main process (can it be done without
-  moving the TLS handshake over the main thread?)
+  moving all the TLS handshake over the main thread?)
 * Keep the TLS key and certificates into the privileged process and use IPC
   for operations (this will make the privileged process a bottleneck).
-* Handle multiple clients in a single tun device (check if needed at all)
 * Add path MTU discovery
 * Allow the usage of PSK ciphersuites instead of the non-standard cisco 
   resumption mode for DTLS. 

@@ -203,7 +203,8 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 	if (status != 0) {
 #if GNUTLS_VERSION_NUMBER > 0x030106
-		type = gnutls_certificate_type_get(session);
+		gnutls_datum_t out;
+		int type = gnutls_certificate_type_get(session);
 
 		ret =
 		    gnutls_certificate_verification_status_print(status, type,

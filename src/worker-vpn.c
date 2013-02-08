@@ -263,13 +263,13 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 	 */
 	ret = gnutls_init(&session, GNUTLS_SERVER|GNUTLS_DATAGRAM);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Could not initialize TLS session: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "could not initialize TLS session: %s", gnutls_strerror(ret));
 		return -1;
 	}
 
 	ret = gnutls_priority_set_direct(session, GNUTLS_CIPHERSUITE, NULL);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Could not set TLS priority: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "could not set TLS priority: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 
@@ -277,7 +277,7 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 		GNUTLS_DTLS0_9, GNUTLS_KX_RSA, GNUTLS_CIPHER_AES_128_CBC,
 		GNUTLS_MAC_SHA1, GNUTLS_COMP_NULL, &master, &sid);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Could not set TLS premaster: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "could not set TLS premaster: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 	
@@ -285,7 +285,7 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
 				   ws->creds->xcred);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Could not set TLS credentials: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "could not set TLS credentials: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 
@@ -367,7 +367,7 @@ void vpn_server(struct worker_st* ws)
 
 restart:
 	if (requests_left-- <= 0) {
-		oclog(ws, LOG_INFO, "Maximum number of HTTP requests reached"); 
+		oclog(ws, LOG_INFO, "maximum number of HTTP requests reached"); 
 		exit(1);
 	}
 
@@ -379,13 +379,13 @@ restart:
 	do {
 		nrecvd = tls_recv(session, buf, sizeof(buf));
 		if (nrecvd <= 0) {
-			oclog(ws, LOG_INFO, "Error receiving client data"); 
+			oclog(ws, LOG_INFO, "error receiving client data"); 
 			exit(1);
 		}
 	
 		nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 		if (nparsed == 0) {
-			oclog(ws, LOG_INFO, "Error parsing HTTP request"); 
+			oclog(ws, LOG_INFO, "error parsing HTTP request"); 
 			exit(1);
 		}
 	} while(req.headers_complete == 0);
@@ -393,7 +393,7 @@ restart:
 	if (parser.method == HTTP_GET) {
 		fn = get_url_handler(req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "Unexpected URL %s", req.url); 
+			oclog(ws, LOG_INFO, "unexpected URL %s", req.url); 
 			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
@@ -410,14 +410,14 @@ restart:
 		
 			nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 			if (nparsed == 0) {
-				oclog(ws, LOG_INFO, "Error parsing HTTP request"); 
+				oclog(ws, LOG_INFO, "error parsing HTTP request"); 
 				exit(1);
 			}
 		}
 
 		fn = post_url_handler(req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "Unexpected POST URL %s", req.url); 
+			oclog(ws, LOG_INFO, "unexpected POST URL %s", req.url); 
 			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
@@ -432,7 +432,7 @@ restart:
 			goto restart;
 
 	} else {
-		oclog(ws, LOG_INFO, "Unexpected method %s", http_method_str(parser.method)); 
+		oclog(ws, LOG_INFO, "unexpected method %s", http_method_str(parser.method)); 
 		tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 	}
 
@@ -510,7 +510,7 @@ time_t udp_recv_time = 0;
 unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 	if (req->cookie_set == 0) {
-		oclog(ws, LOG_INFO, "Connect request without authentication");
+		oclog(ws, LOG_INFO, "connect request without authentication");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
@@ -521,7 +521,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		 * cookie */
 		ret = auth_cookie(ws, req->cookie, sizeof(req->cookie));
 		if (ret < 0) {
-			oclog(ws, LOG_INFO, "Failed cookie authentication attempt");
+			oclog(ws, LOG_INFO, "failed cookie authentication attempt");
 			tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 			tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 			exit(1);
@@ -533,14 +533,14 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		alarm(0);
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
-		oclog(ws, LOG_INFO, "Bad connect request: '%s'\n", req->url);
+		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
 		tls_puts(ws->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit(1);
 	}
 	
 	if (ws->config->network.name == NULL) {
-		oclog(ws, LOG_ERR, "No networks are configured; rejecting client");
+		oclog(ws, LOG_ERR, "no networks are configured; rejecting client");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
@@ -549,8 +549,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	buffer_size = sizeof(buffer);
 	ret = get_rt_vpn_info(ws, &vinfo, (char*)buffer, buffer_size);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Network interfaces are not configured. Rejecting client");
-
+		oclog(ws, LOG_ERR, "no networks are configured; rejecting client");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
@@ -695,7 +694,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			if (ws->udp_state == UP_ACTIVE) {
 				buffer[0] = AC_PKT_TERM_SERVER;
 				
-				oclog(ws, LOG_DEBUG, "Sending disconnect message in DTLS channel");
+				oclog(ws, LOG_DEBUG, "sending disconnect message in DTLS channel");
 
 				ret = tls_send(ws->dtls_session, buffer, 1);
 				GNUTLS_FATAL_ERR(ret);
@@ -710,7 +709,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			buffer[6] = AC_PKT_TERM_SERVER;
 			buffer[7] = 0;
 
-			oclog(ws, LOG_DEBUG, "Sending disconnect message in TLS channel");
+			oclog(ws, LOG_DEBUG, "sending disconnect message in TLS channel");
 			ret = tls_send(ws->session, buffer, 8);
 			GNUTLS_FATAL_ERR(ret);
 
@@ -744,7 +743,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				e = errno;
 				
 				if (e != EAGAIN && e != EINTR) {
-					oclog(ws, LOG_ERR, "Received corrupt data from tun (%d): %s", l, strerror(e));
+					oclog(ws, LOG_ERR, "received corrupt data from tun (%d): %s", l, strerror(e));
 					goto exit;
 				}
 				continue;
@@ -756,7 +755,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			}
 
 			tls_retry = 0;
-			oclog(ws, LOG_DEBUG, "Sending %d\n", l);
+			oclog(ws, LOG_DEBUG, "sending %d byte(s)\n", l);
 			if (ws->udp_state == UP_ACTIVE) {
 				buffer[7] = AC_PKT_DATA;
 
@@ -766,11 +765,11 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				if (ret == GNUTLS_E_LARGE_PACKET) {
 					ret = mtu_not_ok(ws, &dtls_mtu);
 					if (ret < 0) {
-						oclog(ws, LOG_INFO, "Could not calculate an MTU. Disabling DTLS.");
+						oclog(ws, LOG_INFO, "could not calculate a valid MTU. Disabling DTLS.");
 						ws->udp_state = UP_DISABLED;
 					}
 
-					oclog(ws, LOG_DEBUG, "Retrying (TLS) %d\n", l);
+					oclog(ws, LOG_DEBUG, "retrying (TLS) %d\n", l);
 					tls_retry = 1;
 				} else if (ret > 0) {
 					 mtu_ok(ws, ret, &dtls_mtu);
@@ -798,12 +797,12 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			 * on short reads.
 			 */
 			ret = tls_recv(ws->session, buffer, sizeof(buffer));
-			oclog(ws, LOG_DEBUG, "Received %d bytes (TLS)\n", ret);
+			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)\n", ret);
 
 			GNUTLS_FATAL_ERR(ret);
 
 			if (ret == 0) { /* disconnect */
-				oclog(ws, LOG_INFO, "Client disconnected");
+				oclog(ws, LOG_INFO, "client disconnected");
 				goto exit_nomsg;
 			}
 
@@ -811,7 +810,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 			ret = parse_cstp_data(ws, buffer, l);
 			if (ret < 0) {
-				oclog(ws, LOG_INFO, "Error parsing CSTP data");
+				oclog(ws, LOG_INFO, "error parsing CSTP data");
 				goto exit;
 			}
 			
@@ -828,12 +827,12 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				case UP_ACTIVE:
 				case UP_INACTIVE:
 					ret = tls_recv(ws->dtls_session, buffer, sizeof(buffer));
-					oclog(ws, LOG_DEBUG, "Received %d bytes (DTLS)\n", ret);
+					oclog(ws, LOG_DEBUG, "received %d byte(s) (DTLS)\n", ret);
 
 					GNUTLS_FATAL_ERR(ret);
 
 					if (ret == 0) { /* disconnect */
-						oclog(ws, LOG_INFO, "Client disconnected");
+						oclog(ws, LOG_INFO, "client disconnected");
 						goto exit_nomsg;
 					}
 					l = ret;
@@ -842,7 +841,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 					ret = parse_dtls_data(ws, buffer, l);
 					if (ret < 0) {
-						oclog(ws, LOG_INFO, "Error parsing CSTP data");
+						oclog(ws, LOG_INFO, "error parsing CSTP data");
 						goto exit;
 					}
 					
@@ -861,7 +860,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 hsk_restart:
 					ret = gnutls_handshake(ws->dtls_session);
 					if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
-						oclog(ws, LOG_ERR, "Error in DTLS handshake: %s\n", gnutls_strerror(ret));
+						oclog(ws, LOG_ERR, "error in DTLS handshake: %s\n", gnutls_strerror(ret));
 						ws->udp_state = UP_DISABLED;
 						break;
 					}
@@ -914,7 +913,7 @@ exit_nomsg:
 	exit(1);
 
 send_error:
-	oclog(ws, LOG_DEBUG, "Error sending data\n");
+	oclog(ws, LOG_DEBUG, "error sending data\n");
 	exit(1);
 }
 
@@ -953,7 +952,7 @@ int handle_worker_commands(struct worker_st *ws)
 	
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret == -1) {
-		oclog(ws, LOG_ERR, "Cannot obtain data from command socket");
+		oclog(ws, LOG_ERR, "cannot obtain data from command socket");
 		exit(1);
 	}
 
@@ -997,7 +996,7 @@ int handle_worker_commands(struct worker_st *ws)
 			}
 			break;
 		default:
-			oclog(ws, LOG_ERR, "Unknown CMD 0x%x", (unsigned)cmd);
+			oclog(ws, LOG_ERR, "unknown CMD 0x%x", (unsigned)cmd);
 			exit(1);
 	}
 	
@@ -1043,7 +1042,7 @@ int ret, e;
 			oclog(ws, LOG_INFO, "received BYE packet");
 			break;
 		case AC_PKT_DATA:
-			oclog(ws, LOG_DEBUG, "writing %d bytes to TUN", (int)buf_size);
+			oclog(ws, LOG_DEBUG, "writing %d byte(s) to TUN", (int)buf_size);
 			ret = tun_write(ws->tun_fd, buf, buf_size);
 			if (ret == -1) {
 				e = errno;
@@ -1065,19 +1064,19 @@ static int parse_cstp_data(struct worker_st* ws,
 int pktlen;
 
 	if (buf_size < 8) {
-		oclog(ws, LOG_INFO, "Can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
+		oclog(ws, LOG_INFO, "can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
 		return -1;
 	}
 
 	if (buf[0] != 'S' || buf[1] != 'T' ||
 	    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
-		oclog(ws, LOG_INFO, "Can't recognise CSTP header\n");
+		oclog(ws, LOG_INFO, "can't recognise CSTP header\n");
 		return -1;
 	}
 
 	pktlen = (buf[4] << 8) + buf[5];
 	if (buf_size != 8 + pktlen) {
-		oclog(ws, LOG_INFO, "Unexpected length\n");
+		oclog(ws, LOG_INFO, "unexpected CSTP length\n");
 		return -1;
 	}
 
@@ -1088,7 +1087,7 @@ static int parse_dtls_data(struct worker_st* ws,
 				uint8_t* buf, size_t buf_size)
 {
 	if (buf_size < 1) {
-		oclog(ws, LOG_INFO, "Can't read DTLS header (only %d bytes are available)\n", (int)buf_size);
+		oclog(ws, LOG_INFO, "can't read DTLS header (only %d bytes are available)\n", (int)buf_size);
 		return -1;
 	}
 

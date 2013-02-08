@@ -19,6 +19,7 @@ typedef enum {
 	RESUME_FETCH_REQ,
 	RESUME_FETCH_REP,
 	CMD_UDP_FD,
+	CMD_TUN_MTU,
 	CMD_TERMINATE,
 } cmd_request_t;
 
@@ -77,6 +78,11 @@ struct __attribute__ ((__packed__)) cmd_resume_fetch_reply_st {
 	uint8_t reply;
 	uint16_t session_data_size;
 	uint8_t session_data[MAX_SESSION_DATA_SIZE];
+};
+
+/* TUN_MTU */
+struct __attribute__ ((__packed__)) cmd_tun_mtu_st {
+	uint16_t mtu;
 };
 
 #endif

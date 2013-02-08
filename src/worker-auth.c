@@ -1,5 +1,4 @@
 /*
- * Copyright (C) 2012, 2013 David Woodhouse
  * Copyright (C) 2013 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify

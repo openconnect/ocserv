@@ -43,8 +43,8 @@
 #include <ccan/list/list.h>
 #include "pam.h"
 
-static int send_auth_reply(main_server_st* s, struct proc_st* proc,
-				cmd_auth_reply_t r, struct lease_st* lease)
+int send_auth_reply(main_server_st* s, struct proc_st* proc,
+			cmd_auth_reply_t r, struct lease_st* lease)
 {
 	struct iovec iov[2];
 	uint8_t cmd[2];
@@ -99,8 +99,8 @@ static int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
-static int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
-  			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease)
+int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
+ 			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease)
 {
 int ret;
 struct stored_cookie_st sc;
@@ -123,7 +123,6 @@ struct stored_cookie_st sc;
 	return ret;
 }
 
-static
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc)
 {
 int ret;
@@ -158,8 +157,8 @@ struct stored_cookie_st *sc;
 	return 0;
 }
 
-static int handle_auth_req(main_server_st *s, struct proc_st* proc,
-  			   const struct cmd_auth_req_st * req, struct lease_st **lease)
+int handle_auth_req(main_server_st *s, struct proc_st* proc,
+		   const struct cmd_auth_req_st * req, struct lease_st **lease)
 {
 int ret = -1;
 unsigned username_set = 0;
@@ -198,160 +197,4 @@ unsigned username_set = 0;
 	}
 	
 	return ret;
-}
-
-int handle_commands(main_server_st *s, struct proc_st* proc)
-{
-	struct iovec iov[2];
-	char buf[128];
-	int e;
-	uint8_t cmd;
-	struct msghdr hdr;
-	struct lease_st *lease;
-	union {
-		struct cmd_auth_req_st auth;
-		struct cmd_auth_cookie_req_st cauth;
-		struct cmd_resume_store_req_st sresume;
-		struct cmd_resume_fetch_req_st fresume;
-	} cmd_data;
-	int ret, cmd_data_len;
-	const char* peer_ip;
-
-	peer_ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len, buf, sizeof(buf));
-	
-	memset(&cmd_data, 0, sizeof(cmd_data));
-	
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = &cmd_data;
-	iov[1].iov_len = sizeof(cmd_data);
-	
-	memset(&hdr, 0, sizeof(hdr));
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
-	
-	ret = recvmsg( proc->fd, &hdr, 0);
-	if (ret == -1) {
-		e = errno;
-		mslog(s, proc, LOG_ERR, "Cannot obtain data from command socket (pid: %d, peer: %s): %s", proc->pid, peer_ip, strerror(e));
-		return -1;
-	}
-
-	if (ret == 0) {
-		return -1;
-	}
-
-	cmd_data_len = ret - 1;
-	
-	switch(cmd) {
-		case RESUME_STORE_REQ:
-			if (cmd_data_len <= sizeof(cmd_data.sresume)-MAX_SESSION_DATA_SIZE) {
-				mslog(s, proc, LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
-				return -2;
-			}
-			ret = handle_resume_store_req(s, proc, &cmd_data.sresume);
-			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "Could not store resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
-			}
-			
-			break;
-			
-		case RESUME_DELETE_REQ:
-			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
-				return -2;
-			}
-			ret = handle_resume_delete_req(s, proc, &cmd_data.fresume);
-			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "Could not delete resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
-			}
-
-			break;
-		case RESUME_FETCH_REQ: {
-			struct cmd_resume_fetch_reply_st reply;
-
-			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
-				return -2;
-			}
-			ret = handle_resume_fetch_req(s, proc, &cmd_data.fresume, &reply);
-			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "Could not fetch resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
-				ret = send_resume_fetch_reply(s, proc, REP_RESUME_FAILED, NULL);
-			} else
-				ret = send_resume_fetch_reply(s, proc, REP_RESUME_OK, &reply);
-			}
-			
-			if (ret < 0) {
-				mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
-				return -2;
-			}
-			
-			break;
-
-		case AUTH_REQ:
-		case AUTH_COOKIE_REQ:
-		
-			if (cmd == AUTH_REQ) {
-				if (cmd_data_len != sizeof(cmd_data.auth)) {
-					mslog(s, proc, LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
-					return -2;
-				}
-
-				ret = handle_auth_req(s, proc, &cmd_data.auth, &lease);
-			} else {
-				if (cmd_data_len != sizeof(cmd_data.cauth)) {
-					mslog(s, proc, LOG_ERR, "Error in received message length (pid: %d, peer: %s).", proc->pid, peer_ip);
-					return -2;
-				}
-
-				ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth, &lease);
-			}
-
-			if (ret == 0) {
-				ret = user_connected(s, proc, lease);
-				if (ret < 0) {
-					mslog(s, proc, LOG_INFO, "User '%s' disconnected due to script", proc->username);
-				}
-			}
-
-			if (ret == 0) {
-				if (cmd == AUTH_REQ) {
-					/* generate and store cookie */
-					ret = generate_and_store_vals(s, proc);
-					if (ret < 0)
-						return -2;
-					mslog(s, proc, LOG_INFO, "User '%s' authenticated", proc->username);
-				} else {
-					mslog(s, proc, LOG_INFO, "User '%s' re-authenticated (using cookie)", proc->username);
-				}
-				
-				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
-				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
-					return -2;
-				}
-
-				proc->lease = lease;
-				proc->lease->in_use = 1;
-				if (lease->fd >= 0)
-					close(lease->fd);
-				lease->fd = -1;
-			} else {
-				mslog(s, proc, LOG_INFO, "Failed authentication attempt for user '%s'", proc->username);
-				ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
-				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
-					return -2;
-				}
-			}
-			
-			break;
-		default:
-			mslog(s, proc, LOG_ERR, "Unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
-			return -2;
-	}
-	
-	return 0;
 }

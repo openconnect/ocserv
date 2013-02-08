@@ -99,5 +99,14 @@ __attribute__ ((format(printf, 4, 5)))
     	int priority, const char *fmt, ...);
 
 int open_tun(main_server_st* s, struct lease_st** l);
+int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
+
+int send_auth_reply(main_server_st* s, struct proc_st* proc,
+			cmd_auth_reply_t r, struct lease_st* lease);
+int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
+ 			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease);
+int generate_and_store_vals(main_server_st *s, struct proc_st* proc);
+int handle_auth_req(main_server_st *s, struct proc_st* proc,
+		   const struct cmd_auth_req_st * req, struct lease_st **lease);
 
 #endif

@@ -89,9 +89,10 @@ struct req_data_st {
 void __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * server, int priority, const char *fmt, ...);
 
-int set_tun_mtu(struct worker_st* ws, unsigned mtu);
 int get_rt_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo, char* buffer, size_t buffer_size);
 ssize_t tun_write(int sockfd, const void *buf, size_t len);
+
+int send_tun_mtu(worker_st *ws, unsigned int mtu);
 
 #endif

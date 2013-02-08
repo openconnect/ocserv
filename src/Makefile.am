@@ -14,10 +14,11 @@ CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
 
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	http-parser/http_parser.c ipc.h cookies.c worker-tun.c \
+	http-parser/http_parser.c ipc.h cookies.c worker-tun.c main-misc.c \
 	vpn.h cookies.h tlslib.h http-parser/http_parser.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
-	main-user.c cookies-gdbm.c cookies-hash.c $(CCAN_SOURCES)
+	main-user.c cookies-gdbm.c cookies-hash.c worker-misc.c \
+	$(CCAN_SOURCES)
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 

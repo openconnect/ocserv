@@ -461,7 +461,7 @@ int mtu_not_ok(worker_st* ws, unsigned *mtu)
 
 	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, *mtu);
 
-	set_tun_mtu(ws, *mtu);
+	send_tun_mtu(ws, *mtu);
 
 	return 0;
 }
@@ -487,7 +487,7 @@ int c;
 
 	*mtu = c;
 	gnutls_dtls_set_data_mtu (ws->dtls_session, c);
-	set_tun_mtu(ws, c);
+	send_tun_mtu(ws, c);
 
 	return;
 }
@@ -663,9 +663,9 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	}
 
 	if (dtls_mtu == 0)
-		set_tun_mtu(ws, tls_mtu);
+		send_tun_mtu(ws, tls_mtu);
 	else
-		set_tun_mtu(ws, MIN(dtls_mtu, tls_mtu));
+		send_tun_mtu(ws, MIN(dtls_mtu, tls_mtu));
 
 	ret = tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
 	SEND_ERR(ret);
@@ -1018,8 +1018,10 @@ int ret, e;
 			break;
 		case AC_PKT_DPD_OUT:
 			oclog(ws, LOG_DEBUG, "received DPD; sending response");
-			ret =
-			    tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
+			if (ws->session == ts)
+				ret = tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
+			else
+				ret = tls_send(ts, "\x04", 1);
 			if (ret < 0) {
 				oclog(ws, LOG_ERR, "could not send TLS data: %s", gnutls_strerror(ret));
 				return -1;

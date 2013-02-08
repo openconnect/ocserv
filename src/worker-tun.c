@@ -1,5 +1,4 @@
 /*
- * Copyright (C) 2012, 2013 David Woodhouse
  * Copyright (C) 2013 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
@@ -46,34 +45,6 @@
 #include <tlslib.h>
 
 #include <http-parser/http_parser.h>
-
-int set_tun_mtu(struct worker_st* ws, unsigned mtu)
-{
-int fd, ret, e;
-struct ifreq ifr;
-
-	oclog(ws, LOG_DEBUG, "setting tun MTU to %u", mtu);
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		return -1;
-
-	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", ws->tun_name);
-	ifr.ifr_mtu = mtu;
-	
-	ret = ioctl(fd, SIOCSIFMTU, &ifr);
-	if (ret != 0) {
-		e = errno;
-		oclog(ws, LOG_INFO, "ioctl SIOCSIFMTU error: %s", strerror(e));
-		ret = -1;
-		goto fail;
-	}
-	
-	ret = 0;
-fail:
-	close(fd);
-	return ret;
-}
 
 /* if local is non zero it returns the local, otherwise the remote */
 static

@@ -113,8 +113,6 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc,
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
-
-
 int handle_commands(main_server_st *s, struct proc_st* proc)
 {
 	struct iovec iov[2];
@@ -235,9 +233,18 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			}
 
 			if (ret == 0) {
-				ret = user_connected(s, proc, lease);
+				/* check for multiple connections */
+				ret = check_multiple_users(s, proc);
 				if (ret < 0) {
-					mslog(s, proc, LOG_INFO, "User '%s' disconnected due to script", proc->username);
+					mslog(s, proc, LOG_INFO, "User '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
+				}
+
+				/* do scripts and utmp */
+				if (ret == 0) {
+					ret = user_connected(s, proc, lease);
+					if (ret < 0) {
+						mslog(s, proc, LOG_INFO, "User '%s' disconnected due to script", proc->username);
+					}
 				}
 			}
 

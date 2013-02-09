@@ -165,6 +165,7 @@ unsigned j;
 	READ_NUMERIC("cookie-validity", config->cookie_validity, 1);
 	READ_NUMERIC("auth-timeout", config->auth_timeout, 0);
 	READ_NUMERIC("max-clients", config->max_clients, 0);
+	READ_NUMERIC("max-same-clients", config->max_same_clients, 0);
 
 	val = optionGetValue(pov, "run-as-user"); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) {

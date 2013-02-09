@@ -200,3 +200,27 @@ unsigned username_set = 0;
 	
 	return ret;
 }
+
+int check_multiple_users(main_server_st *s, struct proc_st* proc)
+{
+struct proc_st *ctmp;
+unsigned int entries = 1; /* that one */
+
+	if (s->config->max_same_clients == 0)
+		return 0; /* ok */
+
+	list_for_each(&s->clist->head, ctmp, list) {
+
+		if (ctmp != proc) {
+			if (strcmp(proc->username, ctmp->username) == 0) {
+				entries++;
+			}
+		}
+	}
+	
+	if (entries > s->config->max_same_clients)
+		return -1;
+	
+	return 0;
+}
+

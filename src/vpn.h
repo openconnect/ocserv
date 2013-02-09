@@ -72,6 +72,7 @@ struct cfg_st {
 	unsigned tls_debug;
 	unsigned debug;
 	unsigned max_clients;
+	unsigned max_same_clients;
 	unsigned use_utmp;
 
 	/* if gdbm is there */

@@ -74,6 +74,10 @@ auth = "pam"
 #max-clients = 1024
 max-clients = 16
 
+# Limit the number of identical clients (i.e., users connecting multiple times)
+# Unset or set to zero for unlimited.
+max-same-clients = 1
+
 # TCP and UDP port number
 tcp-port = 3333
 udp-port = 3333

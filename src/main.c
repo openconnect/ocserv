@@ -439,6 +439,7 @@ int connected = 0;
 				mslog(s, ctmp, LOG_ERR, "Error passing UDP socket");
 				return -1;
 			}
+			mslog(s, ctmp, LOG_DEBUG, "Passed UDP socket");
 			ctmp->udp_fd_received = 1;
 			connected = 1;
 			

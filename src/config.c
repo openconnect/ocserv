@@ -31,6 +31,8 @@
 
 #include <vpn.h>
 
+#define DEFAULT_CFG_FILE "/etc/ocserv.conf"
+
 static void write_pid_file(const char* pid_file);
 
 #define MAX_ENTRIES 64
@@ -230,7 +232,7 @@ static void check_cfg( struct cfg_st *config)
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config)
 {
-	const char* cfg_file;
+	const char* cfg_file = DEFAULT_CFG_FILE;
 
 	memset(config, 0, sizeof(*config));
 
@@ -247,7 +249,7 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 	
 	if (HAVE_OPT(CONFIG)) {
 		cfg_file = OPT_ARG(CONFIG);
-	} else {
+	} else if (access(cfg_file, R_OK) != 0) {
 		fprintf(stderr, "%s -c [config]\nUse %s --help for more information.\n", argv[0], argv[0]);
 		exit(1);
 	}

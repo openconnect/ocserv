@@ -291,6 +291,7 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 
 	gnutls_transport_set_ptr(session, (gnutls_transport_ptr_t) (long)ws->udp_fd);
 	gnutls_session_set_ptr(session, ws);
+	gnutls_certificate_server_set_request(session, GNUTLS_CERT_IGNORE);
 
 	ws->udp_state = UP_HANDSHAKE;
 
@@ -998,8 +999,10 @@ int handle_worker_commands(struct worker_st *ws)
 				}
 				ws->udp_state = UP_SETUP;
 
+				oclog(ws, LOG_ERR, "received UDP fd and connected to peer");
 				return 0;
 			} else {
+				oclog(ws, LOG_ERR, "Could not receive peer's UDP fd");
 				return -1;
 			}
 			break;

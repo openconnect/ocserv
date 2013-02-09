@@ -495,17 +495,15 @@ int c;
 #define SEND_ERR(x) if (x<0) goto send_error
 static int connect_handler(worker_st *ws)
 {
-int ret;
 struct req_data_st *req = ws->parser->data;
 fd_set rfds;
-int l, e;
-int max;
-unsigned i;
+int l, e, max, ret;
 struct vpn_st vinfo;
 uint8_t buffer[4*1024];
 unsigned int buffer_size, tls_retry;
 char *p;
-unsigned tls_pending, dtls_pending = 0;
+struct timeval tv;
+unsigned tls_pending, dtls_pending = 0, i;
 time_t udp_recv_time = 0;
 unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
@@ -674,7 +672,10 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 	ret = tls_uncork(ws->session);
 	SEND_ERR(ret);
-	
+
+	/* start dead peer detection */
+	ws->last_dpd = time(0);
+
 	/* main loop  */
 	for(;;) {
 		FD_ZERO(&rfds);
@@ -721,14 +722,23 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		if (ws->dtls_session != NULL)
 			dtls_pending = gnutls_record_check_pending(ws->dtls_session);
 		if (tls_pending == 0 && dtls_pending == 0) {
-			ret = select(max + 1, &rfds, NULL, NULL, NULL);
+			tv.tv_usec = 0;
+			tv.tv_sec = 10;
+			ret = select(max + 1, &rfds, NULL, NULL, &tv);
 			if (ret == -1) {
 				if (errno == EINTR)
 					continue;
 				goto exit;
 			}
+			
+			if (ret == 0) { /* timeout */
+				/* check DPD. Otherwise exit */
+				if (time(0)-ws->last_dpd > 3*ws->config->dpd) {
+					oclog(ws, LOG_ERR, "have not received DPD for long");
+					goto exit;
+				}
+			}
 		}
-		
 		
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
 				
@@ -1035,6 +1045,7 @@ int ret, e;
 				oclog(ws, LOG_ERR, "could not send TLS data: %s", gnutls_strerror(ret));
 				return -1;
 			}
+			ws->last_dpd = time(0);
 			break;
 		case AC_PKT_DISCONN:
 			oclog(ws, LOG_INFO, "received BYE packet");

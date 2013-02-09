@@ -41,6 +41,9 @@ typedef struct worker_st {
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
 	int proto; /* AF_INET or AF_INET6 */
+	
+	/* for dead peer detection */
+	time_t last_dpd;
 
 	/* set after authentication */
 	int udp_fd;

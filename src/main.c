@@ -470,7 +470,7 @@ int main(int argc, char** argv)
 	struct proc_st *ctmp, *cpos;
 	struct tun_st tun;
 	fd_set rd;
-	int val, n = 0, ret;
+	int val, n = 0, ret, flags;
 	struct timeval tv;
 	int cmd_fd[2];
 	struct worker_st ws;
@@ -531,7 +531,13 @@ int main(int argc, char** argv)
 
 #define MAINTAINANCE_TIME (config.cookie_validity + 300)
 	alarm(MAINTAINANCE_TIME);
-	openlog("ocserv", LOG_PID|LOG_NDELAY, LOG_LOCAL0);
+	flags = LOG_PID|LOG_NDELAY;
+#ifdef LOG_PERROR
+	if (config.debug != 0)
+		flags |= LOG_PERROR;
+#endif
+	openlog("ocserv", flags, LOG_DAEMON);
+
 	syslog_open = 1;
 
 	for (;;) {

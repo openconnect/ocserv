@@ -79,18 +79,14 @@ void __attribute__ ((format(printf, 3, 4)))
 	ip = human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
 			    ipbuf, sizeof(ipbuf));
 
-	buf[1023] = 0;
-
 	va_start(args, fmt);
-	vsnprintf(buf, 1023, fmt, args);
+	vsnprintf(buf, sizeof(buf)-1, fmt, args);
 	va_end(args);
 
 	if (ip) {
 		syslog(priority, "%s %s", ip, buf);
-		if (ws->config->debug != 0) fprintf(stderr, "%s %s", ip, buf);
 	} else {
 		syslog(priority, "[unknown] %s", buf);
-		if (ws->config->debug != 0) fprintf(stderr, "[unknown] %s", buf);
 	}
 	
 	return;
@@ -114,18 +110,14 @@ void __attribute__ ((format(printf, 4, 5)))
 			    ipbuf, sizeof(ipbuf));
 	}
 
-	buf[1023] = 0;
-
 	va_start(args, fmt);
-	vsnprintf(buf, 1023, fmt, args);
+	vsnprintf(buf, sizeof(buf)-1, fmt, args);
 	va_end(args);
 
 	if (ip) {
 		syslog(priority, "%s %s", ip, buf);
-		if (s->config->debug != 0) fprintf(stderr, "%s %s", ip, buf);
 	} else {
 		syslog(priority, "[unknown] %s", buf);
-		if (s->config->debug != 0) fprintf(stderr, "[unknown] %s", buf);
 	}
 	
 	return;

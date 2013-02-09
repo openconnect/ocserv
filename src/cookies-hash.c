@@ -102,6 +102,24 @@ time_t now = time(0);
         }
 }
 
+void erase_cookies_hash(main_server_st* s)
+{
+struct stored_cookie_st *sc;
+struct htable_iter iter;
+time_t now = time(0);
+
+	sc = htable_first(&s->cookie_db->ht, &iter);
+	while(sc != NULL) {
+		if (sc->expiration <= now) {
+	          	htable_delval(&s->cookie_db->ht, &iter);
+	          	memset(sc->cookie, 0, sizeof(sc->cookie));
+	          	free(sc);
+			s->cookie_db->entries--;
+		}
+          	sc = htable_next(&s->cookie_db->ht, &iter);
+        }
+}
+
 static size_t rehash(const void *_e, void *unused)
 {
 const struct stored_cookie_st *e = _e;
@@ -145,6 +163,7 @@ struct cookie_storage_st hash_cookie_funcs = {
 	.store = store_cookie_hash,
 	.retrieve = retrieve_cookie_hash,
 	.expire = expire_cookies_hash,
+	.erase = erase_cookies_hash,
 	.init = cookie_db_init_hash,
 	.deinit = cookie_db_deinit_hash,
 };

@@ -617,12 +617,14 @@ int main(int argc, char** argv)
 
 				pid = fork();
 				if (pid == 0) {	/* child */
-					/* close any open descriptors before
-					 * running the server
+					/* close any open descriptors, and erase
+					 * sensitive data before running the worker
 					 */
-					setproctitle(PACKAGE_NAME"-worker");
 					close(cmd_fd[0]);
 					clear_lists(&s);
+					erase_cookies(&s);
+
+					setproctitle(PACKAGE_NAME"-worker");
 
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];

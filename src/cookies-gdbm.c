@@ -39,7 +39,7 @@
 #ifdef HAVE_GDBM
 
 static
-int store_cookie_gdbm(main_server_st *s, struct stored_cookie_st* sc)
+int cookie_gdbm_store(main_server_st *s, struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;
 datum key;
@@ -72,7 +72,7 @@ finish:
 }
 
 static
-int retrieve_cookie_gdbm(main_server_st *s, const void* cookie, unsigned cookie_size, 
+int cookie_gdbm_retrieve(main_server_st *s, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc)
 {
 GDBM_FILE dbf;
@@ -107,7 +107,7 @@ finish:
 }
 
 static
-void expire_cookies_gdbm(main_server_st* s)
+void cookie_gdbm_expire(main_server_st* s)
 {
 GDBM_FILE dbf;
 datum key;
@@ -148,23 +148,30 @@ finish:
 }
 
 static
-int cookie_db_init_gdbm(main_server_st* s)
+int cookie_gdbm_init(main_server_st* s)
 {
 	return 0;
 }
 
 static
-void cookie_db_deinit_gdbm(main_server_st* s)
+void cookie_gdbm_erase(main_server_st* s)
+{
+	return;
+}
+
+static
+void cookie_gdbm_deinit(main_server_st* s)
 {
         return;
 }
 
 struct cookie_storage_st gdbm_cookie_funcs = {
-	.store = store_cookie_gdbm,
-	.retrieve = retrieve_cookie_gdbm,
-	.expire = expire_cookies_gdbm,
-	.init = cookie_db_init_gdbm,
-	.deinit = cookie_db_deinit_gdbm,
+	.store = cookie_gdbm_store,
+	.retrieve = cookie_gdbm_retrieve,
+	.expire = cookie_gdbm_expire,
+	.init = cookie_gdbm_init,
+	.deinit = cookie_gdbm_deinit,
+	.erase = cookie_gdbm_erase,
 };
 
 #endif

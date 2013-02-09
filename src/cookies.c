@@ -40,6 +40,7 @@ cookie_store_fn store_cookie;
 cookie_retrieve_fn retrieve_cookie;
 cookie_db_deinit_fn cookie_db_deinit;
 cookie_expire_fn expire_cookies;
+cookie_expire_fn erase_cookies;
 
 int cookie_db_init(main_server_st* s)
 {
@@ -54,6 +55,7 @@ struct cookie_storage_st* funcs;
 
 	cookie_db_deinit = funcs->deinit;
 	expire_cookies = funcs->expire;
+	erase_cookies = funcs->erase;
 	store_cookie = funcs->store;
 	retrieve_cookie = funcs->retrieve;
 

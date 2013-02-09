@@ -19,6 +19,9 @@ AC_CHECK_SIZEOF([unsigned long])
 AC_C_BIGENDIAN
 
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.28])
+AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
+AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
+])
 
 gdbm_enabled=no
 LIBS="$oldlibs -lgdbm"
@@ -39,6 +42,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 *** ]])])
 LIBS="$oldlibs"
 
+pam_enabled=no
 LIBS="$oldlibs -lpam"
 AC_MSG_CHECKING([for pam library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -47,15 +51,18 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		  [AC_MSG_RESULT(yes)
 		   AC_SUBST([PAM_LIBS], [-lpam])
 		   AC_SUBST([PAM_CFLAGS], [])
+		   pam_enabled=yes
 		   AC_DEFINE([HAVE_PAM], 1, [Enable the PAM library])],
 		  [AC_MSG_RESULT(no)
-   	           AC_MSG_ERROR([[
+   	           AC_MSG_WARN([[
 *** 
-*** libpam was not found. It is required for building this program.
+*** libpam was not found. PAM support will be disabled.
 *** ]])])
 LIBS="$oldlibs"
 
 gl_INIT
+
+AC_LIB_HAVE_LINKFLAGS(util,, [#include <utmpx.h>], [pututxline(0);])
 
 enable_local_libopts=yes
 NEED_LIBOPTS_DIR=true
@@ -76,5 +83,6 @@ AC_MSG_NOTICE([summary of build options:
   Compiler:         ${CC}
   CFlags:           ${CFLAGS}
   GDBM backend:     ${gdbm_enabled}
+  PAM backend:      ${pam_enabled}
 ])
 

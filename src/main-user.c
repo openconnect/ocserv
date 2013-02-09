@@ -34,7 +34,9 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
-#include <utmpx.h>
+#ifdef HAVE_LIBUTIL
+# include <utmpx.h>
+#endif
 #include <timespec.h>
 
 #include <vpn.h>
@@ -148,6 +150,7 @@ int ret, status;
 static void
 add_utmp_entry(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
 {
+#ifdef HAVE_LIBUTIL
 	struct utmpx entry;
 	struct timespec tv;
 	
@@ -174,10 +177,12 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
 	endutxent();
 	
 	return;
+#endif
 }
 
 static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 {
+#ifdef HAVE_LIBUTIL
 	struct utmpx entry;
 
 	if (s->config->use_utmp == 0)
@@ -194,6 +199,7 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 	endutxent();
 	
 	return;
+#endif
 }
 
 int user_connected(main_server_st *s, struct proc_st* proc, struct lease_st* lease)

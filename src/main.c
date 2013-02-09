@@ -59,10 +59,8 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 	struct listener_st *tmp;
 
 	for (ptr = res; ptr != NULL; ptr = ptr->ai_next) {
-#ifndef HAVE_IPV6
-		if (ptr->ai_family != AF_INET)
+		if (ptr->ai_family != AF_INET && ptr->ai_family != AF_INET6)
 			continue;
-#endif
 
 		if (ptr->ai_socktype == SOCK_STREAM)
 			type = "TCP";
@@ -83,7 +81,6 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			continue;
 		}
 		
-
 #if defined(HAVE_IPV6) && !defined(_WIN32)
 		if (ptr->ai_family == AF_INET6) {
 			y = 1;

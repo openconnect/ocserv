@@ -110,7 +110,12 @@ unsigned j;
 	READ_MULTI_LINE("auth", auth, auth_size, 1);
 	for (j=0;j<auth_size;j++) {
 		if (strcasecmp(auth[j], "pam") == 0) {
+#ifdef HAVE_PAM
 			config->auth_types |= AUTH_TYPE_PAM;
+#else
+			fprintf(stderr, "PAM support is disabled\n");
+			exit(1);
+#endif
 		} else if (strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 			config->cert_req = GNUTLS_CERT_REQUIRE;

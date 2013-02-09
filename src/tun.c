@@ -396,6 +396,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 		}
 	}
 
+#ifdef TUNSETGROUP
 	if (s->config->gid != -1) {
 		t = s->config->uid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
@@ -406,6 +407,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 			goto fail;
 		}
 	}
+#endif
 
 	/* set IP/mask */
 	ret = set_network_info(s, lease);

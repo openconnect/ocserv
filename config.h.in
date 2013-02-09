@@ -141,6 +141,9 @@
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H
 
+/* Define if you have the libutil library. */
+#undef HAVE_LIBUTIL
+
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
@@ -184,6 +187,9 @@
 
 /* Define to 1 if the system has the type `pid_t'. */
 #undef HAVE_PID_T
+
+/* PKCS11 detected in gnutls */
+#undef HAVE_PKCS11
 
 /* Define to 1 if chdir is declared even after undefining macros. */
 #undef HAVE_RAW_DECL_CHDIR

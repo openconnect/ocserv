@@ -163,6 +163,7 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
 int ret = -1;
 unsigned username_set = 0;
 
+#ifdef HAVE_PAM
 	if (req->user_pass_present != 0 && s->config->auth_types & AUTH_TYPE_PAM) {
 		ret = pam_auth_user(req->user, req->pass);
 		if (ret != 0)
@@ -171,6 +172,7 @@ unsigned username_set = 0;
 		memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
 		username_set = 1;
 	}
+#endif
 
 	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 		if (req->tls_auth_ok != 0) {

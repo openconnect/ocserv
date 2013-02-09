@@ -255,6 +255,11 @@ const char* perr;
 				s->config->cert, s->config->key, gnutls_strerror(ret));
 			exit(1);
 		}
+	} else {
+#ifdef HAVE_PKCS11
+		fprintf(stderr, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
+		exit(1);
+#endif	
 	}
 
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
@@ -297,6 +302,7 @@ int tls_global_init_client(worker_st* ws)
 {
 int ret;
 
+#ifdef HAVE_PKCS11
 	/* when we have PKCS #11 keys we cannot open them and then fork(), we need
 	 * to open them at the process they are going to be used. */
 	if (ws->config->key != NULL && strncmp(ws->config->key, "pkcs11:", 7) == 0) {
@@ -318,6 +324,7 @@ int ret;
 			return -1;
 		}
 	}
+#endif
 
 	return 0;
 }

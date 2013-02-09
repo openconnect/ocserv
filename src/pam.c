@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+
+#ifdef HAVE_PAM
+
 #include <security/pam_appl.h>
 
 #define APP_NAME PACKAGE
@@ -70,3 +73,5 @@ fail:
 	return ret;
 
 }
+
+#endif

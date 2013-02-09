@@ -793,10 +793,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		}
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
-			/* FIXME: retry and receive the correct amount of data
-			 * on short reads.
-			 */
-			ret = tls_recv(ws->session, buffer, sizeof(buffer));
+			ret = gnutls_record_recv(ws->session, buffer, sizeof(buffer));
 			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)\n", ret);
 
 			GNUTLS_FATAL_ERR(ret);
@@ -805,19 +802,21 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				oclog(ws, LOG_INFO, "client disconnected");
 				goto exit_nomsg;
 			}
-
-			l = ret;
-
-			ret = parse_cstp_data(ws, buffer, l);
-			if (ret < 0) {
-				oclog(ws, LOG_INFO, "error parsing CSTP data");
-				goto exit;
-			}
 			
-			if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
-				/* client switched to TLS for some reason */
-				if (time(0) - udp_recv_time > UDP_SWITCH_TIME)
-					ws->udp_state = UP_INACTIVE;
+			if (ret > 0) {
+				l = ret;
+
+				ret = parse_cstp_data(ws, buffer, l);
+				if (ret < 0) {
+					oclog(ws, LOG_INFO, "error parsing CSTP data");
+					goto exit;
+				}
+
+				if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
+					/* client switched to TLS for some reason */
+					if (time(0) - udp_recv_time > UDP_SWITCH_TIME)
+						ws->udp_state = UP_INACTIVE;
+				}
 			}
 		}
 
@@ -826,25 +825,24 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			switch (ws->udp_state) {
 				case UP_ACTIVE:
 				case UP_INACTIVE:
-					ret = tls_recv(ws->dtls_session, buffer, sizeof(buffer));
+					ret = gnutls_record_recv(ws->dtls_session, buffer, sizeof(buffer));
 					oclog(ws, LOG_DEBUG, "received %d byte(s) (DTLS)\n", ret);
 
 					GNUTLS_FATAL_ERR(ret);
 
-					if (ret == 0) { /* disconnect */
-						oclog(ws, LOG_INFO, "client disconnected");
-						goto exit_nomsg;
-					}
-					l = ret;
+					if (ret > 0) {
+						l = ret;
+						ws->udp_state = UP_ACTIVE;
 
-					ws->udp_state = UP_ACTIVE;
-
-					ret = parse_dtls_data(ws, buffer, l);
-					if (ret < 0) {
-						oclog(ws, LOG_INFO, "error parsing CSTP data");
-						goto exit;
-					}
+						ret = parse_dtls_data(ws, buffer, l);
+						if (ret < 0) {
+							oclog(ws, LOG_INFO, "error parsing CSTP data");
+							goto exit;
+						}
 					
+					} else
+						oclog(ws, LOG_DEBUG, "no data received (%d)", ret);
+
 					udp_recv_time = time(0);
 					break;
 				case UP_SETUP:

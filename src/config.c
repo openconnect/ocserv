@@ -31,6 +31,8 @@
 
 #include <vpn.h>
 
+static void write_pid_file(const char* pid_file);
+
 #define MAX_ENTRIES 64
 
 #define READ_MULTI_LINE(name, s_name, num, mand) \
@@ -97,6 +99,7 @@ static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
 const tOptionValue* val;
+char *pid_file = NULL;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned j;
@@ -143,6 +146,12 @@ unsigned j;
 
 	READ_STRING("connect-script", config->connect_script, 0);
 	READ_STRING("disconnect-script", config->disconnect_script, 0);
+	
+	READ_STRING("pid-file", pid_file, 0);
+	if (pid_file != NULL) {
+		write_pid_file(pid_file);
+		free(pid_file);
+	}
 
 	READ_TF("use-utmp", config->use_utmp, 0, 1);
 
@@ -249,4 +258,18 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 	
 	return 0;
 
+}
+
+static void write_pid_file(const char* pid_file)
+{
+FILE* fp;
+
+	fp = fopen(pid_file, "w");
+	if (fp == NULL) {
+		fprintf(stderr, "Cannot open pid file '%s'\n", pid_file);
+		exit(1);
+	}
+	
+	fprintf(fp, "%u", (unsigned)getpid());
+	fclose(fp);
 }

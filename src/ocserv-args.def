@@ -135,6 +135,9 @@ disconnect-script = /bin/echo
 # UTMP
 use-utmp = true
 
+# PID file
+pid-file = /var/run/ocserv.pid
+
 run-as-user = nobody
 run-as-group = nogroup
 

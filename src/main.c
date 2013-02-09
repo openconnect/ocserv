@@ -689,16 +689,19 @@ fork_failed:
 		/* Check if we need to expire any cookies */
 		if (need_maintainance != 0) {
 			need_maintainance = 0;
-			pid = fork();
-			if (pid == 0) {	/* child */
-				setproctitle(PACKAGE_NAME"-maint");
-				mslog(&s, NULL, LOG_INFO, "Performing maintainance");
-				clear_lists(&s);
-
+			mslog(&s, NULL, LOG_INFO, "Performing maintainance");
+			expire_tls_sessions(&s);
+			
+			if (s.config->cookie_db_name != NULL) { /* gdbm */
+				pid = fork();
+				if (pid == 0) {	/* child */
+					clear_lists(&s);
+					setproctitle(PACKAGE_NAME"-maint");
+					expire_cookies(&s);
+					exit(0);
+				}
+			} else { /* hash */
 				expire_cookies(&s);
-				expire_tls_sessions(&s);
-
-				exit(0);
 			}
 			alarm(MAINTAINANCE_TIME);
 		}

@@ -191,6 +191,9 @@ static int verify_certificate_cb(gnutls_session_t session)
 		syslog(LOG_ERR, "%s:%d: Could not obtain worker state.", __func__, __LINE__);
 		return -1;
 	}
+	
+	if (session == ws->dtls_session) /* no certificate is verified in DTLS */
+		return 0;
 
 	/* This verification function uses the trusted CAs in the credentials
 	 * structure. So you must have installed one or more CA certificates.

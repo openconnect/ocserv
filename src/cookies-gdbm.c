@@ -32,7 +32,7 @@
 #include <limits.h>
 #include <gdbm.h>
 #include <sys/stat.h>
-
+#include "setproctitle.h"
 #include <main.h>
 #include <cookies.h>
 
@@ -115,36 +115,46 @@ datum data;
 int deleted = 0;
 struct stored_cookie_st sc;
 time_t now = time(0);
+pid_t pid;
 
-	dbf = gdbm_open((char*)s->config->cookie_db_name, 0, GDBM_WRITER, 0, NULL);
-	if (dbf == NULL)
-		return;
+	pid = fork();
+	if (pid == 0) { /* child */
+		clear_lists(s);
+		setproctitle(PACKAGE_NAME"-maint");
 
-	key = gdbm_firstkey(dbf);
-	if (key.dptr == NULL)
-		goto finish;
+		dbf = gdbm_open((char*)s->config->cookie_db_name, 0, GDBM_WRITER, 0, NULL);
+		if (dbf == NULL)
+			exit(1);
 
-	while(key.dptr != NULL) {
-		data = gdbm_fetch( dbf, key);
-		if (data.dsize != sizeof(sc)) {
-			gdbm_delete(dbf, key);
-			deleted++;
-		} else {
-			memcpy(&sc, data.dptr, data.dsize);
-			if (sc.expiration <= now) {
+		key = gdbm_firstkey(dbf);
+		if (key.dptr == NULL)
+			goto finish;
+
+		while(key.dptr != NULL) {
+			data = gdbm_fetch( dbf, key);
+			if (data.dsize != sizeof(sc)) {
 				gdbm_delete(dbf, key);
 				deleted++;
+			} else {
+				memcpy(&sc, data.dptr, data.dsize);
+				if (sc.expiration <= now) {
+					gdbm_delete(dbf, key);
+					deleted++;
+				}
 			}
-		}
 
-		key = gdbm_nextkey(dbf, key);
-	}
+			key = gdbm_nextkey(dbf, key);
+		}
 	
-	if (deleted > 0)
-		gdbm_reorganize(dbf);
+		if (deleted > 0)
+			gdbm_reorganize(dbf);
 
 finish:
-	gdbm_close(dbf);
+		gdbm_close(dbf);
+		exit(0);
+	}
+	
+	return;
 }
 
 static

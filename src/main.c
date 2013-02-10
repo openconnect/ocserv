@@ -691,18 +691,8 @@ fork_failed:
 			need_maintainance = 0;
 			mslog(&s, NULL, LOG_INFO, "Performing maintainance");
 			expire_tls_sessions(&s);
-			
-			if (s.config->cookie_db_name != NULL) { /* gdbm */
-				pid = fork();
-				if (pid == 0) {	/* child */
-					clear_lists(&s);
-					setproctitle(PACKAGE_NAME"-maint");
-					expire_cookies(&s);
-					exit(0);
-				}
-			} else { /* hash */
-				expire_cookies(&s);
-			}
+			expire_cookies(&s);
+
 			alarm(MAINTAINANCE_TIME);
 		}
 		

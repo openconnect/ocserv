@@ -81,7 +81,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			continue;
 		}
 		
-#if defined(HAVE_IPV6) && !defined(_WIN32)
+#if defined(IPV6_V6ONLY)
 		if (ptr->ai_family == AF_INET6) {
 			y = 1;
 			/* avoid listen on ipv6 addresses failing
@@ -91,17 +91,13 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 		}
 #endif
 
-		if (ptr->ai_socktype == SOCK_STREAM) {
-			y = 1;
-			if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
-				       (const void *) &y, sizeof(y)) < 0) {
-				perror("setsockopt() failed");
-				close(s);
-				continue;
-			}
-		} else {
-			y = 1;
-			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
+		y = 1;
+		if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
+			       (const void *) &y, sizeof(y)) < 0) {
+			perror("setsockopt(SO_REUSEADDR) failed");
+		}
+
+		if (ptr->ai_socktype == SOCK_DGRAM) {
 #if defined(IP_DONTFRAG)
 			y = 1;
 			if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG,
@@ -231,8 +227,8 @@ int s, y, e;
 		return -1;
 	}
 
-#if defined(HAVE_IPV6) && !defined(_WIN32)
-	if (ptr->ai_family == AF_INET6) {
+#if defined(IPPROTO_IPV6)
+	if (l->family == AF_INET6) {
 		y = 1;
 		/* avoid listen on ipv6 addresses failing
 		 * because already listening on ipv4 addresses: */

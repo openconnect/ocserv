@@ -353,13 +353,15 @@ void clear_lists(main_server_st *s)
 	tls_cache_deinit(s->tls_db);
 }
 
-static void kill_children(struct proc_list_st* clist)
+static void kill_children(main_server_st* s)
 {
 	struct proc_st *ctmp;
 
-	list_for_each(&clist->head, ctmp, list) {
-		if (ctmp->pid != -1)
+	list_for_each(&s->clist->head, ctmp, list) {
+		if (ctmp->pid != -1) {
 			kill(ctmp->pid, SIGTERM);
+			user_disconnected(s, ctmp);
+		}
 	}
 }
 
@@ -369,8 +371,8 @@ static void remove_proc(struct proc_st *ctmp)
 	if (ctmp->fd >= 0)
 		close(ctmp->fd);
 	ctmp->fd = -1;
-
 	ctmp->pid = -1;
+
 	if (ctmp->lease)
 		ctmp->lease->in_use = 0;
 	list_del(&ctmp->list);
@@ -544,7 +546,7 @@ int main(int argc, char** argv)
 	for (;;) {
 		if (terminate != 0) {
 			mslog(&s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
-			kill_children(&clist);
+			kill_children(&s);
 			closelog();
 			while (waitpid(-1, NULL, 0) > 0);
 			exit(0);

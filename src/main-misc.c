@@ -215,7 +215,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 		case AUTH_REQ:
 		case AUTH_COOKIE_REQ:
-		
+			lease = NULL;
+
 			if (cmd == AUTH_REQ) {
 				if (cmd_data_len != sizeof(cmd_data.auth)) {
 					mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
@@ -252,8 +253,10 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				if (cmd == AUTH_REQ) {
 					/* generate and store cookie */
 					ret = generate_and_store_vals(s, proc);
-					if (ret < 0)
-						return -2;
+					if (ret < 0) {
+						ret = -2;
+						goto lease_cleanup;
+					}
 					mslog(s, proc, LOG_INFO, "User '%s' authenticated", proc->username);
 				} else {
 					mslog(s, proc, LOG_INFO, "User '%s' re-authenticated (using cookie)", proc->username);
@@ -262,23 +265,32 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
 				if (ret < 0) {
 					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
-					return -2;
+					ret = -2;
+					goto lease_cleanup;
 				}
 
 				proc->lease = lease;
 				proc->lease->in_use = 1;
-				if (lease->fd >= 0)
-					close(lease->fd);
-				lease->fd = -1;
+				ret = 0;
 			} else {
 				mslog(s, proc, LOG_INFO, "Failed authentication attempt for user '%s'", proc->username);
 				ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
 				if (ret < 0) {
 					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
-					return -2;
+					ret = -2;
+					goto lease_cleanup;
 				}
+				ret = 0;
 			}
-			
+
+lease_cleanup:
+			if (lease) {
+				if (lease->fd >= 0)
+					close(lease->fd);
+				lease->fd = -1;
+			}
+			return ret;
+
 			break;
 		default:
 			mslog(s, proc, LOG_ERR, "Unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);

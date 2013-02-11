@@ -634,7 +634,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		ret = tls_printf(ws->session, "X-DTLS-Port: %u\r\n", ws->config->udp_port);
 		SEND_ERR(ret);
 
-		ret = tls_puts(ws->session, "X-DTLS-Rekey-Time: 86400\r\n");
+		ret = tls_printf(ws->session, "X-DTLS-Rekey-Time: %u\r\n", (unsigned)(2*ws->config->cookie_validity)/3);
 		SEND_ERR(ret);
 
 		ret = tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);

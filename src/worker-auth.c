@@ -536,7 +536,7 @@ struct cmd_auth_req_st areq;
 	if (ret < 0)
 		return -1;
 
-	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s\r\n", str_cookie);
+	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s;Max-Age=%u\r\n", str_cookie, (unsigned)ws->config->cookie_validity);
 	if (ret < 0)
 		return -1;
 

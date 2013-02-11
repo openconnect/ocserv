@@ -227,7 +227,7 @@ int s, y, e;
 		return -1;
 	}
 
-#if defined(IPPROTO_IPV6)
+#if defined(IPV6_V6ONLY)
 	if (l->family == AF_INET6) {
 		y = 1;
 		/* avoid listen on ipv6 addresses failing

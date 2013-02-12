@@ -301,6 +301,13 @@ fail:
 	return -1;
 }
 
+static
+void exit_worker(worker_st *ws)
+{
+	closelog();
+	exit(1);
+}
+
 void vpn_server(struct worker_st* ws)
 {
 	unsigned char buf[2048];
@@ -323,7 +330,7 @@ void vpn_server(struct worker_st* ws)
 	ret = disable_system_calls(ws);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not disable system calls (seccomp error)");
-		exit(1);
+		exit_worker(ws);
 	}
 
 	oclog(ws, LOG_INFO, "accepted connection");
@@ -371,7 +378,7 @@ void vpn_server(struct worker_st* ws)
 restart:
 	if (requests_left-- <= 0) {
 		oclog(ws, LOG_INFO, "maximum number of HTTP requests reached"); 
-		exit(1);
+		exit_worker(ws);
 	}
 
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -383,13 +390,13 @@ restart:
 		nrecvd = tls_recv(session, buf, sizeof(buf));
 		if (nrecvd <= 0) {
 			oclog(ws, LOG_INFO, "error receiving client data"); 
-			exit(1);
+			exit_worker(ws);
 		}
 	
 		nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 		if (nparsed == 0) {
 			oclog(ws, LOG_INFO, "error parsing HTTP request"); 
-			exit(1);
+			exit_worker(ws);
 		}
 	} while(req.headers_complete == 0);
 
@@ -414,7 +421,7 @@ restart:
 			nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 			if (nparsed == 0) {
 				oclog(ws, LOG_INFO, "error parsing HTTP request"); 
-				exit(1);
+				exit_worker(ws);
 			}
 		}
 
@@ -495,6 +502,7 @@ int c;
 	return;
 }
 
+
 #define SEND_ERR(x) if (x<0) goto send_error
 static int connect_handler(worker_st *ws)
 {
@@ -514,7 +522,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		oclog(ws, LOG_INFO, "connect request without authentication");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
-		exit(1);
+		exit_worker(ws);
 	}
 
 	if (ws->auth_ok == 0) {
@@ -525,7 +533,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			oclog(ws, LOG_INFO, "failed cookie authentication attempt");
 			tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 			tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
-			exit(1);
+			exit_worker(ws);
 		}
 	}
 
@@ -537,7 +545,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
 		tls_puts(ws->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
-		exit(1);
+		exit_worker(ws);
 	}
 	
 	if (ws->config->network.name == NULL) {
@@ -920,12 +928,13 @@ exit:
 		/*gnutls_deinit(ws->dtls_session);*/
 	}
 exit_nomsg:
-	closelog();
-	exit(1);
+	exit_worker(ws);
 
 send_error:
 	oclog(ws, LOG_DEBUG, "error sending data\n");
-	exit(1);
+	exit_worker(ws);
+	
+	return -1;
 }
 
 
@@ -957,7 +966,7 @@ int ret, e;
 			break;
 		case AC_PKT_DISCONN:
 			oclog(ws, LOG_INFO, "received BYE packet; exiting");
-			exit(0);
+			exit_worker(ws);
 			break;
 		case AC_PKT_DATA:
 			oclog(ws, LOG_DEBUG, "writing %d byte(s) to TUN", (int)buf_size);

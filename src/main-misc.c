@@ -112,7 +112,6 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 {
 	struct iovec iov[2];
 	char buf[128];
-	int e;
 	uint8_t cmd;
 	struct msghdr hdr;
 	struct lease_st *lease;
@@ -123,8 +122,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 		struct cmd_resume_fetch_req_st fresume;
 		struct cmd_tun_mtu_st tmtu;
 	} cmd_data;
-	int ret, cmd_data_len;
-	const char* peer_ip;
+	int ret, cmd_data_len, e;
+	const char* peer_ip, *group;
 
 	peer_ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len, buf, sizeof(buf));
 	
@@ -143,7 +142,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	ret = recvmsg( proc->fd, &hdr, 0);
 	if (ret == -1) {
 		e = errno;
-		mslog(s, proc, LOG_ERR, "Cannot obtain data from command socket (pid: %d, peer: %s): %s", proc->pid, peer_ip, strerror(e));
+		mslog(s, proc, LOG_ERR, "cannot obtain data from command socket (pid: %d, peer: %s): %s", proc->pid, peer_ip, strerror(e));
 		return -1;
 	}
 
@@ -156,7 +155,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	switch(cmd) {
 		case CMD_TUN_MTU:
 			if (cmd_data_len != sizeof(cmd_data.tmtu)) {
-				mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 				return -2;
 			}
 			
@@ -165,24 +164,24 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 		case RESUME_STORE_REQ:
 			if (cmd_data_len <= sizeof(cmd_data.sresume)-MAX_SESSION_DATA_SIZE) {
-				mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 				return -2;
 			}
 			ret = handle_resume_store_req(s, proc, &cmd_data.sresume);
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "Could not store resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_DEBUG, "could not store resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
 			}
 			
 			break;
 			
 		case RESUME_DELETE_REQ:
 			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 				return -2;
 			}
 			ret = handle_resume_delete_req(s, proc, &cmd_data.fresume);
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "Could not delete resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_DEBUG, "could not delete resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
 			}
 
 			break;
@@ -190,19 +189,19 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			struct cmd_resume_fetch_reply_st reply;
 
 			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 				return -2;
 			}
 			ret = handle_resume_fetch_req(s, proc, &cmd_data.fresume, &reply);
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "Could not fetch resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_DEBUG, "could not fetch resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
 				ret = send_resume_fetch_reply(s, proc, REP_RESUME_FAILED, NULL);
 			} else
 				ret = send_resume_fetch_reply(s, proc, REP_RESUME_OK, &reply);
 			}
 			
 			if (ret < 0) {
-				mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
 				return -2;
 			}
 			
@@ -214,14 +213,14 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 			if (cmd == AUTH_REQ) {
 				if (cmd_data_len != sizeof(cmd_data.auth)) {
-					mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 					return -2;
 				}
 
 				ret = handle_auth_req(s, proc, &cmd_data.auth, &lease);
 			} else {
 				if (cmd_data_len != sizeof(cmd_data.cauth)) {
-					mslog(s, proc, LOG_ERR, "Error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 					return -2;
 				}
 
@@ -232,19 +231,24 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				/* check for multiple connections */
 				ret = check_multiple_users(s, proc);
 				if (ret < 0) {
-					mslog(s, proc, LOG_INFO, "User '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
+					mslog(s, proc, LOG_INFO, "user '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
 				}
 
 				/* do scripts and utmp */
 				if (ret == 0) {
 					ret = user_connected(s, proc, lease);
 					if (ret < 0) {
-						mslog(s, proc, LOG_INFO, "User '%s' disconnected due to script", proc->username);
+						mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 					}
 				}
 			}
 
 			if (ret == 0) {
+				if (proc->groupname[0] == 0)
+					group = "[unknown]";
+				else
+					group = proc->groupname;
+
 				if (cmd == AUTH_REQ) {
 					/* generate and store cookie */
 					ret = generate_and_store_vals(s, proc);
@@ -252,14 +256,14 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 						ret = -2;
 						goto lease_cleanup;
 					}
-					mslog(s, proc, LOG_INFO, "User '%s' authenticated", proc->username);
+					mslog(s, proc, LOG_INFO, "user '%s' of group '%s' authenticated", proc->username, group);
 				} else {
-					mslog(s, proc, LOG_INFO, "User '%s' re-authenticated (using cookie)", proc->username);
+					mslog(s, proc, LOG_INFO, "user '%s' of group '%s' re-authenticated (using cookie)", proc->username, group);
 				}
 				
 				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
 				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
 					ret = -2;
 					goto lease_cleanup;
 				}
@@ -268,10 +272,10 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				proc->lease->in_use = 1;
 				ret = 0;
 			} else {
-				mslog(s, proc, LOG_INFO, "Failed authentication attempt for user '%s'", proc->username);
+				mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
 				ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
 				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "Could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
 					ret = -2;
 					goto lease_cleanup;
 				}
@@ -288,7 +292,7 @@ lease_cleanup:
 
 			break;
 		default:
-			mslog(s, proc, LOG_ERR, "Unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+			mslog(s, proc, LOG_ERR, "unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
 			return -2;
 	}
 	

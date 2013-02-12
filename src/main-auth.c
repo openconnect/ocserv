@@ -112,15 +112,27 @@ struct stored_cookie_st sc;
 	
 	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
 	memcpy(proc->username, sc.username, sizeof(proc->username));
+	memcpy(proc->groupname, sc.groupname, sizeof(proc->groupname));
 	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
 	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	proc->session_id_size = sizeof(proc->session_id);
-	
+
+	if (req->tls_auth_ok != 0) {
+		if (strcmp(proc->username, req->cert_user) != 0) {
+			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
+			return -1;
+		}
+		if (strcmp(proc->groupname, req->cert_group) != 0) {
+			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
+			return -1;
+		}
+	}
+
 	ret = open_tun(s, lease);
 	if (ret < 0)
-		ret = -1; /* sorry */
+		return -1; /* sorry */
 	
-	return ret;
+	return 0;
 }
 
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc)
@@ -144,6 +156,7 @@ struct stored_cookie_st *sc;
 	
 	memcpy(sc->cookie, proc->cookie, sizeof(proc->cookie));
 	memcpy(sc->username, proc->username, sizeof(sc->username));
+	memcpy(sc->groupname, proc->groupname, sizeof(sc->groupname));
 	memcpy(sc->hostname, proc->hostname, sizeof(sc->hostname));
 	memcpy(sc->session_id, proc->session_id, sizeof(sc->session_id));
 	
@@ -165,7 +178,7 @@ unsigned username_set = 0;
 
 #ifdef HAVE_PAM
 	if (req->user_pass_present != 0 && s->config->auth_types & AUTH_TYPE_PAM) {
-		ret = pam_auth_user(req->user, req->pass);
+		ret = pam_auth_user(req->user, req->pass, proc->groupname, sizeof(proc->groupname));
 		if (ret != 0)
 			ret = -1;
 
@@ -179,11 +192,16 @@ unsigned username_set = 0;
 			ret = 0;
 		}
 		
-		if (username_set == 0)
-			memcpy(proc->username, req->cert_user, MAX_USERNAME_SIZE);
-		else {
+		if (username_set == 0) {
+			memcpy(proc->username, req->cert_user, sizeof(proc->username));
+			memcpy(proc->groupname, req->cert_group, sizeof(proc->groupname));
+		} else {
 			if (strcmp(proc->username, req->cert_user) != 0) {
-				mslog(s, proc, LOG_INFO, "User '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
+				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
+				ret = -1;
+			}
+			if (strcmp(proc->groupname, req->cert_group) != 0) {
+				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
 				ret = -1;
 			}
 		}

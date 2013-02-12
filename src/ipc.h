@@ -38,6 +38,7 @@ struct __attribute__ ((__packed__)) cmd_auth_cookie_req_st {
 	uint8_t cookie[COOKIE_SIZE];
 	uint8_t tls_auth_ok;
 	char cert_user[MAX_USERNAME_SIZE];
+	char cert_group[MAX_GROUPNAME_SIZE];
 };
 
 /* AUTH_REQ */
@@ -47,6 +48,7 @@ struct __attribute__ ((__packed__)) cmd_auth_req_st {
 	char pass[MAX_PASSWORD_SIZE];
 	uint8_t tls_auth_ok;
 	char cert_user[MAX_USERNAME_SIZE];
+	char cert_group[MAX_GROUPNAME_SIZE];
 	char hostname[MAX_HOSTNAME_SIZE];
 };
 

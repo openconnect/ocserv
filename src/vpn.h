@@ -60,6 +60,7 @@ struct cfg_st {
 	char *ca;
 	char *crl;
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
+	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
 	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
@@ -98,6 +99,7 @@ struct main_server_st;
 #define MAX_PASSWORD_SIZE 64
 #define TLS_MASTER_SIZE 48
 #define MAX_HOSTNAME_SIZE MAX_USERNAME_SIZE
+#define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
 #define COOKIE_SIZE 32
 #define MAX_SESSION_DATA_SIZE (4*1024)
 

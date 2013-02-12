@@ -146,6 +146,7 @@ unsigned j;
 	READ_STRING("ca-cert", config->ca, 0);
 	READ_STRING("crl", config->crl, 0);
 	READ_STRING("cert-user-oid", config->cert_user_oid, 0);
+	READ_STRING("cert-group-oid", config->cert_group_oid, 0);
 
 	READ_STRING("connect-script", config->connect_script, 0);
 	READ_STRING("disconnect-script", config->disconnect_script, 0);
@@ -274,6 +275,7 @@ unsigned i;
 	DEL(config->ca);
 	DEL(config->crl);
 	DEL(config->cert_user_oid);
+	DEL(config->cert_group_oid);
 	DEL(config->priorities);
 	DEL(config->chroot_dir);
 	DEL(config->cookie_db_name);

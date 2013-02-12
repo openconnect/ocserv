@@ -7,7 +7,8 @@
 struct stored_cookie_st {
 	uint8_t cookie[COOKIE_SIZE];
 	char username[MAX_USERNAME_SIZE];
-	char hostname[MAX_USERNAME_SIZE];
+	char groupname[MAX_GROUPNAME_SIZE];
+	char hostname[MAX_HOSTNAME_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	time_t expiration;
 };

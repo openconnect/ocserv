@@ -6,6 +6,9 @@
 #ifdef HAVE_PAM
 
 #include <security/pam_appl.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 
 #define APP_NAME PACKAGE
 
@@ -44,12 +47,13 @@ struct pam_response *replies;
 
 /* Returns 0 if the user is successfully authenticated
  */
-int pam_auth_user(const char* user, const char* pass)
+int pam_auth_user(const char* user, const char* pass, char *groupname, int groupname_size)
 {
 pam_handle_t * ph;
 int ret, pret;
 struct local_st local;
 const struct pam_conv dc = { dummy_conv, &local };
+struct passwd * pwd;
 
 	local.username = user;
 	local.password = pass;
@@ -65,6 +69,21 @@ const struct pam_conv dc = { dummy_conv, &local };
 		syslog(LOG_AUTH, "Error in PAM authentication: %s", pam_strerror(ph, pret));
 		ret = -1;
 		goto fail;
+	}
+	
+	pret = pam_acct_mgmt(ph, PAM_SILENT|PAM_DISALLOW_NULL_AUTHTOK);
+	if (pret != PAM_SUCCESS) {
+		syslog(LOG_AUTH, "Error in PAM account management: %s", pam_strerror(ph, pret));
+		ret = -1;
+		goto fail;
+	}
+	
+	groupname[0] = 0;
+	pwd = getpwnam(user);
+	if (pwd != NULL) {
+		struct group* grp = getgrgid(pwd->pw_gid);
+		if (grp != NULL)
+			snprintf(groupname, groupname_size, "%s", grp->gr_name);
 	}
 
 	ret = 0;

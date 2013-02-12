@@ -10,11 +10,11 @@ long-opts;
 no-misuse-usage;
 short-usage   = "Usage: ocserv [options] -c [config]\nocserv --help for usage instructions.\n";
 explain       = "";
-detail        = "This program is openconnect VPN server (ocserv), a server compatible with the
-openconnect VPN client. It is believed to be compatible with the protocol
-used by CISCO's AnyConnect SSL VPN.
 
-";
+
+detail  = "This program is openconnect VPN server (ocserv), a server compatible with the
+openconnect VPN client. It is believed to be compatible with the protocol
+used by CISCO's AnyConnect SSL VPN.";
 
 
 copyright = {
@@ -28,20 +28,20 @@ copyright = {
 flag = {
     name      = foreground;
     value     = f;
-    descrip   = "Do not fork into background.";
+    descrip   = "Do not fork into background";
     doc      = "";
 };
 
 flag = {
     name      = tls-debug;
-    descrip   = "Enable verbose TLS debugging information.";
+    descrip   = "Enable verbose TLS debugging information";
     doc      = "";
 };
 
 flag = {
     name      = debug;
     value     = d;
-    descrip   = "Enable verbose network debugging information.";
+    descrip   = "Enable verbose network debugging information";
     doc      = "";
 };
 
@@ -50,26 +50,11 @@ flag = {
     value     = c;
     arg-type  = file;
     file-exists = yes;
-    descrip   = "Configuration file for the server.";
+    descrip   = "Configuration file for the server";
     doc   = "";
 };
 
 help-value    = h;
-
-doc-section = {
-  ds-type = 'FEATURES';
-  ds-format = 'texi';
-  ds-text   = <<-_EOT_
-@subheading Features of the server
-@itemize
-@item Supports both TCP and UDP VPN tunnels using TLS and DTLS.
-@item Authentication using PAM (username-password) or certificates
-@item Privilege separation between the main process which performs TUN allocation and authentication, with the worker processes which handles messages from the client.
-@item Registers VPN leases to UTMP and WTMP files.
-@item Persistent storage of cookies, to allow a seamless server restart.
-@end itemize
-_EOT_;
-};
 
 
 doc-section = {
@@ -77,7 +62,7 @@ doc-section = {
   ds-format = 'texi';
   ds-text   = <<-_EOT_
 @subheading ocserv's configuration file format
-
+By default, if no other file is specified, ocserv looks for its configuration file at @file{/etc/ocserv.conf}.
 An example configuration file follows.
 
 @example
@@ -125,6 +110,12 @@ server-key = /path/to/key.pem
 #  CN = 2.5.4.3, UID = 0.9.2342.19200300.100.1.1
 #cert-user-oid = 0.9.2342.19200300.100.1.1
 
+# The object identifier that will be used to read the user group in the client 
+# certificate. The object identifier should be part of the certificate's DN
+# Useful OIDs are: 
+#  OU (organizational unit) = 2.5.4.11 
+#cert-group-oid = 2.5.4.11
+
 # A revocation list of ca-cert is set
 #crl = /path/to/crl.pem
 
@@ -149,7 +140,7 @@ cookie-validity = 14400
 #cookie-db = /var/tmp/cookies.db
 
 # Script to call when a client connects and obtains an IP
-# Parameters: username hostname device IP-REAL IP-LOCAL IP-REMOTE
+# Parameters: username groupname hostname device IP-REAL IP-LOCAL IP-REMOTE
 # hostname is the hostname selected by the client
 # IP-REAL is the remote IP of the client,
 # IP-LOCAL is the local IP in the P-t-P connection and IP-REMOTE
@@ -201,7 +192,6 @@ ocserv will take advantage of it to password authenticate its users.
 It can be used in conjunction with certificate authentication.
 
 @subheading Certificate authentication
-
 In order to support certificate authentication you will need in addition to 
 the server certificate and key for TLS, a certificate authority (CA) to sign
 certificates for the clients. That authority should also provide a CRL to
@@ -260,5 +250,32 @@ $ certtool --generate-crl --load-ca-privkey ca-key.pem \
 After that you may want to notify ocserv of the new CRL by using
 the HUP signal.
 
+_EOT_;
+};
+
+doc-section = {
+  ds-type = 'IMPLEMENTATION NOTES';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+Note that while this server utilizes privilege separation for password
+authentication, this does not occur for TLS and client certificate authentication.
+This was done to take advantage of multi-core systems by distributing the
+expensive TLS calculations to the workers.
+_EOT_;
+};
+
+doc-section = {
+  ds-type = 'COMPATIBILITY';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+@subheading Features of the server
+@itemize
+@item Supports both TCP and UDP VPN tunnels using TLS and DTLS.
+@item Support for the server key being stored in TPM, a hardware security module (HSM), or smart card.
+@item Authentication using PAM (username-password) or certificates
+@item Privilege separation between the main process which performs TUN allocation and authentication, with the worker processes which handles messages from the client.
+@item Registers VPN leases to UTMP and WTMP files.
+@item Persistent storage of cookies, to allow a seamless server restart.
+@end itemize
 _EOT_;
 };

@@ -48,6 +48,7 @@ struct proc_st {
 	
 	/* The following are set by the worker process (or by a stored cookie) */
 	char username[MAX_USERNAME_SIZE]; /* the owner */
+	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 };

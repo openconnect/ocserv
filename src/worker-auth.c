@@ -95,8 +95,9 @@ int ret;
 }
 
 static
-int get_cert_username(worker_st *ws, const gnutls_datum_t* raw, 
-			char* username, size_t username_size)
+int get_cert_names(worker_st *ws, const gnutls_datum_t* raw, 
+			char* username, size_t username_size,
+			char* groupname, size_t groupname_size)
 {
 gnutls_x509_crt_t crt;
 int ret;
@@ -120,8 +121,19 @@ int ret;
 		ret = gnutls_x509_crt_get_dn (crt, username, &username_size);
 	}
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "certificate error in DN: %s", gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "cannot obtain user from certificate DN: %s", gnutls_strerror(ret));
 		goto fail;
+	}
+
+	if (ws->config->cert_group_oid) {
+		ret = gnutls_x509_crt_get_dn_by_oid (crt, ws->config->cert_group_oid, 
+							0, 0, groupname, &groupname_size);
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "cannot obtain group from certificate DN: %s", gnutls_strerror(ret));
+			goto fail;
+		}
+	} else {
+		groupname[0] = 0;
 	}
 	
 	ret = 0;
@@ -246,7 +258,8 @@ static int recv_auth_reply(worker_st *ws)
 
 /* grabs the username from the session certificate */
 static
-int get_cert_info(worker_st *ws, char* user, unsigned user_size)
+int get_cert_info(worker_st *ws, char* user, unsigned user_size,
+				char* group, unsigned group_size)
 {
 const gnutls_datum_t * cert;
 unsigned int ncerts;
@@ -260,7 +273,7 @@ int ret;
 		return -1;
 	}
 		
-	ret = get_cert_username(ws, cert, user, user_size);
+	ret = get_cert_names(ws, cert, user, user_size, group, group_size);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "Cannot get username (%s) from certificate", ws->config->cert_user_oid);
 		return -1;
@@ -278,7 +291,8 @@ static int auth_user(worker_st *ws, struct cmd_auth_req_st* areq)
 int ret;
 
 	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		ret = get_cert_info(ws, areq->cert_user, sizeof(areq->cert_user));
+		ret = get_cert_info(ws, areq->cert_user, sizeof(areq->cert_user),
+					areq->cert_group, sizeof(areq->cert_group));
 		if (ret < 0)
 			return -1;
 
@@ -308,7 +322,8 @@ struct cmd_auth_cookie_req_st areq;
 		return -1;
 
 	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user));
+		ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user),
+					areq.cert_group, sizeof(areq.cert_group));
 		if (ret < 0)
 			return -1;
 
@@ -321,7 +336,7 @@ struct cmd_auth_cookie_req_st areq;
 	ret = send_auth_cookie_req(ws->cmd_fd, &areq);
 	if (ret < 0)
 		return ret;
-		
+
 	return recv_auth_reply(ws);
 }
 

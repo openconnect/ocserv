@@ -127,8 +127,6 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			}
 		}
 
-
-
 		tmp = calloc(1, sizeof(struct listener_st));
 		tmp->fd = s;
 		tmp->family = ptr->ai_family;
@@ -140,7 +138,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 		list_add(&list->head, &(tmp->list));
 		list->total++;
 	}
-
+	
 	fflush(stderr);
 
 	return 0;
@@ -181,6 +179,11 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 	}
 
 	freeaddrinfo(res);
+
+	if (list->total == 0) {
+		fprintf(stderr, "Could not listen to any TCP ports\n");
+		exit(1);
+	}
 
 	snprintf(portname, sizeof(portname), "%d", config->udp_port);
 

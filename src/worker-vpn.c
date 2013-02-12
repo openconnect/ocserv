@@ -35,7 +35,6 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <signal.h>
@@ -320,10 +319,14 @@ void vpn_server(struct worker_st* ws)
 
 	if (ws->config->auth_timeout)
 		alarm(ws->config->auth_timeout);
+		
+	ret = disable_system_calls(ws);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "could not disable system calls (seccomp error)");
+		exit(1);
+	}
 
-	syslog(LOG_INFO, "Accepted connection from %s", 
-		human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
-		    buf, sizeof(buf)));
+	oclog(ws, LOG_INFO, "accepted connection");
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
 		ws->proto = AF_INET;
 	else

@@ -99,5 +99,6 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len);
 
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);
+int disable_system_calls(struct worker_st *ws);
 
 #endif

@@ -141,6 +141,9 @@
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H
 
+/* Define if you have the libseccomp library. */
+#undef HAVE_LIBSECCOMP
+
 /* Define if you have the libutil library. */
 #undef HAVE_LIBUTIL
 

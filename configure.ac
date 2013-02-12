@@ -64,6 +64,20 @@ gl_INIT
 
 AC_LIB_HAVE_LINKFLAGS(util,, [#include <utmpx.h>], [pututxline(0);])
 
+AC_ARG_ENABLE(seccomp,
+  AS_HELP_STRING([--disable-seccomp], [unconditionally disable seccomp]),
+    seccomp_enabled=$enableval, seccomp_enabled=yes)
+
+if [ test "$seccomp_enabled" = "yes" ];then
+AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <linux/seccomp.h>
+#include <seccomp.h>], [seccomp_init(0);])
+if [ test -z "$LIBSECCOMP" ];then
+	seccomp_enabled="no"
+else
+	seccomp_enabled="yes"
+fi
+fi
+
 enable_local_libopts=yes
 NEED_LIBOPTS_DIR=true
 LIBOPTS_CHECK([libopts])
@@ -84,5 +98,6 @@ AC_MSG_NOTICE([summary of build options:
   CFlags:           ${CFLAGS}
   GDBM backend:     ${gdbm_enabled}
   PAM backend:      ${pam_enabled}
+  seccomp:          ${seccomp_enabled}
 ])
 

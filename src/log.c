@@ -68,7 +68,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 void __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * ws, int priority, const char *fmt, ...)
 {
-	char buf[1024];
+	char buf[512];
 	char ipbuf[128];
 	const char* ip;
 	va_list args;
@@ -80,7 +80,7 @@ void __attribute__ ((format(printf, 3, 4)))
 			    ipbuf, sizeof(ipbuf));
 
 	va_start(args, fmt);
-	vsnprintf(buf, sizeof(buf)-1, fmt, args);
+	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 
 	if (ip) {
@@ -97,7 +97,7 @@ void __attribute__ ((format(printf, 4, 5)))
     mslog(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *fmt, ...)
 {
-	char buf[1024];
+	char buf[512];
 	char ipbuf[128];
 	const char* ip = NULL;
 	va_list args;
@@ -111,7 +111,7 @@ void __attribute__ ((format(printf, 4, 5)))
 	}
 
 	va_start(args, fmt);
-	vsnprintf(buf, sizeof(buf)-1, fmt, args);
+	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 
 	if (ip) {

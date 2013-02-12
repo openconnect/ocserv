@@ -807,7 +807,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
 			ret = gnutls_record_recv(ws->session, buffer, sizeof(buffer));
-			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)\n", ret);
+			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)", ret);
 
 			GNUTLS_FATAL_ERR(ret);
 
@@ -839,7 +839,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 				case UP_ACTIVE:
 				case UP_INACTIVE:
 					ret = gnutls_record_recv(ws->dtls_session, buffer, sizeof(buffer));
-					oclog(ws, LOG_DEBUG, "received %d byte(s) (DTLS)\n", ret);
+					oclog(ws, LOG_DEBUG, "received %d byte(s) (DTLS)", ret);
 
 					GNUTLS_FATAL_ERR(ret);
 
@@ -938,10 +938,10 @@ int ret, e;
 
 	switch (head) {
 		case AC_PKT_DPD_RESP:
-			oclog(ws, LOG_INFO, "received DPD response");
+			oclog(ws, LOG_DEBUG, "received DPD response");
 			break;
 		case AC_PKT_KEEPALIVE:
-			oclog(ws, LOG_INFO, "received keepalive");
+			oclog(ws, LOG_DEBUG, "received keepalive");
 			break;
 		case AC_PKT_DPD_OUT:
 			oclog(ws, LOG_DEBUG, "received DPD; sending response");
@@ -956,7 +956,8 @@ int ret, e;
 			ws->last_dpd = time(0);
 			break;
 		case AC_PKT_DISCONN:
-			oclog(ws, LOG_INFO, "received BYE packet");
+			oclog(ws, LOG_INFO, "received BYE packet; exiting");
+			exit(0);
 			break;
 		case AC_PKT_DATA:
 			oclog(ws, LOG_DEBUG, "writing %d byte(s) to TUN", (int)buf_size);

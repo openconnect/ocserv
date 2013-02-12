@@ -393,7 +393,7 @@ struct cmd_auth_req_st areq;
 		goto auth_fail;
 	}
 
-	oclog(ws, LOG_INFO, "User '%s' logged in\n", ws->username);
+	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
 
 	p = str_cookie;
 	for (i=0;i<sizeof(ws->cookie);i++) {
@@ -509,7 +509,7 @@ struct cmd_auth_req_st areq;
 		goto auth_fail;
 	}
 
-	oclog(ws, LOG_INFO, "User '%s' logged in\n", ws->username);
+	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
 
 	p = str_cookie;
 	for (i=0;i<sizeof(ws->cookie);i++) {

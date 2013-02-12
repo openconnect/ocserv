@@ -130,11 +130,11 @@ struct ifreq ifr;
 	/* get the remote IPs */
         ret = get_ip(ws, fd, AF_INET6, 0, vinfo, &buffer, &buffer_size);
         if (ret < 0)
-                oclog(ws, LOG_DEBUG, "Cannot obtain IPv6 remote IP for %s\n", vinfo->name);
+                oclog(ws, LOG_DEBUG, "cannot obtain IPv6 remote IP for %s", vinfo->name);
 
         ret = get_ip(ws, fd, AF_INET, 0, vinfo, &buffer, &buffer_size);
         if (ret < 0)
-                oclog(ws, LOG_DEBUG, "Cannot obtain IPv4 remote IP for %s\n", vinfo->name);
+                oclog(ws, LOG_DEBUG, "cannot obtain IPv4 remote IP for %s", vinfo->name);
 
         if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
                 ret = -1;
@@ -144,11 +144,11 @@ struct ifreq ifr;
 	/* get the local IPs */
         ret = get_ip(ws, fd, AF_INET6, 1, vinfo, &buffer, &buffer_size);
         if (ret < 0)
-                oclog(ws, LOG_DEBUG, "Cannot obtain IPv6 local IP for %s\n", vinfo->name);
+                oclog(ws, LOG_DEBUG, "cannot obtain IPv6 local IP for %s", vinfo->name);
 
         ret = get_ip(ws, fd, AF_INET, 1, vinfo, &buffer, &buffer_size);
         if (ret < 0)
-                oclog(ws, LOG_DEBUG, "Cannot obtain IPv4 local IP for %s\n", vinfo->name);
+                oclog(ws, LOG_DEBUG, "cannot obtain IPv4 local IP for %s", vinfo->name);
 
 
 	if (vinfo->ipv4_dns && strcmp(vinfo->ipv4_dns, "local") == 0)

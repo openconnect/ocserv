@@ -2,6 +2,7 @@
 # define TUN_H
 
 #include <vpn.h>
+#include <string.h>
 #include <ccan/list/list.h>
 
 struct lease_st {

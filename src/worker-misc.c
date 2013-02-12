@@ -76,8 +76,8 @@ int handle_worker_commands(struct worker_st *ws)
 		char              control[CMSG_SPACE(sizeof(int))];
 	} control_un;
 	struct cmsghdr  *cmptr;
-	int ret, e;
-	int cmd_data_len;
+	int ret;
+	/*int cmd_data_len;*/
 
 	memset(&cmd_data, 0, sizeof(cmd_data));
 	
@@ -104,7 +104,7 @@ int handle_worker_commands(struct worker_st *ws)
 		exit(1);
 	}
 
-	cmd_data_len = ret - 1;
+	/*cmd_data_len = ret - 1;*/
 	
 	switch(cmd) {
 		case CMD_TERMINATE:
@@ -117,21 +117,10 @@ int handle_worker_commands(struct worker_st *ws)
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 				if (cmptr->cmsg_level != SOL_SOCKET)
-					return -1;
-				if (cmptr->cmsg_type != SCM_RIGHTS)
-					return -1;
-				memcpy(&ws->udp_fd, CMSG_DATA(cmptr), sizeof(int));
-				if (cmd_data_len > 0) {
-					ret = connect(ws->udp_fd, (void*)&cmd_data.ss, cmd_data_len);
-					if (ret == -1) {
-						e = errno;
-						oclog(ws, LOG_ERR, "connect(): %s", strerror(e));
-						goto udp_fd_fail;
-					}
-				} else {
-					oclog(ws, LOG_ERR, "didn't receive peer's UDP address");
 					goto udp_fd_fail;
-				}
+				if (cmptr->cmsg_type != SCM_RIGHTS)
+					goto udp_fd_fail;
+				memcpy(&ws->udp_fd, CMSG_DATA(cmptr), sizeof(int));
 				ws->udp_state = UP_SETUP;
 
 				oclog(ws, LOG_DEBUG, "received UDP fd and connected to peer");

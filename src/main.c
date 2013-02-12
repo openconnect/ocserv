@@ -385,7 +385,7 @@ static void handle_term(int signo)
 #define HANDSHAKE_SESSION_ID_POS 46
 static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
 {
-int ret;
+int ret, e;
 struct sockaddr_storage cli_addr;
 struct proc_st *ctmp;
 socklen_t cli_addr_size;
@@ -431,8 +431,15 @@ int connected = 0;
 
 		if (ctmp->udp_fd_received == 0 && session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
-			
-			ret = send_udp_fd(s, ctmp, (void*)&cli_addr, cli_addr_size, listener->fd);
+
+			ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
+			if (ret == -1) {
+				e = errno;
+				mslog(s, ctmp, LOG_ERR, "connect UDP socket: %s", strerror(e));
+				return -1;
+			}
+
+			ret = send_udp_fd(s, ctmp, listener->fd);
 			if (ret < 0) {
 				mslog(s, ctmp, LOG_ERR, "Error passing UDP socket");
 				return -1;

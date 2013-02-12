@@ -81,7 +81,7 @@ void expire_tls_sessions(main_server_st *s);
 int send_resume_fetch_reply(main_server_st* s, struct proc_st* proc,
 		cmd_resume_reply_t r, struct cmd_resume_fetch_reply_st * reply);
 
-int send_udp_fd(main_server_st* s, struct proc_st* proc, void* cli_addr, socklen_t cli_addr_size, int fd);
+int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 
 int handle_resume_delete_req(main_server_st* s, struct proc_st* proc,
   			   const struct cmd_resume_fetch_req_st * req);

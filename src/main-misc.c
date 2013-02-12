@@ -77,8 +77,7 @@ fail:
 	return ret;
 }
 
-int send_udp_fd(main_server_st* s, struct proc_st * proc, 
-		void* cli_addr, socklen_t cli_addr_size, int fd)
+int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 {
 	struct iovec iov[2];
 	uint8_t cmd = CMD_UDP_FD;
@@ -93,10 +92,6 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc,
 	memset(&hdr, 0, sizeof(hdr));
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
-	hdr.msg_iovlen++;
-
-	iov[1].iov_base = cli_addr;
-	iov[1].iov_len = cli_addr_size;
 	hdr.msg_iovlen++;
 
 	hdr.msg_iov = iov;

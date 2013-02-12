@@ -1,0 +1,5 @@
+#!/bin/sh
+
+iptables -D INPUT -i $DEVICE -j ACCEPT
+
+echo "User '$USERNAME' from '$IP_REAL' disconnected."

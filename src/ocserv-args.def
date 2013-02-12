@@ -226,6 +226,7 @@ $ certtool --generate-self-signed --load-privkey ca-key.pem \
 $ certtool --generate-privkey --outfile user-key.pem
 $ cat << _EOF_ >user.tmpl
 cn = "user"
+ou = "admins"
 serial = 1824
 email = "user@example.com"
 expiration_days = 9999
@@ -269,7 +270,7 @@ doc-section = {
   ds-text   = <<-_EOT_
 @subheading Features of the server
 @itemize
-@item Supports both TCP and UDP VPN tunnels using TLS and DTLS.
+@item Supports both TCP and UDP VPN tunnels using TLS and Datagram TLS.
 @item Support for the server key being stored in TPM, a hardware security module (HSM), or smart card.
 @item Authentication using PAM (username-password) or certificates
 @item Privilege separation between the main process which performs TUN allocation and authentication, with the worker processes which handles messages from the client.

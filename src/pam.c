@@ -64,14 +64,14 @@ struct passwd * pwd;
 		return -1;
 	}
 	
-	pret = pam_authenticate(ph, PAM_SILENT|PAM_DISALLOW_NULL_AUTHTOK);
+	pret = pam_authenticate(ph, PAM_SILENT);
 	if (pret != PAM_SUCCESS) {
 		syslog(LOG_AUTH, "Error in PAM authentication: %s", pam_strerror(ph, pret));
 		ret = -1;
 		goto fail;
 	}
 	
-	pret = pam_acct_mgmt(ph, PAM_SILENT|PAM_DISALLOW_NULL_AUTHTOK);
+	pret = pam_acct_mgmt(ph, PAM_SILENT);
 	if (pret != PAM_SUCCESS) {
 		syslog(LOG_AUTH, "Error in PAM account management: %s", pam_strerror(ph, pret));
 		ret = -1;

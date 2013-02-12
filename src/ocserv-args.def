@@ -10,7 +10,12 @@ long-opts;
 no-misuse-usage;
 short-usage   = "Usage: ocserv [options] -c [config]\nocserv --help for usage instructions.\n";
 explain       = "";
-detail        = "OpenConnect VPN server.";
+detail        = "This program is openconnect VPN server (ocserv), a server compatible with the
+openconnect VPN client. It is believed to be compatible with the protocol
+used by CISCO's AnyConnect SSL VPN.
+
+";
+
 
 copyright = {
     date  = "2013";
@@ -50,6 +55,22 @@ flag = {
 };
 
 help-value    = h;
+
+doc-section = {
+  ds-type = 'FEATURES';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+@subheading Features of the server
+@itemize
+@item Supports both TCP and UDP VPN tunnels using TLS and DTLS.
+@item Authentication using PAM (username-password) or certificates
+@item Privilege separation between the main process which performs TUN allocation and authentication, with the worker processes which handles messages from the client.
+@item Registers VPN leases to UTMP and WTMP files.
+@item Persistent storage of cookies, to allow a seamless server restart.
+@end itemize
+_EOT_;
+};
+
 
 doc-section = {
   ds-type = 'FILES';
@@ -170,3 +191,74 @@ route = 192.168.5.0/255.255.255.0
 _EOT_;
 };
 
+doc-section = {
+  ds-type = 'AUTHENTICATION';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+@subheading Password authentication
+If your system supports Pluggable Authentication Modules (PAM), then
+ocserv will take advantage of it to password authenticate its users.
+It can be used in conjunction with certificate authentication.
+
+@subheading Certificate authentication
+
+In order to support certificate authentication you will need in addition to 
+the server certificate and key for TLS, a certificate authority (CA) to sign
+certificates for the clients. That authority should also provide a CRL to
+allow the server to reject the revoked clients (see @var{ca-cert, crl}).
+
+Each client will then hold a key and certificate that identifies him.
+The user ID of the client must be embedded in the certificate's Distinguished
+Name (DN), e.g. in the Common Name, or UID fields. For the server to
+read the name, the @var{cert-user-oid} configuration option must be set.
+
+The following examples demonstrate how to use certtool from GnuTLS to
+generate such CA.
+
+@subheading Generating the CA
+@example
+$ certtool --generate-privkey --outfile ca-key.pem
+$ cat << _EOF_ >ca.tmpl
+cn = "VPN CA"
+organization = "Big Corp"
+serial = 1
+expiration_days = 9999
+ca
+signing_key
+cert_signing_key
+crl_signing_key
+_EOF_
+$ certtool --generate-self-signed --load-privkey ca-key.pem \
+	--template ca.tmpl --outfile ca-cert.pem
+@end example
+
+@subheading Generating the client certificates
+@example
+$ certtool --generate-privkey --outfile user-key.pem
+$ cat << _EOF_ >user.tmpl
+cn = "user"
+serial = 1824
+email = "user@example.com"
+expiration_days = 9999
+signing_key
+tls_www_client
+_EOF_
+$ certtool --generate-certificate --load-privkey user-key.pem \
+	--load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
+	--template user.tmpl --outfile user-cert.pem
+
+@end example
+
+@subheading Revoking a client certificate
+To revoke the previous client certificate use:
+@example
+$ cat user-cert.pem >>revoked.pem
+$ certtool --generate-crl --load-ca-privkey ca-key.pem \
+	--load-ca-certificate ca.pem --load-certificate revoked.pem \
+	--outfile crl.pem
+@end example
+After that you may want to notify ocserv of the new CRL by using
+the HUP signal.
+
+_EOT_;
+};

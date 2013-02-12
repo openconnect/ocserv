@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
-EXTRA_DIST = ocserv.1 sample.config ccan/licenses/BSD-MIT \
+EXTRA_DIST = ccan/licenses/BSD-MIT \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1
 
 
@@ -30,7 +30,3 @@ ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 	-autogen ocserv-args.def
 
-ocserv.1: ocserv-args.def
-	-sed 's/@subheading \(.*\)/@*\n@var{\1}\n@*/' $< > "$<".tmp && \
-	autogen -DMAN_SECTION=1 -Tagman-cmd.tpl "$<".tmp && \
-	rm -f "$<".tmp

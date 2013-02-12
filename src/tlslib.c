@@ -371,9 +371,9 @@ const char* perr;
 
 int tls_global_init_client(worker_st* ws)
 {
+#ifdef HAVE_PKCS11
 int ret;
 
-#ifdef HAVE_PKCS11
 	/* when we have PKCS #11 keys we cannot open them and then fork(), we need
 	 * to open them at the process they are going to be used. */
 	if (ws->config->key != NULL && strncmp(ws->config->key, "pkcs11:", 7) == 0) {

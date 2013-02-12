@@ -33,7 +33,7 @@
 
 #define DEFAULT_CFG_FILE "/etc/ocserv.conf"
 
-static void write_pid_file(const char* pid_file);
+static const char* pid_file = NULL;
 static const char* cfg_file = DEFAULT_CFG_FILE;
 
 #define MAX_ENTRIES 64
@@ -102,7 +102,6 @@ static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
 const tOptionValue* val;
-char *pid_file = NULL;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned j;
@@ -151,11 +150,8 @@ unsigned j;
 	READ_STRING("connect-script", config->connect_script, 0);
 	READ_STRING("disconnect-script", config->disconnect_script, 0);
 	
-	READ_STRING("pid-file", pid_file, 0);
-	if (pid_file != NULL) {
-		write_pid_file(pid_file);
-		free(pid_file);
-	}
+	if (pid_file == NULL)
+		READ_STRING("pid-file", pid_file, 0);
 
 	READ_TF("use-utmp", config->use_utmp, 0, 1);
 
@@ -301,9 +297,12 @@ unsigned i;
 	return;
 }
 
-static void write_pid_file(const char* pid_file)
+void write_pid_file(void)
 {
 FILE* fp;
+
+	if (pid_file==NULL)
+		return;
 
 	fp = fopen(pid_file, "w");
 	if (fp == NULL) {

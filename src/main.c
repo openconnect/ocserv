@@ -463,7 +463,6 @@ int connected = 0;
 fail:
 	if (connected == 0) {
 		/* received packet from unknown host */
-//		mslog(s, NULL, LOG_ERR, "Received UDP packet from unexpected host; discarding it");
 		recv(listener->fd, buffer, buffer_size, 0);
 
 		return -1;
@@ -472,6 +471,8 @@ fail:
 	return 0;
 
 }
+
+#define MAINTAINANCE_TIME (config.cookie_validity + 300)
 
 int main(int argc, char** argv)
 {
@@ -541,7 +542,8 @@ int main(int argc, char** argv)
 	if (config.foreground == 0)
 		daemon(0, 0);
 
-#define MAINTAINANCE_TIME (config.cookie_validity + 300)
+	write_pid_file();
+
 	alarm(MAINTAINANCE_TIME);
 	flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR

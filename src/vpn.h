@@ -37,33 +37,33 @@ typedef struct
 
 
 struct vpn_st {
-	const char *name;	/* device name */
-	const char *ipv4_netmask;
-	const char *ipv4;
-	const char *ipv4_local; /* local IPv4 address */
-	const char *ipv6_netmask;
-	const char *ipv6;
-	const char *ipv6_local; /* local IPv6 address */
-	const char *ipv4_dns;
-	const char *ipv6_dns;
+	char *name;	/* device name */
+	char *ipv4_netmask;
+	char *ipv4;
+	char *ipv4_local; /* local IPv4 address */
+	char *ipv6_netmask;
+	char *ipv6;
+	char *ipv6_local; /* local IPv6 address */
+	char *ipv4_dns;
+	char *ipv6_dns;
 	unsigned int mtu;
-	const char **routes;
+	char **routes;
 	unsigned int routes_size;
 };
 
 struct cfg_st {
-	const char *name;
+	char *name; /* server name */
 	unsigned int port;
 	unsigned int udp_port;
-	const char *cert;
-	const char *key;
-	const char *ca;
-	const char *crl;
-	const char *cert_user_oid;	/* The OID that will be used to extract the username */
+	char *cert;
+	char *key;
+	char *ca;
+	char *crl;
+	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
 	gnutls_certificate_request_t cert_req;
-	const char *priorities;
-	const char *chroot_dir;	/* where the xml files are served from */
+	char *priorities;
+	char *chroot_dir;	/* where the xml files are served from */
 	time_t cookie_validity;	/* in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;
@@ -76,10 +76,10 @@ struct cfg_st {
 	unsigned use_utmp;
 
 	/* if gdbm is there */
-	const char* cookie_db_name;
+	char* cookie_db_name;
 
-	const char *connect_script;
-	const char *disconnect_script;
+	char *connect_script;
+	char *disconnect_script;
 
 	uid_t uid;
 	gid_t gid;

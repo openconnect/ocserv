@@ -52,7 +52,7 @@ int get_ip(struct worker_st* ws, int fd, int family, unsigned int local,
            struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
 {
 void* ptr;
-const void* p;
+void* p;
 struct ifreq ifr;
 unsigned int flags;
 int ret, e;
@@ -82,7 +82,7 @@ int ret, e;
 		return -1;
 	}
 
-	p = inet_ntop(family, ptr, *buffer, *buffer_size);
+	p = (char*)inet_ntop(family, ptr, *buffer, *buffer_size);
 	if (p == NULL) {
 		e = errno;
 		oclog(ws, LOG_DEBUG, "inet_ntop error: %s", strerror(e));

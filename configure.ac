@@ -85,6 +85,7 @@ LIBOPTS_CHECK([libopts])
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
+	doc/Makefile
 	gl/Makefile
 ])
 AC_OUTPUT

@@ -117,7 +117,7 @@ void __attribute__ ((format(printf, 4, 5)))
 	if (ip) {
 		syslog(priority, "%s %s", ip, buf);
 	} else {
-		syslog(priority, "[unknown] %s", buf);
+		syslog(priority, "[main] %s", buf);
 	}
 	
 	return;

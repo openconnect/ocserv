@@ -46,6 +46,7 @@
 
 int syslog_open = 0;
 static unsigned int terminate = 0;
+static unsigned int reload_conf = 0;
 static unsigned int need_maintainance = 0;
 static unsigned int need_children_cleanup = 0;
 
@@ -380,6 +381,11 @@ static void handle_term(int signo)
 	terminate = 1;
 }
 
+static void handle_reload(int signo)
+{
+	reload_conf = 1;
+}
+
 
 #define RECORD_PAYLOAD_POS 13
 #define HANDSHAKE_SESSION_ID_POS 46
@@ -491,7 +497,7 @@ int main(int argc, char** argv)
 	signal(SIGINT, handle_term);
 	signal(SIGTERM, handle_term);
 	signal(SIGPIPE, SIG_IGN);
-	signal(SIGHUP, SIG_IGN);
+	signal(SIGHUP, handle_reload);
 	signal(SIGCHLD, handle_children);
 	signal(SIGALRM, handle_alarm);
 
@@ -547,6 +553,13 @@ int main(int argc, char** argv)
 	syslog_open = 1;
 
 	for (;;) {
+		if (reload_conf != 0) {
+			mslog(&s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
+			reload_cfg_file(s.config);
+			tls_global_reinit(&s);
+			reload_conf = 0;
+		}
+
 		if (terminate != 0) {
 			mslog(&s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
 			kill_children(&s);

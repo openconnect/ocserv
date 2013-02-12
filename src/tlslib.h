@@ -19,6 +19,7 @@ int tls_uncork(gnutls_session_t session);
 
 void tls_global_init(struct main_server_st* s);
 int tls_global_init_client(struct worker_st* ws);
+void tls_global_reinit(struct main_server_st* s);
 
 ssize_t tls_send_file(gnutls_session_t session, const char *file);
 

@@ -1,3 +1,14 @@
+
+=== About ===
+
+This program is openconnect VPN server (ocserv), a server compatible with the
+openconnect VPN client [0]. It is believed to be compatible with the protocol
+used by CISCO's AnyConnect SSL VPN. 
+
+[0]. http://www.infradead.org/openconnect/
+
+=== Build instructions ===
+
 To build from the git repository use:
 
 $ autoreconf -fvi

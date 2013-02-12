@@ -322,6 +322,7 @@ void vpn_server(struct worker_st* ws)
 
 	signal(SIGTERM, handle_term);
 	signal(SIGINT, handle_term);
+	signal(SIGHUP, SIG_IGN);
 	signal(SIGALRM, handle_alarm);
 
 	if (ws->config->auth_timeout)

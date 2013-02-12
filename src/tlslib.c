@@ -301,6 +301,74 @@ const char* perr;
 	return;
 }
 
+/* reload key files etc. */
+void tls_global_reinit(main_server_st* s)
+{
+int ret;
+const char* perr;
+
+	gnutls_certificate_free_credentials(s->creds.xcred);
+
+	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
+	GNUTLS_FATAL_ERR(ret);
+	
+	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
+		ret =
+		    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert,
+						 s->config->key,
+						 GNUTLS_X509_FMT_PEM);
+		if (ret < 0) {
+			mslog(s, NULL, LOG_ERR, "Error setting the certificate (%s) or key (%s) files: %s\n",
+				s->config->cert, s->config->key, gnutls_strerror(ret));
+			exit(1);
+		}
+	} else {
+#ifdef HAVE_PKCS11
+		mslog(s, NULL, LOG_ERR, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
+		exit(1);
+#endif	
+	}
+
+	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
+		if (s->config->ca != NULL) {
+			ret =
+			    gnutls_certificate_set_x509_trust_file(s->creds.xcred,
+								   s->config->ca,
+								   GNUTLS_X509_FMT_PEM);
+			if (ret < 0) {
+				mslog(s, NULL, LOG_ERR, "Error setting the CA (%s) file.\n",
+					s->config->ca);
+				exit(1);
+			}
+
+			mslog(s, NULL, LOG_ERR, "Processed %d CA certificate(s).\n", ret);
+		}
+
+		if (s->config->crl != NULL) {
+			ret =
+			    gnutls_certificate_set_x509_crl_file(s->creds.xcred,
+								 s->config->crl,
+								 GNUTLS_X509_FMT_PEM);
+			if (ret < 0) {
+				mslog(s, NULL, LOG_ERR, "Error setting the CRL (%s) file.\n",
+					s->config->crl);
+				exit(1);
+			}
+		}
+
+		gnutls_certificate_set_verify_function(s->creds.xcred,
+						       verify_certificate_cb);
+	}
+
+	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
+	if (ret == GNUTLS_E_PARSING_ERROR)
+		mslog(s, NULL, LOG_ERR, "Error in TLS priority string: %s\n", perr);
+	GNUTLS_FATAL_ERR(ret);
+	
+	
+	return;
+}
+
 int tls_global_init_client(worker_st* ws)
 {
 int ret;

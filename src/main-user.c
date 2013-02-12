@@ -198,15 +198,15 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 	if (proc->lease && proc->lease->name)
 		snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
 	entry.ut_pid = proc->pid;
-	gettime(&tv);
-	entry.ut_tv.tv_sec = tv.tv_sec;
-	entry.ut_tv.tv_usec = tv.tv_nsec / 1000;
 
 	setutxent();
 	pututxline(&entry);
 	endutxent();
 
 #if defined(WTMPX_FILE)
+	gettime(&tv);
+	entry.ut_tv.tv_sec = tv.tv_sec;
+	entry.ut_tv.tv_usec = tv.tv_nsec / 1000;
 	updwtmpx(WTMPX_FILE, &entry);
 #endif   
 	return;

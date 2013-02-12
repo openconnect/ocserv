@@ -116,6 +116,10 @@ struct stored_cookie_st sc;
 	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
 	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	proc->session_id_size = sizeof(proc->session_id);
+	
+	proc->username[sizeof(proc->username)-1] = 0;
+	proc->groupname[sizeof(proc->groupname)-1] = 0;
+	proc->hostname[sizeof(proc->hostname)-1] = 0;
 
 	if (req->tls_auth_ok != 0) {
 		if (strcmp(proc->username, req->cert_user) != 0) {
@@ -206,10 +210,14 @@ unsigned username_set = 0;
 			}
 		}
 	}
-	
+
 	if (ret == 0) { /* open tun */
 		if (req->hostname[0] != 0)
 			memcpy(proc->hostname, req->hostname, MAX_HOSTNAME_SIZE);
+
+		proc->username[sizeof(proc->username)-1] = 0;
+		proc->groupname[sizeof(proc->groupname)-1] = 0;
+		proc->hostname[sizeof(proc->hostname)-1] = 0;
 
 		ret = open_tun(s, lease);
 		if (ret < 0)

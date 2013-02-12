@@ -46,60 +46,19 @@
 #include <ccan/list/list.h>
 
 static
-void call_disconnect_script(main_server_st *s, struct proc_st* proc)
-{
-pid_t pid;
-int ret;
-
-	if (s->config->disconnect_script == NULL)
-		return;
-
-	pid = fork();
-	if (pid == 0) {
-		char real[64];
-		char local[64];
-		char remote[64];
-
-		if (proc->lease == NULL)
-			exit(1);
-		
-		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
-			exit(1);
-
-		if (proc->lease->lip4_len > 0) {
-			if (getnameinfo((void*)&proc->lease->lip4, proc->lease->lip4_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
-				exit(1);
-		} else {
-			if (getnameinfo((void*)&proc->lease->lip6, proc->lease->lip6_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
-				exit(1);
-		}
-
-		if (proc->lease->rip4_len > 0) {
-			if (getnameinfo((void*)&proc->lease->rip4, proc->lease->rip4_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
-				exit(1);
-		} else {
-			if (getnameinfo((void*)&proc->lease->rip6, proc->lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
-				exit(1);
-		}
-		
-		ret = execlp(s->config->disconnect_script, s->config->disconnect_script,
-			proc->username, proc->hostname, proc->lease->name, real, local, remote, NULL);
-		if (ret == -1)
-			exit(1);
-			
-		exit(0);
-	} else if (pid == -1) {
-		mslog(s, proc, LOG_ERR, "Could not fork()");
-	}
-}
-
-static
-int call_connect_script(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
+int call_script(main_server_st *s, struct proc_st* proc, struct lease_st* lease, unsigned up)
 {
 pid_t pid;
 int ret, status;
+unsigned estatus;
+const char* script;
 
-	if (s->config->connect_script == NULL)
+	if (up != 0)
+		script = s->config->connect_script;
+	else
+		script = s->config->disconnect_script;
+
+	if (script == NULL)
 		return 0;
 
 	pid = fork();
@@ -110,7 +69,6 @@ int ret, status;
 		
 		/* Note we don't use proc->lease and accept lease directly
 		 * because we are called before proc population is completed */
-		
 		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
 			exit(1);
 
@@ -130,21 +88,38 @@ int ret, status;
 				exit(1);
 		}
 
-		ret = execlp(s->config->connect_script, s->config->connect_script,
-			proc->username, proc->hostname, lease->name, real, local, remote, NULL);
-		if (ret == -1)
+		setenv("USERNAME", proc->username, 1);
+		setenv("GROUPNAME", proc->groupname, 1);
+		setenv("HOSTNAME", proc->hostname, 1);
+		setenv("DEVICE", lease->name, 1);
+		setenv("IP_REAL", real, 1);
+		setenv("IP_LOCAL", local, 1);
+		setenv("IP_REMOTE", remote, 1);
+
+		mslog(s, proc, LOG_DEBUG, "executing script %s", script);
+		ret = execl(script, script, NULL);
+		if (ret == -1) {
+			mslog(s, proc, LOG_ERR, "Could execute script %s", script);
 			exit(1);
+		}
 			
-		exit(0);
+		exit(77);
 	} else if (pid == -1) {
 		mslog(s, proc, LOG_ERR, "Could not fork()");
 		return -1;
 	}
 	
 	ret = waitpid(pid, &status, 0);
-	if (WEXITSTATUS(status) == 0)
+	estatus = WEXITSTATUS(status);
+	mslog(s, proc, LOG_DEBUG, "%s-script exit status: %u", (up!=0)?"connect":"disconnect", estatus);
+
+	if (estatus == 0) {
 		return 0;
-	return -1;
+	} else {
+		if (WIFSIGNALED(status))
+			mslog(s, proc, LOG_DEBUG, "%s-script exit due to signal", (up!=0)?"connect":"disconnect");
+		return -1;
+	}
 }
 
 static void
@@ -219,7 +194,7 @@ int ret;
 
 	add_utmp_entry(s, proc, lease);
 
-	ret = call_connect_script(s, proc, lease);
+	ret = call_script(s, proc, lease, 1);
 	if (ret < 0)
 		return ret;
 
@@ -229,6 +204,6 @@ int ret;
 void user_disconnected(main_server_st *s, struct proc_st* proc)
 {
 	remove_utmp_entry(s, proc);
-	call_disconnect_script(s, proc);
+	call_script(s, proc, proc->lease, 0);
 }
 

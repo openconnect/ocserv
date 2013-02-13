@@ -475,7 +475,38 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME (config.cookie_validity + 300)
+#define MAINTAINANCE_TIME(s) ((s)->config->cookie_validity + 300)
+
+static void check_other_work(main_server_st *s)
+{
+	if (reload_conf != 0) {
+		mslog(s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
+		reload_cfg_file(s->config);
+		tls_global_reinit(s);
+		reload_conf = 0;
+	}
+
+	if (terminate != 0) {
+		mslog(s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
+		kill_children(s);
+		closelog();
+		while (waitpid(-1, NULL, 0) > 0);
+		exit(0);
+	}
+
+	/* Check if we need to expire any cookies */
+	if (need_maintainance != 0) {
+		need_maintainance = 0;
+		mslog(s, NULL, LOG_INFO, "Performing maintainance");
+		expire_tls_sessions(s);
+		expire_cookies(s);
+		alarm(MAINTAINANCE_TIME(s));
+	}
+		
+	if (need_children_cleanup != 0) {
+		cleanup_children(s);
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -547,7 +578,7 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 
-	alarm(MAINTAINANCE_TIME);
+	alarm(MAINTAINANCE_TIME(&s));
 	flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR
 	if (config.debug != 0)
@@ -558,21 +589,9 @@ int main(int argc, char** argv)
 	syslog_open = 1;
 
 	for (;;) {
-		if (reload_conf != 0) {
-			mslog(&s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
-			reload_cfg_file(s.config);
-			tls_global_reinit(&s);
-			reload_conf = 0;
-		}
+		check_other_work(&s);
 
-		if (terminate != 0) {
-			mslog(&s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
-			kill_children(&s);
-			closelog();
-			while (waitpid(-1, NULL, 0) > 0);
-			exit(0);
-		}
-
+		/* initialize select */
 		FD_ZERO(&rd);
 
 		list_for_each(&llist.head, ltmp, list) {
@@ -597,7 +616,7 @@ int main(int argc, char** argv)
 		}
 
 		tv.tv_usec = 0;
-		tv.tv_sec = 10;
+		tv.tv_sec = 30;
 		ret = select(n + 1, &rd, NULL, NULL, &tv);
 		if (ret == -1 && errno == EINTR)
 			continue;
@@ -709,20 +728,6 @@ fork_failed:
 					active_clients--;
 				}
 			}
-		}
-
-		/* Check if we need to expire any cookies */
-		if (need_maintainance != 0) {
-			need_maintainance = 0;
-			mslog(&s, NULL, LOG_INFO, "Performing maintainance");
-			expire_tls_sessions(&s);
-			expire_cookies(&s);
-
-			alarm(MAINTAINANCE_TIME);
-		}
-		
-		if (need_children_cleanup != 0) {
-			cleanup_children(&s);
 		}
 
 	}

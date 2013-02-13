@@ -305,13 +305,35 @@ int open_tun(main_server_st* s, struct lease_st** l)
 	struct lease_st *last6;
 	unsigned current = s->tun->total;
 	
-	if (list_empty(&s->tun->head)) {
+	last4 = last6 = NULL;
+		
+	/* try to re-use an address */
+        list_for_each(&s->tun->head, tmp, list) {
+		if (tmp->in_use == 0) {
+			lease = tmp;
+			mslog(s, NULL, LOG_INFO, "reusing tun device %s\n", lease->name);
+			break;
+		}
+	}
+		
+	/* nothing to re-use */
+	if (lease == NULL) {
 		lease = calloc(1, sizeof(*lease));
 		if (lease == NULL)
 		        return -1;
 
-		/* find the first IP address */
-		ret = get_avail_network_addresses(s->config, NULL, NULL, lease);
+                list_for_each_rev(&s->tun->head, tmp, list) {
+			if (last4 == NULL && tmp->rip4_len > 0)
+				last4 = tmp;
+
+			if (last6 == NULL && tmp->rip6_len > 0)
+				last6 = tmp;
+			
+			if (last4 && last6)
+				break;
+		}
+
+		ret = get_avail_network_addresses(s->config, last4, last6, lease);
 		if (ret < 0) {
 			free(lease);
 			return -1;
@@ -319,50 +341,12 @@ int open_tun(main_server_st* s, struct lease_st** l)
 
 		/* Add into the list */
 		list_add_tail( &s->tun->head, &lease->list);
+		snprintf(lease->name, sizeof(lease->name), "%s%u", s->config->network.name, current);
 		s->tun->total++;
-	} else {
-		last4 = last6 = NULL;
-		
-		/* try to re-use an address */
-                list_for_each(&s->tun->head, tmp, list) {
-			if (tmp->in_use == 0) {
-				lease = tmp;
-				break;
-			}
-		}
-		
-		if (lease == NULL) { /* nothing to re-use */
-			lease = calloc(1, sizeof(*lease));
-			if (lease == NULL)
-			        return -1;
-
-	                list_for_each_rev(&s->tun->head, tmp, list) {
-				if (last4 == NULL && tmp->rip4_len > 0)
-					last4 = tmp;
-
-
-				if (last6 == NULL && tmp->rip6_len > 0)
-					last6 = tmp;
-			
-				if (last4 && last6)
-					break;
-			}
-
-			ret = get_avail_network_addresses(s->config, last4, last6, lease);
-			if (ret < 0) {
-				free(lease);
-				return -1;
-			}
-
-			/* Add into the list */
-			list_add_tail( &s->tun->head, &lease->list);
-			s->tun->total++;
-		}
 	}
-	
+
 	/* No need to free the lease after this point.
 	 */
-	
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
 		int e = errno;
@@ -376,12 +360,19 @@ int open_tun(main_server_st* s, struct lease_st** l)
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 
-	snprintf(lease->name, sizeof(lease->name), "%s%u", s->config->network.name, current);
-        memcpy(ifr.ifr_name, lease->name, sizeof(ifr.ifr_name));
+        memcpy(ifr.ifr_name, lease->name, IFNAMSIZ);
 
 	if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "%s: TUNSETIFF: %s\n", lease->name, strerror(e));
+		goto fail;
+	}
+	memcpy(lease->name, ifr.ifr_name, IFNAMSIZ);
+	mslog(s, NULL, LOG_INFO, "assigning tun device %s\n", lease->name);
+
+	if (ioctl(tunfd, TUNSETPERSIST, (void *)0) < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: TUNSETPERSIST: %s\n", lease->name, strerror(e));
 		goto fail;
 	}
 

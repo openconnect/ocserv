@@ -283,6 +283,9 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			}
 
 lease_cleanup:
+			/* we close the lease tun fd both on success and failure.
+			 * The parent doesn't need to know the tunfd.
+			 */
 			if (lease) {
 				if (lease->fd >= 0)
 					close(lease->fd);

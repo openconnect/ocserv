@@ -402,14 +402,14 @@ int ret;
 
 void tls_cork(gnutls_session_t session)
 {
-#if GNUTLS_VERSION_NUMBER > 0x030107
+#if GNUTLS_VERSION_NUMBER > 0x030109
 	gnutls_record_cork(session);
 #endif
 }
 
 int tls_uncork(gnutls_session_t session)
 {
-#if GNUTLS_VERSION_NUMBER > 0x030107
+#if GNUTLS_VERSION_NUMBER > 0x030109
 	return gnutls_record_uncork(session, GNUTLS_RECORD_WAIT);
 #else
 	return 0;

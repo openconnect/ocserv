@@ -37,7 +37,7 @@
 #include <ccan/htable/htable.h>
 #include <ccan/hash/hash.h>
 
-#define MAX_COOKIES(n) ((n>0&&n>2048)?(2*n):4096)
+#define MAX_COOKIES(n) ((n>0&&n>64)?(2*n):128)
 
 /* receives allocated data and stores them.
  */

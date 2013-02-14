@@ -47,7 +47,7 @@ int store_cookie_hash(main_server_st *s, struct stored_cookie_st* sc)
 size_t key;
 
 	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
-		mslog(s, NULL, LOG_INFO, "Maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
+		mslog(s, NULL, LOG_INFO, "maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
 		need_maintainance = 1;
 		return -1;
 	}
@@ -115,6 +115,7 @@ unsigned int todelete;
         /* if the hash is still full then delete the few first cookies */
 	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
 		todelete = MAX_COOKIES(s->config->max_clients)/5;
+		mslog(s, NULL, LOG_INFO, "too many cookies present; expiring the first %u", todelete);
 		sc = htable_first(&s->cookie_db->ht, &iter);
 		while(sc != NULL) {
 			if (todelete >= 0) {

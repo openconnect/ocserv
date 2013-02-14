@@ -47,7 +47,7 @@
 int syslog_open = 0;
 static unsigned int terminate = 0;
 static unsigned int reload_conf = 0;
-static unsigned int need_maintainance = 0;
+unsigned int need_maintainance = 0;
 static unsigned int need_children_cleanup = 0;
 
 static 

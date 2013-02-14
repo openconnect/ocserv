@@ -41,12 +41,14 @@
 
 /* receives allocated data and stores them.
  */
+static
 int store_cookie_hash(main_server_st *s, struct stored_cookie_st* sc)
 {
 size_t key;
 
 	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
 		syslog(LOG_INFO, "Maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
+		need_maintainance = 1;
 		return -1;
 	}
 
@@ -58,6 +60,7 @@ size_t key;
 	return 0;
 }
 
+static
 int retrieve_cookie_hash(main_server_st *s, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* rsc)
 {
@@ -85,23 +88,47 @@ struct stored_cookie_st * sc;
 	return -1;
 }
 
+static void delete_entry(hash_db_st *cookie_db, struct htable_iter *iter,
+	struct stored_cookie_st *sc)
+{
+       	htable_delval(&cookie_db->ht, iter);
+       	free(sc);
+       	cookie_db->entries--;
+}
+
+static
 void expire_cookies_hash(main_server_st* s)
 {
 struct stored_cookie_st *sc;
 struct htable_iter iter;
 time_t now = time(0);
+unsigned int todelete;
 
 	sc = htable_first(&s->cookie_db->ht, &iter);
 	while(sc != NULL) {
 		if (sc->expiration <= now) {
-	          	htable_delval(&s->cookie_db->ht, &iter);
-	          	free(sc);
-			s->cookie_db->entries--;
+			delete_entry(s->cookie_db, &iter, sc);
 		}
           	sc = htable_next(&s->cookie_db->ht, &iter);
         }
+
+        /* if the hash is still full then delete the few first cookies */
+	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
+		todelete = MAX_COOKIES(s->config->max_clients)/5;
+		sc = htable_first(&s->cookie_db->ht, &iter);
+		while(sc != NULL) {
+			if (todelete >= 0) {
+				delete_entry(s->cookie_db, &iter, sc);
+				todelete--;
+			} else {
+				break;
+			}
+        	  	sc = htable_next(&s->cookie_db->ht, &iter);
+	        }
+	}
 }
 
+static
 void erase_cookies_hash(main_server_st* s)
 {
 struct stored_cookie_st *sc;
@@ -127,6 +154,7 @@ const struct stored_cookie_st *e = _e;
 	return hash_stable_8(e->cookie, COOKIE_SIZE, 0);
 }
 
+static
 int cookie_db_init_hash(main_server_st * s)
 {
 hash_db_st * db;
@@ -143,6 +171,7 @@ hash_db_st * db;
 	return 0;
 }
 
+static
 void cookie_db_deinit_hash(main_server_st* s)
 {
 struct stored_cookie_st* cache;

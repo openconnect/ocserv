@@ -13,6 +13,9 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
 void write_pid_file(void);
 
+/* set to 1 to start cleaning up cookies, sessions etc. */
+extern unsigned int need_maintainance;
+
 struct listener_st {
 	struct list_node list;
 	int fd;

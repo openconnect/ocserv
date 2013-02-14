@@ -142,17 +142,19 @@ int handle_resume_store_req(main_server_st* s, struct proc_st * proc,
 {
 tls_cache_st* cache;
 size_t key;
+unsigned int max;
 
 	if (req->session_id_size > GNUTLS_MAX_SESSION_ID)
 		return -1;
 	if (req->session_data_size > MAX_SESSION_DATA_SIZE)
 		return -1;
 
-	if ((s->config->max_clients != 0 && 
-		s->tls_db->entries >= MAX(s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS(s->tls_db))) ||
-		(s->config->max_clients == 0 && 
-		s->tls_db->entries >= DEFAULT_MAX_CACHED_TLS_SESSIONS(s->tls_db)))
+	max = MAX(2*s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
+	if (s->tls_db->entries >= max) {
+		mslog(s, NULL, LOG_INFO, "Maximum number of stored TLS sessions reached (%u)", max);
+		need_maintainance = 1;
 		return -1;
+	}
 
 	key = hash_stable_8(req->session_id, req->session_id_size, 0);
 	

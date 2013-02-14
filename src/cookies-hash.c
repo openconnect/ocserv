@@ -47,7 +47,7 @@ int store_cookie_hash(main_server_st *s, struct stored_cookie_st* sc)
 size_t key;
 
 	if (s->cookie_db->entries >= MAX_COOKIES(s->config->max_clients)) {
-		syslog(LOG_INFO, "Maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
+		mslog(s, NULL, LOG_INFO, "Maximum number of cookies was reached (%u)", MAX_COOKIES(s->config->max_clients));
 		need_maintainance = 1;
 		return -1;
 	}

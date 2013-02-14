@@ -2,9 +2,6 @@
 
 * Fix SIGHUP handling on the main server.
 
-* Keep the TLS key and certificates into the privileged process and use IPC
-  for operations (this will make the privileged process a bottleneck).
-
 * Add path MTU discovery.
 
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
@@ -12,14 +9,24 @@
   seem to be like a solution, but then we could not use the session ID to
   forward the UDP connection to the proper worker).
 
+* Try adding salsa20-12 and UMAC as encryption algorithms for DTLS to reduce 
+  CPU load.
+
+* Keep the TLS key and certificates into the privileged process and use IPC
+  for operations. This currently cannot be done, because the main process is
+  the one that spawns the workers and there is no sane way to make the key
+  (or any temporal value depending on it) disappear from the main process
+  memory. Moreover, such a move will make the privileged process a bottleneck
+  on a multi-core system. If that functionality is desirable, it can be
+  obtained using a software security module (e.g. pkcs11 softoken), an HSM
+  or TPM.
+
 * Certificate authentication to the main process. Possibly that is just
   wishful thinking. To verify the TLS client certificate verify signature one
   needs instead of the signature, the contents of all the handshake messages, 
   and knowledge of the negotiated TLS version, in addition to being able to
   select the server hello random. That could be done sanely only if gnutls 
   provided facilities to set the server hello random, and override the client
-  signature verification. Even in that case the handshake data need to be
-  transferred to the main thread.
+  signature verification at an early stage before data are hashed (to verify
+  that the set random value was present in the handshake).
 
-* Try adding salsa20-12 and UMAC as encryption algorithms for DTLS to reduce 
-  CPU load.

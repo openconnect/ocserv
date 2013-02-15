@@ -21,7 +21,7 @@ copyright = {
     date  = "2013";
     owner = "Nikos Mavrogiannopoulos";
     author = "Nikos Mavrogiannopoulos";
-    eaddr  = "nmav@gnutls.org";
+    eaddr  = "openconnect-devel@lists.infradead.org";
     type  = gplv2;
 };
 

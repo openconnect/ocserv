@@ -38,6 +38,9 @@
 
 #ifdef HAVE_GDBM
 
+/* Note that it receives allocated data and stores them. Do not
+ * free the sc.
+ */
 static
 int cookie_gdbm_store(main_server_st *s, struct stored_cookie_st* sc)
 {
@@ -71,6 +74,7 @@ finish:
 	return ret;
 }
 
+/* retrieves and deletes the entry */
 static
 int cookie_gdbm_retrieve(main_server_st *s, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc)
@@ -95,11 +99,9 @@ int ret;
 		goto finish;
 	}
 	memcpy(sc, data.dptr, data.dsize);
+	gdbm_delete(dbf, key);
 
-	if (sc->expiration >= time(0))
-		ret = 0;
-	else
-		ret = -1;
+	ret = 0;
 
 finish:
 	gdbm_close(dbf);

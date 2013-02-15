@@ -103,18 +103,29 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease)
 {
 int ret;
-struct stored_cookie_st sc;
+struct stored_cookie_st *sc;
+time_t now = time(0);
 
-	ret = retrieve_cookie(s, req->cookie, sizeof(req->cookie), &sc);
-	if (ret < 0) {
+	sc = malloc(sizeof(*sc));
+	if (sc == NULL)
 		return -1;
+
+	ret = retrieve_cookie(s, req->cookie, sizeof(req->cookie), sc);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (sc->expiration < now) {
+		ret = -1;
+		goto cleanup;
 	}
 	
 	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
-	memcpy(proc->username, sc.username, sizeof(proc->username));
-	memcpy(proc->groupname, sc.groupname, sizeof(proc->groupname));
-	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
-	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
+	memcpy(proc->username, sc->username, sizeof(proc->username));
+	memcpy(proc->groupname, sc->groupname, sizeof(proc->groupname));
+	memcpy(proc->hostname, sc->hostname, sizeof(proc->hostname));
+	memcpy(proc->session_id, sc->session_id, sizeof(proc->session_id));
 	proc->session_id_size = sizeof(proc->session_id);
 	
 	proc->username[sizeof(proc->username)-1] = 0;
@@ -124,19 +135,34 @@ struct stored_cookie_st sc;
 	if (req->tls_auth_ok != 0) {
 		if (strcmp(proc->username, req->cert_user) != 0) {
 			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
-			return -1;
+			ret = -1;
+			goto cleanup;
 		}
 		if (strcmp(proc->groupname, req->cert_group) != 0) {
 			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
-			return -1;
+			ret = -1;
+			goto cleanup;
 		}
 	}
 
 	ret = open_tun(s, lease);
+	if (ret < 0) {
+		ret = -1; /* sorry */
+		goto cleanup;
+	}
+	
+	/* ok auth ok. Renew the cookie. */
+	sc->expiration = time(0) + s->config->cookie_validity;
+	ret = store_cookie(s, sc);
 	if (ret < 0)
-		return -1; /* sorry */
+		goto cleanup;
+
+	/* sc is freed in store_cookie() */
 	
 	return 0;
+cleanup:
+	free(sc);
+	return ret;
 }
 
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc)

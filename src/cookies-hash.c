@@ -39,7 +39,8 @@
 
 #define MAX_COOKIES(n) ((n>0&&n>64)?(2*n):128)
 
-/* receives allocated data and stores them.
+/* Note that it receives allocated data and stores them. Do not
+ * free the sc.
  */
 static
 int store_cookie_hash(main_server_st *s, struct stored_cookie_st* sc)
@@ -60,6 +61,7 @@ size_t key;
 	return 0;
 }
 
+/* retrieves and deletes the entry */
 static
 int retrieve_cookie_hash(main_server_st *s, const void* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* rsc)
@@ -75,10 +77,8 @@ struct stored_cookie_st * sc;
 		if (cookie_size == COOKIE_SIZE &&
 	          memcmp (cookie, sc->cookie, COOKIE_SIZE) == 0) {
 
-			if (sc->expiration < time(0))
-				return -1;
-			
 			memcpy(rsc, sc, sizeof(*sc));
+			htable_delval(&s->cookie_db->ht, &iter);
 	          	return 0;
 		}
 

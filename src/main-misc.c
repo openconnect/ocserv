@@ -155,7 +155,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	switch(cmd) {
 		case CMD_TUN_MTU:
 			if (cmd_data_len != sizeof(cmd_data.tmtu)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
 				return -2;
 			}
 			
@@ -164,24 +164,24 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 		case RESUME_STORE_REQ:
 			if (cmd_data_len <= sizeof(cmd_data.sresume)-MAX_SESSION_DATA_SIZE) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
 				return -2;
 			}
 			ret = handle_resume_store_req(s, proc, &cmd_data.sresume);
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "could not store resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_DEBUG, "could not store resumption data.");
 			}
 			
 			break;
 			
 		case RESUME_DELETE_REQ:
 			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
 				return -2;
 			}
 			ret = handle_resume_delete_req(s, proc, &cmd_data.fresume);
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "could not delete resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_DEBUG, "could not delete resumption data.");
 			}
 
 			break;
@@ -189,19 +189,19 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			struct cmd_resume_fetch_reply_st reply;
 
 			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
 				return -2;
 			}
 			ret = handle_resume_fetch_req(s, proc, &cmd_data.fresume, &reply);
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "could not fetch resumption data (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_DEBUG, "could not fetch resumption data.");
 				ret = send_resume_fetch_reply(s, proc, REP_RESUME_FAILED, NULL);
 			} else
 				ret = send_resume_fetch_reply(s, proc, REP_RESUME_OK, &reply);
 			}
 			
 			if (ret < 0) {
-				mslog(s, proc, LOG_ERR, "could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+				mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned) cmd);
 				return -2;
 			}
 			
@@ -213,14 +213,14 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 			if (cmd == AUTH_REQ) {
 				if (cmd_data_len != sizeof(cmd_data.auth)) {
-					mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
 					return -2;
 				}
 
 				ret = handle_auth_req(s, proc, &cmd_data.auth, &lease);
 			} else {
 				if (cmd_data_len != sizeof(cmd_data.cauth)) {
-					mslog(s, proc, LOG_ERR, "error in received message (%u) length (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
 					return -2;
 				}
 
@@ -263,7 +263,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				
 				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
 				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned)cmd);
 					ret = -2;
 					goto lease_cleanup;
 				}
@@ -295,7 +295,7 @@ lease_cleanup:
 
 			break;
 		default:
-			mslog(s, proc, LOG_ERR, "unknown CMD 0x%x (pid: %d, peer: %s).", (unsigned)cmd, proc->pid, peer_ip);
+			mslog(s, proc, LOG_ERR, "unknown CMD 0x%x.", (unsigned)cmd);
 			return -2;
 	}
 	

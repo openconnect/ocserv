@@ -46,7 +46,7 @@ ssize_t tls_send(gnutls_session_t session, const void *data,
 
 	while(left > 0) {
 		ret = gnutls_record_send(session, p, data_size);
-		if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
+		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
 			return ret;
 		}
 	

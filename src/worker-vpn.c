@@ -69,6 +69,7 @@ static void handle_alarm(int signo)
 static void handle_term(int signo)
 {
 	terminate = 1;
+	alarm(2); /* force exit by SIGALRM */
 }
 
 static int connect_handler(worker_st *ws);
@@ -457,48 +458,53 @@ finish:
  * Returns -1 on failure.
  */
 static
-int mtu_not_ok(worker_st* ws, unsigned *mtu)
+int mtu_not_ok(worker_st* ws)
 {
-	ws->last_bad_mtu = *mtu;
+	ws->last_bad_mtu = ws->dtls_mtu;
 
+	if (ws->last_good_mtu >= ws->dtls_mtu) {
+		ws->last_good_mtu = (ws->dtls_mtu)/2;
 	
-	ws->last_good_mtu = (*mtu)/2;
-	
-	if (ws->last_good_mtu < 128)
-		return -1;
+		if (ws->last_good_mtu < 128) {
+			oclog(ws, LOG_INFO, "could not calculate a valid MTU. Disabling DTLS.");
+			ws->udp_state = UP_DISABLED;
+			return -1;
+		}
+	}
 
-	*mtu = ws->last_good_mtu;
-	gnutls_dtls_set_data_mtu (ws->dtls_session, *mtu);
+	ws->dtls_mtu = ws->last_good_mtu;
+	gnutls_dtls_set_data_mtu (ws->dtls_session, ws->dtls_mtu);
 
-	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, *mtu);
+	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, ws->dtls_mtu);
 
-	send_tun_mtu(ws, *mtu);
+	send_tun_mtu(ws, ws->dtls_mtu-1);
 
 	return 0;
 }
 
-static void mtu_set(worker_st *ws, unsigned max_mtu)
+static void mtu_discovery_init(worker_st *ws)
 {
-	if (ws->last_good_mtu == 0)
-		ws->last_good_mtu = max_mtu;
-	if (ws->last_bad_mtu == 0)
-		ws->last_bad_mtu = max_mtu;
+	ws->last_good_mtu = ws->dtls_mtu;
+	ws->last_bad_mtu = ws->dtls_mtu;
 }
 
 static
-void mtu_ok(worker_st* ws, unsigned sent, unsigned *mtu)
+void mtu_ok(worker_st* ws)
 {
-int c;
+unsigned int c;
 
-	if (sent < *mtu || ws->last_bad_mtu == (*mtu)+1)
+	if (ws->last_bad_mtu == (ws->dtls_mtu)+1 ||
+		ws->last_bad_mtu == (ws->dtls_mtu))
 		return;
-		
+	
+	ws->last_good_mtu = ws->dtls_mtu;
+	c = (ws->dtls_mtu + ws->last_bad_mtu)/2;
 
-	c = (ws->last_good_mtu + ws->last_bad_mtu)/2;
-
-	*mtu = c;
+	ws->dtls_mtu = c;
 	gnutls_dtls_set_data_mtu (ws->dtls_session, c);
-	send_tun_mtu(ws, c);
+	send_tun_mtu(ws, c-1);
+
+	oclog(ws, LOG_DEBUG, "trying MTU %u", c);
 
 	return;
 }
@@ -511,13 +517,21 @@ struct req_data_st *req = ws->parser->data;
 fd_set rfds;
 int l, e, max, ret;
 struct vpn_st vinfo;
-uint8_t buffer[4*1024];
-unsigned int buffer_size, tls_retry;
+unsigned tls_retry;
 char *p;
 struct timeval tv;
 unsigned tls_pending, dtls_pending = 0, i;
-time_t udp_recv_time = 0;
-unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
+time_t udp_recv_time = 0, now;
+unsigned mtu_overhead, tls_mtu = 0;
+
+	ws->buffer_size = 16*1024;
+	ws->buffer = malloc(ws->buffer_size);
+	if (ws->buffer == NULL) {
+		oclog(ws, LOG_INFO, "memory error");
+		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_close(ws->session);
+		exit_worker(ws);
+	}
 
 	if (req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "connect request without authentication");
@@ -556,8 +570,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		return -1;
 	}
 
-	buffer_size = sizeof(buffer);
-	ret = get_rt_vpn_info(ws, &vinfo, (char*)buffer, buffer_size);
+	ret = get_rt_vpn_info(ws, &vinfo, (char*)ws->buffer, ws->buffer_size);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "no networks are configured; rejecting client");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");
@@ -626,18 +639,18 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		tls_mtu = MIN(tls_mtu, req->cstp_mtu);
 		oclog(ws, LOG_DEBUG, "peer CSTP MTU is %u", req->cstp_mtu);
 	}
-	tls_mtu = MIN(sizeof(buffer)-8, tls_mtu);
+	tls_mtu = MIN(ws->buffer_size-8, tls_mtu);
 
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", tls_mtu);
 	SEND_ERR(ret);
 
 	if (ws->udp_state != UP_DISABLED) {
-		p = (char*)buffer;
+		p = (char*)ws->buffer;
 		for (i=0;i<sizeof(ws->session_id);i++) {
 			sprintf(p, "%.2x", (unsigned int)ws->session_id[i]);
 			p+=2;
 		}
-		ret = tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", buffer);
+		ret = tls_printf(ws->session, "X-DTLS-Session-ID: %s\r\n", ws->buffer);
 		SEND_ERR(ret);
 
 		ret = tls_printf(ws->session, "X-DTLS-DPD: %u\r\n", ws->config->dpd);
@@ -657,24 +670,25 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
 		if (ws->proto == AF_INET)
-			mtu_overhead = 20+1;
+			mtu_overhead = 20+1; /* ip */
 		else
-			mtu_overhead = 40+1;
-		dtls_mtu = vinfo.mtu - mtu_overhead;
+			mtu_overhead = 40+1; /* ipv6 */
+		mtu_overhead += 8; /* udp */
+		ws->dtls_mtu = vinfo.mtu - mtu_overhead;
 
 		if (req->dtls_mtu > 0) {
-			dtls_mtu = MIN(req->dtls_mtu, dtls_mtu);
+			ws->dtls_mtu = MIN(req->dtls_mtu, ws->dtls_mtu);
 			oclog(ws, LOG_DEBUG, "peer DTLS MTU is %u", req->dtls_mtu);
 		}
 
-		dtls_mtu = MIN(sizeof(buffer)-1, dtls_mtu);
-		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
+		ws->dtls_mtu = MIN(ws->buffer_size-1, ws->dtls_mtu);
+		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->dtls_mtu);
 	}
 
-	if (dtls_mtu == 0)
+	if (ws->dtls_mtu == 0)
 		send_tun_mtu(ws, tls_mtu);
 	else
-		send_tun_mtu(ws, MIN(dtls_mtu, tls_mtu));
+		send_tun_mtu(ws, ws->dtls_mtu-1);
 
 	ret = tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
 	SEND_ERR(ret);
@@ -686,7 +700,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 	SEND_ERR(ret);
 
 	/* start dead peer detection */
-	ws->last_dpd = time(0);
+	ws->last_dpd_tcp = ws->last_dpd_udp = time(0);
 
 	/* main loop  */
 	for(;;) {
@@ -705,25 +719,25 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 
 		if (terminate != 0) {
 			if (ws->udp_state == UP_ACTIVE) {
-				buffer[0] = AC_PKT_TERM_SERVER;
+				ws->buffer[0] = AC_PKT_TERM_SERVER;
 				
 				oclog(ws, LOG_DEBUG, "sending disconnect message in DTLS channel");
 
-				ret = tls_send(ws->dtls_session, buffer, 1);
+				ret = tls_send(ws->dtls_session, ws->buffer, 1);
 				GNUTLS_FATAL_ERR(ret);
 			}
 
-			buffer[0] = 'S';
-			buffer[1] = 'T';
-			buffer[2] = 'F';
-			buffer[3] = 1;
-			buffer[4] = 0;
-			buffer[5] = 0;
-			buffer[6] = AC_PKT_TERM_SERVER;
-			buffer[7] = 0;
+			ws->buffer[0] = 'S';
+			ws->buffer[1] = 'T';
+			ws->buffer[2] = 'F';
+			ws->buffer[3] = 1;
+			ws->buffer[4] = 0;
+			ws->buffer[5] = 0;
+			ws->buffer[6] = AC_PKT_TERM_SERVER;
+			ws->buffer[7] = 0;
 
 			oclog(ws, LOG_DEBUG, "sending disconnect message in TLS channel");
-			ret = tls_send(ws->session, buffer, 8);
+			ret = tls_send(ws->session, ws->buffer, 8);
 			GNUTLS_FATAL_ERR(ret);
 
 			goto exit;
@@ -744,9 +758,14 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			}
 			
 			if (ret == 0) { /* timeout */
+				now = time(0);
 				/* check DPD. Otherwise exit */
-				if (time(0)-ws->last_dpd > 3*ws->config->dpd) {
-					oclog(ws, LOG_ERR, "have not received DPD for long");
+				if (now-ws->last_dpd_udp > 3*ws->config->dpd) {
+					oclog(ws, LOG_ERR, "have not received UDP DPD for long");
+					goto exit;
+				}
+				if (now-ws->last_dpd_tcp > 3*ws->config->dpd) {
+					oclog(ws, LOG_ERR, "have not received TCP DPD for long");
 					goto exit;
 				}
 			}
@@ -755,12 +774,12 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
 				
 			if (ws->udp_state == UP_ACTIVE) {
-				l = dtls_mtu;
+				l = ws->dtls_mtu-1;
 			} else {
 				l = tls_mtu;
 			}
 
-			l = read(ws->tun_fd, buffer + 8, l);
+			l = read(ws->tun_fd, ws->buffer + 8, l);
 			if (l < 0) {
 				e = errno;
 				
@@ -779,43 +798,37 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			tls_retry = 0;
 			oclog(ws, LOG_DEBUG, "sending %d byte(s)\n", l);
 			if (ws->udp_state == UP_ACTIVE) {
-				buffer[7] = AC_PKT_DATA;
+				ws->buffer[7] = AC_PKT_DATA;
 
-				ret = tls_send(ws->dtls_session, buffer + 7, l + 1);
+				ret = tls_send(ws->dtls_session, ws->buffer + 7, l+1);
 				GNUTLS_FATAL_ERR(ret);
 
 				if (ret == GNUTLS_E_LARGE_PACKET) {
-					ret = mtu_not_ok(ws, &dtls_mtu);
-					if (ret < 0) {
-						oclog(ws, LOG_INFO, "could not calculate a valid MTU. Disabling DTLS.");
-						ws->udp_state = UP_DISABLED;
-					}
+					mtu_not_ok(ws);
 
 					oclog(ws, LOG_DEBUG, "retrying (TLS) %d\n", l);
 					tls_retry = 1;
-				} else if (ret > 0) {
-					 mtu_ok(ws, ret, &dtls_mtu);
 				}
 			}
 
 			if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
-				buffer[0] = 'S';
-				buffer[1] = 'T';
-				buffer[2] = 'F';
-				buffer[3] = 1;
-				buffer[4] = l >> 8;
-				buffer[5] = l & 0xff;
-				buffer[6] = AC_PKT_DATA;
-				buffer[7] = 0;
+				ws->buffer[0] = 'S';
+				ws->buffer[1] = 'T';
+				ws->buffer[2] = 'F';
+				ws->buffer[3] = 1;
+				ws->buffer[4] = l >> 8;
+				ws->buffer[5] = l & 0xff;
+				ws->buffer[6] = AC_PKT_DATA;
+				ws->buffer[7] = 0;
 
-				ret = tls_send(ws->session, buffer, l + 8);
+				ret = tls_send(ws->session, ws->buffer, l + 8);
 				GNUTLS_FATAL_ERR(ret);
 			}
 
 		}
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
-			ret = gnutls_record_recv(ws->session, buffer, sizeof(buffer));
+			ret = gnutls_record_recv(ws->session, ws->buffer, ws->buffer_size);
 			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)", ret);
 
 			GNUTLS_FATAL_ERR(ret);
@@ -828,7 +841,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			if (ret > 0) {
 				l = ret;
 
-				ret = parse_cstp_data(ws, buffer, l);
+				ret = parse_cstp_data(ws, ws->buffer, l);
 				if (ret < 0) {
 					oclog(ws, LOG_INFO, "error parsing CSTP data");
 					goto exit;
@@ -847,7 +860,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 			switch (ws->udp_state) {
 				case UP_ACTIVE:
 				case UP_INACTIVE:
-					ret = gnutls_record_recv(ws->dtls_session, buffer, sizeof(buffer));
+					ret = gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
 					oclog(ws, LOG_DEBUG, "received %d byte(s) (DTLS)", ret);
 
 					GNUTLS_FATAL_ERR(ret);
@@ -856,7 +869,7 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 						l = ret;
 						ws->udp_state = UP_ACTIVE;
 
-						ret = parse_dtls_data(ws, buffer, l);
+						ret = parse_dtls_data(ws, ws->buffer, l);
 						if (ret < 0) {
 							oclog(ws, LOG_INFO, "error parsing CSTP data");
 							goto exit;
@@ -872,8 +885,8 @@ unsigned mtu_overhead, dtls_mtu = 0, tls_mtu = 0;
 					if (ret < 0)
 						goto exit;
 					
-					gnutls_dtls_set_mtu (ws->dtls_session, dtls_mtu);
-					mtu_set(ws, dtls_mtu);
+					gnutls_dtls_set_mtu (ws->dtls_session, ws->dtls_mtu);
+					mtu_discovery_init(ws);
 
 					break;
 				case UP_HANDSHAKE:
@@ -887,10 +900,8 @@ hsk_restart:
 
 					if (ret == GNUTLS_E_LARGE_PACKET) {
 						/* adjust mtu */
-						ret = mtu_not_ok(ws, &dtls_mtu);
-						if (ret < 0) {
-							oclog(ws, LOG_DEBUG, "DTLS handshake failed. MTU error\n");
-						} else {
+						mtu_not_ok(ws);
+						if (ret == 0) {
 							goto hsk_restart;
 						}
 
@@ -898,9 +909,9 @@ hsk_restart:
 
 					if (ret == 0) {
 						ws->udp_state = UP_ACTIVE;
-						dtls_mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
-						mtu_set(ws, dtls_mtu);
-						oclog(ws, LOG_DEBUG, "DTLS handshake completed (MTU: %u)\n", dtls_mtu);
+						ws->dtls_mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
+						mtu_discovery_init(ws);
+						oclog(ws, LOG_DEBUG, "DTLS handshake completed (MTU: %u)\n", ws->dtls_mtu);
 					}
 					
 					break;
@@ -944,7 +955,8 @@ static int parse_data(struct worker_st* ws,
 			uint8_t head,
 			uint8_t* buf, size_t buf_size)
 {
-int ret, e;
+int ret, e, l;
+time_t now;
 
 	switch (head) {
 		case AC_PKT_DPD_RESP:
@@ -954,16 +966,47 @@ int ret, e;
 			oclog(ws, LOG_DEBUG, "received keepalive");
 			break;
 		case AC_PKT_DPD_OUT:
-			oclog(ws, LOG_DEBUG, "received DPD; sending response");
-			if (ws->session == ts)
+			now = time(0);
+
+			if (ws->session == ts) {
 				ret = tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
-			else
-				ret = tls_send(ts, "\x04", 1);
+
+				ws->last_dpd_tcp = time(0);
+				oclog(ws, LOG_DEBUG, "received TLS DPD; sent response (%d bytes)", ret);
+			} else {
+				/* Use DPD for MTU discovery in DTLS */
+				ws->buffer[0] = 0x04;
+				
+				/* if we received a dpd sooner than expected reply with minimal
+				 * data */
+				if (ws->dpd_mtu_trial == 0 || now-ws->last_dpd_udp <= ws->config->dpd/2) {
+					l = 1;
+					if (now-ws->last_dpd_udp <= ws->config->dpd/2)
+						mtu_not_ok(ws);
+
+					ws->dpd_mtu_trial++;
+				} else {
+					l = ws->dtls_mtu;
+					ws->dpd_mtu_trial = 0;
+				}
+				ret = tls_send(ts, ws->buffer, l);
+
+				if (ret == GNUTLS_E_LARGE_PACKET) {
+					mtu_not_ok(ws);
+					tls_send(ts, ws->buffer, 1);
+					ret = 1;
+				} else if (ret > 0 && ws->dpd_mtu_trial > 0) {
+					mtu_ok(ws);
+				}
+
+				ws->last_dpd_udp = time(0);
+				oclog(ws, LOG_DEBUG, "received DTLS DPD; sent response (%d bytes)", ret);
+			}
+
 			if (ret < 0) {
 				oclog(ws, LOG_ERR, "could not send TLS data: %s", gnutls_strerror(ret));
 				return -1;
 			}
-			ws->last_dpd = time(0);
 			break;
 		case AC_PKT_DISCONN:
 			oclog(ws, LOG_INFO, "received BYE packet; exiting");

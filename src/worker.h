@@ -43,7 +43,8 @@ typedef struct worker_st {
 	int proto; /* AF_INET or AF_INET6 */
 	
 	/* for dead peer detection */
-	time_t last_dpd;
+	time_t last_dpd_udp;
+	time_t last_dpd_tcp;
 
 	/* set after authentication */
 	int udp_fd;
@@ -52,6 +53,12 @@ typedef struct worker_st {
 	/* for mtu trials */
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;
+	unsigned dtls_mtu;
+	unsigned dpd_mtu_trial;
+	
+	/* Buffer used by worker */
+	uint8_t * buffer;
+	unsigned buffer_size;
 
 	/* the following are set only if authentication is complete */
 	char tun_name[IFNAMSIZ];

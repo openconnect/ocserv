@@ -14,7 +14,17 @@ explain       = "";
 
 detail  = "This program is openconnect VPN server (ocserv), a server compatible with the
 openconnect VPN client. It is believed to be compatible with the protocol
-used by CISCO's AnyConnect SSL VPN.";
+used by CISCO's AnyConnect SSL VPN.
+
+Multiple authentication methods are available including PAM and certificate
+authentication.
+Authenticated users are assigned an unprivileged worker process and obtain 
+a networking (tun) device and IP from a configurable pool of address.
+
+Currently there is no tool to manipulate logged-in users. However,
+they can be disconnected by killing their worker process. The pid of that
+process can be seen with @var{who -u} if utmp logging is enabled.
+";
 
 
 copyright = {

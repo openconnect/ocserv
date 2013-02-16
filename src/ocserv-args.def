@@ -91,7 +91,7 @@ max-clients = 16
 
 # Limit the number of identical clients (i.e., users connecting multiple times)
 # Unset or set to zero for unlimited.
-max-same-clients = 1
+max-same-clients = 2
 
 # TCP and UDP port number
 tcp-port = 3333
@@ -102,6 +102,9 @@ keepalive = 32400
 
 # Dead peer detection in seconds
 dpd = 240
+
+# MTU discovery (DPD must be enabled)
+try-mtu-discovery = false
 
 # The key and the certificates of the server
 # The key may be a file, or any URL supported by GnuTLS (i.e., tpmkey or pkcs11)

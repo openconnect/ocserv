@@ -75,6 +75,7 @@ struct cfg_st {
 	unsigned max_clients;
 	unsigned max_same_clients;
 	unsigned use_utmp;
+	unsigned try_mtu; /* MTU discovery enabled */
 
 	/* if gdbm is there */
 	char* cookie_db_name;

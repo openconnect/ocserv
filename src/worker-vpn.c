@@ -979,7 +979,7 @@ time_t now;
 				
 				/* if we received a dpd sooner than expected reply with minimal
 				 * data */
-				if (ws->dpd_mtu_trial == 0 || now-ws->last_dpd_udp <= ws->config->dpd/2) {
+				if (ws->config->try_mtu == 0 || ws->dpd_mtu_trial == 0 || now-ws->last_dpd_udp <= ws->config->dpd/2) {
 					l = 1;
 					if (now-ws->last_dpd_udp <= ws->config->dpd/2)
 						mtu_not_ok(ws);
@@ -995,7 +995,7 @@ time_t now;
 					mtu_not_ok(ws);
 					tls_send(ts, ws->buffer, 1);
 					ret = 1;
-				} else if (ret > 0 && ws->dpd_mtu_trial > 0) {
+				} else if (ws->config->try_mtu != 0 && ret > 0 && ws->dpd_mtu_trial > 0) {
 					mtu_ok(ws);
 				}
 

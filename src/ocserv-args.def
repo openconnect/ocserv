@@ -10,7 +10,7 @@ long-opts;
 no-misuse-usage;
 short-usage   = "Usage: ocserv [options] -c [config]\nocserv --help for usage instructions.\n";
 explain       = "";
-
+#include version.def
 
 detail  = "This program is openconnect VPN server (ocserv), a server compatible with the
 openconnect VPN client. It is believed to be compatible with the protocol
@@ -23,8 +23,7 @@ a networking (tun) device and IP from a configurable pool of address.
 
 Currently there is no tool to manipulate logged-in users. However,
 they can be disconnected by killing their worker process. The pid of that
-process can be seen with @var{who -u} if utmp logging is enabled.
-";
+process can be seen with @var{who -u} if utmp logging is enabled.";
 
 
 copyright = {

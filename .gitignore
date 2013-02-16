@@ -25,3 +25,4 @@ gl/unistd.h
 gl/fcntl.h
 gl/stdint.h
 gl/sys/types.h
+src/version.def

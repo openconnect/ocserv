@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
-EXTRA_DIST = ccan/licenses/BSD-MIT \
+EXTRA_DIST = ccan/licenses/BSD-MIT version.def.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1
 
 

@@ -28,6 +28,24 @@ enum {
 	HEADER_DTLS_MTU,
 };
 
+struct req_data_st {
+	char url[256];
+	char dbg_txt[256];
+
+	char hostname[MAX_HOSTNAME_SIZE];
+	unsigned int next_header;
+	unsigned char cookie[COOKIE_SIZE];
+	unsigned int cookie_set;
+	unsigned char master_secret[TLS_MASTER_SIZE];
+	unsigned int master_secret_set;
+
+	char *body;
+	unsigned int headers_complete;
+	unsigned int message_complete;
+	unsigned dtls_mtu;
+	unsigned cstp_mtu;
+};
+
 typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
@@ -69,8 +87,9 @@ typedef struct worker_st {
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	unsigned auth_ok;
 	int tun_fd;
+	
+	struct req_data_st req;
 } worker_st;
-
 
 void vpn_server(struct worker_st* ws);
 
@@ -82,20 +101,6 @@ int post_new_auth_handler(worker_st *server);
 
 void set_resume_db_funcs(gnutls_session_t);
 
-struct req_data_st {
-	char url[256];
-	char hostname[MAX_HOSTNAME_SIZE];
-	unsigned int next_header;
-	unsigned char cookie[COOKIE_SIZE];
-	unsigned int cookie_set;
-	unsigned char master_secret[TLS_MASTER_SIZE];
-	unsigned int master_secret_set;
-	char *body;
-	unsigned int headers_complete;
-	unsigned int message_complete;
-	unsigned dtls_mtu;
-	unsigned cstp_mtu;
-};
 
 void __attribute__ ((format(printf, 3, 4)))
     oclog(const worker_st * server, int priority, const char *fmt, ...);

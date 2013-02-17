@@ -344,7 +344,7 @@ struct cmd_auth_cookie_req_st areq;
 int post_old_auth_handler(worker_st *ws)
 {
 int ret;
-struct req_data_st *req = ws->parser->data;
+struct req_data_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
@@ -464,7 +464,7 @@ auth_fail:
 int post_new_auth_handler(worker_st *ws)
 {
 int ret;
-struct req_data_st *req = ws->parser->data;
+struct req_data_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;

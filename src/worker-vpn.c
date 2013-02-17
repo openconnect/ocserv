@@ -117,7 +117,8 @@ struct known_urls_st *p;
 
 int url_cb(http_parser* parser, const char *at, size_t length)
 {
-	struct req_data_st *req = parser->data;
+	struct worker_st *ws = parser->data;
+	struct req_data_st *req = &ws->req;
 	
 	if (length >= sizeof(req->url)) {
 		req->url[0] = 0;
@@ -130,22 +131,36 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 	return 0;
 }
 
+#define STR_HDR_COOKIE "Cookie"
+#define STR_HDR_MS "X-DTLS-Master-Secret"
+#define STR_HDR_DMTU "X-DTLS-MTU"
+#define STR_HDR_CMTU "X-CSTP-MTU"
+#define STR_HDR_HOST "X-CSTP-Hostname"
 int header_field_cb(http_parser* parser, const char *at, size_t length)
 {
-	struct req_data_st *req = parser->data;
+	struct worker_st *ws = parser->data;
+	struct req_data_st *req = &ws->req;
 
-	if (strncmp(at, "Cookie:", length) == 0) {
+	if (length == sizeof(STR_HDR_COOKIE)-1 && strncmp(at, STR_HDR_COOKIE, length) == 0) {
 		req->next_header = HEADER_COOKIE;
-	} else if (strncmp(at, "X-DTLS-Master-Secret:", length) == 0) {
+	} else if (length == sizeof(STR_HDR_MS)-1 && strncmp(at, STR_HDR_MS, length) == 0) {
 		req->next_header = HEADER_MASTER_SECRET;
-	} else if (strncmp(at, "X-DTLS-MTU:", length) == 0) {
+	} else if (length == sizeof(STR_HDR_DMTU)-1 && strncmp(at, STR_HDR_DMTU, length) == 0) {
 		req->next_header = HEADER_DTLS_MTU;
-	} else if (strncmp(at, "X-CSTP-MTU:", length) == 0) {
+	} else if (length == sizeof(STR_HDR_CMTU)-1 && strncmp(at, STR_HDR_CMTU, length) == 0) {
 		req->next_header = HEADER_CSTP_MTU;
-	} else if (strncmp(at, "X-CSTP-Hostname:", length) == 0) {
+	} else if (length == sizeof(STR_HDR_HOST)-1 && strncmp(at, STR_HDR_HOST, length) == 0) {
 		req->next_header = HEADER_HOSTNAME;
 	} else {
 		req->next_header = 0;
+	}
+	
+	if (length < sizeof(req->dbg_txt)) {
+		memcpy(req->dbg_txt, at, length);
+		req->dbg_txt[length] = 0;
+	} else {
+		oclog(ws, LOG_ERR, "oversized HTTP header %.*s\n", (int)length, at);
+		req->dbg_txt[0] = 0;
 	}
 	
 	return 0;
@@ -153,11 +168,14 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 
 int header_value_cb(http_parser* parser, const char *at, size_t length)
 {
-struct req_data_st *req = parser->data;
-char *p;
-size_t nlen;
+	struct worker_st *ws = parser->data;
+	struct req_data_st *req = &ws->req;
+	char *p;
+	size_t nlen;
 
-	if (length > 0)
+	if (length > 0) {
+		oclog(ws, LOG_DEBUG, "HTTP: %s: %.*s", req->dbg_txt, (int)length, at);
+
 		switch (req->next_header) {
 			case HEADER_MASTER_SECRET:
 				if (length < TLS_MASTER_SIZE*2) {
@@ -212,13 +230,15 @@ size_t nlen;
 				req->cookie_set = 1;
 				break;
 		}
+	}
 	
 	return 0;
 }
 
 int header_complete_cb(http_parser* parser)
 {
-	struct req_data_st *req = parser->data;
+	struct worker_st *ws = parser->data;
+	struct req_data_st *req = &ws->req;
 
 	req->headers_complete = 1;
 	return 0;
@@ -226,7 +246,8 @@ int header_complete_cb(http_parser* parser)
 
 int message_complete_cb(http_parser* parser)
 {
-	struct req_data_st *req = parser->data;
+	struct worker_st *ws = parser->data;
+	struct req_data_st *req = &ws->req;
 
 	req->message_complete = 1;
 	return 0;
@@ -234,8 +255,11 @@ int message_complete_cb(http_parser* parser)
 
 int body_cb(http_parser* parser, const char *at, size_t length)
 {
-struct req_data_st *req = parser->data;
-char* tmp = malloc(length+1);
+	struct worker_st *ws = parser->data;
+	struct req_data_st *req = &ws->req;
+	char* tmp;
+	
+	tmp = malloc(length+1);
 
 	if (tmp == NULL)
 		return 1;
@@ -317,7 +341,6 @@ void vpn_server(struct worker_st* ws)
 	gnutls_session_t session;
 	http_parser parser;
 	http_parser_settings settings;
-	struct req_data_st req;
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
 
@@ -384,8 +407,7 @@ restart:
 	}
 
 	http_parser_init(&parser, HTTP_REQUEST);
-	memset(&req, 0, sizeof(req));
-	parser.data = &req;
+	parser.data = ws;
 
 	/* parse as we go */
 	do {
@@ -400,12 +422,12 @@ restart:
 			oclog(ws, LOG_INFO, "error parsing HTTP request"); 
 			exit_worker(ws);
 		}
-	} while(req.headers_complete == 0);
+	} while(ws->req.headers_complete == 0);
 
 	if (parser.method == HTTP_GET) {
-		fn = get_url_handler(req.url);
+		fn = get_url_handler(ws->req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "unexpected URL %s", req.url); 
+			oclog(ws, LOG_INFO, "unexpected URL %s", ws->req.url); 
 			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
@@ -416,7 +438,7 @@ restart:
 
 	} else if (parser.method == HTTP_POST) {
 		/* continue reading */
-		while(req.message_complete == 0) {
+		while(ws->req.message_complete == 0) {
 			nrecvd = tls_recv(session, buf, sizeof(buf));
 			GNUTLS_FATAL_ERR(nrecvd);
 		
@@ -427,9 +449,9 @@ restart:
 			}
 		}
 
-		fn = post_url_handler(req.url);
+		fn = post_url_handler(ws->req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "unexpected POST URL %s", req.url); 
+			oclog(ws, LOG_INFO, "unexpected POST URL %s", ws->req.url); 
 			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
 			goto finish;
 		}
@@ -513,7 +535,7 @@ unsigned int c;
 #define SEND_ERR(x) if (x<0) goto send_error
 static int connect_handler(worker_st *ws)
 {
-struct req_data_st *req = ws->parser->data;
+struct req_data_st *req = &ws->req;
 fd_set rfds;
 int l, e, max, ret;
 struct vpn_st vinfo;

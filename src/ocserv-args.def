@@ -107,9 +107,17 @@ dpd = 240
 try-mtu-discovery = false
 
 # The key and the certificates of the server
-# The key may be a file, or any URL supported by GnuTLS (i.e., tpmkey or pkcs11)
+# The key may be a file, or any URL supported by GnuTLS (e.g., 
+# tpmkey:uuid=xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx;storage=user
+# or pkcs11:object=my-vpn-key;object-type=private)
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
+
+# In case PKCS #11 or TPM keys are used the PINs should be available
+# in files. The srk-pin-file is applicable to TPM keys only (It's the storage
+# root key).
+pin-file = /path/to/pin.txt
+#srk-pin-file = /path/to/srkpin.txt
 
 # The Certificate Authority that will be used
 # to verify clients if certificate authentication

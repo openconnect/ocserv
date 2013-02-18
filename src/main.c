@@ -568,6 +568,13 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
+	flags = LOG_PID|LOG_NDELAY;
+#ifdef LOG_PERROR
+	if (config.debug != 0)
+		flags |= LOG_PERROR;
+#endif
+	openlog("ocserv", flags, LOG_DAEMON);
+
 	/* Initialize GnuTLS */
 	tls_global_init(&s);
 
@@ -579,12 +586,6 @@ int main(int argc, char** argv)
 	write_pid_file();
 
 	alarm(MAINTAINANCE_TIME(&s));
-	flags = LOG_PID|LOG_NDELAY;
-#ifdef LOG_PERROR
-	if (config.debug != 0)
-		flags |= LOG_PERROR;
-#endif
-	openlog("ocserv", flags, LOG_DAEMON);
 
 	syslog_open = 1;
 

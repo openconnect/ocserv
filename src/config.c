@@ -132,6 +132,9 @@ unsigned j;
 	}
 	free(auth);
 	
+	/* When adding allocated data, remember to modify
+	 * reload_cfg_file();
+	 */
 	READ_STRING("listen-host", config->name, 0);
 
 	READ_NUMERIC("tcp-port", config->port, 1);
@@ -141,6 +144,8 @@ unsigned j;
 
 	READ_STRING("server-cert", config->cert, 1);
 	READ_STRING("server-key", config->key, 1);
+	READ_STRING("pin-file", config->pin_file, 0);
+	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
 
 	READ_STRING("ca-cert", config->ca, 0);
 	READ_STRING("crl", config->crl, 0);
@@ -269,6 +274,8 @@ unsigned i;
 	DEL(config->name);
 	DEL(config->cert);
 	DEL(config->key);
+	DEL(config->pin_file);
+	DEL(config->srk_pin_file);
 	DEL(config->ca);
 	DEL(config->crl);
 	DEL(config->cert_user_oid);

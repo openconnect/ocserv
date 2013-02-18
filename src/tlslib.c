@@ -224,10 +224,65 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	} else {
-		oclog(ws, LOG_INFO, "Client certificate verification succeeded");
+		oclog(ws, LOG_INFO, "client certificate verification succeeded");
 	}
 
 	/* notify gnutls to continue handshake normally */
+	return 0;
+}
+
+int pin_callback (void *user, int attempt, const char *token_url,
+	const char *token_label, unsigned int flags, char *pin,
+	size_t pin_max)
+{
+struct cfg_st * config = user;
+int srk = 0, fd, ret;
+const char* file;
+
+	if (flags & GNUTLS_PIN_FINAL_TRY) {
+		syslog(LOG_ERR, "PIN callback: final try before locking; not attempting to unlock");
+		return -1;
+	}
+
+	if (flags & GNUTLS_PIN_WRONG) {
+		syslog(LOG_ERR, "PIN callback: wrong PIN was entered for '%s' (%s)", token_label, token_url);
+		return -1;
+	}
+
+	if (config->pin_file == NULL) {
+		syslog(LOG_ERR, "PIN required for '%s' but pin-file was not set", token_label);
+		return -1;
+	}
+
+	if (strcmp(token_url, "SRK") == 0 || strcmp(token_label, "SRK") == 0) {
+		srk = 1;
+		file = config->srk_pin_file;
+	} else {
+		file = config->pin_file;
+	}
+
+	if (srk != 0 && config->srk_pin_file == NULL) {
+		syslog(LOG_ERR, "PIN required for '%s' but srk-pin-file was not set", token_label);
+		return -1;
+	}
+	
+	fd = open(file, O_RDONLY);
+	if (fd < 0) {
+		syslog(LOG_ERR, "Could not open PIN file '%s'", file);
+		return -1;
+	}
+	
+	ret = read(fd, pin, pin_max);
+	close(fd);
+	if (ret <= 1) {
+		syslog(LOG_ERR, "Could not read from PIN file '%s'", file);
+		return -1;
+	}
+	
+	if (pin[ret-1] == '\n' || pin[ret-1] == '\r')
+		pin[ret-1] = 0;
+	pin[ret] = 0;
+	
 	return 0;
 }
 
@@ -248,6 +303,8 @@ const char* perr;
 	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
 	
+	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, s->config);
+	
 	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
 		ret =
 		    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert,
@@ -259,7 +316,7 @@ const char* perr;
 			exit(1);
 		}
 	} else {
-#ifdef HAVE_PKCS11
+#ifndef HAVE_PKCS11
 		fprintf(stderr, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
 		exit(1);
 #endif	
@@ -311,6 +368,8 @@ const char* perr;
 
 	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
+
+	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, s->config);
 	
 	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
 		ret =
@@ -323,7 +382,7 @@ const char* perr;
 			exit(1);
 		}
 	} else {
-#ifdef HAVE_PKCS11
+#ifndef HAVE_PKCS11
 		mslog(s, NULL, LOG_ERR, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
 		exit(1);
 #endif	

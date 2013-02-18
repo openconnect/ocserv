@@ -55,6 +55,8 @@ struct cfg_st {
 	char *name; /* server name */
 	unsigned int port;
 	unsigned int udp_port;
+	char *pin_file;
+	char *srk_pin_file;
 	char *cert;
 	char *key;
 	char *ca;

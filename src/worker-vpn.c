@@ -54,7 +54,8 @@
 #define UDP_SWITCH_TIME 15
 
 /* The number of DPD packets a client skips before he's kicked */
-#define DPD_TRIES 5
+#define DPD_TRIES 2
+#define DPD_MAX_TRIES 3
 
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 8
@@ -782,16 +783,29 @@ unsigned mtu_overhead, tls_mtu = 0;
 				goto exit;
 			}
 			
-			if (ret == 0) { /* timeout */
+			if (ret == 0) {
 				now = time(0);
 				/* check DPD. Otherwise exit */
-				if (now-ws->last_dpd_udp > DPD_TRIES*ws->config->dpd) {
+				if (ws->udp_state == UP_ACTIVE && now-ws->last_dpd_udp > DPD_TRIES*ws->config->dpd) {
 					oclog(ws, LOG_ERR, "have not received UDP DPD for long (%d secs)", (int)(now-ws->last_dpd_udp));
-					goto exit;
+				
+					ws->buffer[0] = AC_PKT_DPD_OUT;
+					tls_send(ws->dtls_session, ws->buffer, 1);
+				
+					if (now-ws->last_dpd_udp > DPD_MAX_TRIES*ws->config->dpd) {
+						oclog(ws, LOG_ERR, "have not received UDP DPD for very long; disabling UDP port");
+						ws->udp_state = UP_INACTIVE;
+					}
 				}
 				if (now-ws->last_dpd_tcp > DPD_TRIES*ws->config->dpd) {
 					oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_dpd_tcp));
-					goto exit;
+					ws->buffer[0] = AC_PKT_DPD_OUT;
+					tls_send(ws->session, ws->buffer, 1);
+
+					if (now-ws->last_dpd_tcp > DPD_MAX_TRIES*ws->config->dpd) {
+						oclog(ws, LOG_ERR, "have not received TCP DPD for very long; tearing down connection");
+						goto exit;
+					}
 				}
 			}
 		}
@@ -981,11 +995,20 @@ static int parse_data(struct worker_st* ws,
 			uint8_t* buf, size_t buf_size)
 {
 int ret, e, l;
-time_t now;
+time_t now = time(0);
+
+	/* whatever we received treat it as DPD response.
+	 * it indicates that the channel is alive */
+	if (ws->session == ts) {
+		ws->last_dpd_tcp = now;
+	} else {
+		ws->last_dpd_udp = now;
+	}
 
 	switch (head) {
 		case AC_PKT_DPD_RESP:
 			oclog(ws, LOG_DEBUG, "received DPD response");
+
 			break;
 		case AC_PKT_KEEPALIVE:
 			oclog(ws, LOG_DEBUG, "received keepalive");
@@ -994,18 +1017,14 @@ time_t now;
 			now = time(0);
 
 			if (ws->session == ts) {
-				ws->last_dpd_tcp = now;
 				ret = tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
 
 				oclog(ws, LOG_DEBUG, "received TLS DPD; sent response (%d bytes)", ret);
 			} else {
 				/* Use DPD for MTU discovery in DTLS */
-				ws->last_dpd_udp = now;
-				ws->buffer[0] = 0x04;
+				ws->buffer[0] = AC_PKT_DPD_RESP;
 				
-				/* if we received a dpd sooner than expected reply with minimal
-				 * data */
-				if (ws->config->try_mtu == 0 || ws->dpd_mtu_trial == 0 || now-ws->last_dpd_udp <= ws->config->dpd/2) {
+				if (ws->config->try_mtu == 0 || ws->dpd_mtu_trial == 0) {
 					l = 1;
 					if (now-ws->last_dpd_udp <= ws->config->dpd/2)
 						mtu_not_ok(ws);

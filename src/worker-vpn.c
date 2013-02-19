@@ -783,11 +783,11 @@ unsigned mtu_overhead, tls_mtu = 0;
 				now = time(0);
 				/* check DPD. Otherwise exit */
 				if (now-ws->last_dpd_udp > 3*ws->config->dpd) {
-					oclog(ws, LOG_ERR, "have not received UDP DPD for long");
+					oclog(ws, LOG_ERR, "have not received UDP DPD for long (%d secs)", (int)(now-ws->last_dpd_udp));
 					goto exit;
 				}
 				if (now-ws->last_dpd_tcp > 3*ws->config->dpd) {
-					oclog(ws, LOG_ERR, "have not received TCP DPD for long");
+					oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_dpd_tcp));
 					goto exit;
 				}
 			}

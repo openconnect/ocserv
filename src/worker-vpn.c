@@ -53,6 +53,9 @@
  */
 #define UDP_SWITCH_TIME 15
 
+/* The number of DPD packets a client skips before he's kicked */
+#define DPD_TRIES 5
+
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 8
 
@@ -782,11 +785,11 @@ unsigned mtu_overhead, tls_mtu = 0;
 			if (ret == 0) { /* timeout */
 				now = time(0);
 				/* check DPD. Otherwise exit */
-				if (now-ws->last_dpd_udp > 3*ws->config->dpd) {
+				if (now-ws->last_dpd_udp > DPD_TRIES*ws->config->dpd) {
 					oclog(ws, LOG_ERR, "have not received UDP DPD for long (%d secs)", (int)(now-ws->last_dpd_udp));
 					goto exit;
 				}
-				if (now-ws->last_dpd_tcp > 3*ws->config->dpd) {
+				if (now-ws->last_dpd_tcp > DPD_TRIES*ws->config->dpd) {
 					oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_dpd_tcp));
 					goto exit;
 				}

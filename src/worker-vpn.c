@@ -991,12 +991,13 @@ time_t now;
 			now = time(0);
 
 			if (ws->session == ts) {
+				ws->last_dpd_tcp = now;
 				ret = tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
 
-				ws->last_dpd_tcp = time(0);
 				oclog(ws, LOG_DEBUG, "received TLS DPD; sent response (%d bytes)", ret);
 			} else {
 				/* Use DPD for MTU discovery in DTLS */
+				ws->last_dpd_udp = now;
 				ws->buffer[0] = 0x04;
 				
 				/* if we received a dpd sooner than expected reply with minimal
@@ -1021,7 +1022,6 @@ time_t now;
 					mtu_ok(ws);
 				}
 
-				ws->last_dpd_udp = time(0);
 				oclog(ws, LOG_DEBUG, "received DTLS DPD; sent response (%d bytes)", ret);
 			}
 

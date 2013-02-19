@@ -2,6 +2,7 @@
 #define TLSLIB_H
 
 #include <gnutls/gnutls.h>
+#include <gnutls/pkcs11.h>
 #include <vpn.h>
 #include <ccan/htable/htable.h>
 
@@ -37,9 +38,13 @@ void tls_close(gnutls_session_t session);
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
 
+#define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
+
 struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
+	char pin[MAX_PIN_SIZE];
+	char srk_pin[MAX_PIN_SIZE];
 };
 
 typedef struct

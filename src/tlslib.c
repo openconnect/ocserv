@@ -235,9 +235,10 @@ int pin_callback (void *user, int attempt, const char *token_url,
 	const char *token_label, unsigned int flags, char *pin,
 	size_t pin_max)
 {
-struct cfg_st * config = user;
-int srk = 0, fd, ret;
-const char* file;
+struct tls_st * ts = user;
+int srk = 0;
+const char* p;
+unsigned len;
 
 	if (flags & GNUTLS_PIN_FINAL_TRY) {
 		syslog(LOG_ERR, "PIN callback: final try before locking; not attempting to unlock");
@@ -249,39 +250,80 @@ const char* file;
 		return -1;
 	}
 
-	if (config->pin_file == NULL) {
+	if (ts->pin[0] == 0) {
 		syslog(LOG_ERR, "PIN required for '%s' but pin-file was not set", token_label);
 		return -1;
 	}
 
 	if (strcmp(token_url, "SRK") == 0 || strcmp(token_label, "SRK") == 0) {
 		srk = 1;
-		file = config->srk_pin_file;
+		p = ts->srk_pin;
 	} else {
-		file = config->pin_file;
+		p = ts->pin;
 	}
 
-	if (srk != 0 && config->srk_pin_file == NULL) {
+	if (srk != 0 && ts->srk_pin[0] == 0) {
 		syslog(LOG_ERR, "PIN required for '%s' but srk-pin-file was not set", token_label);
 		return -1;
 	}
 	
-	fd = open(file, O_RDONLY);
-	if (fd < 0) {
-		syslog(LOG_ERR, "Could not open PIN file '%s'", file);
+	len = strlen(p);
+	if (len > pin_max-1) {
+		syslog(LOG_ERR, "Too long PIN (%u chars)", len);
 		return -1;
 	}
 	
-	ret = read(fd, pin, pin_max);
-	close(fd);
-	if (ret <= 1) {
-		syslog(LOG_ERR, "Could not read from PIN file '%s'", file);
-		return -1;
-	}
+	memcpy(pin, p, len);
+	pin[len] = 0;
 	
-	if (pin[ret-1] == '\n' || pin[ret-1] == '\r')
-		pin[ret-1] = 0;
-	pin[ret] = 0;
+	return 0;
+}
+
+static
+int load_pins(main_server_st* s)
+{
+int fd, ret;
+
+	s->creds.srk_pin[0] = 0;
+	s->creds.pin[0] = 0;
+
+	if (s->config->srk_pin_file != NULL) {
+		fd = open(s->config->srk_pin_file, O_RDONLY);
+		if (fd < 0) {
+			mslog(s, NULL, LOG_ERR, "Could not open SRK PIN file '%s'", s->config->srk_pin_file);
+			return -1;
+		}
+	
+		ret = read(fd, s->creds.srk_pin, sizeof(s->creds.srk_pin));
+		close(fd);
+		if (ret <= 1) {
+			mslog(s, NULL, LOG_ERR, "Could not read from PIN file '%s'", s->config->srk_pin_file);
+			return -1;
+		}
+	
+		if (s->creds.srk_pin[ret-1] == '\n' || s->creds.srk_pin[ret-1] == '\r')
+			s->creds.srk_pin[ret-1] = 0;
+		s->creds.srk_pin[ret] = 0;
+	}
+
+	if (s->config->pin_file != NULL) {
+		fd = open(s->config->pin_file, O_RDONLY);
+		if (fd < 0) {
+			mslog(s, NULL, LOG_ERR, "Could not open PIN file '%s'", s->config->pin_file);
+			return -1;
+		}
+	
+		ret = read(fd, s->creds.pin, sizeof(s->creds.pin));
+		close(fd);
+		if (ret <= 1) {
+			mslog(s, NULL, LOG_ERR, "Could not read from PIN file '%s'", s->config->pin_file);
+			return -1;
+		}
+	
+		if (s->creds.pin[ret-1] == '\n' || s->creds.pin[ret-1] == '\r')
+			s->creds.pin[ret-1] = 0;
+		s->creds.pin[ret] = 0;
+	}
 	
 	return 0;
 }
@@ -303,7 +345,12 @@ const char* perr;
 	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
 	
-	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, s->config);
+	ret = load_pins(s);
+	if (ret < 0) {
+		exit(1);
+	}
+	
+	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, &s->creds);
 	
 	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
 		ret =
@@ -311,13 +358,13 @@ const char* perr;
 						 s->config->key,
 						 GNUTLS_X509_FMT_PEM);
 		if (ret < 0) {
-			fprintf(stderr, "Error setting the certificate (%s) or key (%s) files: %s\n",
+			mslog(s, NULL, LOG_ERR, "Error setting the certificate (%s) or key (%s) files: %s\n",
 				s->config->cert, s->config->key, gnutls_strerror(ret));
 			exit(1);
 		}
 	} else {
 #ifndef HAVE_PKCS11
-		fprintf(stderr, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
+		mslog(s, NULL, LOG_ERR, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
 		exit(1);
 #endif	
 	}
@@ -329,12 +376,12 @@ const char* perr;
 								   s->config->ca,
 								   GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
-				fprintf(stderr, "Error setting the CA (%s) file.\n",
+				mslog(s, NULL, LOG_ERR, "Error setting the CA (%s) file.\n",
 					s->config->ca);
 				exit(1);
 			}
 
-			fprintf(stderr, "Processed %d CA certificate(s).\n", ret);
+			mslog(s, NULL, LOG_ERR, "Processed %d CA certificate(s).\n", ret);
 		}
 
 		if (s->config->crl != NULL) {
@@ -351,7 +398,7 @@ const char* perr;
 
 	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
-		fprintf(stderr, "Error in TLS priority string: %s\n", perr);
+		mslog(s, NULL, LOG_ERR, "Error in TLS priority string: %s\n", perr);
 	GNUTLS_FATAL_ERR(ret);
 	
 	
@@ -369,7 +416,7 @@ const char* perr;
 	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
 
-	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, s->config);
+	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, &s->creds);
 	
 	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
 		ret =

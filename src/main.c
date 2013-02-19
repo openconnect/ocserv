@@ -438,7 +438,7 @@ int connected = 0;
 	/* search for the IP and the session ID in all procs */
 	list_for_each(&s->clist->head, ctmp, list) {
 
-		if (ctmp->udp_fd_received == 0 && session_id_size == ctmp->session_id_size &&
+		if (session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
 
 			ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);

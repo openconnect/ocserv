@@ -111,8 +111,7 @@ int handle_worker_commands(struct worker_st *ws)
 			exit(0);
 		case CMD_UDP_FD:
 			if (ws->udp_state != UP_WAIT_FD) {
-				oclog(ws, LOG_ERR, "didn't expect a UDP fd!");
-				goto fatal_error;
+				oclog(ws, LOG_INFO, "received another a UDP fd!");
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
@@ -120,6 +119,10 @@ int handle_worker_commands(struct worker_st *ws)
 					goto udp_fd_fail;
 				if (cmptr->cmsg_type != SCM_RIGHTS)
 					goto udp_fd_fail;
+
+				if (ws->udp_fd != -1)
+					close(ws->udp_fd);
+
 				memcpy(&ws->udp_fd, CMSG_DATA(cmptr), sizeof(int));
 				ws->udp_state = UP_SETUP;
 
@@ -136,10 +139,6 @@ int handle_worker_commands(struct worker_st *ws)
 	}
 	
 	return 0;
-
-fatal_error:
-	closelog();
-	exit(1);
 
 udp_fd_fail:
 	ws->udp_state = UP_DISABLED;

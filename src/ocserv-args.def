@@ -291,7 +291,7 @@ doc-section = {
   ds-text   = <<-_EOT_
 @subheading Features of the server
 @itemize
-@item Supports both TCP and UDP VPN tunnels using TLS and Datagram TLS.
+@item Supports both TCP and UDP VPN tunnels using TLS 1.2 and Datagram TLS.
 @item Support for the server key being stored in TPM, hardware security modules (HSM), or even a smart card. They can be specified as files using the tpmkey or pkcs11 URLs.
 @item Authentication using PAM or certificates.
 @item Each client is isolated from the others on a separate process with a separate tun device. This allows routing using the system facilies, allows having separate settings per user or group (e.g. bandwidth limits).

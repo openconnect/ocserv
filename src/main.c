@@ -524,6 +524,8 @@ int main(int argc, char** argv)
 	struct cfg_st config;
 	unsigned active_clients = 0, set;
 	main_server_st s;
+
+	memset(&s, 0, sizeof(s));
 	
 	list_head_init(&clist.head);
 	tun_st_init(&tun);

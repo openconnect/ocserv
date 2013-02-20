@@ -19,11 +19,8 @@ used by CISCO's AnyConnect SSL VPN.
 Multiple authentication methods are available including PAM and certificate
 authentication.
 Authenticated users are assigned an unprivileged worker process and obtain 
-a networking (tun) device and IP from a configurable pool of address.
+a networking (tun) device and IP from a configurable pool of addresses.";
 
-Currently there is no tool to manipulate logged-in users. However,
-they can be disconnected by killing their worker process. The pid of that
-process is available from the command 'who -u' if utmp logging is enabled.";
 
 
 copyright = {
@@ -205,6 +202,10 @@ doc-section = {
   ds-type = 'AUTHENTICATION';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
+Users can be authenticated in multiple ways, which are explained in the following
+paragraphs. Once authenticated users can be disconnected by killing their worker process. 
+The pid of that process is available from the command 'who -u' if utmp logging is enabled.
+
 @subheading Password authentication
 If your system supports Pluggable Authentication Modules (PAM), then
 ocserv will take advantage of it to password authenticate its users.
@@ -289,15 +290,6 @@ doc-section = {
   ds-type = 'COMPATIBILITY';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-@subheading Features of the server
-@itemize
-@item Supports both TCP and UDP VPN tunnels using TLS 1.2 and Datagram TLS.
-@item Support for the server key being stored in TPM, hardware security modules (HSM), or even a smart card. They can be specified as files using the tpmkey or pkcs11 URLs.
-@item Authentication using PAM or certificates.
-@item Each client is isolated from the others on a separate process with a separate tun device. This allows routing using the system facilies, allows having separate settings per user or group (e.g. bandwidth limits).
-@item Privilege separation between the main process which performs TUN allocation and authentication, with the worker processes which handles messages from the client.
-@item Registers VPN leases to UTMP and WTMP files.
-@item Persistent storage of cookies, to allow a seamless server restart.
-@end itemize
+The server has been tested to be compatible with the openconnect VPN client.
 _EOT_;
 };

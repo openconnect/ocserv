@@ -190,6 +190,7 @@ ipv4-dns = local
 # Leave empty to assign the default MTU of the device
 # mtu = 
 
+# routes to be sent to client.
 route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 

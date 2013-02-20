@@ -111,9 +111,9 @@ server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 
 # In case PKCS #11 or TPM keys are used the PINs should be available
-# in files. The srk-pin-file is applicable to TPM keys only (It's the storage
-# root key).
-pin-file = /path/to/pin.txt
+# in files. The srk-pin-file is applicable to TPM keys only, and is the 
+# storage root key.
+#pin-file = /path/to/pin.txt
 #srk-pin-file = /path/to/srkpin.txt
 
 # The Certificate Authority that will be used

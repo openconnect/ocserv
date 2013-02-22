@@ -344,7 +344,7 @@ struct cmd_auth_cookie_req_st areq;
 int post_old_auth_handler(worker_st *ws)
 {
 int ret;
-struct req_data_st *req = &ws->req;
+struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
@@ -357,14 +357,14 @@ struct cmd_auth_req_st areq;
 
 	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should be "username=test&password=test" */
-		username = strstr(req->body, "username=");
+		username = memmem(req->body, req->body_length, "username=", sizeof("username=")-1);
 		if (username == NULL) {
 			reason = "No username";
 			goto auth_fail;
 		}
 		username += sizeof("username=")-1;
 
-		password = strstr(req->body, "password=");
+		password = memmem(req->body, req->body_length, "password=", sizeof("password=")-1);
 		if (password == NULL) {
 			reason = "No password";
 			goto auth_fail;
@@ -464,7 +464,7 @@ auth_fail:
 int post_new_auth_handler(worker_st *ws)
 {
 int ret;
-struct req_data_st *req = &ws->req;
+struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
@@ -477,14 +477,14 @@ struct cmd_auth_req_st areq;
 
 	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* body should contain <username>test</username><password>test</password> */
-		username = strstr(req->body, XMLUSER);
+		username = memmem(req->body, req->body_length, XMLUSER, sizeof(XMLUSER)-1);
 		if (username == NULL) {
 			reason = "No username";
 			goto ask_auth;
 		}
 		username += sizeof(XMLUSER)-1;
 
-		password = strstr(req->body, XMLPASS);
+		password = memmem(req->body, req->body_length, XMLPASS, sizeof(XMLPASS)-1);
 		if (password == NULL) {
 			reason = "No password";
 			goto auth_fail;

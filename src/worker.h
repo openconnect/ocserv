@@ -28,7 +28,7 @@ enum {
 	HEADER_DTLS_MTU,
 };
 
-struct req_data_st {
+struct http_req_st {
 	char url[256];
 	char dbg_txt[256];
 
@@ -40,6 +40,7 @@ struct req_data_st {
 	unsigned int master_secret_set;
 
 	char *body;
+	unsigned int body_length;
 	unsigned int headers_complete;
 	unsigned int message_complete;
 	unsigned dtls_mtu;
@@ -88,7 +89,7 @@ typedef struct worker_st {
 	unsigned auth_ok;
 	int tun_fd;
 	
-	struct req_data_st req;
+	struct http_req_st req;
 } worker_st;
 
 void vpn_server(struct worker_st* ws);

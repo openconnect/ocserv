@@ -122,7 +122,7 @@ struct known_urls_st *p;
 int url_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
-	struct req_data_st *req = &ws->req;
+	struct http_req_st *req = &ws->req;
 	
 	if (length >= sizeof(req->url)) {
 		req->url[0] = 0;
@@ -143,7 +143,7 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 int header_field_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
-	struct req_data_st *req = &ws->req;
+	struct http_req_st *req = &ws->req;
 
 	if (length == sizeof(STR_HDR_COOKIE)-1 && strncmp(at, STR_HDR_COOKIE, length) == 0) {
 		req->next_header = HEADER_COOKIE;
@@ -173,7 +173,7 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 int header_value_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
-	struct req_data_st *req = &ws->req;
+	struct http_req_st *req = &ws->req;
 	char *p;
 	size_t nlen;
 
@@ -242,7 +242,7 @@ int header_value_cb(http_parser* parser, const char *at, size_t length)
 int header_complete_cb(http_parser* parser)
 {
 	struct worker_st *ws = parser->data;
-	struct req_data_st *req = &ws->req;
+	struct http_req_st *req = &ws->req;
 
 	req->headers_complete = 1;
 	return 0;
@@ -251,7 +251,7 @@ int header_complete_cb(http_parser* parser)
 int message_complete_cb(http_parser* parser)
 {
 	struct worker_st *ws = parser->data;
-	struct req_data_st *req = &ws->req;
+	struct http_req_st *req = &ws->req;
 
 	req->message_complete = 1;
 	return 0;
@@ -260,16 +260,16 @@ int message_complete_cb(http_parser* parser)
 int body_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
-	struct req_data_st *req = &ws->req;
+	struct http_req_st *req = &ws->req;
 	char* tmp;
 	
-	tmp = realloc(req->body, length+1);
-
+	tmp = realloc(req->body, req->body_length+length+1);
 	if (tmp == NULL)
 		return 1;
 		
-	memcpy(tmp, at, length);
-	tmp[length] = 0;
+	memcpy(&tmp[req->body_length], at, length);
+	req->body_length += length;
+	tmp[req->body_length] = 0;
 
 	req->body = tmp;
 	return 0;
@@ -328,6 +328,22 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 fail:
 	gnutls_deinit(session);
 	return -1;
+}
+
+static void http_req_reset(worker_st * ws)
+{
+	ws->req.headers_complete = 0;
+	ws->req.message_complete = 0;
+	ws->req.body_length = 0;
+	ws->req.url[0] = 0;
+	ws->req.dbg_txt[0] = 0;
+}
+
+static void http_req_deinit(worker_st * ws)
+{
+	http_req_reset(ws);
+	free(ws->req.body);
+	ws->req.body = NULL;
 }
 
 static
@@ -412,10 +428,8 @@ restart:
 
 	http_parser_init(&parser, HTTP_REQUEST);
 	parser.data = ws;
-	ws->req.headers_complete = 0;
-	ws->req.message_complete = 0;
-	ws->req.url[0] = 0;
-	ws->req.dbg_txt[0] = 0;
+	http_req_reset(ws);
+
 
 	/* parse as we go */
 	do {
@@ -543,7 +557,7 @@ unsigned int c;
 #define SEND_ERR(x) if (x<0) goto send_error
 static int connect_handler(worker_st *ws)
 {
-struct req_data_st *req = &ws->req;
+struct http_req_st *req = &ws->req;
 fd_set rfds;
 int l, e, max, ret;
 struct vpn_st vinfo;
@@ -582,10 +596,6 @@ unsigned mtu_overhead, tls_mtu = 0;
 		}
 	}
 
-	/* turn of the alarm */
-	if (ws->config->auth_timeout)
-		alarm(0);
-
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
 		tls_puts(ws->session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
@@ -608,6 +618,11 @@ unsigned mtu_overhead, tls_mtu = 0;
 		return -1;
 	}
 	
+	/* Connected. Turn of the alarm */
+	if (ws->config->auth_timeout)
+		alarm(0);
+	http_req_deinit(ws);
+	
 	tls_cork(ws->session);
 	ret = tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
 	SEND_ERR(ret);
@@ -623,7 +638,6 @@ unsigned mtu_overhead, tls_mtu = 0;
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
 	}
-	
 
 	if (vinfo.ipv4) {
 		oclog(ws, LOG_DEBUG, "sending IPv4 %s", vinfo.ipv4);

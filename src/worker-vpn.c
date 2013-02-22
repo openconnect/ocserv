@@ -263,7 +263,7 @@ int body_cb(http_parser* parser, const char *at, size_t length)
 	struct req_data_st *req = &ws->req;
 	char* tmp;
 	
-	tmp = malloc(length+1);
+	tmp = realloc(req->body, length+1);
 
 	if (tmp == NULL)
 		return 1;
@@ -412,10 +412,12 @@ restart:
 
 	http_parser_init(&parser, HTTP_REQUEST);
 	parser.data = ws;
-
-	/* parse as we go */
 	ws->req.headers_complete = 0;
 	ws->req.message_complete = 0;
+	ws->req.url[0] = 0;
+	ws->req.dbg_txt[0] = 0;
+
+	/* parse as we go */
 	do {
 		nrecvd = tls_recv(session, buf, sizeof(buf));
 		if (nrecvd <= 0) {

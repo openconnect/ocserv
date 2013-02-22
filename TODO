@@ -10,6 +10,8 @@
 * Try adding salsa20-12 and UMAC as encryption algorithms for DTLS to reduce 
   CPU load.
 
+* Handle users being in multiple groups.
+
 * Keep the TLS key and certificates into the privileged process and use IPC
   for operations. This currently cannot be done, because the main process is
   the one that spawns the workers and there is no sane way to make the key

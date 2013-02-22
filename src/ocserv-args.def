@@ -133,14 +133,11 @@ server-key = /path/to/key.pem
 #  OU (organizational unit) = 2.5.4.11 
 #cert-group-oid = 2.5.4.11
 
-# A revocation list of ca-cert is set
+# The revocation list of the certificates issued by the 'ca-cert' above.
 #crl = /path/to/crl.pem
 
 # GnuTLS priority string
 tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE"
-
-# The default server directory
-#chroot-dir = /path/to/chroot
 
 # The time (in seconds) that a client is allowed to stay connected prior
 # to authentication
@@ -160,7 +157,7 @@ cookie-validity = 43200
 # Parameters are passed on the environment.
 # USERNAME, GROUPNAME, HOSTNAME (the hostname selected by client), 
 # DEVICE, IP_REAL (the real IP of the client), IP_LOCAL (the local IP
-# in the P-t-P connect), IP_REMOTE (the VPN IP of the client).
+# in the P-t-P connection), IP_REMOTE (the VPN IP of the client).
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript
 
@@ -170,27 +167,35 @@ use-utmp = true
 # PID file
 pid-file = /var/run/ocserv.pid
 
+# The user the worker processes will be run as.
 run-as-user = nobody
 run-as-group = nogroup
 
+#
 # Network settings
+#
 
+# The name of the tun device
 device = vpns
 
+# The pool of addresses that leases will be given from.
 ipv4-network = 192.168.1.0
 ipv4-netmask = 255.255.255.0
 # Use the keywork local to advertize the local P-t-P address as DNS server
 # ipv4-dns = 192.168.2.1
 ipv4-dns = local
 
+# The same, but for IPv6.
 #ipv6-address = 
 #ipv6-mask = 
 #ipv6-dns = 
 
-# Leave empty to assign the default MTU of the device
+# Unset to assign the default MTU of the device
 # mtu = 
 
-# routes to be sent to client.
+# Routes to be forwarded to the client. If you need the
+# client to forward routes to the server, you may use the connect 
+# and disconnect scripts.
 route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 

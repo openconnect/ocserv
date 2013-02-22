@@ -414,6 +414,8 @@ restart:
 	parser.data = ws;
 
 	/* parse as we go */
+	ws->req.headers_complete = 0;
+	ws->req.message_complete = 0;
 	do {
 		nrecvd = tls_recv(session, buf, sizeof(buf));
 		if (nrecvd <= 0) {

@@ -9,10 +9,16 @@ used by CISCO's AnyConnect SSL VPN.
 
 === Build instructions ===
 
+To build from a distributed release use:
+
+$ ./configure && make
+
 To build from the git repository use:
 
 $ autoreconf -fvi
 $ ./configure && make
+
+=== Installation instructions ===
 
 Now you need to generate a certificate. E.g.
 $ certtool --generate-privkey > ./test-key.pem

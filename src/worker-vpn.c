@@ -686,6 +686,13 @@ unsigned mtu_overhead, tls_mtu = 0;
 	ret = tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);
 	SEND_ERR(ret);
 
+	ret = tls_puts(ws->session, "X-CSTP-Smartcard-Removal-Disconnect: true\r\n");
+	SEND_ERR(ret);
+
+	ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: new-tunnel\r\n");
+	SEND_ERR(ret);
+
+
 	tls_mtu = vinfo.mtu - 8;
 	if (req->cstp_mtu > 0) {
 		tls_mtu = MIN(tls_mtu, req->cstp_mtu);

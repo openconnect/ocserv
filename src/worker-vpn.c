@@ -652,6 +652,10 @@ unsigned mtu_overhead, tls_mtu = 0;
 			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
 			SEND_ERR(ret);
 		}
+		if (vinfo.ipv4_nbns) {
+			ret = tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n", vinfo.ipv4_nbns);
+			SEND_ERR(ret);
+		}
 	}
 	
 	if (vinfo.ipv6) {
@@ -665,6 +669,10 @@ unsigned mtu_overhead, tls_mtu = 0;
 		}
 		if (vinfo.ipv6_dns) {
 			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
+			SEND_ERR(ret);
+		}
+		if (vinfo.ipv6_nbns) {
+			ret = tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n", vinfo.ipv6_nbns);
 			SEND_ERR(ret);
 		}
 	}

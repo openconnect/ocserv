@@ -201,6 +201,9 @@ unsigned j;
 	READ_STRING("ipv6-netmask", config->network.ipv6_netmask, 0);
 	READ_STRING("ipv6-dns", config->network.ipv6_dns, 0);
 
+	READ_STRING("ipv4-nbns", config->network.ipv4_nbns, 0);
+	READ_STRING("ipv6-nbns", config->network.ipv6_nbns, 0);
+
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size, 0);
 }
 

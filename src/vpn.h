@@ -46,6 +46,8 @@ struct vpn_st {
 	char *ipv6_local; /* local IPv6 address */
 	char *ipv4_dns;
 	char *ipv6_dns;
+	char *ipv4_nbns;
+	char *ipv6_nbns;
 	unsigned int mtu;
 	char **routes;
 	unsigned int routes_size;

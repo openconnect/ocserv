@@ -64,6 +64,13 @@ LIBS="$oldlibs"
 gl_INIT
 
 AC_LIB_HAVE_LINKFLAGS(util,, [#include <utmpx.h>], [pututxline(0);])
+AC_LIB_HAVE_LINKFLAGS(wrap,, [#include <tcpd.h>], [hosts_access(0);])
+
+if [ test -z "$LIBWRAP" ];then
+	libwrap_enabled="no"
+else
+	libwrap_enabled="yes"
+fi
 
 AC_ARG_ENABLE(seccomp,
   AS_HELP_STRING([--disable-seccomp], [unconditionally disable seccomp]),
@@ -101,6 +108,7 @@ AC_MSG_NOTICE([summary of build options:
   CFlags:           ${CFLAGS}
   GDBM backend:     ${gdbm_enabled}
   PAM backend:      ${pam_enabled}
+  TCP wrappers:     ${libwrap_enabled}
   seccomp:          ${seccomp_enabled}
 ])
 

@@ -25,7 +25,7 @@ ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv_LDADD = ../gl/libgnu.a ../libopts/libopts.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP)
+	$(LIBSECCOMP) $(LIBWRAP)
 
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 	-autogen $<

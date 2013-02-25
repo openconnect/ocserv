@@ -37,6 +37,9 @@
 #include <tlslib.h>
 #include "ipc.h"
 #include "setproctitle.h"
+#ifdef HAVE_LIBWRAP
+# include <tcpd.h>
+#endif
 
 #include <main.h>
 #include <worker.h>
@@ -508,6 +511,24 @@ static void check_other_work(main_server_st *s)
 	}
 }
 
+#ifdef HAVE_LIBWRAP
+static int check_tcp_wrapper(int fd)
+{
+	struct request_info req;
+	
+	if (request_init(&req, RQ_FILE, fd, RQ_DAEMON, PACKAGE_NAME, 0) == NULL)
+		return -1;
+	
+	sock_host(&req);
+	if (hosts_access(&req) == 0)
+		return -1;
+		
+	return 0;
+}
+#else
+# define check_tcp_wrapper(x) 0
+#endif
+
 int main(int argc, char** argv)
 {
 	int fd, pid, e;
@@ -640,8 +661,7 @@ int main(int argc, char** argv)
 				fd = accept(ltmp->fd, (void*)&ws.remote_addr, &ws.remote_addr_len);
 				if (fd < 0) {
 					mslog(&s, NULL, LOG_ERR,
-					       "Error in accept(): %s",
-					       strerror(errno));
+					       "Error in accept(): %s", strerror(errno));
 					continue;
 				}
 				set_cloexec_flag (fd, 1);
@@ -649,6 +669,12 @@ int main(int argc, char** argv)
 				if (config.max_clients > 0 && active_clients >= config.max_clients) {
 					close(fd);
 					mslog(&s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
+					break;
+				}
+
+				if (check_tcp_wrapper(fd) < 0) {
+					close(fd);
+					mslog(&s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts.[allow|deny])");
 					break;
 				}
 

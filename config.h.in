@@ -147,6 +147,9 @@
 /* Define if you have the libutil library. */
 #undef HAVE_LIBUTIL
 
+/* Define if you have the libwrap library. */
+#undef HAVE_LIBWRAP
+
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 

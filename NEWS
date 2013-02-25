@@ -3,6 +3,7 @@
 - Updated HTTP protocol handling (fixes issue with
 openconnect < 4). Reported by Mike Miller.
 
+- Use TCP wrappers (libwrap) when present.
 
 * Version 0.0.1 (released 2013-02-20)
 

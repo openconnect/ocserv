@@ -547,7 +547,7 @@ int main(int argc, char** argv)
 	main_server_st s;
 
 	memset(&s, 0, sizeof(s));
-	
+
 	list_head_init(&clist.head);
 	tun_st_init(&tun);
 	tls_cache_init(&s.tls_db);
@@ -597,6 +597,10 @@ int main(int argc, char** argv)
 		flags |= LOG_PERROR;
 #endif
 	openlog("ocserv", flags, LOG_DAEMON);
+#ifdef HAVE_LIBWRAP
+	allow_severity = LOG_DAEMON|LOG_INFO;
+	deny_severity = LOG_DAEMON|LOG_WARNING;
+#endif	
 
 	/* Initialize GnuTLS */
 	tls_global_init(&s);

@@ -2,6 +2,7 @@
 ocserv
 configure
 autom4te.cache
+aclocal.m4
 config.status
 build-aux/config.guess
 build-aux/config.sub

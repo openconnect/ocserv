@@ -607,8 +607,13 @@ int main(int argc, char** argv)
 
 	memset(&ws, 0, sizeof(ws));
 	
-	if (config.foreground == 0)
-		daemon(0, 0);
+	if (config.foreground == 0) {
+		if (daemon(0, 0) == -1) {
+			e = errno;
+			fprintf(stderr, "daemon failed: %s\n", strerror(e));
+			exit(1);
+		}
+	}
 
 	write_pid_file();
 

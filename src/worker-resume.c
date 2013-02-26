@@ -107,12 +107,12 @@ static int recv_resume_fetch_reply(worker_st *ws, struct cmd_resume_fetch_reply_
 
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret <= sizeof(*resp)-MAX_SESSION_DATA_SIZE) {
-		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
+		oclog(ws, LOG_ERR, "received incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
 		return -1;
 	}
 
 	if (cmd != RESUME_FETCH_REP) {
-		oclog(ws, LOG_ERR, "Received unexpected response (%d, expected %d) from main", (int)cmd, (int)RESUME_FETCH_REP);
+		oclog(ws, LOG_ERR, "received unexpected response (%d, expected %d) from main", (int)cmd, (int)RESUME_FETCH_REP);
 		return -1;
 	}
 
@@ -144,7 +144,7 @@ int ret;
 	areq.session_id_size = key.size;
 	memcpy(areq.session_id, key.data, key.size);
 
-	oclog(ws, LOG_DEBUG, "Sending resumption request");
+	oclog(ws, LOG_DEBUG, "sending resumption request (fetch)");
 
 	ret = send_resume_fetch_req(ws, &areq, 0);
 	if (ret < 0)
@@ -180,12 +180,12 @@ struct cmd_resume_store_req_st areq;
 int ret;
 
 	if (data.size > MAX_SESSION_DATA_SIZE) {
-		oclog(ws, LOG_DEBUG, "Session data size exceeds the maximum %u", data.size);
+		oclog(ws, LOG_DEBUG, "session data size exceeds the maximum %u", data.size);
 		return GNUTLS_E_DB_ERROR;
 	}
 
 	if (key.size > GNUTLS_MAX_SESSION_ID) {
-		oclog(ws, LOG_DEBUG, "Session ID size exceeds the maximum %u", key.size);
+		oclog(ws, LOG_DEBUG, "session ID size exceeds the maximum %u", key.size);
 		return GNUTLS_E_DB_ERROR;
 	}
 
@@ -221,7 +221,7 @@ int ret;
 	areq.session_id_size = key.size;
 	memcpy(areq.session_id, key.data, key.size);
 
-	oclog(ws, LOG_DEBUG, "Sending resumption request");
+	oclog(ws, LOG_DEBUG, "sending resumption request (delete)");
 
 	ret = send_resume_fetch_req(ws, &areq, 1);
 	if (ret < 0)

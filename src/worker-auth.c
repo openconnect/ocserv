@@ -299,7 +299,7 @@ int ret;
 		areq->tls_auth_ok = 1;
 	}
 	
-	oclog(ws, LOG_DEBUG, "Sending authentication request");
+	oclog(ws, LOG_DEBUG, "sending authentication request");
 	ret = send_auth_req(ws->cmd_fd, areq);
 	if (ret < 0)
 		return ret;
@@ -332,7 +332,7 @@ struct cmd_auth_cookie_req_st areq;
 
 	memcpy(areq.cookie, cookie, sizeof(areq.cookie));
 
-	oclog(ws, LOG_DEBUG, "Sending cookie authentication request");
+	oclog(ws, LOG_DEBUG, "sending cookie authentication request");
 	ret = send_auth_cookie_req(ws->cmd_fd, &areq);
 	if (ret < 0)
 		return ret;

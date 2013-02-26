@@ -172,11 +172,11 @@ static void tls_audit_log_func(gnutls_session_t session, const char *str)
 worker_st * ws;
 
 	if (session == NULL)
-		syslog(LOG_AUTH, "Warning: %s", str);
+		syslog(LOG_AUTH, "warning: %s", str);
 	else {
 		ws = gnutls_session_get_ptr(session);
 		
-		oclog(ws, LOG_ERR, "Warning: %s", str);
+		oclog(ws, LOG_ERR, "warning: %s", str);
 	}
 }
 
@@ -188,7 +188,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 	ws = gnutls_session_get_ptr(session);
 	if (ws == NULL) {
-		syslog(LOG_ERR, "%s:%d: Could not obtain worker state.", __func__, __LINE__);
+		syslog(LOG_ERR, "%s:%d: could not obtain worker state.", __func__, __LINE__);
 		return -1;
 	}
 	
@@ -200,7 +200,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 	 */
 	ret = gnutls_certificate_verify_peers2(session, &status);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Error verifying client certificate");
+		oclog(ws, LOG_ERR, "error verifying client certificate");
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	}
 
@@ -215,11 +215,11 @@ static int verify_certificate_cb(gnutls_session_t session)
 		if (ret < 0)
 			return GNUTLS_E_CERTIFICATE_ERROR;
 
-		oclog(ws, LOG_INFO, "Client certificate verification failed: %s", out.data);
+		oclog(ws, LOG_INFO, "client certificate verification failed: %s", out.data);
 
 		gnutls_free(out.data);
 #else
-		oclog(ws, LOG_INFO, "Client certificate verification failed.");
+		oclog(ws, LOG_INFO, "client certificate verification failed.");
 #endif
 
 		return GNUTLS_E_CERTIFICATE_ERROR;
@@ -290,14 +290,14 @@ int fd, ret;
 	if (s->config->srk_pin_file != NULL) {
 		fd = open(s->config->srk_pin_file, O_RDONLY);
 		if (fd < 0) {
-			mslog(s, NULL, LOG_ERR, "Could not open SRK PIN file '%s'", s->config->srk_pin_file);
+			mslog(s, NULL, LOG_ERR, "could not open SRK PIN file '%s'", s->config->srk_pin_file);
 			return -1;
 		}
 	
 		ret = read(fd, s->creds.srk_pin, sizeof(s->creds.srk_pin));
 		close(fd);
 		if (ret <= 1) {
-			mslog(s, NULL, LOG_ERR, "Could not read from PIN file '%s'", s->config->srk_pin_file);
+			mslog(s, NULL, LOG_ERR, "could not read from PIN file '%s'", s->config->srk_pin_file);
 			return -1;
 		}
 	
@@ -309,14 +309,14 @@ int fd, ret;
 	if (s->config->pin_file != NULL) {
 		fd = open(s->config->pin_file, O_RDONLY);
 		if (fd < 0) {
-			mslog(s, NULL, LOG_ERR, "Could not open PIN file '%s'", s->config->pin_file);
+			mslog(s, NULL, LOG_ERR, "could not open PIN file '%s'", s->config->pin_file);
 			return -1;
 		}
 	
 		ret = read(fd, s->creds.pin, sizeof(s->creds.pin));
 		close(fd);
 		if (ret <= 1) {
-			mslog(s, NULL, LOG_ERR, "Could not read from PIN file '%s'", s->config->pin_file);
+			mslog(s, NULL, LOG_ERR, "could not read from PIN file '%s'", s->config->pin_file);
 			return -1;
 		}
 	
@@ -371,13 +371,13 @@ const char* perr;
 						 s->config->key,
 						 GNUTLS_X509_FMT_PEM);
 		if (ret < 0) {
-			mslog(s, NULL, LOG_ERR, "Error setting the certificate (%s) or key (%s) files: %s\n",
+			mslog(s, NULL, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
 				s->config->cert, s->config->key, gnutls_strerror(ret));
 			exit(1);
 		}
 	} else {
 #ifndef HAVE_PKCS11
-		mslog(s, NULL, LOG_ERR, "Cannot load key, GnuTLS is compiled without pkcs11 support\n");
+		mslog(s, NULL, LOG_ERR, "cannot load key, GnuTLS is compiled without pkcs11 support\n");
 		exit(1);
 #endif	
 	}
@@ -389,12 +389,12 @@ const char* perr;
 								   s->config->ca,
 								   GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "Error setting the CA (%s) file.\n",
+				mslog(s, NULL, LOG_ERR, "error setting the CA (%s) file.\n",
 					s->config->ca);
 				exit(1);
 			}
 
-			mslog(s, NULL, LOG_ERR, "Processed %d CA certificate(s).\n", ret);
+			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s).\n", ret);
 		}
 
 		if (s->config->crl != NULL) {
@@ -403,7 +403,7 @@ const char* perr;
 								 s->config->crl,
 								 GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "Error setting the CRL (%s) file.\n",
+				mslog(s, NULL, LOG_ERR, "error setting the CRL (%s) file.\n",
 					s->config->crl);
 				exit(1);
 			}
@@ -415,7 +415,7 @@ const char* perr;
 
 	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
-		mslog(s, NULL, LOG_ERR, "Error in TLS priority string: %s\n", perr);
+		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s\n", perr);
 	GNUTLS_FATAL_ERR(ret);
 	
 	
@@ -432,7 +432,7 @@ int ret;
 	if (ws->config->key != NULL && strncmp(ws->config->key, "pkcs11:", 7) == 0) {
 		ret = gnutls_pkcs11_reinit();
 		if (ret < 0) {
-			oclog(ws, LOG_ERR, "Could not reinitialize PKCS #11 subsystem: %s\n",
+			oclog(ws, LOG_ERR, "could not reinitialize PKCS #11 subsystem: %s\n",
 				gnutls_strerror(ret));
 			return -1;
 
@@ -443,7 +443,7 @@ int ret;
 						 ws->config->key,
 						 GNUTLS_X509_FMT_PEM);
 		if (ret < 0) {
-			oclog(ws, LOG_ERR, "Error setting the certificate (%s) or key (%s) files: %s\n",
+			oclog(ws, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
 				ws->config->cert, ws->config->key, gnutls_strerror(ret));
 			return -1;
 		}

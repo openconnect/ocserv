@@ -28,4 +28,4 @@ ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP)
 
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
-	-autogen $<
+	-@AUTOGEN@ $<

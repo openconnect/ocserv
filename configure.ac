@@ -17,6 +17,14 @@ if [ test "$GCC" = "yes" ];then
 fi
 AC_PATH_PROG(CTAGS, ctags, /bin/true)
 AC_PATH_PROG(CSCOPE, cscope, /bin/true)
+AC_PATH_PROG(AUTOGEN, autogen, /bin/true)
+
+if test x"$AUTOGEN" = "x/bin/true"; then
+	AC_MSG_WARN([[
+***
+*** autogen not found.  We will not build manpages.
+*** ]])
+fi
 
 AC_CHECK_SIZEOF([unsigned long])
 AC_C_BIGENDIAN

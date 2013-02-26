@@ -320,6 +320,8 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 	gnutls_session_set_ptr(session, ws);
 	gnutls_certificate_server_set_request(session, GNUTLS_CERT_IGNORE);
 
+	gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+
 	ws->udp_state = UP_HANDSHAKE;
 
 	ws->dtls_session = session;
@@ -403,10 +405,13 @@ void vpn_server(struct worker_st* ws)
 	gnutls_db_set_ptr (session, ws);
 	gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME);
 
+	gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 	do {
 		ret = gnutls_handshake(session);
 	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
 	GNUTLS_FATAL_ERR(ret);
+
+	oclog(ws, LOG_DEBUG, "TLS handshake completed");
 
 	memset(&settings, 0, sizeof(settings));
 

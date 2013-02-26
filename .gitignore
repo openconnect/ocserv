@@ -10,6 +10,8 @@ config.h
 config.log
 Makefile
 Makefile.in
+cscope.out
+tags
 .deps
 stamp-h1
 *.o

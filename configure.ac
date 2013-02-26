@@ -15,6 +15,8 @@ AM_PROG_CC_C_O
 if [ test "$GCC" = "yes" ];then
 	CFLAGS="$CFLAGS -Wall"
 fi
+AC_PATH_PROG(CTAGS, ctags, /bin/true)
+AC_PATH_PROG(CSCOPE, cscope, /bin/true)
 
 AC_CHECK_SIZEOF([unsigned long])
 AC_C_BIGENDIAN

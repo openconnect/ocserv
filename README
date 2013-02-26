@@ -7,6 +7,7 @@ used by CISCO's AnyConnect SSL VPN.
 
 [0]. http://www.infradead.org/openconnect/
 
+
 === Build instructions ===
 
 To build from a distributed release use:
@@ -18,6 +19,7 @@ To build from the git repository use:
 $ autoreconf -fvi
 $ ./configure && make
 
+
 === Installation instructions ===
 
 Now you need to generate a certificate. E.g.
@@ -27,4 +29,46 @@ $ certtool --generate-self-signed --load-privkey test-key.pem --outfile test-cer
 
 To run the server edit the src/sample.config and then run:
 # src/ocserv -f -c src/sample.config
+
+
+=== How the VPN works ===
+
+The openconnect VPN server is an Internet-layer VPN server. That is, it provides 
+the client with an IP address and a list of routes that this IP may access. 
+Since this is not a Link-layer VPN a separate subnet must be allocated for the 
+VPN addresses.
+
+The subnet addresses are specified by the 'ipv4-network' and 'ipv4-netmask'
+configuration options (and the corresponding ipv6 options). The routes that
+are pushed to the client are specified by the 'route' option. For each client
+two IPv4 addresses are assigned, its VPN address and its local image (remember
+this is a point-to-point connection). The image isn't known to the client 
+(the anyconnect protocol doesn't forward it). 
+
+Note that ocserv doesn't do any packet forwarding or filtering between the
+networks. It is expected that the server has any required routes or firewall
+rules, set up. You may conditionally enable firewall rules, or even
+enable routing rules through the client using the 'connect-script' and 
+'disconnect-script' scripts based on the user who connected. Note that it 
+is important for these scripts not to hang, and terminate without long delays.
+You may find some examples in the scripts/ directory.
+
+
+=== Authentication ===
+
+The authentication in openconnect VPN server occurs in the initial TLS session.
+That is an HTTPS session over which the client is provided with an XML authentication
+page. The server is authenticated using its certificate and the client, either by
+its certificate, or via a username and password pair which are forwarded to
+PAM, or a combination of both. Because PAM supports various authentication types,
+the username, password entered by the user could be a one-time-password or whatever
+else. After the user is authenticated he is provided with a cookie that can
+be used for future connections. The lifetime of the cookie is configurable using 
+the 'cookie-validity' option, and is newed on every client connection.
+
+After the user is authenticated, directly, or via the cookie, he may issue a CONNECT 
+HTTP command which results to a direct connection with the VPN. Additionally
+the user could connect using UDP and Datagram TLS. That connection is authenticated
+using session resumption and a master key provided by the server, i.e., it is not really 
+a DTLS 1.0 compliant connection.
 

@@ -41,7 +41,8 @@
 #include <http-parser/http_parser.h>
 
 #define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
-                        "<auth id=\"success\">\n"
+                        "<auth id=\"success\">\n" \
+                        "<title>SSL VPN Service</title>"
 
 #define SUCCESS_MSG_FOOT "</auth>\n"
 

@@ -40,18 +40,18 @@
 
 #include <http-parser/http_parser.h>
 
-#define SUCCESS_MSG "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" \
-                        "<auth id=\"success\">\r\n" \
-                        "<banner>Success</banner>\r\n" \
-                        "</auth>\r\n"
+#define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
+                        "<auth id=\"success\">\n"
 
-const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
-	"<auth id=\"main\">\r\n"
-	 "<message>Please enter your username and password.</message>\r\n"
-	 "<form method=\"post\" action=\"/auth\">\r\n"
-	 "<input type=\"text\" name=\"username\" label=\"Username:\" />\r\n"
-	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\r\n"
-	 "</form></auth>\r\n";
+#define SUCCESS_MSG_FOOT "</auth>\n"
+
+const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	"<auth id=\"main\">\n"
+	 "<message>Please enter your username and password.</message>\n"
+	 "<form method=\"post\" action=\"/auth\">\n"
+	 "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
+	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
+	 "</form></auth>\n";
 
 int get_auth_handler(worker_st *ws)
 {
@@ -343,7 +343,7 @@ struct cmd_auth_cookie_req_st areq;
 
 int post_old_auth_handler(worker_st *ws)
 {
-int ret;
+int ret, size;
 struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char str_cookie[2*COOKIE_SIZE+1];
@@ -352,6 +352,7 @@ char * password = NULL;
 char *p;
 unsigned int i;
 struct cmd_auth_req_st areq;
+char msg[MAX_BANNER_SIZE+32];
 
 	memset(&areq, 0, sizeof(areq));
 
@@ -427,7 +428,18 @@ struct cmd_auth_req_st areq;
 	if (ret < 0)
 		return -1;
 
-        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
+	if (ws->config->banner) {
+		size = snprintf(msg, sizeof(msg), "<banner>%s</banner>", ws->config->banner);
+		if (size <= 0)
+			return -1;
+	} else {
+		msg[0] = 0;
+		size = 0;
+	}
+
+	size += (sizeof(SUCCESS_MSG_HEAD)-1) + (sizeof(SUCCESS_MSG_FOOT)-1);
+
+        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)
 		return -1;
 
@@ -439,7 +451,7 @@ struct cmd_auth_req_st areq;
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "\r\n"SUCCESS_MSG);
+	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
 	if (ret < 0)
 		return -1;
 
@@ -463,7 +475,7 @@ auth_fail:
 
 int post_new_auth_handler(worker_st *ws)
 {
-int ret;
+int ret, size;
 struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char str_cookie[2*COOKIE_SIZE+1];
@@ -472,6 +484,7 @@ char * password = NULL;
 char *p;
 unsigned int i;
 struct cmd_auth_req_st areq;
+char msg[MAX_BANNER_SIZE+32];
 
 	memset(&areq, 0, sizeof(areq));
 
@@ -543,7 +556,18 @@ struct cmd_auth_req_st areq;
 	if (ret < 0)
 		return -1;
 
-        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)(sizeof(SUCCESS_MSG)-1));
+	if (ws->config->banner) {
+		size = snprintf(msg, sizeof(msg), "<banner>%s</banner>", ws->config->banner);
+		if (size <= 0)
+			return -1;
+	} else {
+		msg[0] = 0;
+		size = 0;
+	}
+
+	size += (sizeof(SUCCESS_MSG_HEAD)-1) + (sizeof(SUCCESS_MSG_FOOT)-1);
+
+        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)
 		return -1;
 
@@ -555,7 +579,7 @@ struct cmd_auth_req_st areq;
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "\r\n"SUCCESS_MSG);
+	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
 	if (ret < 0)
 		return -1;
 

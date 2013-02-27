@@ -101,6 +101,7 @@ struct main_server_st;
 
 #include <tun.h>
 
+#define MAX_BANNER_SIZE 256
 #define MAX_USERNAME_SIZE 64
 #define MAX_PASSWORD_SIZE 64
 #define TLS_MASTER_SIZE 48

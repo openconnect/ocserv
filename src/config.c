@@ -226,6 +226,11 @@ static void check_cfg( struct cfg_st *config)
 		exit(1);
 	}
 	
+	if (config->banner && strlen(config->banner) > MAX_BANNER_SIZE) {
+		fprintf(stderr, "Banner size is too long\n");
+		exit(1);
+	}
+	
 	if (config->keepalive == 0)
 		config->keepalive = 3600;
 

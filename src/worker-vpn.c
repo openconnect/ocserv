@@ -78,7 +78,7 @@ static void handle_term(int signo)
 
 static int connect_handler(worker_st *ws);
 
-typedef int (*url_handler_fn)(worker_st*);
+typedef int (*url_handler_fn)(worker_st*, unsigned http_ver);
 struct known_urls_st {
 	const char* url;
 	url_handler_fn get_handler;
@@ -460,7 +460,7 @@ restart:
 			goto finish;
 		}
 		
-		ret = fn(ws);
+		ret = fn(ws, parser.http_minor);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;
 
@@ -485,7 +485,7 @@ restart:
 			goto finish;
 		}
 
-		ret = fn(ws);
+		ret = fn(ws, parser.http_minor);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;
 

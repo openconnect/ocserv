@@ -96,9 +96,9 @@ void vpn_server(struct worker_st* ws);
 
 int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size);
 
-int get_auth_handler(worker_st *server);
-int post_old_auth_handler(worker_st *server);
-int post_new_auth_handler(worker_st *server);
+int get_auth_handler(worker_st *server, unsigned http_ver);
+int post_old_auth_handler(worker_st *server, unsigned http_ver);
+int post_new_auth_handler(worker_st *server, unsigned http_ver);
 
 void set_resume_db_funcs(gnutls_session_t);
 

@@ -54,16 +54,16 @@ const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
 	 "</form></auth>\n";
 
-int get_auth_handler(worker_st *ws)
+int get_auth_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
 
 	tls_cork(ws->session);
-	ret = tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: close\r\n");
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
@@ -342,7 +342,7 @@ struct cmd_auth_cookie_req_st areq;
 }
 
 
-int post_old_auth_handler(worker_st *ws)
+int post_old_auth_handler(worker_st *ws, unsigned http_ver)
 {
 int ret, size;
 struct http_req_st *req = &ws->req;
@@ -421,7 +421,11 @@ char msg[MAX_BANNER_SIZE+32];
 	/* reply */
 	tls_cork(ws->session);
 
-	ret = tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 	
@@ -474,7 +478,7 @@ auth_fail:
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
-int post_new_auth_handler(worker_st *ws)
+int post_new_auth_handler(worker_st *ws, unsigned http_ver)
 {
 int ret, size;
 struct http_req_st *req = &ws->req;
@@ -549,10 +553,14 @@ char msg[MAX_BANNER_SIZE+32];
 	/* reply */
 	tls_cork(ws->session);
 
-	ret = tls_puts(ws->session, "HTTP/1.1 200 OK\r\n");
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
-	
+
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	if (ret < 0)
+		return -1;
+
 	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
 	if (ret < 0)
 		return -1;
@@ -592,7 +600,7 @@ char msg[MAX_BANNER_SIZE+32];
 	return 0;
 
 ask_auth:
-	return get_auth_handler(ws);
+	return get_auth_handler(ws, http_ver);
 
 auth_fail:
 	tls_printf(ws->session,

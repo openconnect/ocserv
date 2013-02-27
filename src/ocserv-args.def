@@ -79,6 +79,9 @@ An example configuration file follows.
 #auth = "certificate"
 auth = "pam"
 
+# A banner to be displayed on clients
+#banner = "Welcome"
+
 # Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
 #listen-host = [IP|HOSTNAME]
 

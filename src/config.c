@@ -158,6 +158,7 @@ unsigned j;
 	if (pid_file == NULL)
 		READ_STRING("pid-file", pid_file, 0);
 
+	READ_STRING("banner", config->banner, 0);
 	READ_TF("use-utmp", config->use_utmp, 0, 1);
 	READ_TF("try-mtu-discovery", config->try_mtu, 0, 0);
 
@@ -274,6 +275,7 @@ void reload_cfg_file(struct cfg_st* config)
 {
 unsigned i;
 
+	DEL(config->banner);
 	DEL(config->name);
 	DEL(config->cert);
 	DEL(config->key);

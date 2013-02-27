@@ -69,6 +69,7 @@ struct cfg_st {
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
 	char *chroot_dir;	/* where the xml files are served from */
+	char *banner;
 	time_t cookie_validity;	/* in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;

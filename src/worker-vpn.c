@@ -642,6 +642,8 @@ unsigned mtu_overhead, tls_mtu = 0;
 	if (req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
+	} else {
+		oclog(ws, LOG_DEBUG, "disabling UDP (DTLS) connection");
 	}
 
 	if (vinfo.ipv4) {
@@ -694,7 +696,18 @@ unsigned mtu_overhead, tls_mtu = 0;
 	ret = tls_puts(ws->session, "X-CSTP-Smartcard-Removal-Disconnect: true\r\n");
 	SEND_ERR(ret);
 
+	ret = tls_printf(ws->session, "X-CSTP-Rekey-Time: %u\r\n", (unsigned)(2*ws->config->cookie_validity)/3);
+	SEND_ERR(ret);
 	ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: new-tunnel\r\n");
+	SEND_ERR(ret);
+
+	ret = tls_puts(ws->session, "X-CSTP-Session-Timeout: none\r\n"
+		"X-CSTP-Idle-Timeout: none\r\n"
+		"X-CSTP-Disconnected-Timeout: none\r\n"
+		"X-CSTP-Keep: true\r\n"
+		"X-CSTP-TCP-Keepalive: true\r\n"
+		"X-CSTP-Tunnel-All-DNS: false\r\n"
+		);
 	SEND_ERR(ret);
 
 
@@ -754,8 +767,10 @@ unsigned mtu_overhead, tls_mtu = 0;
 	else
 		send_tun_mtu(ws, ws->dtls_mtu-1);
 
-	ret = tls_puts(ws->session, "X-CSTP-Banner: Welcome\r\n");
-	SEND_ERR(ret);
+	if (ws->config->banner) {
+		ret = tls_printf(ws->session, "X-CSTP-Banner: %s\r\n", ws->config->banner);
+		SEND_ERR(ret);
+	}
 
 	ret = tls_puts(ws->session, "\r\n");
 	SEND_ERR(ret);

@@ -292,6 +292,11 @@ static int auth_user(worker_st *ws, struct cmd_auth_req_st* areq)
 int ret;
 
 	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		if (ws->cert_auth_ok == 0) {
+			oclog(ws, LOG_INFO, "no certificate provided for authentication");
+			return -1;
+		}
+
 		ret = get_cert_info(ws, areq->cert_user, sizeof(areq->cert_user),
 					areq->cert_group, sizeof(areq->cert_group));
 		if (ret < 0)
@@ -322,7 +327,12 @@ struct cmd_auth_cookie_req_st areq;
 	if (cookie_size != sizeof(areq.cookie))
 		return -1;
 
-	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE) && ws->config->force_cert_auth != 0) {
+		if (ws->cert_auth_ok == 0) {
+			oclog(ws, LOG_INFO, "no certificate provided for cookie authentication");
+			return -1;
+		}
+
 		ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user),
 					areq.cert_group, sizeof(areq.cert_group));
 		if (ret < 0)

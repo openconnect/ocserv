@@ -87,6 +87,7 @@ typedef struct worker_st {
 	uint8_t master_secret[TLS_MASTER_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	unsigned auth_ok;
+	unsigned cert_auth_ok;
 	int tun_fd;
 	
 	struct http_req_st req;

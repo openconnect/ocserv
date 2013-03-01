@@ -196,13 +196,15 @@ static int verify_certificate_cb(gnutls_session_t session)
 	if (session == ws->dtls_session) /* no certificate is verified in DTLS */
 		return 0;
 
+	ws->cert_auth_ok = 0;
+
 	/* This verification function uses the trusted CAs in the credentials
 	 * structure. So you must have installed one or more CA certificates.
 	 */
 	ret = gnutls_certificate_verify_peers2(session, &status);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error verifying client certificate");
-		return GNUTLS_E_CERTIFICATE_ERROR;
+		goto fail;
 	}
 
 	if (status != 0) {
@@ -214,7 +216,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 		    gnutls_certificate_verification_status_print(status, type,
 							 &out, 0);
 		if (ret < 0)
-			return GNUTLS_E_CERTIFICATE_ERROR;
+			goto fail;
 
 		oclog(ws, LOG_INFO, "client certificate verification failed: %s", out.data);
 
@@ -223,13 +225,20 @@ static int verify_certificate_cb(gnutls_session_t session)
 		oclog(ws, LOG_INFO, "client certificate verification failed.");
 #endif
 
-		return GNUTLS_E_CERTIFICATE_ERROR;
+		goto fail;
 	} else {
+		ws->cert_auth_ok = 1;
 		oclog(ws, LOG_INFO, "client certificate verification succeeded");
 	}
 
 	/* notify gnutls to continue handshake normally */
 	return 0;
+fail:
+	if (ws->config->force_cert_auth != 0)
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	else
+		return 0;
+
 }
 
 int pin_callback (void *user, int attempt, const char *token_url,
@@ -479,8 +488,7 @@ gnutls_x509_crt_t crt;
 
 	ret = gnutls_load_file(file, &data);
 	if (ret < 0) {
-		fprintf(stderr, "Cannot open file '%s': %s\n", file, gnutls_strerror(ret));
-		exit(1);
+		return NULL;
 	}
 	
 	if (cert != 0) {

@@ -87,6 +87,12 @@ auth = "pam"
 # It is not used by the openconnect client.
 #user-profile = /path/to/file.xml
 
+# Unless set to false it is required for clients to present their
+# certificate even if they are authenticating via a previously granted
+# cookie. Legacy CISCO clients do not do that, and thus this option
+# should be set for them.
+#always-require-cert = false
+
 # Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
 #listen-host = [IP|HOSTNAME]
 

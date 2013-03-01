@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <ocserv-args.h>
 #include <autoopts/options.h>
+#include <limits.h>
 
 #include <vpn.h>
 #include <tlslib.h>
@@ -124,7 +125,7 @@ unsigned j;
 #endif
 		} else if (strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
-			config->cert_req = GNUTLS_CERT_REQUIRE;
+			config->cert_req = GNUTLS_CERT_REQUEST;
 		} else {
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
 			exit(1);
@@ -161,6 +162,7 @@ unsigned j;
 		READ_STRING("pid-file", pid_file, 0);
 
 	READ_STRING("banner", config->banner, 0);
+	READ_TF("always-require-cert", config->force_cert_auth, 0, 1);
 	READ_TF("use-utmp", config->use_utmp, 0, 1);
 	READ_TF("try-mtu-discovery", config->try_mtu, 0, 0);
 
@@ -237,9 +239,27 @@ static void check_cfg( struct cfg_st *config)
 	if (config->cert) {
 		config->cert_hash = calc_sha1_hash(config->cert, 1);
 	}
+	
+	if (config->force_cert_auth)
+		config->cert_req = GNUTLS_CERT_REQUIRE;
 
 	if (config->xml_config_file) {
 		config->xml_config_hash = calc_sha1_hash(config->xml_config_file, 0);
+		if (config->xml_config_hash == NULL && config->chroot_dir != NULL) {
+			char path[_POSIX_PATH_MAX];
+			
+			snprintf(path, sizeof(path), "%s/%s", config->chroot_dir, config->xml_config_file);
+			config->xml_config_hash = calc_sha1_hash(path, 0);
+			
+			if (config->xml_config_hash == NULL) {
+				fprintf(stderr, "Cannot open file '%s'\n", path);
+				exit(1);
+			}
+		}
+		if (config->xml_config_hash == NULL) {
+			fprintf(stderr, "Cannot open file '%s'\n", config->xml_config_file);
+			exit(1);
+		}
 	}
 	
 	if (config->keepalive == 0)

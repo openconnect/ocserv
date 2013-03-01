@@ -303,6 +303,7 @@ static void drop_privileges(main_server_st* s)
 	int ret, e;
 
 	if (s->config->chroot_dir) {
+		chdir(s->config->chroot_dir);
 		ret = chroot(s->config->chroot_dir);
 		if (ret != 0) {
 			e = errno;

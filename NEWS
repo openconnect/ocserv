@@ -1,9 +1,13 @@
 * Version 0.0.2 (unreleased)
 
-- Updated HTTP protocol handling (fixes issue with
-openconnect < 4). Reported by Mike Miller.
+- Updated HTTP protocol handling (fixes issue with openconnect < 4). 
+Reported by Mike Miller.
 
 - Use TCP wrappers (libwrap) when present.
+
+- Added configuration options 'user-profile' and 'always-require-cert' to 
+enable non-openconnect clients to connect.
+
 
 * Version 0.0.1 (released 2013-02-20)
 

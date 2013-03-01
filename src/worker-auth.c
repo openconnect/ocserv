@@ -341,19 +341,84 @@ struct cmd_auth_cookie_req_st areq;
 	return recv_auth_reply(ws);
 }
 
+int post_common_handler(worker_st *ws, unsigned http_ver)
+{
+int ret, size;
+char str_cookie[2*COOKIE_SIZE+1];
+char *p;
+unsigned i;
+char msg[MAX_BANNER_SIZE+32];
+
+	p = str_cookie;
+	for (i=0;i<sizeof(ws->cookie);i++) {
+		sprintf(p, "%.2x", (unsigned int)ws->cookie[i]);
+		p+=2;
+	}
+
+	/* reply */
+	tls_cork(ws->session);
+
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	if (ret < 0)
+		return -1;
+	
+	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+	if (ws->config->banner) {
+		size = snprintf(msg, sizeof(msg), "<banner>%s</banner>", ws->config->banner);
+		if (size <= 0)
+			return -1;
+	} else {
+		msg[0] = 0;
+		size = 0;
+	}
+
+	size += (sizeof(SUCCESS_MSG_HEAD)-1) + (sizeof(SUCCESS_MSG_FOOT)-1);
+
+        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s;Max-Age=%u\r\n", str_cookie, (unsigned)ws->config->cookie_validity);
+	if (ret < 0)
+		return -1;
+
+	if (ws->config->xml_config_file) {
+		ret = tls_printf(ws->session, "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2Fprofile.xml&fh:%s\r\n", ws->config->cert_hash,ws->config->xml_config_hash);
+		if (ret < 0)
+			return -1;
+	}
+
+	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
+		
+	return 0;
+}
 
 int post_old_auth_handler(worker_st *ws, unsigned http_ver)
 {
-int ret, size;
+int ret;
 struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
-char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
 char * password = NULL;
 char *p;
-unsigned int i;
 struct cmd_auth_req_st areq;
-char msg[MAX_BANNER_SIZE+32];
 
 	memset(&areq, 0, sizeof(areq));
 
@@ -412,59 +477,7 @@ char msg[MAX_BANNER_SIZE+32];
 
 	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
 
-	p = str_cookie;
-	for (i=0;i<sizeof(ws->cookie);i++) {
-		sprintf(p, "%.2x", (unsigned int)ws->cookie[i]);
-		p+=2;
-	}
-
-	/* reply */
-	tls_cork(ws->session);
-
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
-	if (ret < 0)
-		return -1;
-	
-	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
-	if (ret < 0)
-		return -1;
-
-	if (ws->config->banner) {
-		size = snprintf(msg, sizeof(msg), "<banner>%s</banner>", ws->config->banner);
-		if (size <= 0)
-			return -1;
-	} else {
-		msg[0] = 0;
-		size = 0;
-	}
-
-	size += (sizeof(SUCCESS_MSG_HEAD)-1) + (sizeof(SUCCESS_MSG_FOOT)-1);
-
-        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
-	if (ret < 0)
-		return -1;
-
-	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s;Max-Age=%u\r\n", str_cookie, (unsigned)ws->config->cookie_validity);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_uncork(ws->session);
-	if (ret < 0)
-		return -1;
-
-	return 0;
+	return post_common_handler(ws, http_ver);;
 
 auth_fail:
 	tls_printf(ws->session,
@@ -480,16 +493,13 @@ auth_fail:
 
 int post_new_auth_handler(worker_st *ws, unsigned http_ver)
 {
-int ret, size;
+int ret;
 struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
-char str_cookie[2*COOKIE_SIZE+1];
 char * username = NULL;
 char * password = NULL;
 char *p;
-unsigned int i;
 struct cmd_auth_req_st areq;
-char msg[MAX_BANNER_SIZE+32];
 
 	memset(&areq, 0, sizeof(areq));
 
@@ -544,60 +554,7 @@ char msg[MAX_BANNER_SIZE+32];
 
 	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
 
-	p = str_cookie;
-	for (i=0;i<sizeof(ws->cookie);i++) {
-		sprintf(p, "%.2x", (unsigned int)ws->cookie[i]);
-		p+=2;
-	}
-
-	/* reply */
-	tls_cork(ws->session);
-
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
-	if (ret < 0)
-		return -1;
-
-	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
-	if (ret < 0)
-		return -1;
-
-	if (ws->config->banner) {
-		size = snprintf(msg, sizeof(msg), "<banner>%s</banner>", ws->config->banner);
-		if (size <= 0)
-			return -1;
-	} else {
-		msg[0] = 0;
-		size = 0;
-	}
-
-	size += (sizeof(SUCCESS_MSG_HEAD)-1) + (sizeof(SUCCESS_MSG_FOOT)-1);
-
-        ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
-	if (ret < 0)
-		return -1;
-
-	ret = tls_printf(ws->session, "Set-Cookie: webvpn=%s;Max-Age=%u\r\n", str_cookie, (unsigned)ws->config->cookie_validity);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
-	if (ret < 0)
-		return -1;
-
-	ret = tls_uncork(ws->session);
-	if (ret < 0)
-		return -1;
-
-
-	return 0;
+	return post_common_handler(ws, http_ver);;
 
 ask_auth:
 	return get_auth_handler(ws, http_ver);

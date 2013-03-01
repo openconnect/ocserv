@@ -30,6 +30,7 @@
 #include <autoopts/options.h>
 
 #include <vpn.h>
+#include <tlslib.h>
 
 #define DEFAULT_CFG_FILE "/etc/ocserv.conf"
 
@@ -146,6 +147,7 @@ unsigned j;
 	READ_STRING("server-key", config->key, 1);
 	READ_STRING("pin-file", config->pin_file, 0);
 	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
+	READ_STRING("user-profile", config->xml_config_file, 0);
 
 	READ_STRING("ca-cert", config->ca, 0);
 	READ_STRING("crl", config->crl, 0);
@@ -208,6 +210,7 @@ unsigned j;
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size, 0);
 }
 
+
 /* sanity checks on config */
 static void check_cfg( struct cfg_st *config)
 {
@@ -229,6 +232,14 @@ static void check_cfg( struct cfg_st *config)
 	if (config->banner && strlen(config->banner) > MAX_BANNER_SIZE) {
 		fprintf(stderr, "Banner size is too long\n");
 		exit(1);
+	}
+
+	if (config->cert) {
+		config->cert_hash = calc_sha1_hash(config->cert, 1);
+	}
+
+	if (config->xml_config_file) {
+		config->xml_config_hash = calc_sha1_hash(config->xml_config_file, 0);
 	}
 	
 	if (config->keepalive == 0)
@@ -280,6 +291,9 @@ void reload_cfg_file(struct cfg_st* config)
 {
 unsigned i;
 
+	DEL(config->xml_config_file);
+	DEL(config->xml_config_hash);
+	DEL(config->cert_hash);
 	DEL(config->banner);
 	DEL(config->name);
 	DEL(config->cert);

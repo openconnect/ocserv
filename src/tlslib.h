@@ -20,15 +20,28 @@ int tls_uncork(gnutls_session_t session);
 
 void tls_global_init(struct main_server_st* s);
 int tls_global_init_client(struct worker_st* ws);
-void tls_global_reinit(struct main_server_st* s);
+void tls_global_init_certs(struct main_server_st* s);
 
 ssize_t tls_send_file(gnutls_session_t session, const char *file);
 
 #define GNUTLS_FATAL_ERR(x) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
                 if (syslog_open) \
-        		syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+       			syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
                 else \
+                        fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+                exit(1); \
+        }
+
+#define GNUTLS_S_FATAL_ERR(session, x) \
+        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+                if (syslog_open) { \
+	        	if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED) { \
+	        		syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s: %s", __FILE__, __LINE__, gnutls_strerror(x), gnutls_alert_get_name(gnutls_alert_get(session))); \
+        		} else { \
+        			syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+			} \
+                } else \
                         fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
                 exit(1); \
         }
@@ -66,5 +79,6 @@ typedef struct
 
 void tls_cache_init(hash_db_st** db);
 void tls_cache_deinit(hash_db_st* db);
+void *calc_sha1_hash(char* file, unsigned cert);
 
 #endif

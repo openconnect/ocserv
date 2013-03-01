@@ -485,7 +485,7 @@ static void check_other_work(main_server_st *s)
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
 		reload_cfg_file(s->config);
-		tls_global_reinit(s);
+		tls_global_init_certs(s);
 		reload_conf = 0;
 	}
 
@@ -559,6 +559,9 @@ int main(int argc, char** argv)
 	signal(SIGCHLD, handle_children);
 	signal(SIGALRM, handle_alarm);
 
+	/* Initialize GnuTLS */
+	tls_global_init(&s);
+
 	/* load configuration */
 	ret = cmd_parser(argc, argv, &config);
 	if (ret < 0) {
@@ -601,11 +604,10 @@ int main(int argc, char** argv)
 	allow_severity = LOG_DAEMON|LOG_INFO;
 	deny_severity = LOG_DAEMON|LOG_WARNING;
 #endif	
+	memset(&ws, 0, sizeof(ws));
 
 	/* Initialize GnuTLS */
-	tls_global_init(&s);
-
-	memset(&ws, 0, sizeof(ws));
+	tls_global_init_certs(&s);
 	
 	if (config.foreground == 0) {
 		if (daemon(0, 0) == -1) {

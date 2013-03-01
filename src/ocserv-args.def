@@ -82,6 +82,11 @@ auth = "pam"
 # A banner to be displayed on clients
 #banner = "Welcome"
 
+# Client profile xml. A sample file exists in doc/profile.xml.
+# This file must be accessible from inside the worker's chroot. 
+# It is not used by the openconnect client.
+#user-profile = /path/to/file.xml
+
 # Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
 #listen-host = [IP|HOSTNAME]
 

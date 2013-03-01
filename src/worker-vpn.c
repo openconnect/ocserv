@@ -81,23 +81,128 @@ static int connect_handler(worker_st *ws);
 typedef int (*url_handler_fn)(worker_st*, unsigned http_ver);
 struct known_urls_st {
 	const char* url;
+	unsigned url_size;
 	url_handler_fn get_handler;
 	url_handler_fn post_handler;
 };
 
+int get_config_handler(worker_st *ws, unsigned http_ver)
+{
+int ret;
+struct stat st;
+
+	oclog(ws, LOG_DEBUG, "requested config: %s", ws->req.url); 
+	if (ws->config->xml_config_file == NULL) {
+		oclog(ws, LOG_INFO, "requested config but no config file is set");
+		tls_printf(ws->session, "HTTP/1.%u 404 Not found\r\n", http_ver);
+		return -1;
+	}
+	
+	ret = stat( ws->config->xml_config_file, &st);
+	if (ret == -1) {
+		oclog(ws, LOG_INFO, "cannot load config file '%s'", ws->config->xml_config_file);
+		tls_printf(ws->session, "HTTP/1.%u 404 Not found\r\n", http_ver);
+		return -1;
+	}
+
+	tls_cork(ws->session);
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)st.st_size);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
+	
+	ret = tls_send_file(ws->session, ws->config->xml_config_file);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "error sending file '%s': %s", ws->config->xml_config_file, gnutls_strerror(ret));
+		return -1;
+	}
+
+	return 0;
+}
+
+int get_cscot_handler(worker_st *ws, unsigned http_ver)
+{
+int ret;
+
+	oclog(ws, LOG_DEBUG, "requested CSCOT: %s", ws->req.url); 
+
+	tls_cork(ws->session);
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+#define MANIFEST "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n" \
+		"</vpn>\n"
+	ret = tls_printf(ws->session, "Content-Length: %u\r\n\r\n", (unsigned)sizeof(MANIFEST)-1);
+	if (ret < 0)
+		return -1;
+		
+	ret = tls_puts(ws->session, MANIFEST);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
+	
+	return 0;
+}
+
+#define LL(x,y,z) {x, sizeof(x)-1, y, z}
 struct known_urls_st known_urls[] = {
-		{"/", get_auth_handler, post_new_auth_handler},
-		{"/auth", get_auth_handler, post_old_auth_handler},
-		{NULL, NULL}
+		LL("/", get_auth_handler, post_new_auth_handler),
+		LL("/auth", get_auth_handler, post_old_auth_handler),
+		LL("/profiles", get_config_handler, NULL),
+		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
+		{NULL, 0, NULL, NULL}
 };
 
 static url_handler_fn get_url_handler(const char* url)
 {
 struct known_urls_st *p;
+unsigned len = strlen(url);
 
 	p = known_urls;
 	do {
-		if (p->url != NULL && strcmp(p->url, url)==0)
+		if (p->url != NULL && (
+		        (len == p->url_size && strcmp(p->url, url)==0) ||
+			(len >= p->url_size && strncmp(p->url, url, p->url_size)==0 && 
+				(url[p->url_size] == '/' || url[p->url_size] == '?'))))
 			return p->get_handler;
 		p++;
 	} while(p->url != NULL);
@@ -409,7 +514,7 @@ void vpn_server(struct worker_st* ws)
 	do {
 		ret = gnutls_handshake(session);
 	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-	GNUTLS_FATAL_ERR(ret);
+	GNUTLS_S_FATAL_ERR(session, ret);
 
 	oclog(ws, LOG_DEBUG, "TLS handshake completed");
 
@@ -988,7 +1093,10 @@ unsigned mtu_overhead, tls_mtu = 0;
 hsk_restart:
 					ret = gnutls_handshake(ws->dtls_session);
 					if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
-						oclog(ws, LOG_ERR, "error in DTLS handshake: %s\n", gnutls_strerror(ret));
+						if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED)
+							oclog(ws, LOG_ERR, "error in DTLS handshake: %s: %s\n", gnutls_strerror(ret), gnutls_alert_get_name(gnutls_alert_get(ws->dtls_session)));
+						else
+							oclog(ws, LOG_ERR, "error in DTLS handshake: %s\n", gnutls_strerror(ret));
 						ws->udp_state = UP_DISABLED;
 						break;
 					}

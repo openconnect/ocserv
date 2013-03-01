@@ -19,6 +19,7 @@
 #include <config.h>
 
 #include <gnutls/gnutls.h>
+#include <gnutls/crypto.h>
 #include <gnutls/pkcs11.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -333,24 +334,23 @@ void tls_global_init(main_server_st* s)
 int ret;
 
 	gnutls_global_set_audit_log_function(tls_audit_log_func);
-	if (s->config->tls_debug) {
-		gnutls_global_set_log_function(tls_log_func);
-		gnutls_global_set_log_level(9);
-	}
 
 	ret = gnutls_global_init();
 	GNUTLS_FATAL_ERR(ret);
 	
-	tls_global_reinit(s);
-
 	return;
 }
 
 /* reload key files etc. */
-void tls_global_reinit(main_server_st* s)
+void tls_global_init_certs(main_server_st* s)
 {
 int ret;
 const char* perr;
+
+	if (s->config->tls_debug) {
+		gnutls_global_set_log_function(tls_log_func);
+		gnutls_global_set_log_level(9);
+	}
 
 	if (s->creds.xcred != NULL)
 		gnutls_certificate_free_credentials(s->creds.xcred);
@@ -467,4 +467,61 @@ int tls_uncork(gnutls_session_t session)
 #else
 	return 0;
 #endif
+}
+
+void *calc_sha1_hash(char* file, unsigned cert)
+{
+int ret;
+gnutls_datum_t data;
+uint8_t digest[20];
+char * retval;
+gnutls_x509_crt_t crt;
+
+	ret = gnutls_load_file(file, &data);
+	if (ret < 0) {
+		fprintf(stderr, "Cannot open file '%s': %s\n", file, gnutls_strerror(ret));
+		exit(1);
+	}
+	
+	if (cert != 0) {
+		ret = gnutls_x509_crt_init(&crt);
+		GNUTLS_FATAL_ERR(ret);
+
+		ret = gnutls_x509_crt_import(crt, &data, GNUTLS_X509_FMT_PEM);
+		if (ret == GNUTLS_E_BASE64_DECODING_ERROR)
+	  		ret = gnutls_x509_crt_import(crt, &data, GNUTLS_X509_FMT_DER);
+		GNUTLS_FATAL_ERR(ret);
+
+		gnutls_free(data.data);
+	
+		ret = gnutls_x509_crt_export2(crt, GNUTLS_X509_FMT_DER, &data);
+		GNUTLS_FATAL_ERR(ret);
+		gnutls_x509_crt_deinit(crt);
+	}
+	
+	ret = gnutls_hash_fast(GNUTLS_DIG_SHA1, data.data, data.size, digest);
+	gnutls_free(data.data);
+
+	if (ret < 0) {
+		fprintf(stderr, "Error calculating hash of '%s': %s\n", file, gnutls_strerror(ret));
+		exit(1);
+	}
+	
+	size_t ret_size = sizeof(digest)*2+1;
+	retval = malloc(ret_size);
+	if (retval == NULL) {
+		fprintf(stderr, "Memory error\n");
+		exit(1);
+	}
+	
+	data.data = digest;
+	data.size = sizeof(digest);
+	ret = gnutls_hex_encode(&data, retval, &ret_size);
+	if (ret < 0) {
+		fprintf(stderr, "Error in hex encode: %s\n", gnutls_strerror(ret));
+		exit(1);
+	}
+	retval[ret_size] = 0;
+	
+	return retval;
 }

@@ -240,7 +240,7 @@ static void check_cfg( struct cfg_st *config)
 		config->cert_hash = calc_sha1_hash(config->cert, 1);
 	}
 	
-	if (config->force_cert_auth)
+	if (config->force_cert_auth && config->cert_req == GNUTLS_CERT_REQUEST)
 		config->cert_req = GNUTLS_CERT_REQUIRE;
 
 	if (config->xml_config_file) {

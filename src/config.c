@@ -125,7 +125,6 @@ unsigned j;
 #endif
 		} else if (strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
-			config->cert_req = GNUTLS_CERT_REQUEST;
 		} else {
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
 			exit(1);
@@ -240,8 +239,12 @@ static void check_cfg( struct cfg_st *config)
 		config->cert_hash = calc_sha1_hash(config->cert, 1);
 	}
 	
-	if (config->force_cert_auth && config->cert_req == GNUTLS_CERT_REQUEST)
-		config->cert_req = GNUTLS_CERT_REQUIRE;
+	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		if (config->force_cert_auth)
+			config->cert_req = GNUTLS_CERT_REQUIRE;
+		else
+			config->cert_req = GNUTLS_CERT_REQUEST;
+	}
 
 	if (config->xml_config_file) {
 		config->xml_config_hash = calc_sha1_hash(config->xml_config_file, 0);

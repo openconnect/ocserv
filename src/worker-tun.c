@@ -96,11 +96,17 @@ int ret, e;
 	if (family == AF_INET) {
 		if (strcmp(p, "0.0.0.0")==0)
 			p = NULL;
-		vinfo->ipv4 = p;
+		if (local != 0)
+			vinfo->ipv4_local = p;
+		else
+			vinfo->ipv4 = p;
 	} else {
 		if (strcmp(p, "::")==0)
 			p = NULL;
-		vinfo->ipv6 = p;
+		if (local != 0)
+			vinfo->ipv6_local = p;
+		else
+			vinfo->ipv6 = p;
 	}
 
 	return 0;
@@ -150,13 +156,13 @@ struct ifreq ifr;
         if (ret < 0)
                 oclog(ws, LOG_DEBUG, "cannot obtain IPv4 local IP for %s", vinfo->name);
 
-
-	if (vinfo->ipv4_dns && strcmp(vinfo->ipv4_dns, "local") == 0)
+#define LOCAL "local"
+	if (ws->config->network.ipv4_dns && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
 		vinfo->ipv4_dns = vinfo->ipv4_local;
 	else
 		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
 
-	if (vinfo->ipv6_dns && strcmp(vinfo->ipv6_dns, "local") == 0)
+	if (ws->config->network.ipv6_dns && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
 		vinfo->ipv6_dns = vinfo->ipv6_local;
 	else
 		vinfo->ipv6_dns = ws->config->network.ipv6_dns;

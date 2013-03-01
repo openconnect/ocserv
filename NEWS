@@ -5,6 +5,8 @@ Reported by Mike Miller.
 
 - Use TCP wrappers (libwrap) when present.
 
+- Fixed issue with the 'local' keyword in DNS server.
+
 - Added configuration options 'user-profile' and 'always-require-cert' to 
 enable non-openconnect clients to connect.
 

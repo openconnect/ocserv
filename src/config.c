@@ -147,7 +147,9 @@ unsigned j;
 	READ_STRING("server-key", config->key, 1);
 	READ_STRING("pin-file", config->pin_file, 0);
 	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	READ_STRING("user-profile", config->xml_config_file, 0);
+#endif
 
 	READ_STRING("ca-cert", config->ca, 0);
 	READ_STRING("crl", config->crl, 0);
@@ -235,15 +237,17 @@ static void check_cfg( struct cfg_st *config)
 		exit(1);
 	}
 
-	if (config->cert) {
-		config->cert_hash = calc_sha1_hash(config->cert, 1);
-	}
 	
 	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
 		if (config->force_cert_auth)
 			config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;
+	}
+
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	if (config->cert) {
+		config->cert_hash = calc_sha1_hash(config->cert, 1);
 	}
 
 	if (config->xml_config_file) {
@@ -264,6 +268,7 @@ static void check_cfg( struct cfg_st *config)
 			exit(1);
 		}
 	}
+#endif
 	
 	if (config->keepalive == 0)
 		config->keepalive = 3600;
@@ -314,9 +319,11 @@ void reload_cfg_file(struct cfg_st* config)
 {
 unsigned i;
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	DEL(config->xml_config_file);
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
+#endif
 	DEL(config->banner);
 	DEL(config->name);
 	DEL(config->cert);

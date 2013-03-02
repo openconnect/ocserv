@@ -60,7 +60,6 @@ struct cfg_st {
 	char *pin_file;
 	char *srk_pin_file;
 	char *cert;
-	char *cert_hash;
 
 	char *key;
 	char *ca;
@@ -91,8 +90,11 @@ struct cfg_st {
 	char *connect_script;
 	char *disconnect_script;
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	char *xml_config_file;
 	char *xml_config_hash;
+	char *cert_hash;
+#endif
 
 	uid_t uid;
 	gid_t gid;

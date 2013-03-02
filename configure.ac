@@ -96,6 +96,14 @@ else
 fi
 fi
 
+AC_ARG_ENABLE(anyconnect-compat,
+  AS_HELP_STRING([--enable-anyconnect-compat], [enable Anyconnect client compatibility (experimental)]),
+    anyconnect_enabled=$enableval, anyconnect_enabled=no)
+if [ test "$anyconnect_enabled" = "yes" ];then
+	AC_DEFINE([ANYCONNECT_CLIENT_COMPAT], [], [Enable Anyconnect compatibility])
+fi
+
+
 enable_local_libopts=yes
 NEED_LIBOPTS_DIR=true
 LIBOPTS_CHECK([libopts])
@@ -111,14 +119,16 @@ AC_OUTPUT
 
 AC_MSG_NOTICE([summary of build options:
 
-  version:          ${VERSION}
-  Host type:        ${host}
-  Install prefix:   ${prefix}
-  Compiler:         ${CC}
-  CFlags:           ${CFLAGS}
-  GDBM backend:     ${gdbm_enabled}
-  PAM backend:      ${pam_enabled}
-  TCP wrappers:     ${libwrap_enabled}
-  seccomp:          ${seccomp_enabled}
+  version:                ${VERSION}
+  Host type:              ${host}
+  Install prefix:         ${prefix}
+  Compiler:               ${CC}
+  CFlags:                 ${CFLAGS}
+
+  GDBM backend:           ${gdbm_enabled}
+  PAM backend:            ${pam_enabled}
+  TCP wrappers:           ${libwrap_enabled}
+  seccomp (experimental): ${seccomp_enabled}
+  Anyconnect compat:      ${anyconnect_enabled}
 ])
 

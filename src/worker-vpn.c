@@ -86,6 +86,7 @@ struct known_urls_st {
 	url_handler_fn post_handler;
 };
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 int get_config_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
@@ -183,12 +184,16 @@ int ret;
 	return 0;
 }
 
+#endif
+
 #define LL(x,y,z) {x, sizeof(x)-1, y, z}
 struct known_urls_st known_urls[] = {
 		LL("/", get_auth_handler, post_new_auth_handler),
 		LL("/auth", get_auth_handler, post_old_auth_handler),
+#ifdef ANYCONNECT_CLIENT_COMPAT
 		LL("/profiles", get_config_handler, NULL),
 		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
+#endif
 		{NULL, 0, NULL, NULL}
 };
 

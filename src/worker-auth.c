@@ -403,11 +403,13 @@ char msg[MAX_BANNER_SIZE+32];
 	if (ret < 0)
 		return -1;
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	if (ws->config->xml_config_file) {
 		ret = tls_printf(ws->session, "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2Fprofile.xml&fh:%s\r\n", ws->config->cert_hash,ws->config->xml_config_hash);
 		if (ret < 0)
 			return -1;
 	}
+#endif
 
 	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
 	if (ret < 0)

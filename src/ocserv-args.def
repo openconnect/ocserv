@@ -82,17 +82,6 @@ auth = "pam"
 # A banner to be displayed on clients
 #banner = "Welcome"
 
-# Client profile xml. A sample file exists in doc/profile.xml.
-# This file must be accessible from inside the worker's chroot. 
-# It is not used by the openconnect client.
-#user-profile = /path/to/file.xml
-
-# Unless set to false it is required for clients to present their
-# certificate even if they are authenticating via a previously granted
-# cookie. Legacy CISCO clients do not do that, and thus this option
-# should be set for them.
-#always-require-cert = false
-
 # Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
 #listen-host = [IP|HOSTNAME]
 
@@ -218,6 +207,23 @@ ipv4-dns = local
 # and disconnect scripts.
 route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
+
+#
+# The following options are for (experimental) AnyConnect client compatibility.
+# They are available if the server is built with --enable-anyconnect
+#
+
+# Client profile xml. A sample file exists in doc/profile.xml.
+# This file must be accessible from inside the worker's chroot. 
+# It is not used by the openconnect client.
+#user-profile = /path/to/file.xml
+
+# Unless set to false it is required for clients to present their
+# certificate even if they are authenticating via a previously granted
+# cookie. Legacy CISCO clients do not do that, and thus this option
+# should be set for them.
+#always-require-cert = false
+
 
 @end example
 

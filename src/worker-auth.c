@@ -422,88 +422,12 @@ char msg[MAX_BANNER_SIZE+32];
 	return 0;
 }
 
-int post_old_auth_handler(worker_st *ws, unsigned http_ver)
-{
-int ret;
-struct http_req_st *req = &ws->req;
-const char* reason = "Authentication failed";
-char * username = NULL;
-char * password = NULL;
-char *p;
-struct cmd_auth_req_st areq;
-
-	memset(&areq, 0, sizeof(areq));
-
-	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		/* body should be "username=test&password=test" */
-		username = memmem(req->body, req->body_length, "username=", sizeof("username=")-1);
-		if (username == NULL) {
-			reason = "No username";
-			goto auth_fail;
-		}
-		username += sizeof("username=")-1;
-
-		password = memmem(req->body, req->body_length, "password=", sizeof("password=")-1);
-		if (password == NULL) {
-			reason = "No password";
-			goto auth_fail;
-		}
-		password += sizeof("password=")-1;
-		
-		/* modify body */
-		p = username;
-		while(*p != 0) {
-			if (*p == '&') {
-				*p = 0;
-				break;
-			}
-			p++;
-		}
-
-		p = password;
-		while(*p != 0) {
-			if (*p == '&') {
-				*p = 0;
-				break;
-			}
-			p++;
-		}
-		
-		areq.user_pass_present = 1;
-		snprintf(areq.user, sizeof(areq.user), "%s", username);
-		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
-	}
-	
-	if (req->hostname[0] != 0) {
-		memcpy(areq.hostname, req->hostname, sizeof(areq.hostname));
-	}
-
-	ret = auth_user(ws, &areq);
-	if (ret < 0) {
-		if (username)
-			oclog(ws, LOG_INFO, "Failed authentication attempt for '%s'", username);
-		else
-			oclog(ws, LOG_INFO, "Failed authentication attempt");
-		goto auth_fail;
-	}
-
-	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
-
-	return post_common_handler(ws, http_ver);;
-
-auth_fail:
-	tls_printf(ws->session,
-		   "HTTP/1.1 503 Service Unavailable\r\nX-Reason: %s\r\n\r\n", reason);
-	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
-	exit(1);
-}
-
 #define XMLUSER "<username>"
 #define XMLPASS "<password>"
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
-int post_new_auth_handler(worker_st *ws, unsigned http_ver)
+int post_auth_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
 struct http_req_st *req = &ws->req;
@@ -516,43 +440,89 @@ struct cmd_auth_req_st areq;
 	memset(&areq, 0, sizeof(areq));
 
 	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		/* body should contain <username>test</username><password>test</password> */
-		username = memmem(req->body, req->body_length, XMLUSER, sizeof(XMLUSER)-1);
-		if (username == NULL) {
-			reason = "No username";
-			goto ask_auth;
-		}
-		username += sizeof(XMLUSER)-1;
+		if (memmem(req->body, req->body_length, "<?xml", 5) != 0) {
+			oclog(ws, LOG_DEBUG, "POST body: '%.*s'", req->body_length, req->body);
 
-		password = memmem(req->body, req->body_length, XMLPASS, sizeof(XMLPASS)-1);
-		if (password == NULL) {
-			reason = "No password";
-			goto auth_fail;
-		}
-		password += sizeof(XMLPASS)-1;
-		
-		/* modify body */
-		p = username;
-		while(*p != 0) {
-			if (*p == '<' && (strncmp(p, XMLUSER_END, sizeof(XMLUSER_END)-1) == 0)) {
-				*p = 0;
-				break;
+			/* body should contain <username>test</username><password>test</password> */
+			username = memmem(req->body, req->body_length, XMLUSER, sizeof(XMLUSER)-1);
+			if (username == NULL) {
+				reason = "No username";
+				goto ask_auth;
 			}
-			p++;
-		}
+			username += sizeof(XMLUSER)-1;
 
-		p = password;
-		while(*p != 0) {
-			if (*p == '<' && (strncmp(p, XMLPASS_END, sizeof(XMLPASS_END)-1) == 0)) {
-				*p = 0;
-				break;
+			password = memmem(req->body, req->body_length, XMLPASS, sizeof(XMLPASS)-1);
+			if (password == NULL) {
+				reason = "No password";
+				goto auth_fail;
 			}
-			p++;
-		}
+			password += sizeof(XMLPASS)-1;
 		
-		areq.user_pass_present = 1;
-		snprintf(areq.user, sizeof(areq.user), "%s", username);
-		snprintf(areq.pass, sizeof(areq.pass), "%s", password);
+			/* modify body */
+			p = username;
+			while(*p != 0) {
+				if (*p == '<' && (strncmp(p, XMLUSER_END, sizeof(XMLUSER_END)-1) == 0)) {
+					*p = 0;
+					break;
+				}
+				p++;
+			}
+
+			p = password;
+			while(*p != 0) {
+				if (*p == '<' && (strncmp(p, XMLPASS_END, sizeof(XMLPASS_END)-1) == 0)) {
+					*p = 0;
+					break;
+				}
+				p++;
+			}
+		
+			areq.user_pass_present = 1;
+			snprintf(areq.user, sizeof(areq.user), "%s", username);
+			snprintf(areq.pass, sizeof(areq.pass), "%s", password);
+		} else { /* non-xml version */
+			/* body should be "username=test&password=test" */
+			username = memmem(req->body, req->body_length, "username=", sizeof("username=")-1);
+			if (username == NULL) {
+				reason = "No username";
+				goto auth_fail;
+			}
+			username += sizeof("username=")-1;
+
+			password = memmem(req->body, req->body_length, "password=", sizeof("password=")-1);
+			if (password == NULL) {
+				reason = "No password";
+				goto auth_fail;
+			}
+			password += sizeof("password=")-1;
+		
+			/* modify body */
+			p = username;
+			while(*p != 0) {
+				if (*p == '&') {
+					*p = 0;
+					break;
+				}
+				p++;
+			}
+
+			p = password;
+			while(*p != 0) {
+				if (*p == '&') {
+					*p = 0;
+					break;
+				}
+				p++;
+			}
+		
+			areq.user_pass_present = 1;
+			snprintf(areq.user, sizeof(areq.user), "%s", username);
+			snprintf(areq.pass, sizeof(areq.pass), "%s", password);
+		}
+	}
+	
+	if (req->hostname[0] != 0) {
+		memcpy(areq.hostname, req->hostname, sizeof(areq.hostname));
 	}
 
 	ret = auth_user(ws, &areq);

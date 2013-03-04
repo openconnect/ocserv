@@ -188,8 +188,8 @@ int ret;
 
 #define LL(x,y,z) {x, sizeof(x)-1, y, z}
 struct known_urls_st known_urls[] = {
-		LL("/", get_auth_handler, post_new_auth_handler),
-		LL("/auth", get_auth_handler, post_old_auth_handler),
+		LL("/", get_auth_handler, post_auth_handler),
+		LL("/auth", get_auth_handler, post_auth_handler),
 #ifdef ANYCONNECT_CLIENT_COMPAT
 		LL("/profiles", get_config_handler, NULL),
 		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
@@ -591,7 +591,7 @@ restart:
 		fn = post_url_handler(ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_INFO, "unexpected POST URL %s", ws->req.url); 
-			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+			tls_printf(session, "HTTP/1.%u 404 Nah, go away\r\n\r\n", parser.http_minor);
 			goto finish;
 		}
 
@@ -607,7 +607,7 @@ restart:
 
 	} else {
 		oclog(ws, LOG_INFO, "unexpected HTTP method %s", http_method_str(parser.method)); 
-		tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+		tls_printf(session, "HTTP/1.%u 404 Nah, go away\r\n\r\n", parser.http_minor);
 	}
 
 finish:

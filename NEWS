@@ -1,14 +1,12 @@
 * Version 0.0.2 (unreleased)
 
 - Updated HTTP protocol handling (fixes issue with openconnect < 4). 
-Reported by Mike Miller.
-
+  Reported by Mike Miller.
 - Use TCP wrappers (libwrap) when present.
-
 - Fixed issue with the 'local' keyword in DNS server.
-
 - Added configuration options 'user-profile' and 'always-require-cert' to 
-enable non-openconnect clients to connect.
+  enable non-openconnect clients to connect. They are enabled with
+  the configure option --enable-anyconnect-compat.
 
 
 * Version 0.0.1 (released 2013-02-20)

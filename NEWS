@@ -10,6 +10,9 @@
 - Allow setting a rate limit on the number of connections.
 - Allow setting a reconnection delay time after a failed authentication
   attempt (added min-reauth-time option).
+- Eliminated memory leaks.
+- Auto-detect xml content for username and password (fixes interoperability
+  with newer openconnect versions).
 
 * Version 0.0.1 (released 2013-02-20)
 

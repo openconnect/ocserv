@@ -314,13 +314,13 @@ struct banned_st *btmp, *bpos;
 			/* invalid entry. Clean it up */
 			list_del(&btmp->list);
 			free(btmp);
-		}
-					
-		if (SA_IN_SIZE(btmp->addr_len) == SA_IN_SIZE(addr_len) &&
-			memcmp(SA_IN_P_GENERIC(&btmp->addr, btmp->addr_len), 
-				SA_IN_P_GENERIC(addr, addr_len), 
-				SA_IN_SIZE(btmp->addr_len)) == 0) {
-			return -1;
+		} else {
+			if (SA_IN_SIZE(btmp->addr_len) == SA_IN_SIZE(addr_len) &&
+				memcmp(SA_IN_P_GENERIC(&btmp->addr, btmp->addr_len), 
+					SA_IN_P_GENERIC(addr, addr_len), 
+					SA_IN_SIZE(btmp->addr_len)) == 0) {
+				return -1;
+			}
 		}
 	}
 	

@@ -1,5 +1,6 @@
 AC_PREREQ(2.61)
 AC_INIT([ocserv], [0.0.2], [nmav@gnutls.org])
+PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -33,6 +34,11 @@ PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.28])
 AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
+
+$PKG_CONFIG --exact-version=3.1.7 gnutls || $PKG_CONFIG --exact-version=3.1.8 gnutls
+if test "$?" = "0"; then
+	    AC_MSG_ERROR([Your GnuTLS version has issue with forking servers. Use 3.1.9 or later.])
+fi
 
 gdbm_enabled=no
 LIBS="$oldlibs -lgdbm"

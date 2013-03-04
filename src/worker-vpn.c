@@ -936,7 +936,7 @@ unsigned mtu_overhead, tls_mtu = 0;
 		}
 
 		tls_pending = gnutls_record_check_pending(ws->session);
-		
+
 		if (ws->dtls_session != NULL)
 			dtls_pending = gnutls_record_check_pending(ws->dtls_session);
 		if (tls_pending == 0 && dtls_pending == 0) {
@@ -1161,30 +1161,18 @@ send_error:
 static int parse_data(struct worker_st* ws, 
 			gnutls_session_t ts, /* the interface of recv */
 			uint8_t head,
-			uint8_t* buf, size_t buf_size)
+			uint8_t* buf, size_t buf_size, time_t now)
 {
 int ret, e, l;
-time_t now = time(0);
-
-	/* whatever we received treat it as DPD response.
-	 * it indicates that the channel is alive */
-	if (ws->session == ts) {
-		ws->last_dpd_tcp = now;
-	} else {
-		ws->last_dpd_udp = now;
-	}
 
 	switch (head) {
 		case AC_PKT_DPD_RESP:
 			oclog(ws, LOG_DEBUG, "received DPD response");
-
 			break;
 		case AC_PKT_KEEPALIVE:
 			oclog(ws, LOG_DEBUG, "received keepalive");
 			break;
 		case AC_PKT_DPD_OUT:
-			now = time(0);
-
 			if (ws->session == ts) {
 				ret = tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
 
@@ -1246,6 +1234,7 @@ static int parse_cstp_data(struct worker_st* ws,
 				uint8_t* buf, size_t buf_size)
 {
 int pktlen;
+time_t now;
 
 	if (buf_size < 8) {
 		oclog(ws, LOG_INFO, "can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
@@ -1264,16 +1253,24 @@ int pktlen;
 		return -1;
 	}
 
-	return parse_data(ws, ws->session, buf[6], buf+8, pktlen);
+	/* whatever we received treat it as DPD response.
+	 * it indicates that the channel is alive */
+	now = time(0);
+	ws->last_dpd_tcp = now;
+	return parse_data(ws, ws->session, buf[6], buf+8, pktlen, now);
 }
 
 static int parse_dtls_data(struct worker_st* ws, 
 				uint8_t* buf, size_t buf_size)
 {
+time_t now;
+
 	if (buf_size < 1) {
 		oclog(ws, LOG_INFO, "can't read DTLS header (only %d bytes are available)\n", (int)buf_size);
 		return -1;
 	}
 
-	return parse_data(ws, ws->dtls_session, buf[0], buf+1, buf_size-1);
+	now = time(0);
+	ws->last_dpd_udp = now;
+	return parse_data(ws, ws->dtls_session, buf[0], buf+1, buf_size-1, now);
 }

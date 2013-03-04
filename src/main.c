@@ -56,9 +56,14 @@ static unsigned int need_children_cleanup = 0;
 static void ms_sleep(unsigned ms)
 {
   struct timespec tv;
-  
+
   tv.tv_sec = 0;
   tv.tv_nsec = ms * 1000 * 1000;
+
+  while(tv.tv_nsec >= 1000000000) {
+  	tv.tv_nsec -= 1000000000;
+  	tv.tv_sec++;
+  }
   
   nanosleep(&tv, NULL);
 }

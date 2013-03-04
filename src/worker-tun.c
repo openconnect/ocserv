@@ -62,9 +62,9 @@ int ret, e;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 
 	if (local != 0)
-		flags = SIOCGIFDSTADDR;
-	else
 		flags = SIOCGIFADDR;
+	else
+		flags = SIOCGIFDSTADDR;
 
 	ret = ioctl(fd, flags, &ifr);
 	if (ret != 0) {

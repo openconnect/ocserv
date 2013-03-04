@@ -73,8 +73,8 @@ An example configuration file follows.
 
 @example
 
-# User authentication method. Could be set multiple times and in that case
-# all should succeed.
+# User authentication method. Could be set multiple times and in 
+# that case all should succeed.
 # Options: certificate, pam. 
 #auth = "certificate"
 auth = "pam"
@@ -82,19 +82,20 @@ auth = "pam"
 # A banner to be displayed on clients
 #banner = "Welcome"
 
-# Use listen-host to limit to specific IPs or to the IPs of a provided hostname.
+# Use listen-host to limit to specific IPs or to the IPs of a provided 
+# hostname.
 #listen-host = [IP|HOSTNAME]
 
 # Limit the number of clients. Unset or set to zero for unlimited.
 #max-clients = 1024
 max-clients = 16
 
-# Limit the number of client connections to one every X milliseconds (X is the provided
-# value). Set to zero for no limit.
+# Limit the number of client connections to one every X milliseconds 
+# (X is the provided value). Set to zero for no limit.
 #rate-limit-ms = 100
 
-# Limit the number of identical clients (i.e., users connecting multiple times)
-# Unset or set to zero for unlimited.
+# Limit the number of identical clients (i.e., users connecting 
+# multiple times). Unset or set to zero for unlimited.
 max-same-clients = 2
 
 # TCP and UDP port number
@@ -128,15 +129,15 @@ server-key = /path/to/key.pem
 # is set.
 #ca-cert = /path/to/ca.pem
 
-# The object identifier that will be used to read the user ID in the client certificate.
-# The object identifier should be part of the certificate's DN
+# The object identifier that will be used to read the user ID in the client 
+# certificate. The object identifier should be part of the certificate's DN
 # Useful OIDs are: 
 #  CN = 2.5.4.3, UID = 0.9.2342.19200300.100.1.1
 #cert-user-oid = 0.9.2342.19200300.100.1.1
 
-# The object identifier that will be used to read the user group in the client 
-# certificate. The object identifier should be part of the certificate's DN
-# Useful OIDs are: 
+# The object identifier that will be used to read the user group in the 
+# client  certificate. The object identifier should be part of the certificate's
+# DN. Useful OIDs are: 
 #  OU (organizational unit) = 2.5.4.11 
 #cert-group-oid = 2.5.4.11
 
@@ -150,9 +151,9 @@ tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE"
 # to authentication
 auth-timeout = 40
 
-# The time (in seconds) that a client is not allowed to reconnect after a failed
-# authentication attempt.
-min-reauth-time = 2
+# The time (in seconds) that a client is not allowed to reconnect after 
+# a failed authentication attempt.
+#min-reauth-time = 2
 
 # Cookie validity time (in seconds)
 # Once a client is authenticated he's provided a cookie with
@@ -217,8 +218,9 @@ route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 
 #
-# The following options are for (experimental) AnyConnect client compatibility.
-# They are available if the server is built with --enable-anyconnect
+# The following options are for (experimental) AnyConnect client 
+# compatibility. They are only available if the server is built 
+# with --enable-anyconnect
 #
 
 # Client profile xml. A sample file exists in doc/profile.xml.

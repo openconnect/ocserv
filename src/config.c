@@ -142,6 +142,7 @@ unsigned j;
 	READ_NUMERIC("udp-port", config->udp_port, 0);
 	READ_NUMERIC("keepalive", config->keepalive, 0);
 	READ_NUMERIC("dpd", config->dpd, 0);
+	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms, 10);
 
 	READ_STRING("server-cert", config->cert, 1);
 	READ_STRING("server-key", config->key, 1);

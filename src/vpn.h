@@ -83,6 +83,7 @@ struct cfg_st {
 	unsigned use_utmp;
 	unsigned try_mtu; /* MTU discovery enabled */
 	unsigned force_cert_auth; /* always require client certificate */
+	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
 
 	/* if gdbm is there */
 	char* cookie_db_name;

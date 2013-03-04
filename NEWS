@@ -7,7 +7,7 @@
 - Added configuration options 'user-profile' and 'always-require-cert' to 
   enable non-openconnect clients to connect. They are enabled with
   the configure option --enable-anyconnect-compat.
-
+- Allow setting a rate limit on the number of connections.
 
 * Version 0.0.1 (released 2013-02-20)
 

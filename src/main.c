@@ -53,6 +53,16 @@ static unsigned int reload_conf = 0;
 unsigned int need_maintainance = 0;
 static unsigned int need_children_cleanup = 0;
 
+static void ms_sleep(unsigned ms)
+{
+  struct timespec tv;
+  
+  tv.tv_sec = 0;
+  tv.tv_nsec = ms * 1000 * 1000;
+  
+  nanosleep(&tv, NULL);
+}
+
 static 
 int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_list_st *list)
 {
@@ -746,12 +756,18 @@ fork_failed:
 				}
 				close(cmd_fd[1]);
 				close(fd);
+
+				if (config.rate_limit_ms > 0)
+					ms_sleep(config.rate_limit_ms);
 			} else if (set && ltmp->socktype == SOCK_DGRAM) {
 				/* connection on UDP port */
 				ret = forward_udp_to_owner(&s, ltmp);
 				if (ret < 0) {
 					mslog(&s, NULL, LOG_INFO, "Could not determine the owner of received UDP packet");
 				}
+
+				if (config.rate_limit_ms > 0)
+					ms_sleep(config.rate_limit_ms);
 			}
 		}
 

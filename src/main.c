@@ -362,6 +362,7 @@ void clear_lists(main_server_st *s)
 	list_for_each_safe(&s->llist.head, ltmp, lpos, list) {
 		close(ltmp->fd);
 		list_del(&ltmp->list);
+		free(ltmp);
 		s->llist.total--;
 	}
 
@@ -369,11 +370,13 @@ void clear_lists(main_server_st *s)
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
 		list_del(&ctmp->list);
+		free(ctmp);
 		s->clist.total--;
 	}
 
 	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
 		list_del(&btmp->list);
+		free(btmp);
 	}
 
 	tls_cache_deinit(s->tls_db);
@@ -402,6 +405,7 @@ static void remove_proc(struct proc_st *ctmp)
 	if (ctmp->lease)
 		ctmp->lease->in_use = 0;
 	list_del(&ctmp->list);
+	free(ctmp);
 }
 
 static void handle_term(int signo)

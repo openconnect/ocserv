@@ -72,6 +72,7 @@ struct cfg_st {
 	char *chroot_dir;	/* where the xml files are served from */
 	char *banner;
 	time_t cookie_validity;	/* in seconds */
+	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;
 	unsigned dpd;

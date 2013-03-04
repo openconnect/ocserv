@@ -111,7 +111,6 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 int handle_commands(main_server_st *s, struct proc_st* proc)
 {
 	struct iovec iov[2];
-	char buf[128];
 	uint8_t cmd;
 	struct msghdr hdr;
 	struct lease_st *lease;
@@ -123,10 +122,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 		struct cmd_tun_mtu_st tmtu;
 	} cmd_data;
 	int ret, cmd_data_len, e;
-	const char* peer_ip, *group;
+	const char* group;
 
-	peer_ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len, buf, sizeof(buf));
-	
 	memset(&cmd_data, 0, sizeof(cmd_data));
 	
 	iov[0].iov_base = &cmd;
@@ -142,7 +139,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	ret = recvmsg( proc->fd, &hdr, 0);
 	if (ret == -1) {
 		e = errno;
-		mslog(s, proc, LOG_ERR, "cannot obtain data from command socket (pid: %d, peer: %s): %s", proc->pid, peer_ip, strerror(e));
+		mslog(s, proc, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
 		return -1;
 	}
 
@@ -241,6 +238,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 						mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 					}
 				}
+			} else {
+				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
 			}
 
 			if (ret == 0) {
@@ -275,7 +274,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
 				ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
 				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "could not send reply cmd (pid: %d, peer: %s).", proc->pid, peer_ip);
+					mslog(s, proc, LOG_ERR, "could not send reply cmd.");
 					ret = -2;
 					goto lease_cleanup;
 				}
@@ -300,4 +299,68 @@ lease_cleanup:
 	}
 	
 	return 0;
+}
+
+int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len)
+{
+time_t now = time(0);
+struct banned_st *btmp, *bpos;
+
+	if (s->config->min_reauth_time == 0)
+		return 0;
+
+	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
+		if (now-btmp->failed_time > s->config->min_reauth_time) {
+			/* invalid entry. Clean it up */
+			list_del(&btmp->list);
+			free(btmp);
+		}
+					
+		if (SA_IN_SIZE(btmp->addr_len) == SA_IN_SIZE(addr_len) &&
+			memcmp(SA_IN_P_GENERIC(&btmp->addr, btmp->addr_len), 
+				SA_IN_P_GENERIC(addr, addr_len), 
+				SA_IN_SIZE(btmp->addr_len)) == 0) {
+			return -1;
+		}
+	}
+	
+	return 0;
+}
+
+
+void expire_banned(main_server_st* s)
+{
+time_t now = time(0);
+struct banned_st *btmp, *bpos;
+
+	if (s->config->min_reauth_time == 0)
+		return;
+
+	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
+		if (now-btmp->failed_time > s->config->min_reauth_time) {
+			/* invalid entry. Clean it up */
+			list_del(&btmp->list);
+			free(btmp);
+		}
+	}
+
+	return;
+}
+
+void add_to_ip_ban_list(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len)
+{
+struct banned_st *btmp;
+
+	if (s->config->min_reauth_time == 0)
+		return;
+
+	btmp = malloc(sizeof(*btmp));
+	if (btmp == NULL)
+		return;
+	
+	btmp->failed_time = time(0);
+	memcpy(&btmp->addr, addr, addr_len);
+	btmp->addr_len = addr_len;
+	
+	list_add(&s->ban_list.head, &(btmp->list));
 }

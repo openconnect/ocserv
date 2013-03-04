@@ -62,6 +62,17 @@ struct proc_list_st {
 	unsigned int total;
 };
 
+struct banned_st {
+	struct list_node list;
+	time_t failed_time;	/* The time authentication failed */
+	struct sockaddr_storage addr; /* local socket address */
+	socklen_t addr_len;
+};
+
+struct ban_list_st {
+	struct list_head head;
+};
+
 typedef struct main_server_st {
 	struct cfg_st *config;
 	struct tun_st *tun;
@@ -71,8 +82,9 @@ typedef struct main_server_st {
 	/* tls credentials */
 	struct tls_st creds;
 
-	struct listen_list_st* llist;
-	struct proc_list_st* clist;
+	struct listen_list_st llist;
+	struct proc_list_st clist;
+	struct ban_list_st ban_list;
 } main_server_st;
 
 void clear_lists(main_server_st *s);
@@ -116,5 +128,9 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
 		   const struct cmd_auth_req_st * req, struct lease_st **lease);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
+
+void add_to_ip_ban_list(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
+void expire_banned(main_server_st* s);
+int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
 
 #endif

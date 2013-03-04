@@ -150,6 +150,10 @@ tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE"
 # to authentication
 auth-timeout = 40
 
+# The time (in seconds) that a client is not allowed to reconnect after a failed
+# authentication attempt.
+min-reauth-time = 2
+
 # Cookie validity time (in seconds)
 # Once a client is authenticated he's provided a cookie with
 # which he can reconnect. This option sets the maximum lifetime

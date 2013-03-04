@@ -350,25 +350,32 @@ static void drop_privileges(main_server_st* s)
 	}
 }
 
-/* clears the server llist and clist. To be used after fork() */
+/* clears the server llist and clist. To be used after fork().
+ * It frees unused memory and descriptors.
+ */
 void clear_lists(main_server_st *s)
 {
 	struct listener_st *ltmp, *lpos;
 	struct proc_st *ctmp, *cpos;
+	struct banned_st *btmp, *bpos;
 
-	list_for_each_safe(&s->llist->head, ltmp, lpos, list) {
+	list_for_each_safe(&s->llist.head, ltmp, lpos, list) {
 		close(ltmp->fd);
 		list_del(&ltmp->list);
-		s->llist->total--;
+		s->llist.total--;
 	}
 
-	list_for_each_safe(&s->clist->head, ctmp, cpos, list) {
+	list_for_each_safe(&s->clist.head, ctmp, cpos, list) {
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
 		list_del(&ctmp->list);
-		s->clist->total--;
+		s->clist.total--;
 	}
-	
+
+	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
+		list_del(&btmp->list);
+	}
+
 	tls_cache_deinit(s->tls_db);
 }
 
@@ -376,7 +383,7 @@ static void kill_children(main_server_st* s)
 {
 	struct proc_st *ctmp;
 
-	list_for_each(&s->clist->head, ctmp, list) {
+	list_for_each(&s->clist.head, ctmp, list) {
 		if (ctmp->pid != -1) {
 			kill(ctmp->pid, SIGTERM);
 			user_disconnected(s, ctmp);
@@ -455,7 +462,7 @@ int connected = 0;
 	session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 
 	/* search for the IP and the session ID in all procs */
-	list_for_each(&s->clist->head, ctmp, list) {
+	list_for_each(&s->clist.head, ctmp, list) {
 
 		if (session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
@@ -519,6 +526,7 @@ static void check_other_work(main_server_st *s)
 		mslog(s, NULL, LOG_INFO, "Performing maintainance");
 		expire_tls_sessions(s);
 		expire_cookies(s);
+		expire_banned(s);
 		alarm(MAINTAINANCE_TIME(s));
 	}
 		
@@ -548,8 +556,6 @@ static int check_tcp_wrapper(int fd)
 int main(int argc, char** argv)
 {
 	int fd, pid, e;
-	struct listen_list_st llist;
-	struct proc_list_st clist;
 	struct listener_st *ltmp;
 	struct proc_st *ctmp, *cpos;
 	struct tun_st tun;
@@ -564,7 +570,8 @@ int main(int argc, char** argv)
 
 	memset(&s, 0, sizeof(s));
 
-	list_head_init(&clist.head);
+	list_head_init(&s.clist.head);
+	list_head_init(&s.ban_list.head);
 	tun_st_init(&tun);
 	tls_cache_init(&s.tls_db);
 
@@ -594,8 +601,6 @@ int main(int argc, char** argv)
 
 	s.config = &config;
 	s.tun = &tun;
-	s.llist = &llist;
-	s.clist = &clist;
 
 	ret = cookie_db_init(&s);
 	if (ret < 0) {
@@ -604,7 +609,7 @@ int main(int argc, char** argv)
 	}
 	
 	/* Listen to network ports */
-	ret = listen_ports(&config, &llist, config.name);
+	ret = listen_ports(&config, &s.llist, config.name);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -645,7 +650,7 @@ int main(int argc, char** argv)
 		/* initialize select */
 		FD_ZERO(&rd);
 
-		list_for_each(&llist.head, ltmp, list) {
+		list_for_each(&s.llist.head, ltmp, list) {
 			if (ltmp->fd == -1) continue;
 
 			val = fcntl(ltmp->fd, F_GETFL, 0);
@@ -661,7 +666,7 @@ int main(int argc, char** argv)
 			n = MAX(n, ltmp->fd);
 		}
 
-		list_for_each(&clist.head, ctmp, list) {
+		list_for_each(&s.clist.head, ctmp, list) {
 			FD_SET(ctmp->fd, &rd);
 			n = MAX(n, ctmp->fd);
 		}
@@ -680,7 +685,7 @@ int main(int argc, char** argv)
 		}
 
 		/* Check for new connections to accept */
-		list_for_each(&llist.head, ltmp, list) {
+		list_for_each(&s.llist.head, ltmp, list) {
 			set = FD_ISSET(ltmp->fd, &rd);
 			if (set && ltmp->socktype == SOCK_STREAM) {
 				/* connection on TCP port */
@@ -693,6 +698,15 @@ int main(int argc, char** argv)
 				}
 				set_cloexec_flag (fd, 1);
 				
+				/* Check if the client is on the banned list */
+				ret = check_if_banned(&s, &ws.remote_addr, ws.remote_addr_len);
+				if (ret < 0) {
+					/* banned */
+					close(fd);
+					mslog(&s, NULL, LOG_INFO, "dropping client connection due to a previous failed authentication attempt");
+					break;
+				}
+
 				if (config.max_clients > 0 && active_clients >= config.max_clients) {
 					close(fd);
 					mslog(&s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
@@ -756,7 +770,7 @@ fork_failed:
 					ctmp->fd = cmd_fd[0];
 					set_cloexec_flag (cmd_fd[0], 1);
 
-					list_add(&clist.head, &(ctmp->list));
+					list_add(&s.clist.head, &(ctmp->list));
 					active_clients++;
 				}
 				close(cmd_fd[1]);
@@ -777,7 +791,7 @@ fork_failed:
 		}
 
 		/* Check for any pending commands */
-		list_for_each_safe(&clist.head, ctmp, cpos, list) {
+		list_for_each_safe(&s.clist.head, ctmp, cpos, list) {
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {

@@ -261,7 +261,7 @@ unsigned int entries = 1; /* that one */
 	if (s->config->max_same_clients == 0)
 		return 0; /* ok */
 
-	list_for_each(&s->clist->head, ctmp, list) {
+	list_for_each(&s->clist.head, ctmp, list) {
 
 		if (ctmp != proc) {
 			if (strcmp(proc->username, ctmp->username) == 0) {

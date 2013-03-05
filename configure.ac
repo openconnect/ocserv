@@ -131,8 +131,8 @@ AC_MSG_NOTICE([summary of build options:
   Compiler:               ${CC}
   CFlags:                 ${CFLAGS}
 
-  GDBM backend:           ${gdbm_enabled}
-  PAM backend:            ${pam_enabled}
+  GDBM storage backend:   ${gdbm_enabled}
+  PAM auth backend:       ${pam_enabled}
   TCP wrappers:           ${libwrap_enabled}
   seccomp (experimental): ${seccomp_enabled}
   Anyconnect compat:      ${anyconnect_enabled}

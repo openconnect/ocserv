@@ -1,4 +1,4 @@
-* Version 0.0.2 (unreleased)
+* Version 0.0.2 (released 2013-03-05)
 
 - Updated HTTP protocol handling (fixes issue with openconnect < 4). 
   Reported by Mike Miller.

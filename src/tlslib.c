@@ -427,6 +427,11 @@ const char* perr;
 		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s\n", perr);
 	GNUTLS_FATAL_ERR(ret);
 	
+	if (s->config->ocsp_response != NULL) {
+		ret = gnutls_certificate_set_ocsp_status_request_file(s->creds.xcred,
+			s->config->ocsp_response, 0);
+		GNUTLS_FATAL_ERR(ret);
+	}
 	
 	return;
 }

@@ -118,6 +118,15 @@ try-mtu-discovery = false
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 
+# If you have a certificate from a CA that provides an OCSP
+# service you may provide a fresh OCSP status response within
+# the TLS handshake. That will prevent the client from connecting
+# independently on the OCSP server.
+# You can update this response periodically using:
+# ocsptool --ask --load-cert=your_cert --load-issuer=your_ca --outfile response
+# Make sure that you replace the following file in an atomic way.
+#ocsp-response = /path/to/ocsp.der
+
 # In case PKCS #11 or TPM keys are used the PINs should be available
 # in files. The srk-pin-file is applicable to TPM keys only, and is the 
 # storage root key.

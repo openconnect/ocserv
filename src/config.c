@@ -144,6 +144,7 @@ unsigned j;
 	READ_NUMERIC("dpd", config->dpd, 0);
 	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms, 10);
 
+	READ_STRING("ocsp-response", config->cert, 0);
 	READ_STRING("server-cert", config->cert, 1);
 	READ_STRING("server-key", config->key, 1);
 	READ_STRING("pin-file", config->pin_file, 0);
@@ -326,6 +327,7 @@ unsigned i;
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
 #endif
+	DEL(config->ocsp_response);
 	DEL(config->banner);
 	DEL(config->name);
 	DEL(config->cert);

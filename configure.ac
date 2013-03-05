@@ -89,8 +89,8 @@ else
 fi
 
 AC_ARG_ENABLE(seccomp,
-  AS_HELP_STRING([--disable-seccomp], [unconditionally disable seccomp]),
-    seccomp_enabled=$enableval, seccomp_enabled=yes)
+  AS_HELP_STRING([--enable-seccomp], [enable seccomp support]),
+    seccomp_enabled=$enableval, seccomp_enabled=no)
 
 if [ test "$seccomp_enabled" = "yes" ];then
 AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <linux/seccomp.h>

@@ -58,6 +58,7 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		} \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
 	}
 
 #define READ_BOOLEAN(name, s_name, mand) \
@@ -66,6 +67,7 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		s_name = 1; \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
 	}
 
 
@@ -75,6 +77,7 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		s_name = strdup(val->v.strVal); \
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
 	}
 	
 #define READ_TF(name, s_name, mand, def) \
@@ -98,6 +101,7 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 			s_name = atoi(val->v.strVal); \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
 	}
 
 static void parse_cfg_file(const char* file, struct cfg_st *config)

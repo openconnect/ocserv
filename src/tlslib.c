@@ -374,11 +374,15 @@ const char* perr;
 
 	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, &s->creds);
 	
-	if (s->config->key != NULL && strncmp(s->config->key, "pkcs11:", 7) != 0) {
+	if (s->config->key == NULL || s->config->cert == NULL) {
+		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified.\n"); 
+		exit(1);
+	}
+	
+	if (strncmp(s->config->key, "pkcs11:", 7) != 0) {
 		ret =
 		    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert,
-						 s->config->key,
-						 GNUTLS_X509_FMT_PEM);
+						 s->config->key, GNUTLS_X509_FMT_PEM);
 		if (ret < 0) {
 			mslog(s, NULL, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
 				s->config->cert, s->config->key, gnutls_strerror(ret));
@@ -443,7 +447,7 @@ int ret;
 
 	/* when we have PKCS #11 keys we cannot open them and then fork(), we need
 	 * to open them at the process they are going to be used. */
-	if (ws->config->key != NULL && strncmp(ws->config->key, "pkcs11:", 7) == 0) {
+	if (strncmp(ws->config->key, "pkcs11:", 7) == 0) {
 		ret = gnutls_pkcs11_reinit();
 		if (ret < 0) {
 			oclog(ws, LOG_ERR, "could not reinitialize PKCS #11 subsystem: %s\n",

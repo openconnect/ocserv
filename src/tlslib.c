@@ -350,6 +350,46 @@ int ret;
 	return;
 }
 
+static void certificate_check(main_server_st *s)
+{
+gnutls_datum_t data;
+gnutls_x509_crt_t crt;
+int ret;
+unsigned usage;
+
+#if GNUTLS_VERSION_NUMBER > 0x030100
+	if (gnutls_url_is_supported(s->config->cert) == 0) {
+#endif
+		/* no URL */
+		ret = gnutls_load_file(s->config->cert, &data);
+		GNUTLS_FATAL_ERR(ret);
+		
+		ret = gnutls_x509_crt_init(&crt);
+		GNUTLS_FATAL_ERR(ret);
+
+		ret = gnutls_x509_crt_import(crt, &data, GNUTLS_X509_FMT_PEM);
+		GNUTLS_FATAL_ERR(ret);
+		
+		ret = gnutls_x509_crt_get_pk_algorithm(crt, NULL);
+		if (ret != GNUTLS_PK_RSA)
+			goto cleanup;
+		
+		ret = gnutls_x509_crt_get_key_usage(crt, &usage, NULL);
+		if (ret >= 0) {
+			if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
+				mslog(s, NULL, LOG_WARNING, "server certificate does not support key encipherment; it may cause issues to connecting clients\n");
+			}
+		}
+#if GNUTLS_VERSION_NUMBER > 0x030100
+	}
+#endif
+
+cleanup:
+	gnutls_x509_crt_deinit(crt);
+	gnutls_free(data.data);
+	return;
+}
+
 /* reload key files etc. */
 void tls_global_init_certs(main_server_st* s)
 {
@@ -378,6 +418,8 @@ const char* perr;
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified.\n"); 
 		exit(1);
 	}
+
+	certificate_check(s);
 	
 	if (strncmp(s->config->key, "pkcs11:", 7) != 0) {
 		ret =

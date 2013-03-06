@@ -362,7 +362,8 @@ unsigned usage;
 #endif
 		/* no URL */
 		ret = gnutls_load_file(s->config->cert, &data);
-		GNUTLS_FATAL_ERR(ret);
+		if (ret < 0)
+			return;
 		
 		ret = gnutls_x509_crt_init(&crt);
 		GNUTLS_FATAL_ERR(ret);
@@ -377,7 +378,9 @@ unsigned usage;
 		ret = gnutls_x509_crt_get_key_usage(crt, &usage, NULL);
 		if (ret >= 0) {
 			if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
-				mslog(s, NULL, LOG_WARNING, "server certificate does not support key encipherment; it may cause issues to connecting clients\n");
+				mslog(s, NULL, LOG_WARNING, "server certificate key usage prevents key encipherment; unable to support the RSA ciphersuites\n");
+				if (s->config->dh_params_file != NULL)
+					mslog(s, NULL, LOG_WARNING, "no DH-params file specified; server will be limited to ECDHE ciphersuites\n");
 			}
 		}
 #if GNUTLS_VERSION_NUMBER > 0x030100
@@ -388,6 +391,27 @@ cleanup:
 	gnutls_x509_crt_deinit(crt);
 	gnutls_free(data.data);
 	return;
+}
+
+static void set_dh_params(main_server_st* s, gnutls_certificate_credentials_t cred)
+{
+gnutls_datum_t data;
+int ret;
+
+	if (s->config->dh_params_file != NULL) {
+		ret = gnutls_dh_params_init (&s->creds.dh_params);
+		GNUTLS_FATAL_ERR(ret);
+
+		ret = gnutls_load_file(s->config->dh_params_file, &data);
+		GNUTLS_FATAL_ERR(ret);
+
+		ret = gnutls_dh_params_import_pkcs3(s->creds.dh_params, &data, GNUTLS_X509_FMT_PEM);
+		GNUTLS_FATAL_ERR(ret);
+
+		gnutls_free(data.data);
+
+		gnutls_certificate_set_dh_params(cred, s->creds.dh_params);
+	}
 }
 
 /* reload key files etc. */
@@ -411,6 +435,8 @@ const char* perr;
 	if (ret < 0) {
 		exit(1);
 	}
+	
+	set_dh_params(s, s->creds.xcred);
 
 	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, &s->creds);
 	

@@ -151,6 +151,7 @@ unsigned j;
 	READ_STRING("ocsp-response", config->cert, 0);
 	READ_STRING("server-cert", config->cert, 1);
 	READ_STRING("server-key", config->key, 1);
+	READ_STRING("dh-params", config->dh_params_file, 0);
 	READ_STRING("pin-file", config->pin_file, 0);
 	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
 #ifdef ANYCONNECT_CLIENT_COMPAT
@@ -333,6 +334,7 @@ unsigned i;
 #endif
 	DEL(config->ocsp_response);
 	DEL(config->banner);
+	DEL(config->dh_params_file);
 	DEL(config->name);
 	DEL(config->cert);
 	DEL(config->key);

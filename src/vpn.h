@@ -64,6 +64,7 @@ struct cfg_st {
 	char *key;
 	char *ca;
 	char *crl;
+	char *dh_params_file;
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
 	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */

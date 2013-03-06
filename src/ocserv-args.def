@@ -118,6 +118,10 @@ try-mtu-discovery = false
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 
+# Diffie-Hellman parameters. Can be generated using:
+# certtool --generate-dh-params --outfile /path/to/dh.pem
+#dh-params = /path/to/dh.pem
+
 # If you have a certificate from a CA that provides an OCSP
 # service you may provide a fresh OCSP status response within
 # the TLS handshake. That will prevent the client from connecting

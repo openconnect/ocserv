@@ -121,7 +121,9 @@ try-mtu-discovery = false
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 
-# Diffie-Hellman parameters. Can be generated using:
+# Diffie-Hellman parameters. Only needed if you require support
+# for the DHE ciphersuites (by default this server supports ECDHE).
+# Can be generated using:
 # certtool --generate-dh-params --outfile /path/to/dh.pem
 #dh-params = /path/to/dh.pem
 

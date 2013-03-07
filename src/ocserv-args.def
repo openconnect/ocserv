@@ -115,6 +115,9 @@ try-mtu-discovery = false
 # The key may be a file, or any URL supported by GnuTLS (e.g., 
 # tpmkey:uuid=xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx;storage=user
 # or pkcs11:object=my-vpn-key;object-type=private)
+#
+# There may be multiple certificate and key pairs and each key
+# should correspond to the preceding certificate.
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 

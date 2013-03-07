@@ -350,6 +350,8 @@ int ret;
 	return;
 }
 
+/* Checks, if there is a single certificate specified, whether it
+ * is compatible with all ciphersuites */
 static void certificate_check(main_server_st *s)
 {
 gnutls_datum_t data;
@@ -357,11 +359,14 @@ gnutls_x509_crt_t crt;
 int ret;
 unsigned usage;
 
+	if (s->config->cert_size > 1)
+		return;
+
 #if GNUTLS_VERSION_NUMBER > 0x030100
-	if (gnutls_url_is_supported(s->config->cert) == 0) {
+	if (gnutls_url_is_supported(s->config->cert[0]) == 0) {
 #endif
 		/* no URL */
-		ret = gnutls_load_file(s->config->cert, &data);
+		ret = gnutls_load_file(s->config->cert[0], &data);
 		if (ret < 0)
 			return;
 		
@@ -418,6 +423,7 @@ int ret;
 void tls_global_init_certs(main_server_st* s)
 {
 int ret;
+unsigned i;
 const char* perr;
 
 	if (s->config->tls_debug) {
@@ -440,27 +446,29 @@ const char* perr;
 
 	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, &s->creds);
 	
-	if (s->config->key == NULL || s->config->cert == NULL) {
+	if (s->config->key_size == 0 || s->config->cert_size == 0) {
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified.\n"); 
 		exit(1);
 	}
 
 	certificate_check(s);
 	
-	if (strncmp(s->config->key, "pkcs11:", 7) != 0) {
-		ret =
-		    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert,
-						 s->config->key, GNUTLS_X509_FMT_PEM);
-		if (ret < 0) {
-			mslog(s, NULL, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
-				s->config->cert, s->config->key, gnutls_strerror(ret));
-			exit(1);
-		}
-	} else {
+	for (i=0;i<s->config->key_size;i++) {
+		if (strncmp(s->config->key[i], "pkcs11:", 7) != 0) {
+			ret =
+			    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert[i],
+						 s->config->key[i], GNUTLS_X509_FMT_PEM);
+			if (ret < 0) {
+				mslog(s, NULL, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
+					s->config->cert[i], s->config->key[i], gnutls_strerror(ret));
+				exit(1);
+			}
+		} else {
 #ifndef HAVE_PKCS11
-		mslog(s, NULL, LOG_ERR, "cannot load key, GnuTLS is compiled without pkcs11 support\n");
-		exit(1);
+			mslog(s, NULL, LOG_ERR, "cannot load key, GnuTLS is compiled without pkcs11 support\n");
+			exit(1);
 #endif	
+		}
 	}
 
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
@@ -512,26 +520,29 @@ int tls_global_init_client(worker_st* ws)
 {
 #ifdef HAVE_PKCS11
 int ret;
+unsigned i;
 
 	/* when we have PKCS #11 keys we cannot open them and then fork(), we need
 	 * to open them at the process they are going to be used. */
-	if (strncmp(ws->config->key, "pkcs11:", 7) == 0) {
-		ret = gnutls_pkcs11_reinit();
-		if (ret < 0) {
-			oclog(ws, LOG_ERR, "could not reinitialize PKCS #11 subsystem: %s\n",
-				gnutls_strerror(ret));
-			return -1;
+	for (i=0;i<ws->config->key_size;i++) {
+		if (strncmp(ws->config->key[i], "pkcs11:", 7) == 0) {
+			ret = gnutls_pkcs11_reinit();
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "could not reinitialize PKCS #11 subsystem: %s\n",
+					gnutls_strerror(ret));
+				return -1;
 
-		}
+			}
 
-		ret =
-		    gnutls_certificate_set_x509_key_file(ws->creds->xcred, ws->config->cert,
-						 ws->config->key,
+			ret =
+			    gnutls_certificate_set_x509_key_file(ws->creds->xcred, ws->config->cert[i],
+						 ws->config->key[i],
 						 GNUTLS_X509_FMT_PEM);
-		if (ret < 0) {
-			oclog(ws, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
-				ws->config->cert, ws->config->key, gnutls_strerror(ret));
-			return -1;
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
+					ws->config->cert[i], ws->config->key[i], gnutls_strerror(ret));
+				return -1;
+			}
 		}
 	}
 #endif

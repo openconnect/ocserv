@@ -148,9 +148,9 @@ unsigned j;
 	READ_NUMERIC("dpd", config->dpd, 0);
 	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms, 0);
 
-	READ_STRING("ocsp-response", config->cert, 0);
-	READ_STRING("server-cert", config->cert, 1);
-	READ_STRING("server-key", config->key, 1);
+	READ_STRING("ocsp-response", config->ocsp_response, 0);
+	READ_MULTI_LINE("server-cert", config->cert, config->cert_size, 1);
+	READ_MULTI_LINE("server-key", config->key, config->key_size, 1);
 	READ_STRING("dh-params", config->dh_params_file, 0);
 	READ_STRING("pin-file", config->pin_file, 0);
 	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
@@ -245,7 +245,11 @@ static void check_cfg( struct cfg_st *config)
 		exit(1);
 	}
 
-	
+	if (config->cert_size != config->key_size) {
+		fprintf(stderr, "The specified number of keys doesn't match the certificates\n");
+		exit(1);
+	}
+
 	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
 		if (config->force_cert_auth)
 			config->cert_req = GNUTLS_CERT_REQUIRE;
@@ -359,6 +363,10 @@ unsigned i;
 	DEL(config->network.ipv6_dns);
 	for (i=0;i<config->network.routes_size;i++)
 		DEL(config->network.routes[i]);
+	for (i=0;i<config->key_size;i++)
+		DEL(config->key[i]);
+	for (i=0;i<config->cert_size;i++)
+		DEL(config->cert[i]);
 	DEL(config->network.routes);
 	memset(config, 0, sizeof(*config));
 

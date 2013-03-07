@@ -59,9 +59,11 @@ struct cfg_st {
 	unsigned int udp_port;
 	char *pin_file;
 	char *srk_pin_file;
-	char *cert;
+	char **cert;
+	unsigned cert_size;
+	char **key;
+	unsigned key_size;
 
-	char *key;
 	char *ca;
 	char *crl;
 	char *dh_params_file;

@@ -2,6 +2,7 @@
 
 - Corrected issue with ocsp-response configuration field.
 - Added ability to specify multiple certificate and key pairs.
+- Added support for TLS session tickets.
 
 * Version 0.0.2 (released 2013-03-05)
 

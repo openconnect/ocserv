@@ -403,7 +403,7 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 		oclog(ws, LOG_ERR, "could not initialize TLS session: %s", gnutls_strerror(ret));
 		return -1;
 	}
-
+	
 	ret = gnutls_priority_set_direct(session, GNUTLS_CIPHERSUITE, NULL);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s", gnutls_strerror(ret));
@@ -499,6 +499,8 @@ void vpn_server(struct worker_st* ws)
 	/* initialize the session */
 	ret = gnutls_init(&session, GNUTLS_SERVER);
 	GNUTLS_FATAL_ERR(ret);
+
+	gnutls_session_ticket_enable_server(session, &ws->creds->ticket_key);
 
 	ret = gnutls_priority_set(session, ws->creds->cprio);
 	GNUTLS_FATAL_ERR(ret);

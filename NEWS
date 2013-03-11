@@ -4,6 +4,7 @@
 - Added ability to specify multiple certificate and key pairs.
 - Added support for TLS session tickets.
 
+
 * Version 0.0.2 (released 2013-03-05)
 
 - Updated HTTP protocol handling (fixes issue with openconnect < 4). 
@@ -19,6 +20,7 @@
 - Eliminated memory leaks.
 - Auto-detect xml content for username and password (fixes interoperability
   with newer openconnect versions).
+
 
 * Version 0.0.1 (released 2013-02-20)
 

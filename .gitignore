@@ -20,7 +20,7 @@ gl/libgnu.a
 gl/arg-nonnull.h
 gl/warn-on-use.h
 gl/c++defs.h
-doc/ocserv.1
+doc/ocserv.8
 libopts/libopts.a
 gl/time.h
 gl/sys/time.h
@@ -29,3 +29,5 @@ gl/fcntl.h
 gl/stdint.h
 gl/sys/types.h
 src/version.def
+gl/stdio.h
+gl/stdlib.h

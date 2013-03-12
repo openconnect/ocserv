@@ -75,9 +75,15 @@ An example configuration file follows.
 
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
-# multiple auth directives. Available options: certificate, pam. 
+# multiple auth directives. Available options: certificate, plain, pam. 
 #auth = "certificate"
 auth = "pam"
+
+# The plain option requires specifying a password file which contains
+# entries of the following format.
+# "username:groupname:password"
+# One entry must be listed per line.
+#auth = "plain[/etc/ocserv-passwd]"
 
 # A banner to be displayed on clients
 #banner = "Welcome"

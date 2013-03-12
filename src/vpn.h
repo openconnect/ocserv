@@ -28,6 +28,7 @@ extern int syslog_open;
 #define AUTH_TYPE_USERNAME_PASS (1<<0)
 #define AUTH_TYPE_PAM (1<<1 | AUTH_TYPE_USERNAME_PASS)
 #define AUTH_TYPE_CERTIFICATE (1<<2)
+#define AUTH_TYPE_PLAIN (1<<3 | AUTH_TYPE_USERNAME_PASS)
 
 typedef struct 
 {
@@ -70,6 +71,7 @@ struct cfg_st {
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
 	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
+	char *plain_passwd;	/* the password file in plain auth mode */
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
 	char *chroot_dir;	/* where the xml files are served from */

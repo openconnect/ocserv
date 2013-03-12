@@ -42,6 +42,7 @@
 #include <main.h>
 #include <ccan/list/list.h>
 #include "pam.h"
+#include "plain.h"
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			cmd_auth_reply_t r, struct lease_st* lease)
@@ -206,16 +207,26 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
 int ret = -1;
 unsigned username_set = 0;
 
+	if (req->user_pass_present != 0) {
 #ifdef HAVE_PAM
-	if (req->user_pass_present != 0 && s->config->auth_types & AUTH_TYPE_PAM) {
-		ret = pam_auth_user(req->user, req->pass, proc->groupname, sizeof(proc->groupname));
-		if (ret != 0)
-			ret = -1;
+		if ((s->config->auth_types & AUTH_TYPE_PAM) == AUTH_TYPE_PAM) {
+			ret = pam_auth_user(req->user, req->pass, proc->groupname, sizeof(proc->groupname));
+			if (ret != 0)
+				ret = -1;
 
-		memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
-		username_set = 1;
-	}
+			memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
+			username_set = 1;
+		}
 #endif
+		if ((s->config->auth_types & AUTH_TYPE_PLAIN) == AUTH_TYPE_PLAIN) {
+			ret = plain_auth_user(s->config->plain_passwd, req->user, req->pass, proc->groupname, sizeof(proc->groupname));
+			if (ret != 0)
+				ret = -1;
+
+			memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
+			username_set = 1;
+		}
+	}
 
 	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 		if (req->tls_auth_ok != 0) {

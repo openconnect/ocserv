@@ -42,13 +42,16 @@ AC_DEFUN([gl_EARLY],
   # Code from module cloexec:
   # Code from module close:
   # Code from module dup2:
+  # Code from module errno:
   # Code from module extensions:
   AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   # Code from module extern-inline:
   # Code from module fcntl:
   # Code from module fcntl-h:
   # Code from module fd-hook:
+  # Code from module getdelim:
   # Code from module getdtablesize:
+  # Code from module getline:
   # Code from module gettime:
   # Code from module gettimeofday:
   # Code from module include_next:
@@ -58,6 +61,8 @@ AC_DEFUN([gl_EARLY],
   # Code from module msvc-inval:
   # Code from module msvc-nothrow:
   # Code from module multiarch:
+  # Code from module realloc-posix:
+  # Code from module snippet/_Noreturn:
   # Code from module snippet/arg-nonnull:
   # Code from module snippet/c++defs:
   # Code from module snippet/warn-on-use:
@@ -65,6 +70,8 @@ AC_DEFUN([gl_EARLY],
   # Code from module stdbool:
   # Code from module stddef:
   # Code from module stdint:
+  # Code from module stdio:
+  # Code from module stdlib:
   # Code from module string:
   # Code from module sys_time:
   # Code from module sys_types:
@@ -102,6 +109,7 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_DUP2
   fi
   gl_UNISTD_MODULE_INDICATOR([dup2])
+  gl_HEADER_ERRNO_H
   AC_REQUIRE([gl_EXTERN_INLINE])
   gl_FUNC_FCNTL
   if test $HAVE_FCNTL = 0 || test $REPLACE_FCNTL = 1; then
@@ -109,12 +117,24 @@ AC_DEFUN([gl_INIT],
   fi
   gl_FCNTL_MODULE_INDICATOR([fcntl])
   gl_FCNTL_H
+  gl_FUNC_GETDELIM
+  if test $HAVE_GETDELIM = 0 || test $REPLACE_GETDELIM = 1; then
+    AC_LIBOBJ([getdelim])
+    gl_PREREQ_GETDELIM
+  fi
+  gl_STDIO_MODULE_INDICATOR([getdelim])
   gl_FUNC_GETDTABLESIZE
   if test $HAVE_GETDTABLESIZE = 0; then
     AC_LIBOBJ([getdtablesize])
     gl_PREREQ_GETDTABLESIZE
   fi
   gl_UNISTD_MODULE_INDICATOR([getdtablesize])
+  gl_FUNC_GETLINE
+  if test $REPLACE_GETLINE = 1; then
+    AC_LIBOBJ([getline])
+    gl_PREREQ_GETLINE
+  fi
+  gl_STDIO_MODULE_INDICATOR([getline])
   gl_GETTIME
   gl_FUNC_GETTIMEOFDAY
   if test $HAVE_GETTIMEOFDAY = 0 || test $REPLACE_GETTIMEOFDAY = 1; then
@@ -146,10 +166,17 @@ AC_DEFUN([gl_INIT],
     AC_LIBOBJ([msvc-nothrow])
   fi
   gl_MULTIARCH
+  gl_FUNC_REALLOC_POSIX
+  if test $REPLACE_REALLOC = 1; then
+    AC_LIBOBJ([realloc])
+  fi
+  gl_STDLIB_MODULE_INDICATOR([realloc-posix])
   gt_TYPE_SSIZE_T
   AM_STDBOOL_H
   gl_STDDEF_H
   gl_STDINT_H
+  gl_STDIO_H
+  gl_STDLIB_H
   gl_HEADER_STRING_H
   gl_HEADER_SYS_TIME_H
   AC_PROG_MKDIR_P
@@ -298,6 +325,7 @@ AC_DEFUN([gltests_LIBSOURCES], [
 # This macro records the list of files which have been installed by
 # gnulib-tool and may be removed by future gnulib-tool invocations.
 AC_DEFUN([gl_FILE_LIST], [
+  build-aux/snippet/_Noreturn.h
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
@@ -305,11 +333,14 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/cloexec.h
   lib/close.c
   lib/dup2.c
+  lib/errno.in.h
   lib/fcntl.c
   lib/fcntl.in.h
   lib/fd-hook.c
   lib/fd-hook.h
+  lib/getdelim.c
   lib/getdtablesize.c
+  lib/getline.c
   lib/gettime.c
   lib/gettimeofday.c
   lib/memchr.c
@@ -319,9 +350,12 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/msvc-inval.h
   lib/msvc-nothrow.c
   lib/msvc-nothrow.h
+  lib/realloc.c
   lib/stdbool.in.h
   lib/stddef.in.h
   lib/stdint.in.h
+  lib/stdio.in.h
+  lib/stdlib.in.h
   lib/str-two-way.h
   lib/string.in.h
   lib/sys_time.in.h
@@ -335,17 +369,21 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/clock_time.m4
   m4/close.m4
   m4/dup2.m4
+  m4/errno_h.m4
   m4/extensions.m4
   m4/extern-inline.m4
   m4/fcntl-o.m4
   m4/fcntl.m4
   m4/fcntl_h.m4
+  m4/getdelim.m4
   m4/getdtablesize.m4
+  m4/getline.m4
   m4/gettime.m4
   m4/gettimeofday.m4
   m4/gnulib-common.m4
   m4/include_next.m4
   m4/longlong.m4
+  m4/malloc.m4
   m4/memchr.m4
   m4/memmem.m4
   m4/mmap-anon.m4
@@ -353,10 +391,13 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/msvc-nothrow.m4
   m4/multiarch.m4
   m4/off_t.m4
+  m4/realloc.m4
   m4/ssize_t.m4
   m4/stdbool.m4
   m4/stddef_h.m4
   m4/stdint.m4
+  m4/stdio_h.m4
+  m4/stdlib_h.m4
   m4/string_h.m4
   m4/sys_socket_h.m4
   m4/sys_time_h.m4

@@ -127,6 +127,16 @@ unsigned j;
 			fprintf(stderr, "PAM support is disabled\n");
 			exit(1);
 #endif
+		} else if (strncasecmp(auth[j], "plain[", 6) == 0) {
+			char* p;
+			config->plain_passwd = strdup(auth[j]+6);
+			p = strchr(config->plain_passwd, ']');
+			if (p == NULL) {
+				fprintf(stderr, "Format error in %s\n", auth[j]);
+				exit(1);
+			}
+			*p = 0;
+			config->auth_types |= AUTH_TYPE_PLAIN;
 		} else if (strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 		} else {
@@ -336,6 +346,7 @@ unsigned i;
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
 #endif
+	DEL(config->plain_passwd);
 	DEL(config->ocsp_response);
 	DEL(config->banner);
 	DEL(config->dh_params_file);

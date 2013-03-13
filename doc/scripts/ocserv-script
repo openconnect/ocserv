@@ -1,0 +1,19 @@
+#!/bin/sh
+
+if [ "$REASON" = "connect" ];then
+	# Disable the firewall for the user's device
+	iptables -A INPUT -i $DEVICE -j ACCEPT
+
+	if [ "$GROUPNAME" != "admins" ];then
+		#rate limit the tun device to 64kbyte
+		wondershaper $DEVICE 524288 524288
+	fi
+
+	echo "User '$USERNAME' from '$IP_REAL' connected. Local IP is '$IP_REMOTE'"
+else
+	iptables -D INPUT -i $DEVICE -j ACCEPT
+
+	echo "User '$USERNAME' from '$IP_REAL' disconnected."
+fi
+
+exit 0

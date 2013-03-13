@@ -1,4 +1,4 @@
-EXTRA_DIST = design.dia sample.config scripts/ocserv-up scripts/ocserv-down
+EXTRA_DIST = design.dia sample.config scripts/ocserv-script
 
 dist_man_MANS = ocserv.8
 

@@ -527,10 +527,6 @@ struct cmd_auth_req_st areq;
 
 	ret = auth_user(ws, &areq);
 	if (ret < 0) {
-		if (username)
-			oclog(ws, LOG_INFO, "Failed authentication attempt for '%s'", username);
-		else
-			oclog(ws, LOG_INFO, "Failed authentication attempt");
 		goto auth_fail;
 	}
 

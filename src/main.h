@@ -9,6 +9,9 @@
 #include <tlslib.h>
 #include "ipc.h"
 
+#define ERR_WAIT_FOR_SCRIPT -5
+#define ERR_BAD_COMMAND -2
+
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
 void write_pid_file(void);
@@ -32,12 +35,20 @@ struct listen_list_st {
 	unsigned int total;
 };
 
+struct script_wait_st {
+	struct list_node list;
+
+	pid_t pid;
+	unsigned int up; /* connect or disconnect script */
+	struct proc_st* proc;
+};
+
 struct proc_st {
 	struct list_node list;
 	int fd;
 	pid_t pid;
 	unsigned udp_fd_received; /* if the corresponding process has received a UDP fd */
-
+	
 	/* the tun lease this process has */
 	struct lease_st* lease;
 
@@ -62,6 +73,10 @@ struct proc_list_st {
 	unsigned int total;
 };
 
+struct script_list_st {
+	struct list_head head;
+};
+
 struct banned_st {
 	struct list_node list;
 	time_t failed_time;	/* The time authentication failed */
@@ -84,14 +99,17 @@ typedef struct main_server_st {
 
 	struct listen_list_st llist;
 	struct proc_list_st clist;
+	struct script_list_st script_list;
 	struct ban_list_st ban_list;
+	
+	unsigned active_clients;
 } main_server_st;
 
 void clear_lists(main_server_st *s);
 
 int handle_commands(main_server_st *s, struct proc_st* cur);
 
-int user_connected(main_server_st *s, struct proc_st* cur, struct lease_st*);
+int user_connected(main_server_st *s, struct proc_st* cur);
 void user_disconnected(main_server_st *s, struct proc_st* cur);
 
 void expire_tls_sessions(main_server_st *s);
@@ -115,22 +133,26 @@ void
 __attribute__ ((format(printf, 4, 5)))
     mslog(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *fmt, ...);
+void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
+    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size);
 
 int open_tun(main_server_st* s, struct lease_st** l);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r, struct lease_st* lease);
+			cmd_auth_reply_t r);
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
- 			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease);
+ 			   const struct cmd_auth_cookie_req_st * req);
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc);
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		   const struct cmd_auth_req_st * req, struct lease_st **lease);
+		   const struct cmd_auth_req_st * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 
 void add_to_ip_ban_list(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
 void expire_banned(main_server_st* s);
 int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
+
+int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
 #endif

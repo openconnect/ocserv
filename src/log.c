@@ -122,3 +122,24 @@ void __attribute__ ((format(printf, 4, 5)))
 	
 	return;
 }
+
+void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
+    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size)
+{
+	char buf[512];
+	int ret;
+	size_t buf_size;
+	gnutls_datum_t data = {bin, bin_size};
+	
+	if (priority == LOG_DEBUG && s->config->debug == 0)
+		return;
+
+	buf_size = sizeof(buf);
+	ret = gnutls_hex_encode(&data, buf, &buf_size);
+	if (ret < 0)
+		return;
+	
+	mslog(s, proc, priority, "%s %s", prefix, buf);
+
+	return;
+}

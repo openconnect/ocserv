@@ -191,9 +191,10 @@ cookie-validity = 43200
 
 # Script to call when a client connects and obtains an IP
 # Parameters are passed on the environment.
-# USERNAME, GROUPNAME, HOSTNAME (the hostname selected by client), 
+# REASON, USERNAME, GROUPNAME, HOSTNAME (the hostname selected by client), 
 # DEVICE, IP_REAL (the real IP of the client), IP_LOCAL (the local IP
-# in the P-t-P connection), IP_REMOTE (the VPN IP of the client).
+# in the P-t-P connection), IP_REMOTE (the VPN IP of the client). REASON
+# may be "connect" or "disconnect".
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript
 

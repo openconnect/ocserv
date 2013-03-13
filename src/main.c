@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <cloexec.h>
+#include <script-list.h>
 
 #include <gnutls/x509.h>
 #include <tlslib.h>
@@ -285,14 +286,48 @@ int s, y, e;
 	return 0;
 }
 
+static void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
+{
+	if (k)
+		kill(proc->pid, SIGTERM);
+
+	user_disconnected(s, proc);
+
+	/* close the intercomm fd */
+	if (proc->fd >= 0)
+		close(proc->fd);
+	proc->fd = -1;
+	proc->pid = -1;
+
+	if (proc->lease)
+		proc->lease->in_use = 0;
+	list_del(&proc->list);
+	free(proc);
+}
 
 static void cleanup_children(main_server_st *s)
 {
-int status;
+int status, estatus, ret;
 pid_t pid;
+struct script_wait_st *stmp, *spos;
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-		if (WEXITSTATUS(status) != 0 ||
+		estatus = WEXITSTATUS(status);
+
+		/* check if someone was waiting for that pid */
+		list_for_each_safe(&s->script_list.head, stmp, spos, list) {
+			if (stmp->pid == pid) {
+				mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
+				ret = handle_script_exit(s, stmp->proc, estatus);
+				if (ret < 0)
+					remove_proc(s, stmp->proc, 0);
+				list_del(&stmp->list);
+				free(stmp);
+				break;
+			}
+		}
+	
+		if (estatus != 0 ||
 			(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV)) {
 			if (WIFSIGNALED(status))
 				mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
@@ -310,8 +345,6 @@ static void handle_alarm(int signo)
 {
 	need_maintainance = 1;
 }
-
-
 
 static void drop_privileges(main_server_st* s)
 {
@@ -357,6 +390,7 @@ void clear_lists(main_server_st *s)
 {
 	struct listener_st *ltmp, *lpos;
 	struct proc_st *ctmp, *cpos;
+	struct script_wait_st *script_tmp, *script_pos;
 	struct banned_st *btmp, *bpos;
 
 	list_for_each_safe(&s->llist.head, ltmp, lpos, list) {
@@ -379,6 +413,11 @@ void clear_lists(main_server_st *s)
 		free(btmp);
 	}
 
+	list_for_each_safe(&s->script_list.head, script_tmp, script_pos, list) {
+		list_del(&script_tmp->list);
+		free(script_tmp);
+	}
+
 	tls_cache_deinit(s->tls_db);
 }
 
@@ -392,20 +431,6 @@ static void kill_children(main_server_st* s)
 			user_disconnected(s, ctmp);
 		}
 	}
-}
-
-static void remove_proc(struct proc_st *ctmp)
-{
-	/* close the intercomm fd */
-	if (ctmp->fd >= 0)
-		close(ctmp->fd);
-	ctmp->fd = -1;
-	ctmp->pid = -1;
-
-	if (ctmp->lease)
-		ctmp->lease->in_use = 0;
-	list_del(&ctmp->list);
-	free(ctmp);
 }
 
 static void handle_term(int signo)
@@ -438,7 +463,7 @@ int connected = 0;
 	cli_addr_size = sizeof(cli_addr);
 	ret = recvfrom(listener->fd, buffer, sizeof(buffer), MSG_PEEK, (void*)&cli_addr, &cli_addr_size);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_INFO, "Error receiving in UDP socket");
+		mslog(s, NULL, LOG_INFO, "error receiving in UDP socket");
 		return -1;
 	}
 	
@@ -453,11 +478,11 @@ int connected = 0;
 	mslog(s, NULL, LOG_DEBUG, "DTLS hello version: %u.%u", (unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
 	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
 		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
-		mslog(s, NULL, LOG_INFO, "Unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
+		mslog(s, NULL, LOG_INFO, "unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
 		goto fail;
 	}
 	if (buffer[0] != 22) {
-		mslog(s, NULL, LOG_INFO, "Unexpected DTLS content type: %u", (unsigned int)buffer[0]);
+		mslog(s, NULL, LOG_INFO, "unexpected DTLS content type: %u", (unsigned int)buffer[0]);
 		goto fail;
 	}
 
@@ -466,8 +491,8 @@ int connected = 0;
 	session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 
 	/* search for the IP and the session ID in all procs */
-	list_for_each(&s->clist.head, ctmp, list) {
 
+	list_for_each(&s->clist.head, ctmp, list) {
 		if (session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
 
@@ -480,15 +505,14 @@ int connected = 0;
 
 			ret = send_udp_fd(s, ctmp, listener->fd);
 			if (ret < 0) {
-				mslog(s, ctmp, LOG_ERR, "Error passing UDP socket");
+				mslog(s, ctmp, LOG_ERR, "error passing UDP socket");
 				return -1;
 			}
-			mslog(s, ctmp, LOG_DEBUG, "Passed UDP socket");
+			mslog(s, ctmp, LOG_DEBUG, "passed UDP socket");
 			ctmp->udp_fd_received = 1;
 			connected = 1;
 			
 			reopen_udp_port(listener);
-
 			break;
 		}
 	}
@@ -569,13 +593,14 @@ int main(int argc, char** argv)
 	int cmd_fd[2];
 	struct worker_st ws;
 	struct cfg_st config;
-	unsigned active_clients = 0, set;
+	unsigned set;
 	main_server_st s;
 
 	memset(&s, 0, sizeof(s));
 
 	list_head_init(&s.clist.head);
 	list_head_init(&s.ban_list.head);
+	list_head_init(&s.script_list.head);
 	tun_st_init(&tun);
 	tls_cache_init(&s.tls_db);
 
@@ -711,9 +736,9 @@ int main(int argc, char** argv)
 					break;
 				}
 
-				if (config.max_clients > 0 && active_clients >= config.max_clients) {
+				if (config.max_clients > 0 && s.active_clients >= config.max_clients) {
 					close(fd);
-					mslog(&s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", active_clients);
+					mslog(&s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", s.active_clients);
 					break;
 				}
 
@@ -762,6 +787,7 @@ int main(int argc, char** argv)
 fork_failed:
 					close(cmd_fd[0]);
 				} else { /* parent */
+					/* add_proc */
 					ctmp = calloc(1, sizeof(struct proc_st));
 					if (ctmp == NULL) {
 						kill(pid, SIGTERM);
@@ -775,7 +801,7 @@ fork_failed:
 					set_cloexec_flag (cmd_fd[0], 1);
 
 					list_add(&s.clist.head, &(ctmp->list));
-					active_clients++;
+					s.active_clients++;
 				}
 				close(cmd_fd[1]);
 				close(fd);
@@ -786,7 +812,7 @@ fork_failed:
 				/* connection on UDP port */
 				ret = forward_udp_to_owner(&s, ltmp);
 				if (ret < 0) {
-					mslog(&s, NULL, LOG_INFO, "Could not determine the owner of received UDP packet");
+					mslog(&s, NULL, LOG_INFO, "could not determine the owner of received UDP packet");
 				}
 
 				if (config.rate_limit_ms > 0)
@@ -799,13 +825,8 @@ fork_failed:
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {
-					if (ret == -2) {
-						/* received a bad command from worker */
-						kill(ctmp->pid, SIGTERM);
-					}
-					user_disconnected(&s, ctmp);
-					remove_proc(ctmp);
-					active_clients--;
+					remove_from_script_list(&s, ctmp);
+					remove_proc(&s, ctmp, (ret==ERR_BAD_COMMAND)?1:0);
 				}
 			}
 		}

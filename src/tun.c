@@ -406,6 +406,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 		goto fail;
 	}
 	
+	lease->in_use = 1;
 	lease->fd = tunfd;
 	*l = lease;
 

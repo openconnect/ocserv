@@ -108,12 +108,47 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
+int handle_script_exit(main_server_st *s, struct proc_st* proc, int code)
+{
+int ret;
+
+	if (code == 0) {
+		ret = send_auth_reply(s, proc, REP_AUTH_OK);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
+			ret = ERR_BAD_COMMAND;
+			goto fail;
+		}
+	} else {
+		mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
+		ret = send_auth_reply( s, proc, REP_AUTH_FAILED);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
+			ret = ERR_BAD_COMMAND;
+			goto fail;
+		}
+	}
+	ret = 0;
+
+fail:	
+	/* we close the lease tun fd both on success and failure.
+	 * The parent doesn't need to keep the tunfd.
+	 */
+	if (proc->lease) {
+		if (proc->lease->fd >= 0)
+			close(proc->lease->fd);
+		proc->lease->fd = -1;
+	}
+
+	return ret;
+}
+
+
 int handle_commands(main_server_st *s, struct proc_st* proc)
 {
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
-	struct lease_st *lease;
 	union {
 		struct cmd_auth_req_st auth;
 		struct cmd_auth_cookie_req_st cauth;
@@ -153,16 +188,15 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 		case CMD_TUN_MTU:
 			if (cmd_data_len != sizeof(cmd_data.tmtu)) {
 				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
-				return -2;
+				return ERR_BAD_COMMAND;
 			}
 			
 			set_tun_mtu(s, proc, cmd_data.tmtu.mtu);
 			break;
-
 		case RESUME_STORE_REQ:
 			if (cmd_data_len <= sizeof(cmd_data.sresume)-MAX_SESSION_DATA_SIZE) {
 				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
-				return -2;
+				return ERR_BAD_COMMAND;
 			}
 			ret = handle_resume_store_req(s, proc, &cmd_data.sresume);
 			if (ret < 0) {
@@ -174,7 +208,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 		case RESUME_DELETE_REQ:
 			if (cmd_data_len != sizeof(cmd_data.fresume)) {
 				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
-				return -2;
+				return ERR_BAD_COMMAND;
 			}
 			ret = handle_resume_delete_req(s, proc, &cmd_data.fresume);
 			if (ret < 0) {
@@ -187,7 +221,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 			if (cmd_data_len != sizeof(cmd_data.fresume)) {
 				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-				return -2;
+				return ERR_BAD_COMMAND;
 			}
 			ret = handle_resume_fetch_req(s, proc, &cmd_data.fresume, &reply);
 			if (ret < 0) {
@@ -199,29 +233,27 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			
 			if (ret < 0) {
 				mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned) cmd);
-				return -2;
+				return ERR_BAD_COMMAND;
 			}
 			
 			break;
 
 		case AUTH_REQ:
 		case AUTH_COOKIE_REQ:
-			lease = NULL;
-
 			if (cmd == AUTH_REQ) {
 				if (cmd_data_len != sizeof(cmd_data.auth)) {
 					mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-					return -2;
+					return ERR_BAD_COMMAND;
 				}
 
-				ret = handle_auth_req(s, proc, &cmd_data.auth, &lease);
+				ret = handle_auth_req(s, proc, &cmd_data.auth);
 			} else {
 				if (cmd_data_len != sizeof(cmd_data.cauth)) {
 					mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-					return -2;
+					return ERR_BAD_COMMAND;
 				}
 
-				ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth, &lease);
+				ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth);
 			}
 
 			if (ret == 0) {
@@ -231,9 +263,32 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 					mslog(s, proc, LOG_INFO, "user '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
 				}
 
+				if (ret == 0) {
+					if (proc->groupname[0] == 0)
+						group = "[unknown]";
+					else
+						group = proc->groupname;
+
+					if (cmd == AUTH_REQ) {
+						/* generate and store cookie */
+						ret = generate_and_store_vals(s, proc);
+						if (ret < 0) {
+							ret = ERR_BAD_COMMAND;
+							goto cleanup;
+						}
+						mslog(s, proc, LOG_INFO, "user '%s' of group '%s' authenticated", proc->username, group);
+					} else {
+						mslog(s, proc, LOG_INFO, "user '%s' of group '%s' re-authenticated (using cookie)", proc->username, group);
+					}
+				}
+
 				/* do scripts and utmp */
 				if (ret == 0) {
-					ret = user_connected(s, proc, lease);
+					ret = user_connected(s, proc);
+					if (ret == ERR_WAIT_FOR_SCRIPT) {
+						return 0;
+					}
+
 					if (ret < 0) {
 						mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 					}
@@ -242,60 +297,13 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
 			}
 
-			if (ret == 0) {
-				if (proc->groupname[0] == 0)
-					group = "[unknown]";
-				else
-					group = proc->groupname;
+cleanup:
+			/* no script was called. Handle it as a successful script call. */
+			return handle_script_exit(s, proc, ret);
 
-				if (cmd == AUTH_REQ) {
-					/* generate and store cookie */
-					ret = generate_and_store_vals(s, proc);
-					if (ret < 0) {
-						ret = -2;
-						goto lease_cleanup;
-					}
-					mslog(s, proc, LOG_INFO, "user '%s' of group '%s' authenticated", proc->username, group);
-				} else {
-					mslog(s, proc, LOG_INFO, "user '%s' of group '%s' re-authenticated (using cookie)", proc->username, group);
-				}
-				
-				ret = send_auth_reply(s, proc, REP_AUTH_OK, lease);
-				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned)cmd);
-					ret = -2;
-					goto lease_cleanup;
-				}
-
-				proc->lease = lease;
-				proc->lease->in_use = 1;
-				ret = 0;
-			} else {
-				mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
-				ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
-				if (ret < 0) {
-					mslog(s, proc, LOG_ERR, "could not send reply cmd.");
-					ret = -2;
-					goto lease_cleanup;
-				}
-				ret = 0;
-			}
-
-lease_cleanup:
-			/* we close the lease tun fd both on success and failure.
-			 * The parent doesn't need to know the tunfd.
-			 */
-			if (lease) {
-				if (lease->fd >= 0)
-					close(lease->fd);
-				lease->fd = -1;
-			}
-			return ret;
-
-			break;
 		default:
 			mslog(s, proc, LOG_ERR, "unknown CMD 0x%x.", (unsigned)cmd);
-			return -2;
+			return ERR_BAD_COMMAND;
 	}
 	
 	return 0;

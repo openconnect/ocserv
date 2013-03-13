@@ -43,14 +43,14 @@
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
+#include <script-list.h>
 #include <ccan/list/list.h>
 
 static
-int call_script(main_server_st *s, struct proc_st* proc, struct lease_st* lease, unsigned up)
+int call_script(main_server_st *s, struct proc_st* proc, unsigned up)
 {
 pid_t pid;
-int ret, status;
-unsigned estatus;
+int ret;
 const char* script;
 
 	if (up != 0)
@@ -67,34 +67,36 @@ const char* script;
 		char local[64];
 		char remote[64];
 		
-		/* Note we don't use proc->lease and accept lease directly
-		 * because we are called before proc population is completed */
 		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
 			exit(1);
 
-		if (lease->lip4_len > 0) {
-			if (getnameinfo((void*)&lease->lip4, lease->lip4_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+		if (proc->lease->lip4_len > 0) {
+			if (getnameinfo((void*)&proc->lease->lip4, proc->lease->lip4_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		} else {
-			if (getnameinfo((void*)&lease->lip6, lease->lip6_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->lease->lip6, proc->lease->lip6_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
 
-		if (lease->rip4_len > 0) {
-			if (getnameinfo((void*)&lease->rip4, lease->rip4_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+		if (proc->lease->rip4_len > 0) {
+			if (getnameinfo((void*)&proc->lease->rip4, proc->lease->rip4_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		} else {
-			if (getnameinfo((void*)&lease->rip6, lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->lease->rip6, proc->lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
 
 		setenv("USERNAME", proc->username, 1);
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
-		setenv("DEVICE", lease->name, 1);
+		setenv("DEVICE", proc->lease->name, 1);
 		setenv("IP_REAL", real, 1);
 		setenv("IP_LOCAL", local, 1);
 		setenv("IP_REMOTE", remote, 1);
+		if (up)
+			setenv("REASON", "connect", 1);
+		else
+			setenv("REASON", "disconnect", 1);
 
 		mslog(s, proc, LOG_DEBUG, "executing script %s", script);
 		ret = execl(script, script, NULL);
@@ -109,21 +111,16 @@ const char* script;
 		return -1;
 	}
 	
-	ret = waitpid(pid, &status, 0);
-	estatus = WEXITSTATUS(status);
-	mslog(s, proc, LOG_DEBUG, "%s-script exit status: %u", (up!=0)?"connect":"disconnect", estatus);
-
-	if (estatus == 0) {
-		return 0;
+	if (up) {
+		add_to_script_list(s, pid, up, proc);
+		return ERR_WAIT_FOR_SCRIPT;
 	} else {
-		if (WIFSIGNALED(status))
-			mslog(s, proc, LOG_DEBUG, "%s-script exit due to signal", (up!=0)?"connect":"disconnect");
-		return -1;
+		return 0;
 	}
 }
 
 static void
-add_utmp_entry(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
+add_utmp_entry(main_server_st *s, struct proc_st* proc)
 {
 #ifdef HAVE_LIBUTIL
 	struct utmpx entry;
@@ -135,7 +132,7 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = USER_PROCESS;
 	entry.ut_pid = proc->pid;
-	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", lease->name);
+	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
 	snprintf(entry.ut_user, sizeof(entry.ut_user), "%s", proc->username);
 	if (proc->remote_addr_len == sizeof(struct sockaddr_in))
 		memcpy(entry.ut_addr_v6, SA_IN_P(&proc->remote_addr), sizeof(struct in_addr));
@@ -188,13 +185,13 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 #endif
 }
 
-int user_connected(main_server_st *s, struct proc_st* proc, struct lease_st* lease)
+int user_connected(main_server_st *s, struct proc_st* proc)
 {
 int ret;
 
-	add_utmp_entry(s, proc, lease);
+	add_utmp_entry(s, proc);
 
-	ret = call_script(s, proc, lease, 1);
+	ret = call_script(s, proc, 1);
 	if (ret < 0)
 		return ret;
 
@@ -204,6 +201,6 @@ int ret;
 void user_disconnected(main_server_st *s, struct proc_st* proc)
 {
 	remove_utmp_entry(s, proc);
-	call_script(s, proc, proc->lease, 0);
+	call_script(s, proc, 0);
 }
 

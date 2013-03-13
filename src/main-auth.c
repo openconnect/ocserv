@@ -45,7 +45,7 @@
 #include "plain.h"
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r, struct lease_st* lease)
+			cmd_auth_reply_t r)
 {
 	struct iovec iov[2];
 	uint8_t cmd[2];
@@ -62,7 +62,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	
 	hdr.msg_iov = iov;
 
-	if (r == REP_AUTH_OK && lease != NULL) {
+	if (r == REP_AUTH_OK && proc->lease != NULL) {
 		cmd[0] = AUTH_REP;
 
 		iov[0].iov_base = cmd;
@@ -72,7 +72,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		resp.reply = r;
 		memcpy(resp.cookie, proc->cookie, COOKIE_SIZE);
 		memcpy(resp.session_id, proc->session_id, sizeof(resp.session_id));
-		memcpy(resp.vname, lease->name, sizeof(resp.vname));
+		memcpy(resp.vname, proc->lease->name, sizeof(resp.vname));
 		memcpy(resp.user, proc->username, sizeof(resp.user));
 
 		iov[1].iov_base = &resp;
@@ -87,7 +87,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
 		cmptr->cmsg_level = SOL_SOCKET;
 		cmptr->cmsg_type = SCM_RIGHTS;
-		memcpy(CMSG_DATA(cmptr), &lease->fd, sizeof(int));
+		memcpy(CMSG_DATA(cmptr), &proc->lease->fd, sizeof(int));
 	} else {
 		cmd[0] = AUTH_REP;
 		cmd[1] = REP_AUTH_FAILED;
@@ -101,7 +101,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 }
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
- 			   const struct cmd_auth_cookie_req_st * req, struct lease_st **lease)
+ 			   const struct cmd_auth_cookie_req_st * req)
 {
 int ret;
 struct stored_cookie_st *sc;
@@ -146,7 +146,7 @@ time_t now = time(0);
 		}
 	}
 
-	ret = open_tun(s, lease);
+	ret = open_tun(s, &proc->lease);
 	if (ret < 0) {
 		ret = -1; /* sorry */
 		goto cleanup;
@@ -177,7 +177,7 @@ struct stored_cookie_st *sc;
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
 	if (ret < 0)
 		return -2;
-	proc->session_id_size = sizeof( proc->session_id);
+	proc->session_id_size = sizeof(proc->session_id);
 	
 	sc = calloc(1, sizeof(*sc));
 	if (sc == NULL)
@@ -202,7 +202,7 @@ struct stored_cookie_st *sc;
 }
 
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		   const struct cmd_auth_req_st * req, struct lease_st **lease)
+		   const struct cmd_auth_req_st * req)
 {
 int ret = -1;
 unsigned username_set = 0;
@@ -256,7 +256,7 @@ unsigned username_set = 0;
 		proc->groupname[sizeof(proc->groupname)-1] = 0;
 		proc->hostname[sizeof(proc->hostname)-1] = 0;
 
-		ret = open_tun(s, lease);
+		ret = open_tun(s, &proc->lease);
 		if (ret < 0)
 		  ret = -1; /* sorry */
 	}

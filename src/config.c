@@ -266,6 +266,13 @@ static void check_cfg( struct cfg_st *config)
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;
 	}
+	
+	if (config->plain_passwd != NULL) {
+		if (access(config->plain_passwd, R_OK) != 0) {
+			fprintf(stderr, "cannot access password file %s\n", config->plain_passwd);
+			exit(1);
+		}
+	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	if (config->cert) {

@@ -35,10 +35,8 @@ struct pam_response *replies;
 
 	for (i=0;i<msg_size;i++) {
 		/*syslog(LOG_DEBUG, "PAM message: %s\n", msg[i]->msg);*/
-		if (msg[i]->msg_style == PAM_PROMPT_ECHO_OFF)
-			replies[i].resp = strdup(l->password);
-		else if (msg[i]->msg_style == PAM_PROMPT_ECHO_ON)
-			replies[i].resp = strdup(l->username);
+		/*if (msg[i]->msg_style == PAM_PROMPT_ECHO_OFF)*/
+		replies[i].resp = strdup(l->password);
 	}
 
 	*resp = replies;

@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <net/if.h>
+#include <minmax.h>
 
 #define AC_PKT_DATA             0	/* Uncompressed data */
 #define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
@@ -20,9 +21,6 @@
 #define AC_PKT_TERM_SERVER      9	/* Server kick */
 
 extern int syslog_open;
-
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#define MIN(x,y) ((x)<(y)?(x):(y))
 
 /* the first is generic, for the methods that require a username password */
 #define AUTH_TYPE_USERNAME_PASS (1<<0)

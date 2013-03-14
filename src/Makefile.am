@@ -24,9 +24,15 @@ ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv_LDADD = ../gl/libgnu.a ../libopts/libopts.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP) $(LIBWRAP)
+	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT)
 
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 	@AUTOGEN@ $<
 
-ocpasswd_SOURCES += ocpasswd.c
+ocpasswd_SOURCES = ocpasswd.c ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
+
+ocpasswd_LDADD = ../gl/libgnu.a ../libopts/libopts.a
+ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
+
+ocpasswd-args.c ocpasswd-args.h: $(srcdir)/ocpasswd-args.def
+	@AUTOGEN@ $<

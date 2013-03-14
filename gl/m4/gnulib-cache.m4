@@ -27,15 +27,17 @@
 
 
 # Specification in the form of a command-line invocation:
-#   gnulib-tool --import --dir=. --lib=libgnu --source-base=gl --m4-base=gl/m4 --doc-base=doc --tests-base=gl/tests --aux-dir=build-aux --no-conditional-dependencies --no-libtool --macro-prefix=gl cloexec getline gettime memmem
+#   gnulib-tool --import --dir=. --lib=libgnu --source-base=gl --m4-base=gl/m4 --doc-base=doc --tests-base=gl/tests --aux-dir=build-aux --no-conditional-dependencies --no-libtool --macro-prefix=gl cloexec getline getpass gettime memmem minmax
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([])
 gl_MODULES([
   cloexec
   getline
+  getpass
   gettime
   memmem
+  minmax
 ])
 gl_AVOID([])
 gl_SOURCE_BASE([gl])

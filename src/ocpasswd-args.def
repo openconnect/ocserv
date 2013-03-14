@@ -1,0 +1,69 @@
+AutoGen Definitions options;
+prog-name     = ocpasswd;
+prog-title    = "OpenConnect server";
+prog-desc     = "OpenConnect VPN server.";
+disable-save;
+no-xlate = opt;
+gnu-usage;
+config-header = config.h;
+long-opts;
+no-misuse-usage;
+short-usage   = "Usage: ocpasswd [options] -c [passwd]\nocpasswd --help for usage instructions.\n";
+explain       = "";
+#include version.def
+
+detail  = "This program is openconnect password (ocpasswd) utility. It allows the generation
+and handling of a 'plain' password file used by ocserv.";
+
+copyright = {
+    date  = "2013";
+    owner = "Nikos Mavrogiannopoulos";
+    author = "Nikos Mavrogiannopoulos";
+    eaddr  = "openconnect-devel@lists.infradead.org";
+    type  = gplv2;
+};
+
+flag = {
+    name      = passwd;
+    value     = c;
+    arg-type  = file;
+    file-exists = yes;
+    descrip   = "Password file";
+    doc   = "";
+};
+
+flag = {
+    name      = username;
+    value     = u;
+    arg-type  = string;
+    descrip   = "User name";
+    doc   = "";
+};
+
+flag = {
+    name      = groupname;
+    value     = g;
+    arg-type  = string;
+    descrip   = "User's group name";
+    doc   = "";
+};
+
+help-value    = h;
+
+
+doc-section = {
+  ds-type = 'FILES';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+@subheading Password file format
+The password format of ocpasswd is as follows.
+
+@example
+username:groupname:encoded-password
+@end example
+
+The crypt(3) encoding is used for the encoded-password.
+
+_EOT_;
+};
+

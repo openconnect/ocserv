@@ -23,37 +23,42 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
+#include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>	/* for random */
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ocpasswd-args.h>
 
 /* Gnulib portability files. */
 #include <getpass.h>
 #include <minmax.h>
-#include <version-etc.h>
 
-static const char *alphabet[] =
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static const char alphabet[] = 
+	"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./";
 
+#define SALT_SIZE 16
 static void
 crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	  const char *passwd)
 {
-	uint8_t _salt[8];
-	char salt[16];
+	uint8_t _salt[SALT_SIZE];
+	char salt[SALT_SIZE+16];
 	char *p, *cr_passwd;
 	char *tmp_passwd;
 	unsigned i;
 	unsigned fpasswd_len = strlen(fpasswd);
-	unsigned tpm_passwd_len;
+	unsigned tmp_passwd_len;
 	unsigned username_len = strlen(username);
 	struct stat st;
 	FILE *fd, *fd2;
 	char *line = NULL;
-	size_t line_size, len;
+	size_t line_size;
+	ssize_t len;
+	int ret;
 
-	ret = _gnutls_rnd(GNUTLS_RND_NONCE, _salt, 8);
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, _salt, sizeof(_salt));
 	if (ret < 0) {
 		fprintf(stderr, "Error generating nonce: %s\n",
 			gnutls_strerror(ret));
@@ -61,9 +66,9 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	}
 
 	p = salt;
-	p += snprintf(salt, sizeof(salt), "$1$");
+	p += snprintf(salt, sizeof(salt), "$5$");
 
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < sizeof(_salt); i++) {
 		*p = alphabet[_salt[i] % (sizeof(alphabet) - 1)];
 		p++;
 	}
@@ -73,6 +78,10 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	p++;
 
 	cr_passwd = crypt(passwd, salt);
+	if (cr_passwd == NULL) { /* try MD5 */
+		salt[1] = 1;
+		cr_passwd = crypt(passwd, salt);
+	}
 	if (cr_passwd == NULL) {
 		fprintf(stderr, "Error in crypt()\n");
 		exit(1);
@@ -88,20 +97,19 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
 		fprintf(stderr, "file '%s' is locked\n", fpasswd);
-		return -1;
+		exit(1);
 	}
 
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
-		fprintf(stderr, "Cannot open '%s' for write\n", dst);
-		return -1;
+		fprintf(stderr, "Cannot open '%s' for read\n", fpasswd);
+		exit(1);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		/* empty file */
-		fclose(fd);
-		return 0;
+		fprintf(stderr, "Cannot open '%s' for write\n", tmp_passwd);
+		exit(1);
 	}
 
 	while ((len = getline(&line, &line_size, fd)) > 0) {
@@ -125,8 +133,9 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 
 int main(int argc, char **argv)
 {
-	int ret;
+	int ret, optct;
 	const char *username, *groupname, *fpasswd;
+	const char* passwd;
 
 	if ((ret = gnutls_global_init()) < 0) {
 		fprintf(stderr, "global_init: %s\n", gnutls_strerror(ret));
@@ -142,7 +151,7 @@ int main(int argc, char **argv)
 	if (HAVE_OPT(PASSWD))
 		fpasswd = OPT_ARG(PASSWD);
 	else {
-		fprintf(stderr, "passwd was not specified\n");
+		fprintf(stderr, "Password file was not specified\n");
 		exit(1);
 	}
 
@@ -165,6 +174,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	return crypt_int(fpasswd, username, passwd);
+	crypt_int(fpasswd, username, groupname, passwd);
+	
+	gnutls_global_deinit();
+	return 0;
 }
 

@@ -21,8 +21,6 @@ authentication.
 Authenticated users are assigned an unprivileged worker process and obtain 
 a networking (tun) device and IP from a configurable pool of addresses.";
 
-
-
 copyright = {
     date  = "2013";
     owner = "Nikos Mavrogiannopoulos";
@@ -81,8 +79,9 @@ auth = "pam"
 
 # The plain option requires specifying a password file which contains
 # entries of the following format.
-# "username:groupname:password"
-# One entry must be listed per line.
+# "username:groupname:encoded-password"
+# One entry must be listed per line, and 'ocpasswd' can be used
+# to generate password entries.
 #auth = "plain[/etc/ocserv-passwd]"
 
 # A banner to be displayed on clients

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <unistd.h>
 #include <plain.h>
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
@@ -11,7 +12,8 @@ int plain_auth_user(const char* passwd, const char* user, const char* pass, char
 {
 FILE* fp;
 char * line = NULL;
-size_t len, ll;
+size_t len;
+ssize_t ll;
 char* p;
 int ret;
 
@@ -35,7 +37,10 @@ int ret;
 		if (p != NULL && strcmp(user, p) == 0) {
 			p = strtok(NULL, ":");
 			if (p != NULL) {
-				snprintf(groupname, groupname_size, "%s", p);
+				groupname_size = snprintf(groupname, groupname_size, "%s", p);
+				if (groupname_size == 1) /* values like '*' or 'x' indicate empty group */
+					groupname[0] = 0;
+
 				p = strtok(NULL, ":");
 				if (p != NULL && strcmp(crypt(pass, p), p) == 0) {
 					ret = 0;

@@ -37,7 +37,7 @@ int ret;
 			if (p != NULL) {
 				snprintf(groupname, groupname_size, "%s", p);
 				p = strtok(NULL, ":");
-				if (p != NULL && strcmp(pass, p) == 0) {
+				if (p != NULL && strcmp(crypt(pass, p), p) == 0) {
 					ret = 0;
 					goto exit;
 				}

@@ -4,8 +4,7 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 EXTRA_DIST = ccan/licenses/BSD-MIT version.def.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1
 
-
-bin_PROGRAMS = ocserv
+bin_PROGRAMS = ocserv ocpasswd
 
 CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
 	ccan/container_of/container_of.h ccan/hash/hash.c ccan/hash/hash.h \
@@ -29,3 +28,5 @@ ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 	@AUTOGEN@ $<
+
+ocpasswd_SOURCES += ocpasswd.c

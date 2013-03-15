@@ -49,6 +49,7 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(sendmsg);
 	ADD_SYSCALL(read);
 	ADD_SYSCALL(write);
+	ADD_SYSCALL(writev);
 	ADD_SYSCALL(select);
 	ADD_SYSCALL(alarm);
 	ADD_SYSCALL(close);
@@ -56,11 +57,12 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(exit_group);
 	ADD_SYSCALL(send);
 	ADD_SYSCALL(recv);
+	ADD_SYSCALL(socket);
+	ADD_SYSCALL(connect);
 
-	/* these two we need to get the MTU from
+	/* this we need to get the MTU from
 	 * the TUN device */
 	ADD_SYSCALL(ioctl);
-	ADD_SYSCALL(socket);
 
 	ret = seccomp_load(ctx);
 	if (ret < 0) {

@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <sys/resource.h>
 #include <cloexec.h>
 #include <script-list.h>
 
@@ -354,22 +355,42 @@ static void handle_alarm(int signo)
 static void drop_privileges(main_server_st* s)
 {
 	int ret, e;
+	struct rlimit rl;
 
 	if (s->config->chroot_dir) {
 		chdir(s->config->chroot_dir);
 		ret = chroot(s->config->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "Cannot chroot to %s: %s", s->config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s", s->config->chroot_dir, strerror(e));
 			exit(1);
 		}
+	}
+
+	rl.rlim_cur = 0;
+	rl.rlim_max = 0;
+	ret = setrlimit(RLIMIT_NPROC, &rl);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot enforce NPROC limit: %s\n",
+		       strerror(e));
+	}
+
+#define MAX_WORKER_MEM (128*1024)
+	rl.rlim_cur = MAX_WORKER_MEM;
+	rl.rlim_max = MAX_WORKER_MEM;
+	ret = setrlimit(RLIMIT_AS, &rl);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot enforce AS limit: %s\n",
+		       strerror(e));
 	}
 
 	if (s->config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
 		ret = setgid(s->config->gid);
 		if (ret < 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "Cannot set gid to %d: %s\n",
+			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
 			       (int) s->config->gid, strerror(e));
 			exit(1);
 
@@ -380,7 +401,7 @@ static void drop_privileges(main_server_st* s)
 		ret = setuid(s->config->uid);
 		if (ret < 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "Cannot set uid to %d: %s\n",
+			mslog(s, NULL, LOG_ERR, "cannot set uid to %d: %s\n",
 			       (int) s->config->uid, strerror(e));
 			exit(1);
 

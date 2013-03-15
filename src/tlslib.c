@@ -38,6 +38,7 @@
 #include <main.h>
 #include <worker.h>
 #include <sys/un.h>
+#include <sys/uio.h>
 
 
 ssize_t tls_send(gnutls_session_t session, const void *data,

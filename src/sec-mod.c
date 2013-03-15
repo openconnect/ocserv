@@ -36,6 +36,7 @@
 #include <syslog.h>
 #include <vpn.h>
 #include <tlslib.h>
+#include <sys/uio.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/abstract.h>
@@ -158,6 +159,7 @@ unsigned key_size = config->key_size;
 struct pin_st pins;
 gnutls_datum_t data, out;
 uint16_t length;
+struct iovec iov[2];
 
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, SIG_DFL);
@@ -254,8 +256,14 @@ uint16_t length;
 		 
 		/* write reply */
 		length = out.size;
-		force_write(cfd, &length, 2);
-		force_write(cfd, out.data, out.size);
+		
+		iov[0].iov_base = &length;
+		iov[0].iov_len = 2;
+		
+		iov[1].iov_base = out.data;
+		iov[1].iov_len = out.size;
+		writev(cfd, iov, 2);
+
 		gnutls_free(out.data);
 cont:
 		close(cfd);

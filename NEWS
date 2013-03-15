@@ -1,4 +1,4 @@
-* Version 0.0.3 (unreleased)
+* Version 0.1.0 (unreleased)
 
 - Corrected issue with ocsp-response configuration field.
 - Added ability to specify multiple certificate and key pairs.
@@ -6,6 +6,9 @@
 - Added the "plain" authentication option, which allows a simple password
   file format. The ocpasswd tool can be used to generate entries for this
   file.
+- The private key operations are performed on a special process to
+  prevent loss of the private key in case of compromise of a worker
+  process.
 
 
 * Version 0.0.2 (released 2013-03-05)

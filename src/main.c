@@ -313,6 +313,11 @@ struct script_wait_st *stmp, *spos;
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		estatus = WEXITSTATUS(status);
+		
+		if (pid == s->sec_mod_pid) {
+			mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
+			terminate = 1;
+		}
 
 		/* check if someone was waiting for that pid */
 		list_for_each_safe(&s->script_list.head, stmp, spos, list) {
@@ -425,6 +430,8 @@ static void kill_children(main_server_st* s)
 {
 	struct proc_st *ctmp;
 
+	/* kill the security module server */
+	kill(s->sec_mod_pid, SIGTERM);
 	list_for_each(&s->clist.head, ctmp, list) {
 		if (ctmp->pid != -1) {
 			kill(ctmp->pid, SIGTERM);
@@ -536,7 +543,6 @@ static void check_other_work(main_server_st *s)
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
 		reload_cfg_file(s->config);
-		tls_global_init_certs(s);
 		reload_conf = 0;
 	}
 
@@ -544,6 +550,8 @@ static void check_other_work(main_server_st *s)
 		mslog(s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
 		kill_children(s);
 		closelog();
+		remove(s->socket_file);
+		remove_pid_file();
 		while (waitpid(-1, NULL, 0) > 0);
 		exit(0);
 	}
@@ -656,9 +664,6 @@ int main(int argc, char** argv)
 #endif	
 	memset(&ws, 0, sizeof(ws));
 
-	/* Initialize GnuTLS */
-	tls_global_init_certs(&s);
-	
 	if (config.foreground == 0) {
 		if (daemon(0, 0) == -1) {
 			e = errno;
@@ -668,6 +673,11 @@ int main(int argc, char** argv)
 	}
 
 	write_pid_file();
+	
+	run_sec_mod(&s);
+
+	/* Initialize certificates */
+	tls_global_init_certs(&s);
 
 	alarm(MAINTAINANCE_TIME(&s));
 
@@ -726,7 +736,7 @@ int main(int argc, char** argv)
 					continue;
 				}
 				set_cloexec_flag (fd, 1);
-				
+
 				/* Check if the client is on the banned list */
 				ret = check_if_banned(&s, &ws.remote_addr, ws.remote_addr_len);
 				if (ret < 0) {
@@ -773,10 +783,6 @@ int main(int argc, char** argv)
 					ws.udp_fd = -1;
 					ws.conn_fd = fd;
 					ws.creds = &s.creds;
-
-					ret = tls_global_init_client(&ws);
-					if (ret < 0)
-						exit(1);
 
 					/* Drop privileges after this point */
 					drop_privileges(&s);

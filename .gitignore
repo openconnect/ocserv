@@ -34,3 +34,4 @@ gl/stdlib.h
 gl/sys/stat.h
 gl/sys/time.h
 gl/sys/types.h
+src/ocpasswd

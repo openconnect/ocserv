@@ -15,6 +15,7 @@
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
 void write_pid_file(void);
+void remove_pid_file(void);
 
 /* set to 1 to start cleaning up cookies, sessions etc. */
 extern unsigned int need_maintainance;
@@ -102,6 +103,9 @@ typedef struct main_server_st {
 	struct script_list_st script_list;
 	struct ban_list_st ban_list;
 	
+	char socket_file[_POSIX_PATH_MAX];
+	pid_t sec_mod_pid;
+	
 	unsigned active_clients;
 } main_server_st;
 
@@ -154,5 +158,7 @@ void expire_banned(main_server_st* s);
 int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
 
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
+
+void run_sec_mod(main_server_st * s);
 
 #endif

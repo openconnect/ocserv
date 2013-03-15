@@ -75,6 +75,8 @@ struct cfg_st {
 	char *chroot_dir;	/* where the xml files are served from */
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */
+	
+	char* socket_file_prefix;
 	time_t cookie_validity;	/* in seconds */
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
@@ -104,7 +106,7 @@ struct cfg_st {
 
 	uid_t uid;
 	gid_t gid;
-
+	
 	/* the tun network */
 	struct vpn_st network;
 };

@@ -21,6 +21,7 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <gnutls/pkcs11.h>
+#include <gnutls/abstract.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -36,6 +37,7 @@
 #include <vpn.h>
 #include <main.h>
 #include <worker.h>
+#include <sys/un.h>
 
 
 ssize_t tls_send(gnutls_session_t session, const void *data,
@@ -241,103 +243,6 @@ fail:
 
 }
 
-int pin_callback (void *user, int attempt, const char *token_url,
-	const char *token_label, unsigned int flags, char *pin,
-	size_t pin_max)
-{
-struct tls_st * ts = user;
-int srk = 0;
-const char* p;
-unsigned len;
-
-	if (flags & GNUTLS_PIN_FINAL_TRY) {
-		syslog(LOG_ERR, "PIN callback: final try before locking; not attempting to unlock");
-		return -1;
-	}
-
-	if (flags & GNUTLS_PIN_WRONG) {
-		syslog(LOG_ERR, "PIN callback: wrong PIN was entered for '%s' (%s)", token_label, token_url);
-		return -1;
-	}
-
-	if (ts->pin[0] == 0) {
-		syslog(LOG_ERR, "PIN required for '%s' but pin-file was not set", token_label);
-		return -1;
-	}
-
-	if (strcmp(token_url, "SRK") == 0 || strcmp(token_label, "SRK") == 0) {
-		srk = 1;
-		p = ts->srk_pin;
-	} else {
-		p = ts->pin;
-	}
-
-	if (srk != 0 && ts->srk_pin[0] == 0) {
-		syslog(LOG_ERR, "PIN required for '%s' but srk-pin-file was not set", token_label);
-		return -1;
-	}
-	
-	len = strlen(p);
-	if (len > pin_max-1) {
-		syslog(LOG_ERR, "Too long PIN (%u chars)", len);
-		return -1;
-	}
-	
-	memcpy(pin, p, len);
-	pin[len] = 0;
-	
-	return 0;
-}
-
-static
-int load_pins(main_server_st* s)
-{
-int fd, ret;
-
-	s->creds.srk_pin[0] = 0;
-	s->creds.pin[0] = 0;
-
-	if (s->config->srk_pin_file != NULL) {
-		fd = open(s->config->srk_pin_file, O_RDONLY);
-		if (fd < 0) {
-			mslog(s, NULL, LOG_ERR, "could not open SRK PIN file '%s'", s->config->srk_pin_file);
-			return -1;
-		}
-	
-		ret = read(fd, s->creds.srk_pin, sizeof(s->creds.srk_pin));
-		close(fd);
-		if (ret <= 1) {
-			mslog(s, NULL, LOG_ERR, "could not read from PIN file '%s'", s->config->srk_pin_file);
-			return -1;
-		}
-	
-		if (s->creds.srk_pin[ret-1] == '\n' || s->creds.srk_pin[ret-1] == '\r')
-			s->creds.srk_pin[ret-1] = 0;
-		s->creds.srk_pin[ret] = 0;
-	}
-
-	if (s->config->pin_file != NULL) {
-		fd = open(s->config->pin_file, O_RDONLY);
-		if (fd < 0) {
-			mslog(s, NULL, LOG_ERR, "could not open PIN file '%s'", s->config->pin_file);
-			return -1;
-		}
-	
-		ret = read(fd, s->creds.pin, sizeof(s->creds.pin));
-		close(fd);
-		if (ret <= 1) {
-			mslog(s, NULL, LOG_ERR, "could not read from PIN file '%s'", s->config->pin_file);
-			return -1;
-		}
-	
-		if (s->creds.pin[ret-1] == '\n' || s->creds.pin[ret-1] == '\r')
-			s->creds.pin[ret-1] = 0;
-		s->creds.pin[ret] = 0;
-	}
-	
-	return 0;
-}
-
 void tls_global_init(main_server_st* s)
 {
 int ret;
@@ -419,11 +324,175 @@ int ret;
 	}
 }
 
+struct key_cb_data {
+	unsigned idx; /* the index of the key */
+	struct sockaddr_un sa;
+};
+
+static
+int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
+	gnutls_datum_t * output, unsigned type)
+{
+	struct key_cb_data* cdata = userdata;
+	int sd, ret, e;
+	uint8_t header[2];
+	struct iovec iov[2];
+	uint16_t length;
+	
+	output->data = NULL;
+	
+	sd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sd == -1) {
+		e = errno;
+		syslog(LOG_ERR, "error opening socket: %s", strerror(e));
+		return -1;
+	}
+	
+	ret = connect(sd, (struct sockaddr *)&cdata->sa, sizeof(cdata->sa));
+	if (ret == -1) {
+		e = errno;
+		syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s", 
+			cdata->sa.sun_path, strerror(e));
+		return -1;
+	}
+	
+	header[0] = cdata->idx;
+	header[1] = type;
+	
+	iov[0].iov_base = header;
+	iov[0].iov_len = sizeof(header);
+	iov[1].iov_base = raw_data->data;
+	iov[1].iov_len = raw_data->size;
+	
+	ret = writev(sd, iov, 2);
+	if (ret == -1) {
+		e = errno;
+		syslog(LOG_ERR, "error writing to sec-mod: %s", strerror(e));
+		goto error;
+	}
+	
+	ret = recv(sd, &length, 2, 0);
+	if (ret < 2) {
+		e = errno;
+		syslog(LOG_ERR, "error reading from sec-mod: %s", strerror(e));
+		goto error;
+	}
+
+	output->size = length;
+	output->data = gnutls_malloc(output->size);
+	if (output->data == NULL) {
+		syslog(LOG_ERR, "error allocating memory");
+		goto error;
+	}
+	
+	ret = recv(sd, output->data, output->size, 0);
+	if (ret <= 0) {
+		e = errno;
+		syslog(LOG_ERR, "error reading from sec-mod: %s", strerror(e));
+		goto error;
+	}
+	
+	output->size = ret;
+	
+	close(sd);
+	return 0;
+
+error:
+	close(sd);
+	gnutls_free(output->data);
+	return -1;
+
+}
+
+#if GNUTLS_VERSION_NUMBER >= 0x03010a
+static
+int key_cb_sign_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
+	gnutls_datum_t * signature)
+{
+	return key_cb_common_func(key, userdata, raw_data, signature, 'S');
+}
+#else
+# define key_cb_sign_func NULL
+#endif
+
+static int key_cb_decrypt_func(gnutls_privkey_t key, void* userdata, const gnutls_datum_t * ciphertext,
+	gnutls_datum_t * plaintext)
+{
+	return key_cb_common_func(key, userdata, ciphertext, plaintext, 'D');
+}
+
+static void key_cb_deinit_func(gnutls_privkey_t key, void* userdata)
+{
+	free(userdata);
+}
+
+static
+int load_key_files(main_server_st *s)
+{
+int ret;
+gnutls_pcert_st *pcert_list;
+unsigned pcert_list_size, i;
+gnutls_privkey_t key;
+gnutls_datum_t data;
+struct key_cb_data * cdata;
+
+	for (i=0;i<s->config->key_size;i++) {
+		/* load the certificate */
+		if (gnutls_url_is_supported(s->config->cert[i]) != 0) {
+			mslog(s, NULL, LOG_ERR, "Loading a certificate from '%s' is unsupported", s->config->cert[i]);
+			return -1;
+		} else {
+			ret = gnutls_load_file(s->config->cert[i], &data);
+			if (ret < 0) {
+				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->config->key[i]);
+				GNUTLS_FATAL_ERR(ret);
+			}
+		
+			pcert_list_size = 8;
+			pcert_list = gnutls_malloc(sizeof(pcert_list[0])*pcert_list_size);
+			if (pcert_list == NULL) {
+				mslog(s, NULL, LOG_ERR, "error allocating memory");
+				return -1;
+			}
+
+			ret = gnutls_pcert_list_import_x509_raw(pcert_list, &pcert_list_size,
+				&data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+			GNUTLS_FATAL_ERR(ret);
+			
+			gnutls_free(data.data);
+		}
+
+		ret = gnutls_privkey_init(&key);
+		GNUTLS_FATAL_ERR(ret);
+
+		cdata = malloc(sizeof(*cdata));
+		if (cdata == NULL) {
+			mslog(s, NULL, LOG_ERR, "error allocating memory");
+			return -1;
+		}
+		
+		cdata->idx = i;
+		cdata->sa.sun_family = AF_UNIX;
+		snprintf(cdata->sa.sun_path, sizeof(cdata->sa.sun_path), "%s", s->socket_file);
+
+		/* load the private key */
+		ret = gnutls_privkey_import_ext2(key, gnutls_pubkey_get_pk_algorithm(pcert_list[0].pubkey, NULL),
+			cdata, key_cb_sign_func, key_cb_decrypt_func,
+			key_cb_deinit_func, GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE);
+		GNUTLS_FATAL_ERR(ret);
+
+		ret = gnutls_certificate_set_key(s->creds.xcred, NULL, 0, pcert_list,
+				pcert_list_size, key);
+		GNUTLS_FATAL_ERR(ret);
+	}
+
+	return 0;
+}
+
 /* reload key files etc. */
 void tls_global_init_certs(main_server_st* s)
 {
 int ret;
-unsigned i;
 const char* perr;
 
 	if (s->config->tls_debug) {
@@ -437,14 +506,7 @@ const char* perr;
 	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
 	GNUTLS_FATAL_ERR(ret);
 
-	ret = load_pins(s);
-	if (ret < 0) {
-		exit(1);
-	}
-	
 	set_dh_params(s, s->creds.xcred);
-
-	gnutls_certificate_set_pin_function (s->creds.xcred, pin_callback, &s->creds);
 	
 	if (s->config->key_size == 0 || s->config->cert_size == 0) {
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified.\n"); 
@@ -453,22 +515,10 @@ const char* perr;
 
 	certificate_check(s);
 	
-	for (i=0;i<s->config->key_size;i++) {
-		if (strncmp(s->config->key[i], "pkcs11:", 7) != 0) {
-			ret =
-			    gnutls_certificate_set_x509_key_file(s->creds.xcred, s->config->cert[i],
-						 s->config->key[i], GNUTLS_X509_FMT_PEM);
-			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
-					s->config->cert[i], s->config->key[i], gnutls_strerror(ret));
-				exit(1);
-			}
-		} else {
-#ifndef HAVE_PKCS11
-			mslog(s, NULL, LOG_ERR, "cannot load key, GnuTLS is compiled without pkcs11 support\n");
-			exit(1);
-#endif	
-		}
+	ret = load_key_files(s);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file\n");
+		exit(1);
 	}
 
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
@@ -517,40 +567,6 @@ const char* perr;
 	}
 	
 	return;
-}
-
-int tls_global_init_client(worker_st* ws)
-{
-#ifdef HAVE_PKCS11
-int ret;
-unsigned i;
-
-	/* when we have PKCS #11 keys we cannot open them and then fork(), we need
-	 * to open them at the process they are going to be used. */
-	for (i=0;i<ws->config->key_size;i++) {
-		if (strncmp(ws->config->key[i], "pkcs11:", 7) == 0) {
-			ret = gnutls_pkcs11_reinit();
-			if (ret < 0) {
-				oclog(ws, LOG_ERR, "could not reinitialize PKCS #11 subsystem: %s\n",
-					gnutls_strerror(ret));
-				return -1;
-
-			}
-
-			ret =
-			    gnutls_certificate_set_x509_key_file(ws->creds->xcred, ws->config->cert[i],
-						 ws->config->key[i],
-						 GNUTLS_X509_FMT_PEM);
-			if (ret < 0) {
-				oclog(ws, LOG_ERR, "error setting the certificate (%s) or key (%s) files: %s\n",
-					ws->config->cert[i], ws->config->key[i], gnutls_strerror(ret));
-				return -1;
-			}
-		}
-	}
-#endif
-
-	return 0;
 }
 
 void tls_cork(gnutls_session_t session)

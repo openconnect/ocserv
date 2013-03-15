@@ -191,25 +191,4 @@ fail:
 	return ret;
 }
 
-ssize_t tun_write(int sockfd, const void *buf, size_t len)
-{
-int left = len;
-int ret;
-const uint8_t * p = buf;
-
-	while(left > 0) {
-		ret = write(sockfd, p, left);
-		if (ret == -1) {
-			if (errno != EAGAIN && errno != EINTR)
-				return ret;
-		}
-		
-		if (ret > 0) {
-			left -= ret;
-			p += ret;
-		}
-	}
-	
-	return len;
-}
 

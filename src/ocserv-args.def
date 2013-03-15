@@ -203,6 +203,9 @@ use-utmp = true
 # PID file
 pid-file = /var/run/ocserv.pid
 
+# socket file used for IPC, will be appended with .PID
+socket-file = /var/run/ocserv-socket
+
 # The user the worker processes will be run as.
 run-as-user = nobody
 run-as-group = nogroup
@@ -345,10 +348,9 @@ doc-section = {
   ds-format = 'texi';
   ds-text   = <<-_EOT_
 Note that while this server utilizes privilege separation for password
-authentication, this does not apply for TLS and client certificate authentication.
-This has the advantage of spreading TLS calculations to multiple workers (i.e. cores)
-if available, but at the cost of each worker having a copy of the server's 
-private key.
+authentication, this does not apply for TLS client certificate authentication.
+That is because the worker has no easy way to prove to the main server that
+it performed the certificate verification.
 _EOT_;
 };
 

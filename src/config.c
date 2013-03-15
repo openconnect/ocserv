@@ -179,6 +179,8 @@ unsigned j;
 	if (pid_file == NULL)
 		READ_STRING("pid-file", pid_file, 0);
 
+	READ_STRING("socket-file", config->socket_file_prefix, 1);
+
 	READ_STRING("banner", config->banner, 0);
 	READ_TF("always-require-cert", config->force_cert_auth, 0, 1);
 	READ_TF("use-utmp", config->use_utmp, 0, 1);
@@ -353,6 +355,7 @@ unsigned i;
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
 #endif
+	DEL(config->socket_file_prefix);
 	DEL(config->plain_passwd);
 	DEL(config->ocsp_response);
 	DEL(config->banner);
@@ -410,4 +413,12 @@ FILE* fp;
 	
 	fprintf(fp, "%u", (unsigned)getpid());
 	fclose(fp);
+}
+
+void remove_pid_file(void)
+{
+	if (pid_file==NULL)
+		return;
+
+	remove(pid_file);
 }

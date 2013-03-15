@@ -34,7 +34,11 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
+#include <sys/un.h>
+#include <cloexec.h>
 #include "ipc.h"
+#include "setproctitle.h"
+#include <sec-mod.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -371,4 +375,63 @@ struct banned_st *btmp;
 	btmp->addr_len = addr_len;
 	
 	list_add(&s->ban_list.head, &(btmp->list));
+}
+
+void run_sec_mod(main_server_st * s)
+{
+struct sockaddr_un sa;
+int sd, e, ret;
+pid_t pid;
+	
+	sa.sun_family = AF_UNIX;
+
+	/* make socket name */
+	snprintf(s->socket_file, sizeof(s->socket_file), "%s.%u", s->config->socket_file_prefix, (unsigned)getpid());
+	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", s->socket_file);
+
+	remove(s->socket_file);
+	
+	sd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sd == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "could not create socket '%s': %s", s->socket_file, strerror(e));
+		exit(1);
+	}
+	
+	ret = bind(sd, (struct sockaddr *)&sa, sizeof(sa));
+	if (ret == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "could not bind socket '%s': %s", s->socket_file, strerror(e));
+		exit(1);
+	}
+
+	ret = chown(sa.sun_path, s->config->uid, s->config->gid);
+	if (ret == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "could not chown socket '%s': %s", s->socket_file, strerror(e));
+	}
+
+	ret = listen(sd, 1024);
+	if (ret == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "could not listen to socket '%s': %s", s->socket_file, strerror(e));
+		exit(1);
+	}
+	set_cloexec_flag (sd, 1);
+	
+	pid = fork();
+	if (pid == 0) { /* child */
+		setproctitle(PACKAGE_NAME"-secmod");
+
+		sec_mod_server(s->config, sd);
+		exit(0);
+	} else if (pid > 0) { /* parent */
+		close(sd);
+		s->sec_mod_pid = pid;
+	} else {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "error in fork(): %s", strerror(e));
+		exit(1);
+	}
+
 }

@@ -19,7 +19,6 @@ void tls_cork(gnutls_session_t session);
 int tls_uncork(gnutls_session_t session);
 
 void tls_global_init(struct main_server_st* s);
-int tls_global_init_client(struct worker_st* ws);
 void tls_global_init_certs(struct main_server_st* s);
 
 ssize_t tls_send_file(gnutls_session_t session, const char *file);
@@ -51,15 +50,11 @@ void tls_close(gnutls_session_t session);
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
 
-#define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
-
 struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
 	gnutls_dh_params_t dh_params;
 	gnutls_datum_t ticket_key;
-	char pin[MAX_PIN_SIZE];
-	char srk_pin[MAX_PIN_SIZE];
 };
 
 typedef struct

@@ -39,6 +39,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <time.h>
+#include <common.h>
 
 #include <vpn.h>
 #include "ipc.h"
@@ -1217,7 +1218,7 @@ int ret, e, l;
 			break;
 		case AC_PKT_DATA:
 			oclog(ws, LOG_DEBUG, "writing %d byte(s) to TUN", (int)buf_size);
-			ret = tun_write(ws->tun_fd, buf, buf_size);
+			ret = force_write(ws->tun_fd, buf, buf_size);
 			if (ret == -1) {
 				e = errno;
 				oclog(ws, LOG_ERR, "could not write data to tun: %s", strerror(e));

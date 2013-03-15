@@ -30,7 +30,7 @@ fi
 AC_CHECK_SIZEOF([unsigned long])
 AC_C_BIGENDIAN
 
-PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.0.28])
+PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.1.9])
 AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])

@@ -625,7 +625,7 @@ void mtu_set(worker_st* ws, unsigned mtu)
 	ws->conn_mtu = mtu;
 	gnutls_dtls_set_data_mtu (ws->dtls_session, mtu);
 	send_tun_mtu(ws, mtu);
-	oclog(ws, LOG_DEBUG, "setting MTU to %u", ws->conn_mtu);
+	oclog(ws, LOG_INFO, "setting MTU to %u", ws->conn_mtu);
 }
 
 /* sets the current value of mtu as bad,
@@ -649,7 +649,7 @@ int mtu_not_ok(worker_st* ws)
 	}
 
 	mtu_set(ws, ws->last_good_mtu);
-	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, ws->conn_mtu);
+	oclog(ws, LOG_INFO, "MTU %u is too large, switching to %u", ws->last_bad_mtu, ws->conn_mtu);
 
 	return 0;
 }
@@ -719,9 +719,9 @@ int max, e, ret;
 		e = errno;
 		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s", strerror(e));
 	} else {
-		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
+		oclog(ws, LOG_INFO, "TCP MSS is %u", max);
 		if (max > 0 && max-mtu_overhead < ws->conn_mtu) {
-			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u", max-mtu_overhead);
+			oclog(ws, LOG_INFO, "reducing MTU due to TCP MSS to %u", max-mtu_overhead);
 			mtu_set(ws, MIN(ws->conn_mtu, max-mtu_overhead));
 		}
 	}
@@ -941,14 +941,14 @@ socklen_t sl;
 
 		if (req->dtls_mtu > 0) {
 			ws->conn_mtu = MIN(req->dtls_mtu, ws->conn_mtu);
-			oclog(ws, LOG_DEBUG, "reducing DTLS MTU to peer's DTLS MTU (%u)", req->dtls_mtu);
+			oclog(ws, LOG_INFO, "reducing DTLS MTU to peer's DTLS MTU (%u)", req->dtls_mtu);
 		}
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
 	}
 	
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
-		oclog(ws, LOG_ERR, "buffer size is smaller than MTU (%u < %u); adjusting", ws->buffer_size, ws->conn_mtu);
+		oclog(ws, LOG_WARNING, "buffer size is smaller than MTU (%u < %u); adjusting", ws->buffer_size, ws->conn_mtu);
 		ws->buffer_size = ws->conn_mtu+mtu_overhead;
 		ws->buffer = realloc(ws->buffer, ws->buffer_size);
 		if (ws->buffer == NULL)
@@ -958,7 +958,7 @@ socklen_t sl;
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu);
 	SEND_ERR(ret);
 
-	oclog(ws, LOG_DEBUG, "selected MTU is %u", ws->conn_mtu);
+	oclog(ws, LOG_INFO, "selected MTU is %u", ws->conn_mtu);
 	send_tun_mtu(ws, ws->conn_mtu);
 
 	if (ws->config->banner) {
@@ -1239,7 +1239,7 @@ int ret, e, l;
 					if (ws->dpd_mtu_trial == 0) {
 						l = 1;
 						if (now-ws->last_dpd_udp <= ws->config->dpd/2) {
-							oclog(ws, LOG_DEBUG, "DPD timeout (%u<%u); reducing MTU", (unsigned)(now-ws->last_dpd_udp), (unsigned)ws->config->dpd/2);
+							oclog(ws, LOG_INFO, "DPD timeout (%u<%u); reducing MTU", (unsigned)(now-ws->last_dpd_udp), (unsigned)ws->config->dpd/2);
 							mtu_not_ok(ws);
 						}
 

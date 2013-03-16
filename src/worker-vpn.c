@@ -639,7 +639,7 @@ int mtu_not_ok(worker_st* ws)
 	ws->last_bad_mtu = ws->conn_mtu;
 
 	if (ws->last_good_mtu >= ws->conn_mtu) {
-		ws->last_good_mtu = (ws->conn_mtu)/2;
+		ws->last_good_mtu = (2*(ws->conn_mtu))/3;
 	
 		if (ws->last_good_mtu < 128) {
 			oclog(ws, LOG_INFO, "could not calculate a valid MTU. Disabling DTLS.");

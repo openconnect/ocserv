@@ -164,11 +164,13 @@ struct iovec iov[2];
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, SIG_DFL);
 	signal(SIGTERM, SIG_DFL);
-	
+
+#ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();
 	if (ret < 0) {
 	 	syslog(LOG_WARNING, "error in PKCS #11 reinitialization: %s", gnutls_strerror(ret));
 	}
+#endif
 
 	buffer_size = 8*1024;
 	buffer = malloc(buffer_size);

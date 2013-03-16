@@ -719,6 +719,7 @@ int max, e, ret;
 		e = errno;
 		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s", strerror(e));
 	} else {
+		max -= 13;
 		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
 		if (max > 0 && max-mtu_overhead < ws->conn_mtu) {
 			oclog(ws, LOG_INFO, "reducing MTU due to TCP MSS to %u", max-mtu_overhead);
@@ -900,6 +901,7 @@ socklen_t sl;
 		e = errno;
 		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s", strerror(e));
 	} else {
+		max -= 13;
 		oclog(ws, LOG_INFO, "TCP MSS is %u", max);
 		if (max > 0 && max-mtu_overhead < ws->conn_mtu) {
 			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u", max-mtu_overhead);

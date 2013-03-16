@@ -64,6 +64,7 @@ typedef struct worker_st {
 	/* for dead peer detection */
 	time_t last_dpd_udp;
 	time_t last_dpd_tcp;
+	time_t last_periodic_check;
 
 	/* set after authentication */
 	int udp_fd;
@@ -72,8 +73,8 @@ typedef struct worker_st {
 	/* for mtu trials */
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;
-	unsigned dtls_mtu;
 	unsigned dpd_mtu_trial;
+	unsigned conn_mtu;
 	
 	/* Buffer used by worker */
 	uint8_t * buffer;

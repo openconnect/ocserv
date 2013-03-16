@@ -36,6 +36,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <signal.h>
 #include <time.h>
@@ -53,6 +54,7 @@
  * TCP (if activity occurs there).
  */
 #define UDP_SWITCH_TIME 15
+#define PERIODIC_CHECK_TIME 30
 
 /* The number of DPD packets a client skips before he's kicked */
 #define DPD_TRIES 2
@@ -62,9 +64,9 @@
 #define MAX_HTTP_REQUESTS 8
 
 static int terminate = 0;
-static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size);
+static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size, time_t);
 static int parse_dtls_data(struct worker_st* ws, 
-				uint8_t* buf, size_t buf_size);
+				uint8_t* buf, size_t buf_size, time_t);
 
 static void handle_alarm(int signo)
 {
@@ -617,7 +619,16 @@ finish:
 	tls_close(session);
 }
 
-/* sets the provided value of mtu as bad,
+static
+void mtu_set(worker_st* ws, unsigned mtu)
+{
+	ws->conn_mtu = mtu;
+	gnutls_dtls_set_data_mtu (ws->dtls_session, mtu);
+	send_tun_mtu(ws, mtu);
+	oclog(ws, LOG_DEBUG, "setting MTU to %u", ws->conn_mtu);
+}
+
+/* sets the current value of mtu as bad,
  * and returns an estimation of good.
  *
  * Returns -1 on failure.
@@ -625,10 +636,10 @@ finish:
 static
 int mtu_not_ok(worker_st* ws)
 {
-	ws->last_bad_mtu = ws->dtls_mtu;
+	ws->last_bad_mtu = ws->conn_mtu;
 
-	if (ws->last_good_mtu >= ws->dtls_mtu) {
-		ws->last_good_mtu = (ws->dtls_mtu)/2;
+	if (ws->last_good_mtu >= ws->conn_mtu) {
+		ws->last_good_mtu = (ws->conn_mtu)/2;
 	
 		if (ws->last_good_mtu < 128) {
 			oclog(ws, LOG_INFO, "could not calculate a valid MTU. Disabling DTLS.");
@@ -637,20 +648,16 @@ int mtu_not_ok(worker_st* ws)
 		}
 	}
 
-	ws->dtls_mtu = ws->last_good_mtu;
-	gnutls_dtls_set_data_mtu (ws->dtls_session, ws->dtls_mtu);
-
-	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, ws->dtls_mtu);
-
-	send_tun_mtu(ws, ws->dtls_mtu-1);
+	mtu_set(ws, ws->last_good_mtu);
+	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u", ws->last_bad_mtu, ws->conn_mtu);
 
 	return 0;
 }
 
 static void mtu_discovery_init(worker_st *ws)
 {
-	ws->last_good_mtu = ws->dtls_mtu;
-	ws->last_bad_mtu = ws->dtls_mtu;
+	ws->last_good_mtu = ws->conn_mtu;
+	ws->last_bad_mtu = ws->conn_mtu;
 }
 
 static
@@ -658,22 +665,75 @@ void mtu_ok(worker_st* ws)
 {
 unsigned int c;
 
-	if (ws->last_bad_mtu == (ws->dtls_mtu)+1 ||
-		ws->last_bad_mtu == (ws->dtls_mtu))
+	if (ws->last_bad_mtu == (ws->conn_mtu)+1 ||
+		ws->last_bad_mtu == (ws->conn_mtu))
 		return;
 	
-	ws->last_good_mtu = ws->dtls_mtu;
-	c = (ws->dtls_mtu + ws->last_bad_mtu)/2;
+	ws->last_good_mtu = ws->conn_mtu;
+	c = (ws->conn_mtu + ws->last_bad_mtu)/2;
 
-	ws->dtls_mtu = c;
+	ws->conn_mtu = c;
 	gnutls_dtls_set_data_mtu (ws->dtls_session, c);
-	send_tun_mtu(ws, c-1);
+	send_tun_mtu(ws, c);
 
 	oclog(ws, LOG_DEBUG, "trying MTU %u", c);
 
 	return;
 }
 
+static 
+int periodic_check(worker_st *ws, unsigned mtu_overhead, time_t now)
+{
+socklen_t sl;
+int max, e, ret;
+
+	if (now - ws->last_periodic_check < PERIODIC_CHECK_TIME)
+		return 0;
+
+	/* check DPD. Otherwise exit */
+	if (ws->udp_state == UP_ACTIVE && now-ws->last_dpd_udp > DPD_TRIES*ws->config->dpd) {
+		oclog(ws, LOG_ERR, "have not received UDP DPD for long (%d secs)", (int)(now-ws->last_dpd_udp));
+				
+		ws->buffer[0] = AC_PKT_DPD_OUT;
+		tls_send(ws->dtls_session, ws->buffer, 1);
+				
+		if (now-ws->last_dpd_udp > DPD_MAX_TRIES*ws->config->dpd) {
+			oclog(ws, LOG_ERR, "have not received UDP DPD for very long; disabling UDP port");
+			ws->udp_state = UP_INACTIVE;
+		}
+	}
+	if (now-ws->last_dpd_tcp > DPD_TRIES*ws->config->dpd) {
+		oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_dpd_tcp));
+		ws->buffer[0] = AC_PKT_DPD_OUT;
+		tls_send(ws->session, ws->buffer, 1);
+
+		if (now-ws->last_dpd_tcp > DPD_MAX_TRIES*ws->config->dpd) {
+			oclog(ws, LOG_ERR, "have not received TCP DPD for very long; tearing down connection");
+			return -1;
+		}
+	}
+
+	sl = sizeof(max);
+	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s", strerror(e));
+	} else {
+		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
+		if (max > 0 && max-mtu_overhead < ws->conn_mtu) {
+			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u", max-mtu_overhead);
+			mtu_set(ws, MIN(ws->conn_mtu, max-mtu_overhead));
+		}
+	}
+
+
+	ws->last_periodic_check = now;
+	
+	return 0;
+}
+
+#define CSTP_DTLS_OVERHEAD 1
+#define CSTP_OVERHEAD 8
 
 #define SEND_ERR(x) if (x<0) goto send_error
 static int connect_handler(worker_st *ws)
@@ -687,7 +747,8 @@ char *p;
 struct timeval tv;
 unsigned tls_pending, dtls_pending = 0, i;
 time_t udp_recv_time = 0, now;
-unsigned mtu_overhead, tls_mtu = 0;
+unsigned mtu_overhead = 0;
+socklen_t sl;
 
 	ws->buffer_size = 16*1024;
 	ws->buffer = malloc(ws->buffer_size);
@@ -826,16 +887,25 @@ unsigned mtu_overhead, tls_mtu = 0;
 		);
 	SEND_ERR(ret);
 
-
-	tls_mtu = vinfo.mtu - 8;
+	mtu_overhead = CSTP_OVERHEAD;
+	ws->conn_mtu = vinfo.mtu - mtu_overhead;
 	if (req->cstp_mtu > 0) {
-		tls_mtu = MIN(tls_mtu, req->cstp_mtu);
+		ws->conn_mtu = MIN(ws->conn_mtu, req->cstp_mtu);
 		oclog(ws, LOG_DEBUG, "peer CSTP MTU is %u", req->cstp_mtu);
 	}
-	tls_mtu = MIN(ws->buffer_size-8, tls_mtu);
 
-	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", tls_mtu);
-	SEND_ERR(ret);
+	sl = sizeof(max);
+	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s", strerror(e));
+	} else {
+		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
+		if (max > 0 && max-mtu_overhead < ws->conn_mtu) {
+			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u", max-mtu_overhead);
+		}
+		ws->conn_mtu = MIN(ws->conn_mtu, max-mtu_overhead);
+	}
 
 	if (ws->udp_state != UP_DISABLED) {
 		p = (char*)ws->buffer;
@@ -863,25 +933,30 @@ unsigned mtu_overhead, tls_mtu = 0;
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
 		if (ws->proto == AF_INET)
-			mtu_overhead = 20+1; /* ip */
+			mtu_overhead = 20+CSTP_DTLS_OVERHEAD; /* ip */
 		else
-			mtu_overhead = 40+1; /* ipv6 */
+			mtu_overhead = 40+CSTP_DTLS_OVERHEAD; /* ipv6 */
 		mtu_overhead += 8; /* udp */
-		ws->dtls_mtu = vinfo.mtu - mtu_overhead;
+		ws->conn_mtu = MIN(ws->conn_mtu, vinfo.mtu - mtu_overhead);
 
 		if (req->dtls_mtu > 0) {
-			ws->dtls_mtu = MIN(req->dtls_mtu, ws->dtls_mtu);
-			oclog(ws, LOG_DEBUG, "peer DTLS MTU is %u", req->dtls_mtu);
+			ws->conn_mtu = MIN(req->dtls_mtu, ws->conn_mtu);
+			oclog(ws, LOG_DEBUG, "reducing DTLS MTU to peer's DTLS MTU (%u)", req->dtls_mtu);
 		}
 
-		ws->dtls_mtu = MIN(ws->buffer_size-1, ws->dtls_mtu);
-		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->dtls_mtu);
+		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
+	}
+	
+	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
+		oclog(ws, LOG_ERR, "internal error; buffer size is smaller than MTU (%u < %u)", ws->buffer_size, ws->conn_mtu);
+		exit(1);
 	}
 
-	if (ws->dtls_mtu == 0)
-		send_tun_mtu(ws, tls_mtu);
-	else
-		send_tun_mtu(ws, ws->dtls_mtu-1);
+	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu);
+	SEND_ERR(ret);
+
+	oclog(ws, LOG_DEBUG, "selected MTU is %u", ws->conn_mtu);
+	send_tun_mtu(ws, ws->conn_mtu);
 
 	if (ws->config->banner) {
 		ret = tls_printf(ws->session, "X-CSTP-Banner: %s\r\n", ws->config->banner);
@@ -937,6 +1012,7 @@ unsigned mtu_overhead, tls_mtu = 0;
 
 			goto exit;
 		}
+		
 
 		tls_pending = gnutls_record_check_pending(ws->session);
 
@@ -951,43 +1027,13 @@ unsigned mtu_overhead, tls_mtu = 0;
 					continue;
 				goto exit;
 			}
-			
-			if (ret == 0) {
-				now = time(0);
-				/* check DPD. Otherwise exit */
-				if (ws->udp_state == UP_ACTIVE && now-ws->last_dpd_udp > DPD_TRIES*ws->config->dpd) {
-					oclog(ws, LOG_ERR, "have not received UDP DPD for long (%d secs)", (int)(now-ws->last_dpd_udp));
-				
-					ws->buffer[0] = AC_PKT_DPD_OUT;
-					tls_send(ws->dtls_session, ws->buffer, 1);
-				
-					if (now-ws->last_dpd_udp > DPD_MAX_TRIES*ws->config->dpd) {
-						oclog(ws, LOG_ERR, "have not received UDP DPD for very long; disabling UDP port");
-						ws->udp_state = UP_INACTIVE;
-					}
-				}
-				if (now-ws->last_dpd_tcp > DPD_TRIES*ws->config->dpd) {
-					oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_dpd_tcp));
-					ws->buffer[0] = AC_PKT_DPD_OUT;
-					tls_send(ws->session, ws->buffer, 1);
-
-					if (now-ws->last_dpd_tcp > DPD_MAX_TRIES*ws->config->dpd) {
-						oclog(ws, LOG_ERR, "have not received TCP DPD for very long; tearing down connection");
-						goto exit;
-					}
-				}
-			}
 		}
+		now = time(0);
+		if (periodic_check(ws, mtu_overhead, now) < 0)
+			goto exit;
 		
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
-				
-			if (ws->udp_state == UP_ACTIVE) {
-				l = ws->dtls_mtu-1;
-			} else {
-				l = tls_mtu;
-			}
-
-			l = read(ws->tun_fd, ws->buffer + 8, l);
+			l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
 			if (l < 0) {
 				e = errno;
 				
@@ -1049,7 +1095,7 @@ unsigned mtu_overhead, tls_mtu = 0;
 			if (ret > 0) {
 				l = ret;
 
-				ret = parse_cstp_data(ws, ws->buffer, l);
+				ret = parse_cstp_data(ws, ws->buffer, l, now);
 				if (ret < 0) {
 					oclog(ws, LOG_INFO, "error parsing CSTP data");
 					goto exit;
@@ -1077,7 +1123,7 @@ unsigned mtu_overhead, tls_mtu = 0;
 						l = ret;
 						ws->udp_state = UP_ACTIVE;
 
-						ret = parse_dtls_data(ws, ws->buffer, l);
+						ret = parse_dtls_data(ws, ws->buffer, l, now);
 						if (ret < 0) {
 							oclog(ws, LOG_INFO, "error parsing CSTP data");
 							goto exit;
@@ -1093,7 +1139,7 @@ unsigned mtu_overhead, tls_mtu = 0;
 					if (ret < 0)
 						goto exit;
 					
-					gnutls_dtls_set_mtu (ws->dtls_session, ws->dtls_mtu);
+					gnutls_dtls_set_mtu (ws->dtls_session, ws->conn_mtu);
 					mtu_discovery_init(ws);
 
 					break;
@@ -1120,9 +1166,9 @@ hsk_restart:
 
 					if (ret == 0) {
 						ws->udp_state = UP_ACTIVE;
-						ws->dtls_mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
 						mtu_discovery_init(ws);
-						oclog(ws, LOG_DEBUG, "DTLS handshake completed (MTU: %u)\n", ws->dtls_mtu);
+						mtu_set(ws, gnutls_dtls_get_data_mtu(ws->dtls_session));
+						oclog(ws, LOG_DEBUG, "DTLS handshake completed (MTU: %u)\n", ws->conn_mtu);
 					}
 					
 					break;
@@ -1184,24 +1230,32 @@ int ret, e, l;
 				/* Use DPD for MTU discovery in DTLS */
 				ws->buffer[0] = AC_PKT_DPD_RESP;
 				
-				if (ws->config->try_mtu == 0 || ws->dpd_mtu_trial == 0) {
+				if (ws->config->try_mtu == 0) {
 					l = 1;
-					if (now-ws->last_dpd_udp <= ws->config->dpd/2)
-						mtu_not_ok(ws);
-
-					ws->dpd_mtu_trial++;
 				} else {
-					l = ws->dtls_mtu;
-					ws->dpd_mtu_trial = 0;
+					if (ws->dpd_mtu_trial == 0) {
+						l = 1;
+						if (now-ws->last_dpd_udp <= ws->config->dpd/2) {
+							oclog(ws, LOG_DEBUG, "DPD timeout (%u<%u); reducing MTU", (unsigned)(now-ws->last_dpd_udp), (unsigned)ws->config->dpd/2);
+							mtu_not_ok(ws);
+						}
+
+						ws->dpd_mtu_trial++;
+					} else {
+						l = ws->conn_mtu;
+						ws->dpd_mtu_trial = 0;
+					}
 				}
 				ret = tls_send(ts, ws->buffer, l);
 
-				if (ret == GNUTLS_E_LARGE_PACKET) {
-					mtu_not_ok(ws);
-					tls_send(ts, ws->buffer, 1);
-					ret = 1;
-				} else if (ws->config->try_mtu != 0 && ret > 0 && ws->dpd_mtu_trial > 0) {
-					mtu_ok(ws);
+				if (ws->config->try_mtu != 0) {
+					if (ret == GNUTLS_E_LARGE_PACKET) {
+						mtu_not_ok(ws);
+						tls_send(ts, ws->buffer, 1);
+						ret = 1;
+					} else if (ret > 0 && ws->dpd_mtu_trial > 0) {
+						mtu_ok(ws);
+					}
 				}
 
 				oclog(ws, LOG_DEBUG, "received DTLS DPD; sent response (%d bytes)", ret);
@@ -1234,10 +1288,9 @@ int ret, e, l;
 }
 
 static int parse_cstp_data(struct worker_st* ws, 
-				uint8_t* buf, size_t buf_size)
+				uint8_t* buf, size_t buf_size, time_t now)
 {
-int pktlen;
-time_t now;
+int pktlen, ret;
 
 	if (buf_size < 8) {
 		oclog(ws, LOG_INFO, "can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
@@ -1256,24 +1309,25 @@ time_t now;
 		return -1;
 	}
 
+	ret = parse_data(ws, ws->session, buf[6], buf+8, pktlen, now);
 	/* whatever we received treat it as DPD response.
 	 * it indicates that the channel is alive */
-	now = time(0);
 	ws->last_dpd_tcp = now;
-	return parse_data(ws, ws->session, buf[6], buf+8, pktlen, now);
+	
+	return ret;
 }
 
 static int parse_dtls_data(struct worker_st* ws, 
-				uint8_t* buf, size_t buf_size)
+				uint8_t* buf, size_t buf_size, time_t now)
 {
-time_t now;
+int ret;
 
 	if (buf_size < 1) {
 		oclog(ws, LOG_INFO, "can't read DTLS header (only %d bytes are available)\n", (int)buf_size);
 		return -1;
 	}
 
-	now = time(0);
+	ret = parse_data(ws, ws->dtls_session, buf[0], buf+1, buf_size-1, now);
 	ws->last_dpd_udp = now;
-	return parse_data(ws, ws->dtls_session, buf[0], buf+1, buf_size-1, now);
+	return ret;
 }

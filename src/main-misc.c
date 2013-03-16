@@ -382,16 +382,24 @@ void run_sec_mod(main_server_st * s)
 {
 int e;
 pid_t pid;
+char file[_POSIX_PATH_MAX];
+const char *p;
 
 	/* make socket name */
 	snprintf(s->socket_file, sizeof(s->socket_file), "%s.%u", s->config->socket_file_prefix, (unsigned)getpid());
+	p = s->socket_file;
+	if (s->config->chroot_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s.%u", 
+			s->config->chroot_dir, s->config->socket_file_prefix, (unsigned)getpid());
+		p = file;
+	}
 
 	pid = fork();
 	if (pid == 0) { /* child */
 		prctl(PR_SET_PDEATHSIG, SIGTERM);
 		setproctitle(PACKAGE_NAME"-secmod");
 
-		sec_mod_server(s->config, s->socket_file);
+		sec_mod_server(s->config, p);
 		exit(0);
 	} else if (pid > 0) { /* parent */
 		s->sec_mod_pid = pid;

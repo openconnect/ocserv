@@ -948,8 +948,11 @@ socklen_t sl;
 	}
 	
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
-		oclog(ws, LOG_ERR, "internal error; buffer size is smaller than MTU (%u < %u)", ws->buffer_size, ws->conn_mtu);
-		exit(1);
+		oclog(ws, LOG_ERR, "buffer size is smaller than MTU (%u < %u); adjusting", ws->buffer_size, ws->conn_mtu);
+		ws->buffer_size = ws->conn_mtu+mtu_overhead;
+		ws->buffer = realloc(ws->buffer, ws->buffer_size);
+		if (ws->buffer == NULL)
+			goto exit;
 	}
 
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu);

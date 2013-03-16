@@ -204,6 +204,7 @@ use-utmp = true
 pid-file = /var/run/ocserv.pid
 
 # socket file used for IPC, will be appended with .PID
+# It must be accessible within the chroot environment (if any)
 socket-file = /var/run/ocserv-socket
 
 # The user the worker processes will be run as.

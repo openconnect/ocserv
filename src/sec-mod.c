@@ -162,7 +162,6 @@ gnutls_datum_t data, out;
 uint16_t length;
 struct iovec iov[2];
 int sd;
-int mask;
 
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, SIG_DFL);
@@ -194,14 +193,13 @@ int mask;
 		exit(1);
 	}
 	
-	mask = umask(066);
+	umask(066);
 	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));
 	if (ret == -1) {
 		e = errno;
 		syslog(LOG_ERR, "could not bind socket '%s': %s", socket_file, strerror(e));
 		exit(1);
 	}
-	umask(mask);
 
 	ret = chown(socket_file, config->uid, config->gid);
 	if (ret == -1) {

@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -147,7 +148,7 @@ int fd, ret;
 }
 
 void
-sec_mod_server(struct cfg_st* config, int sd)
+sec_mod_server(struct cfg_st* config, const char* socket_file)
 {
 struct sockaddr_un sa;
 socklen_t sa_len;
@@ -160,6 +161,8 @@ struct pin_st pins;
 gnutls_datum_t data, out;
 uint16_t length;
 struct iovec iov[2];
+int sd;
+int mask;
 
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGINT, SIG_DFL);
@@ -178,7 +181,41 @@ struct iovec iov[2];
 	 	syslog(LOG_ERR, "error in memory allocation");
 	 	exit(1);
 	}	
+
+	memset(&sa, 0, sizeof(sa));	
+	sa.sun_family = AF_UNIX;
+	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
+	remove(socket_file);
+
+	sd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sd == -1) {
+		e = errno;
+		syslog(LOG_ERR, "could not create socket '%s': %s", socket_file, strerror(e));
+		exit(1);
+	}
 	
+	mask = umask(066);
+	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));
+	if (ret == -1) {
+		e = errno;
+		syslog(LOG_ERR, "could not bind socket '%s': %s", socket_file, strerror(e));
+		exit(1);
+	}
+	umask(mask);
+
+	ret = chown(socket_file, config->uid, config->gid);
+	if (ret == -1) {
+		e = errno;
+		syslog(LOG_ERR, "could not chown socket '%s': %s", socket_file, strerror(e));
+	}
+
+	ret = listen(sd, 1024);
+	if (ret == -1) {
+		e = errno;
+		syslog(LOG_ERR, "could not listen to socket '%s': %s", socket_file, strerror(e));
+		exit(1);
+	}
+
 	ret = load_pins(config, &pins);
 	if (ret < 0) {
 	 	syslog(LOG_ERR, "error loading PIN files");
@@ -215,6 +252,7 @@ struct iovec iov[2];
 		}
 	}
 
+	syslog(LOG_INFO, "sec-mod initialized (socket: %s)", socket_file);
 	for (;;) {
 		sa_len = sizeof(sa);
 		cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
@@ -226,7 +264,9 @@ struct iovec iov[2];
 		 
 		 /* read request */
 		ret = recv(cfd, buffer, buffer_size, 0);
-		if (ret <= 2) {
+		if (ret == 0)
+			goto cont;
+		else if (ret <= 2) {
 		 	e = errno;
 		 	syslog(LOG_ERR, "error receiving sec-mod data: %s", strerror(e));
 		 	goto cont;

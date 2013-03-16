@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <sys/prctl.h>
 #include <cloexec.h>
 #include <script-list.h>
 
@@ -304,6 +305,7 @@ static void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 		proc->lease->in_use = 0;
 	list_del(&proc->list);
 	free(proc);
+	s->active_clients--;
 }
 
 static void cleanup_children(main_server_st *s)
@@ -367,25 +369,6 @@ static void drop_privileges(main_server_st* s)
 		}
 	}
 
-	rl.rlim_cur = 0;
-	rl.rlim_max = 0;
-	ret = setrlimit(RLIMIT_NPROC, &rl);
-	if (ret < 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot enforce NPROC limit: %s\n",
-		       strerror(e));
-	}
-
-#define MAX_WORKER_MEM (128*1024)
-	rl.rlim_cur = MAX_WORKER_MEM;
-	rl.rlim_max = MAX_WORKER_MEM;
-	ret = setrlimit(RLIMIT_AS, &rl);
-	if (ret < 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot enforce AS limit: %s\n",
-		       strerror(e));
-	}
-
 	if (s->config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
 		ret = setgid(s->config->gid);
 		if (ret < 0) {
@@ -406,6 +389,25 @@ static void drop_privileges(main_server_st* s)
 			exit(1);
 
 		}
+	}
+
+	rl.rlim_cur = 0;
+	rl.rlim_max = 0;
+	ret = setrlimit(RLIMIT_NPROC, &rl);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot enforce NPROC limit: %s\n",
+		       strerror(e));
+	}
+
+#define MAX_WORKER_MEM (4*1024*1024)
+	rl.rlim_cur = MAX_WORKER_MEM;
+	rl.rlim_max = MAX_WORKER_MEM;
+	ret = setrlimit(RLIMIT_AS, &rl);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot enforce AS limit: %s\n",
+		       strerror(e));
 	}
 }
 
@@ -797,6 +799,7 @@ int main(int argc, char** argv)
 					erase_cookies(&s);
 
 					setproctitle(PACKAGE_NAME"-worker");
+					prctl(PR_SET_PDEATHSIG, SIGTERM);
 
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];

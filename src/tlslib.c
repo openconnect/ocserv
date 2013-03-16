@@ -192,7 +192,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 	ws = gnutls_session_get_ptr(session);
 	if (ws == NULL) {
-		syslog(LOG_ERR, "%s:%d: could not obtain worker state.", __func__, __LINE__);
+		syslog(LOG_ERR, "%s:%d: could not obtain worker state", __func__, __LINE__);
 		return -1;
 	}
 	
@@ -225,7 +225,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 
 		gnutls_free(out.data);
 #else
-		oclog(ws, LOG_INFO, "client certificate verification failed.");
+		oclog(ws, LOG_INFO, "client certificate verification failed");
 #endif
 
 		goto fail;
@@ -328,6 +328,7 @@ int ret;
 struct key_cb_data {
 	unsigned idx; /* the index of the key */
 	struct sockaddr_un sa;
+	unsigned sa_len;
 };
 
 static
@@ -346,22 +347,22 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 	if (sd == -1) {
 		e = errno;
 		syslog(LOG_ERR, "error opening socket: %s", strerror(e));
-		return -1;
+		return GNUTLS_E_INTERNAL_ERROR;
 	}
 	
-	ret = connect(sd, (struct sockaddr *)&cdata->sa, sizeof(cdata->sa));
+	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
 	if (ret == -1) {
 		e = errno;
 		syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s", 
 			cdata->sa.sun_path, strerror(e));
-		return -1;
+		return GNUTLS_E_INTERNAL_ERROR;
 	}
 	
 	header[0] = cdata->idx;
 	header[1] = type;
 	
 	iov[0].iov_base = header;
-	iov[0].iov_len = sizeof(header);
+	iov[0].iov_len = 2;
 	iov[1].iov_base = raw_data->data;
 	iov[1].iov_len = raw_data->size;
 	
@@ -401,7 +402,7 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 error:
 	close(sd);
 	gnutls_free(output->data);
-	return -1;
+	return GNUTLS_E_INTERNAL_ERROR;
 
 }
 
@@ -445,8 +446,8 @@ struct key_cb_data * cdata;
 		} else {
 			ret = gnutls_load_file(s->config->cert[i], &data);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->config->key[i]);
-				GNUTLS_FATAL_ERR(ret);
+				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->config->cert[i]);
+				return -1;
 			}
 		
 			pcert_list_size = 8;
@@ -473,8 +474,11 @@ struct key_cb_data * cdata;
 		}
 		
 		cdata->idx = i;
+
+		memset(&cdata->sa, 0, sizeof(cdata->sa));
 		cdata->sa.sun_family = AF_UNIX;
 		snprintf(cdata->sa.sun_path, sizeof(cdata->sa.sun_path), "%s", s->socket_file);
+		cdata->sa_len = SUN_LEN(&cdata->sa);
 
 		/* load the private key */
 		ret = gnutls_privkey_import_ext2(key, gnutls_pubkey_get_pk_algorithm(pcert_list[0].pubkey, NULL),
@@ -510,7 +514,7 @@ const char* perr;
 	set_dh_params(s, s->creds.xcred);
 	
 	if (s->config->key_size == 0 || s->config->cert_size == 0) {
-		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified.\n"); 
+		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified"); 
 		exit(1);
 	}
 
@@ -518,7 +522,7 @@ const char* perr;
 	
 	ret = load_key_files(s);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file\n");
+		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file");
 		exit(1);
 	}
 
@@ -529,12 +533,12 @@ const char* perr;
 								   s->config->ca,
 								   GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error setting the CA (%s) file.\n",
+				mslog(s, NULL, LOG_ERR, "error setting the CA (%s) file",
 					s->config->ca);
 				exit(1);
 			}
 
-			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s).\n", ret);
+			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
 		if (s->config->crl != NULL) {
@@ -543,7 +547,7 @@ const char* perr;
 								 s->config->crl,
 								 GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error setting the CRL (%s) file.\n",
+				mslog(s, NULL, LOG_ERR, "error setting the CRL (%s) file",
 					s->config->crl);
 				exit(1);
 			}
@@ -555,7 +559,7 @@ const char* perr;
 
 	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
-		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s\n", perr);
+		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
 	
 	ret = gnutls_session_ticket_key_generate(&s->creds.ticket_key);
@@ -619,14 +623,14 @@ gnutls_x509_crt_t crt;
 	gnutls_free(data.data);
 
 	if (ret < 0) {
-		fprintf(stderr, "Error calculating hash of '%s': %s\n", file, gnutls_strerror(ret));
+		fprintf(stderr, "error calculating hash of '%s': %s", file, gnutls_strerror(ret));
 		exit(1);
 	}
 	
 	size_t ret_size = sizeof(digest)*2+1;
 	retval = malloc(ret_size);
 	if (retval == NULL) {
-		fprintf(stderr, "Memory error\n");
+		fprintf(stderr, "memory error");
 		exit(1);
 	}
 	
@@ -634,7 +638,7 @@ gnutls_x509_crt_t crt;
 	data.size = sizeof(digest);
 	ret = gnutls_hex_encode(&data, retval, &ret_size);
 	if (ret < 0) {
-		fprintf(stderr, "Error in hex encode: %s\n", gnutls_strerror(ret));
+		fprintf(stderr, "error in hex encode: %s", gnutls_strerror(ret));
 		exit(1);
 	}
 	retval[ret_size] = 0;

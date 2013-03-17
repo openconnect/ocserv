@@ -432,6 +432,7 @@ void clear_lists(main_server_st *s)
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
 		list_del(&ctmp->list);
+		memset(ctmp, 0, sizeof(*ctmp));
 		free(ctmp);
 		s->clist.total--;
 	}

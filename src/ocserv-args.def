@@ -13,12 +13,10 @@ explain       = "";
 #include version.def
 
 detail  = "This program is openconnect VPN server (ocserv), a server compatible with the
-openconnect VPN client. It is believed to be compatible with the protocol
-used by CISCO's AnyConnect SSL VPN.
+openconnect VPN client. It follows the protocol used by CISCO's AnyConnect VPN.
 
 Multiple authentication methods are available including PAM and certificate
-authentication.
-Authenticated users are assigned an unprivileged worker process and obtain 
+authentication. Authenticated users are assigned an unprivileged worker process and obtain 
 a networking (tun) device and IP from a configurable pool of addresses.";
 
 copyright = {
@@ -359,6 +357,7 @@ doc-section = {
   ds-type = 'COMPATIBILITY';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-The server has been tested to be compatible with the openconnect VPN client.
+The server has been tested to be compatible with the openconnect VPN client. 
+It isn't compatible with CISCO's AnyConnect clients (there is experimental code).
 _EOT_;
 };

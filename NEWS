@@ -1,4 +1,4 @@
-* Version 0.1.0 (unreleased)
+* Version 0.1.0 (released 2013-03-23)
 
 - Corrected issue with ocsp-response configuration field.
 - Added ability to specify multiple certificate and key pairs.

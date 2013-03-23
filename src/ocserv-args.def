@@ -277,7 +277,10 @@ The pid of that process is available from the command 'who -u' if utmp logging i
 @subheading Password authentication
 If your system supports Pluggable Authentication Modules (PAM), then
 ocserv will take advantage of it to password authenticate its users.
-It can be used in conjunction with certificate authentication.
+Otherwise a plain password file similar to the UNIX password file could
+be used. In that case the 'ocpasswd' tool can be used for its management.
+Password authentication can be used in conjunction with certificate 
+authentication.
 
 @subheading Certificate authentication
 In order to support certificate authentication you will need in addition to 

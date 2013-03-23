@@ -277,19 +277,19 @@ The pid of that process is available from the command 'who -u' if utmp logging i
 @subheading Password authentication
 If your system supports Pluggable Authentication Modules (PAM), then
 ocserv will take advantage of it to password authenticate its users.
-Otherwise a plain password file similar to the UNIX password file could
-be used. In that case the 'ocpasswd' tool can be used for its management.
-Password authentication can be used in conjunction with certificate 
+Otherwise a plain password file similar to the UNIX password file is also supported.
+In that case the 'ocpasswd' tool can be used for its management.
+Note that password authentication can be used in conjunction with certificate 
 authentication.
 
 @subheading Certificate authentication
 In order to support certificate authentication you will need in addition to 
 the server certificate and key for TLS, a certificate authority (CA) to sign
-certificates for the clients. That authority should also provide a CRL to
+the client certificates. That authority should also provide a CRL to
 allow the server to reject the revoked clients (see @var{ca-cert, crl}).
 
-Each client will then hold a key and certificate that identifies him.
-The user ID of the client must be embedded in the certificate's Distinguished
+In certificate authentication each client holds a key and certificate that 
+identifies him. The user ID of the client must be embedded in the certificate's Distinguished
 Name (DN), e.g. in the Common Name, or UID fields. For the server to
 read the name, the @var{cert-user-oid} configuration option must be set.
 
@@ -349,10 +349,10 @@ doc-section = {
   ds-type = 'IMPLEMENTATION NOTES';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-Note that while this server utilizes privilege separation for password
-authentication, this does not apply for TLS client certificate authentication.
-That is because the worker has no easy way to prove to the main server that
-it performed the certificate verification.
+Note that while this server utilizes privilege separation and password
+authentication occurs on the main server, this does not apply for TLS client 
+certificate authentication. That is because the worker has no way to 
+prove to the main server that it performed the certificate verification.
 _EOT_;
 };
 

@@ -126,16 +126,16 @@ AC_OUTPUT
 
 AC_MSG_NOTICE([summary of build options:
 
-  version:                ${VERSION}
-  Host type:              ${host}
-  Install prefix:         ${prefix}
-  Compiler:               ${CC}
-  CFlags:                 ${CFLAGS}
+  version:                          ${VERSION}
+  Host type:                        ${host}
+  Install prefix:                   ${prefix}
+  Compiler:                         ${CC}
+  CFlags:                           ${CFLAGS}
 
-  GDBM storage backend:   ${gdbm_enabled}
-  PAM auth backend:       ${pam_enabled}
-  TCP wrappers:           ${libwrap_enabled}
-  seccomp (experimental): ${seccomp_enabled}
-  Anyconnect compat:      ${anyconnect_enabled}
+  GDBM storage backend:             ${gdbm_enabled}
+  PAM auth backend:                 ${pam_enabled}
+  TCP wrappers:                     ${libwrap_enabled}
+  seccomp (experimental):           ${seccomp_enabled}
+  Anyconnect compat (experimental): ${anyconnect_enabled}
 ])
 

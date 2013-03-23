@@ -186,16 +186,13 @@ time_t now, exp;
 
 	cache = htable_first(&s->tls_db->ht, &iter);
 	while(cache != NULL) {
-#if GNUTLS_VERSION_NUMBER >= 0x030107
 		gnutls_datum_t d;
 
 		d.data = (void*)cache->session_data;
 		d.size = cache->session_data_size;
 
 		exp = gnutls_db_check_entry_time(&d);
-#else
-		exp = 0;
-#endif
+
 		if (now-exp > TLS_SESSION_EXPIRATION_TIME) {
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;

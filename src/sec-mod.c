@@ -282,12 +282,9 @@ int sd;
 		data.data = &buffer[2];
 		data.size = ret - 2;
 		 
-#if GNUTLS_VERSION_NUMBER >= 0x03010a
 		if (type == 'S') {
 		 	ret = gnutls_privkey_sign_raw_data(key[i], 0, &data, &out);
-		} else 
-#endif
-		if (type == 'D') {
+		} else if (type == 'D') {
 		 	ret = gnutls_privkey_decrypt_data(key[i], 0, &data, &out);
 		} else {
 		 	syslog(LOG_ERR, "unknown type 0x%.2x", type);

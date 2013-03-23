@@ -211,7 +211,6 @@ static int verify_certificate_cb(gnutls_session_t session)
 	}
 
 	if (status != 0) {
-#if GNUTLS_VERSION_NUMBER > 0x030106
 		gnutls_datum_t out;
 		int type = gnutls_certificate_type_get(session);
 
@@ -224,9 +223,6 @@ static int verify_certificate_cb(gnutls_session_t session)
 		oclog(ws, LOG_INFO, "client certificate verification failed: %s", out.data);
 
 		gnutls_free(out.data);
-#else
-		oclog(ws, LOG_INFO, "client certificate verification failed");
-#endif
 
 		goto fail;
 	} else {
@@ -268,9 +264,7 @@ unsigned usage;
 	if (s->config->cert_size > 1)
 		return;
 
-#if GNUTLS_VERSION_NUMBER > 0x030100
 	if (gnutls_url_is_supported(s->config->cert[0]) == 0) {
-#endif
 		/* no URL */
 		ret = gnutls_load_file(s->config->cert[0], &data);
 		if (ret < 0)
@@ -294,9 +288,7 @@ unsigned usage;
 					mslog(s, NULL, LOG_WARNING, "no DH-params file specified; server will be limited to ECDHE ciphersuites\n");
 			}
 		}
-#if GNUTLS_VERSION_NUMBER > 0x030100
 	}
-#endif
 
 cleanup:
 	gnutls_x509_crt_deinit(crt);
@@ -406,16 +398,12 @@ error:
 
 }
 
-#if GNUTLS_VERSION_NUMBER >= 0x03010a
 static
 int key_cb_sign_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
 	gnutls_datum_t * signature)
 {
 	return key_cb_common_func(key, userdata, raw_data, signature, 'S');
 }
-#else
-# define key_cb_sign_func NULL
-#endif
 
 static int key_cb_decrypt_func(gnutls_privkey_t key, void* userdata, const gnutls_datum_t * ciphertext,
 	gnutls_datum_t * plaintext)
@@ -576,18 +564,12 @@ const char* perr;
 
 void tls_cork(gnutls_session_t session)
 {
-#if GNUTLS_VERSION_NUMBER > 0x030109
 	gnutls_record_cork(session);
-#endif
 }
 
 int tls_uncork(gnutls_session_t session)
 {
-#if GNUTLS_VERSION_NUMBER > 0x030109
 	return gnutls_record_uncork(session, GNUTLS_RECORD_WAIT);
-#else
-	return 0;
-#endif
 }
 
 void *calc_sha1_hash(char* file, unsigned cert)

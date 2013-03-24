@@ -1,5 +1,3 @@
-* Fix SIGHUP handling on the main server.
-
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
   versions than the current openssl string approach (using PSK ciphersuites
   seem to be like a solution, but then we could not use the session ID to

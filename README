@@ -27,7 +27,7 @@ $ certtool --generate-privkey > ./test-key.pem
 $ certtool --generate-self-signed --load-privkey test-key.pem --outfile test-cert.pem
 (make sure you enable encryption or signing)
 
-To run the server edit the src/sample.config and then run:
+To run the server on the foreground edit the doc/sample.config and then run:
 # src/ocserv -f -c src/sample.config
 
 
@@ -47,28 +47,28 @@ this is a point-to-point connection). The image isn't known to the client
 
 Note that ocserv doesn't do any packet forwarding or filtering between the
 networks. It is expected that the server has any required routes or firewall
-rules, set up. You may conditionally enable firewall rules, or even
+rules set up. You may conditionally enable firewall rules, or even
 enable routing rules through the client using the 'connect-script' and 
-'disconnect-script' scripts based on the user who connected. Note that it 
-is important for these scripts not to hang, and terminate without long delays.
-You may find some examples in the scripts/ directory.
+'disconnect-script' scripts based on the user who connected. 
+You may find some examples in the doc/scripts/ directory.
 
 
 === Authentication ===
 
-The authentication in openconnect VPN server occurs in the initial TLS session.
+Authentication in openconnect VPN server occurs in the initial TLS session.
 That is an HTTPS session over which the client is provided with an XML authentication
 page. The server is authenticated using its certificate and the client, either by
 its certificate, or via a username and password pair which are forwarded to
-PAM, or a combination of both. Because PAM supports various authentication types,
-the username, password entered by the user could be a one-time-password or whatever
-else. After the user is authenticated he is provided with a cookie that can
-be used for future connections. The lifetime of the cookie is configurable using 
-the 'cookie-validity' option, and is newed on every client connection.
+PAM, verified against a password file, or a combination of them. Because PAM 
+supports various authentication types, the username, password entered by the user 
+could be a one-time-password or whatever else. After the user is authenticated he 
+is provided with a cookie that can be used for future connections. The lifetime 
+of the cookie is configurable using the 'cookie-validity' option, and is renewed 
+on every client connection.
 
-After the user is authenticated, directly, or via the cookie, he may issue a CONNECT 
-HTTP command which results to a direct connection with the VPN. Additionally
+After the user is authenticated, directly, or via the cookie, he issues an HTTP
+CONNECT command which results to a direct connection with the VPN. Additionally
 the user could connect using UDP and Datagram TLS. That connection is authenticated
-using session resumption and a master key provided by the server, i.e., it is not really 
-a DTLS 1.0 compliant connection.
+using session resumption and a master key provided by the server, i.e., it is not 
+really a DTLS 1.0 compliant connection.
 

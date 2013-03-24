@@ -684,6 +684,7 @@ int main(int argc, char** argv)
 		flags |= LOG_PERROR;
 #endif
 	openlog("ocserv", flags, LOG_DAEMON);
+	syslog_open = 1;
 #ifdef HAVE_LIBWRAP
 	allow_severity = LOG_DAEMON|LOG_INFO;
 	deny_severity = LOG_DAEMON|LOG_WARNING;
@@ -706,8 +707,6 @@ int main(int argc, char** argv)
 	tls_global_init_certs(&s);
 
 	alarm(MAINTAINANCE_TIME(&s));
-
-	syslog_open = 1;
 
 	for (;;) {
 		check_other_work(&s);

@@ -396,6 +396,7 @@ const char *p;
 
 	pid = fork();
 	if (pid == 0) { /* child */
+		clear_lists(s);
 		prctl(PR_SET_PDEATHSIG, SIGTERM);
 		setproctitle(PACKAGE_NAME"-secmod");
 

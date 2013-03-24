@@ -503,8 +503,6 @@ void vpn_server(struct worker_st* ws)
 	ret = gnutls_init(&session, GNUTLS_SERVER);
 	GNUTLS_FATAL_ERR(ret);
 
-	gnutls_session_ticket_enable_server(session, &ws->creds->ticket_key);
-
 	ret = gnutls_priority_set(session, ws->creds->cprio);
 	GNUTLS_FATAL_ERR(ret);
 

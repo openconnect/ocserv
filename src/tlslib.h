@@ -54,7 +54,6 @@ struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
 	gnutls_dh_params_t dh_params;
-	gnutls_datum_t ticket_key;
 };
 
 typedef struct

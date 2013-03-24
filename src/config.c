@@ -231,6 +231,8 @@ unsigned j;
 	READ_STRING("ipv6-nbns", config->network.ipv6_nbns, 0);
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size, 0);
+	
+	optionUnloadNested(pov);
 }
 
 

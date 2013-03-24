@@ -62,7 +62,6 @@ typedef struct worker_st {
 	int proto; /* AF_INET or AF_INET6 */
 	
 	/* for dead peer detection */
-	time_t last_dpd_udp;
 	time_t last_msg_udp;
 	time_t last_msg_tcp;
 	time_t last_periodic_check;

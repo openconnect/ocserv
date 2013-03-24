@@ -73,7 +73,6 @@ typedef struct worker_st {
 	/* for mtu trials */
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;
-	unsigned dpd_mtu_trial;
 	unsigned conn_mtu;
 	
 	/* Buffer used by worker */

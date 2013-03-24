@@ -663,6 +663,8 @@ int main(int argc, char** argv)
 	s.config = &config;
 	s.tun = &tun;
 
+	run_sec_mod(&s);
+
 	ret = cookie_db_init(&s);
 	if (ret < 0) {
 		fprintf(stderr, "Could not initialize cookie database.\n");
@@ -698,8 +700,6 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 	
-	run_sec_mod(&s);
-
 	/* Initialize certificates */
 	tls_global_init_certs(&s);
 

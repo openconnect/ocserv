@@ -672,12 +672,7 @@ unsigned int c;
 	ws->last_good_mtu = ws->conn_mtu;
 	c = (ws->conn_mtu + ws->last_bad_mtu)/2;
 
-	ws->conn_mtu = c;
-	gnutls_dtls_set_data_mtu (ws->dtls_session, c);
-	send_tun_mtu(ws, c);
-
-	oclog(ws, LOG_DEBUG, "trying MTU %u", c);
-
+	mtu_set(ws, c);
 	return;
 }
 
@@ -691,23 +686,23 @@ int max, e, ret;
 		return 0;
 
 	/* check DPD. Otherwise exit */
-	if (ws->udp_state == UP_ACTIVE && now-ws->last_dpd_udp > DPD_TRIES*ws->config->dpd) {
-		oclog(ws, LOG_ERR, "have not received UDP DPD for long (%d secs)", (int)(now-ws->last_dpd_udp));
+	if (ws->udp_state == UP_ACTIVE && now-ws->last_msg_udp > DPD_TRIES*ws->config->dpd) {
+		oclog(ws, LOG_ERR, "have not received UDP any message or DPD for long (%d secs)", (int)(now-ws->last_msg_udp));
 				
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 		tls_send(ws->dtls_session, ws->buffer, 1);
 				
-		if (now-ws->last_dpd_udp > DPD_MAX_TRIES*ws->config->dpd) {
-			oclog(ws, LOG_ERR, "have not received UDP DPD for very long; disabling UDP port");
+		if (now-ws->last_msg_udp > DPD_MAX_TRIES*ws->config->dpd) {
+			oclog(ws, LOG_ERR, "have not received UDP message or DPD for very long; disabling UDP port");
 			ws->udp_state = UP_INACTIVE;
 		}
 	}
-	if (now-ws->last_dpd_tcp > DPD_TRIES*ws->config->dpd) {
-		oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_dpd_tcp));
+	if (now-ws->last_msg_tcp > DPD_TRIES*ws->config->dpd) {
+		oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_msg_tcp));
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 		tls_send(ws->session, ws->buffer, 1);
 
-		if (now-ws->last_dpd_tcp > DPD_MAX_TRIES*ws->config->dpd) {
+		if (now-ws->last_msg_tcp > DPD_MAX_TRIES*ws->config->dpd) {
 			oclog(ws, LOG_ERR, "have not received TCP DPD for very long; tearing down connection");
 			return -1;
 		}
@@ -975,7 +970,7 @@ socklen_t sl;
 	SEND_ERR(ret);
 
 	/* start dead peer detection */
-	ws->last_dpd_tcp = ws->last_dpd_udp = time(0);
+	ws->last_msg_tcp = ws->last_msg_udp = ws->last_dpd_udp = time(0);
 
 	/* main loop  */
 	for(;;) {
@@ -1236,7 +1231,7 @@ int ret, e, l;
 				ws->buffer[0] = AC_PKT_DPD_RESP;
 				
 				if (ws->config->try_mtu == 0) {
-					l = 1;
+					ret = tls_send(ts, ws->buffer, 1);
 				} else {
 					if (ws->dpd_mtu_trial == 0) {
 						l = 1;
@@ -1250,10 +1245,8 @@ int ret, e, l;
 						l = ws->conn_mtu;
 						ws->dpd_mtu_trial = 0;
 					}
-				}
-				ret = tls_send(ts, ws->buffer, l);
 
-				if (ws->config->try_mtu != 0) {
+					ret = tls_send(ts, ws->buffer, l);
 					if (ret == GNUTLS_E_LARGE_PACKET) {
 						mtu_not_ok(ws);
 						tls_send(ts, ws->buffer, 1);
@@ -1270,6 +1263,7 @@ int ret, e, l;
 				oclog(ws, LOG_ERR, "could not send TLS data: %s", gnutls_strerror(ret));
 				return -1;
 			}
+			ws->last_dpd_udp = now;
 			break;
 		case AC_PKT_DISCONN:
 			oclog(ws, LOG_INFO, "received BYE packet; exiting");
@@ -1317,7 +1311,7 @@ int pktlen, ret;
 	ret = parse_data(ws, ws->session, buf[6], buf+8, pktlen, now);
 	/* whatever we received treat it as DPD response.
 	 * it indicates that the channel is alive */
-	ws->last_dpd_tcp = now;
+	ws->last_msg_tcp = now;
 	
 	return ret;
 }
@@ -1333,6 +1327,6 @@ int ret;
 	}
 
 	ret = parse_data(ws, ws->dtls_session, buf[0], buf+1, buf_size-1, now);
-	ws->last_dpd_udp = now;
+	ws->last_msg_udp = now;
 	return ret;
 }

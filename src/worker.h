@@ -63,7 +63,8 @@ typedef struct worker_st {
 	
 	/* for dead peer detection */
 	time_t last_dpd_udp;
-	time_t last_dpd_tcp;
+	time_t last_msg_udp;
+	time_t last_msg_tcp;
 	time_t last_periodic_check;
 
 	/* set after authentication */

@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [0.1.0], [nmav@gnutls.org])
+AC_INIT([ocserv], [0.1.1], [nmav@gnutls.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -34,11 +34,6 @@ PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.1.10])
 AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
-
-$PKG_CONFIG --exact-version=3.1.7 gnutls || $PKG_CONFIG --exact-version=3.1.8 gnutls
-if test "$?" = "0"; then
-	    AC_MSG_ERROR([Your GnuTLS version has issue with forking servers. Use 3.1.9 or later.])
-fi
 
 gdbm_enabled=no
 LIBS="$oldlibs -lgdbm"
@@ -124,18 +119,20 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
-AC_MSG_NOTICE([summary of build options:
+AC_MSG_NOTICE([
+Summary of build options:
+  version:              ${VERSION}
+  Host type:            ${host}
+  Install prefix:       ${prefix}
+  Compiler:             ${CC}
+  CFlags:               ${CFLAGS}
 
-  version:                          ${VERSION}
-  Host type:                        ${host}
-  Install prefix:                   ${prefix}
-  Compiler:                         ${CC}
-  CFlags:                           ${CFLAGS}
+  GDBM storage backend: ${gdbm_enabled}
+  PAM auth backend:     ${pam_enabled}
+  TCP wrappers:         ${libwrap_enabled}
 
-  GDBM storage backend:             ${gdbm_enabled}
-  PAM auth backend:                 ${pam_enabled}
-  TCP wrappers:                     ${libwrap_enabled}
-  seccomp (experimental):           ${seccomp_enabled}
-  Anyconnect compat (experimental): ${anyconnect_enabled}
+Experimental options:
+  seccomp:              ${seccomp_enabled}
+  Anyconnect compat:    ${anyconnect_enabled}
 ])
 

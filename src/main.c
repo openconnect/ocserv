@@ -401,13 +401,15 @@ static void drop_privileges(main_server_st* s)
 	}
 
 #define MAX_WORKER_MEM (4*1024*1024)
-	rl.rlim_cur = MAX_WORKER_MEM;
-	rl.rlim_max = MAX_WORKER_MEM;
-	ret = setrlimit(RLIMIT_AS, &rl);
-	if (ret < 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot enforce AS limit: %s\n",
-		       strerror(e));
+	if (s->config->debug == 0) {
+		rl.rlim_cur = MAX_WORKER_MEM;
+		rl.rlim_max = MAX_WORKER_MEM;
+		ret = setrlimit(RLIMIT_AS, &rl);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "cannot enforce AS limit: %s\n",
+			       strerror(e));
+		}
 	}
 }
 

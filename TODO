@@ -22,3 +22,6 @@
 
 * When a user (IP) gets into the BAN list multiple times, disable it for
   long.
+
+* Change into a hashtables the lists that are used during a client
+  connection.

@@ -1,4 +1,4 @@
-EXTRA_DIST = m4/lib-link.m4
+EXTRA_DIST = m4/lib-link.m4 LICENSE
 
 SUBDIRS = gl libopts src doc
 

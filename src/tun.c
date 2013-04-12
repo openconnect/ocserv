@@ -22,7 +22,6 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include <linux/if_tun.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
@@ -30,6 +29,12 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <cloexec.h>
+
+#ifdef __linux__
+# include <linux/if_tun.h>
+#else
+# include <net/if_tun.h>
+#endif
 
 #include <netdb.h>
 
@@ -347,6 +352,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 
 	/* No need to free the lease after this point.
 	 */
+#ifdef __linux__
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
 		int e = errno;
@@ -387,7 +393,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 		}
 	}
 
-#ifdef TUNSETGROUP
+# ifdef TUNSETGROUP
 	if (s->config->gid != -1) {
 		t = s->config->uid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
@@ -398,6 +404,17 @@ int open_tun(main_server_st* s, struct lease_st** l)
 			goto fail;
 		}
 	}
+# endif
+#else /* freebsd */
+	tunfd = open("/dev/tun", O_RDWR);
+	if (tunfd < 0) {
+		int e = errno;
+		mslog(s, NULL, LOG_ERR, "Can't open /dev/tun: %s\n",
+		       strerror(e));
+		return -1;
+	}
+	
+	set_cloexec_flag (tunfd, 1);
 #endif
 
 	/* set IP/mask */

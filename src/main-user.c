@@ -134,10 +134,12 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc)
 	entry.ut_pid = proc->pid;
 	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
 	snprintf(entry.ut_user, sizeof(entry.ut_user), "%s", proc->username);
+#ifdef __linux__
 	if (proc->remote_addr_len == sizeof(struct sockaddr_in))
 		memcpy(entry.ut_addr_v6, SA_IN_P(&proc->remote_addr), sizeof(struct in_addr));
 	else
 		memcpy(entry.ut_addr_v6, SA_IN6_P(&proc->remote_addr), sizeof(struct in6_addr));
+#endif
 
 	gettime(&tv);
 	entry.ut_tv.tv_sec = tv.tv_sec;

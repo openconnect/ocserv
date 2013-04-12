@@ -1,3 +1,8 @@
+* Version 0.1.2 (unreleased)
+
+- Several updates to allow compilation in FreeBSD.
+
+
 * Version 0.1.1 (released 2013-04-03)
 
 - MTU discovery was simplified.

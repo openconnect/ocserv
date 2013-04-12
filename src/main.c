@@ -32,13 +32,13 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
-#include <sys/prctl.h>
 #include <cloexec.h>
 #include <script-list.h>
 
 #include <gnutls/x509.h>
 #include <tlslib.h>
 #include "ipc.h"
+#include "die.h"
 #include "setproctitle.h"
 #ifdef HAVE_LIBWRAP
 # include <tcpd.h>
@@ -122,7 +122,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 		if (ptr->ai_socktype == SOCK_DGRAM) {
 #if defined(IP_DONTFRAG)
 			y = 1;
-			if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG,
+			if (setsockopt(s, SOL_IP, IP_DONTFRAG,
 				       (const void *) &y, sizeof(y)) < 0)
 				perror("setsockopt(IP_DF) failed");
 #elif defined(IP_MTU_DISCOVER)
@@ -801,7 +801,7 @@ int main(int argc, char** argv)
 					erase_cookies(&s);
 
 					setproctitle(PACKAGE_NAME"-worker");
-					prctl(PR_SET_PDEATHSIG, SIGTERM);
+					kill_on_parent_kill(SIGTERM);
 
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];

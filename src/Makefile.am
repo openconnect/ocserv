@@ -18,7 +18,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
 	main-user.c cookies-gdbm.c cookies-hash.c worker-misc.c setproctitle.h \
 	setproctitle.c worker-privs.c plain.c plain.h common.h common.c \
-	sec-mod.c sec-mod.h script-list.h \
+	sec-mod.c sec-mod.h script-list.h die.c die.h \
 	$(CCAN_SOURCES)
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h

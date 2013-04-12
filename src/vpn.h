@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <net/if.h>
+#include <netinet/in.h>
 #include <minmax.h>
 
 #define AC_PKT_DATA             0	/* Uncompressed data */

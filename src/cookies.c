@@ -30,7 +30,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <gdbm.h>
 #include <sys/stat.h>
 
 #include <main.h>

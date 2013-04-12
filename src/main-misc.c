@@ -35,7 +35,7 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include <sys/un.h>
-#include <sys/prctl.h>
+#include "die.h"
 #include <cloexec.h>
 #include "ipc.h"
 #include "setproctitle.h"
@@ -397,7 +397,7 @@ const char *p;
 	pid = fork();
 	if (pid == 0) { /* child */
 		clear_lists(s);
-		prctl(PR_SET_PDEATHSIG, SIGTERM);
+		kill_on_parent_kill(SIGTERM);
 		setproctitle(PACKAGE_NAME"-secmod");
 
 		sec_mod_server(s->config, p);

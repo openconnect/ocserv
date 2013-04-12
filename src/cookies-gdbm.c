@@ -30,13 +30,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <gdbm.h>
 #include <sys/stat.h>
 #include "setproctitle.h"
 #include <main.h>
 #include <cookies.h>
 
 #ifdef HAVE_GDBM
+
+# include <gdbm.h>
 
 /* Note that it receives allocated data and stores them. Do not
  * free the sc.

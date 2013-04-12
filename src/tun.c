@@ -20,6 +20,7 @@
 
 #include <fcntl.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -412,6 +413,20 @@ int open_tun(main_server_st* s, struct lease_st** l)
 		mslog(s, NULL, LOG_ERR, "Can't open /dev/tun: %s\n",
 		       strerror(e));
 		return -1;
+	}
+	
+	/* find device name */
+	{
+		struct stat st;
+		
+		ret = fstat(tunfd, &st);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: stat: %s\n", strerror(e));
+			goto fail;
+		}
+		
+		snprintf(lease->name, sizeof(lease->name), "%s", devname(st.st_rdev, S_IFCHR));
 	}
 	
 	set_cloexec_flag (tunfd, 1);

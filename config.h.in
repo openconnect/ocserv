@@ -716,6 +716,9 @@
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
 
+/* Do we have sockaddr.sa_len? */
+#undef HAVE_SOCKADDR_SA_LEN
+
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
 

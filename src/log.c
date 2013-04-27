@@ -42,8 +42,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	buf++;
 	buflen--;
 
-	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) !=
-	    0)
+	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) != 0)
 		return NULL;
 
 	l = strlen(buf);
@@ -58,8 +57,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	buf++;
 	buflen--;
 
-	if (getnameinfo(sa, salen, NULL, 0, buf, buflen, NI_NUMERICSERV) !=
-	    0)
+	if (getnameinfo(sa, salen, NULL, 0, buf, buflen, NI_NUMERICSERV) != 0)
 		return NULL;
 
 	return save_buf;

@@ -77,6 +77,12 @@ gl_INIT
 AC_LIB_HAVE_LINKFLAGS(crypt,, [#include <unistd.h>], [crypt(0,0);])
 AC_LIB_HAVE_LINKFLAGS(util,, [#include <utmpx.h>], [pututxline(0);])
 AC_LIB_HAVE_LINKFLAGS(wrap,, [#include <tcpd.h>], [hosts_access(0);])
+AC_CHECK_MEMBER([struct sockaddr.sa_len],
+[AC_DEFINE(HAVE_SOCKADDR_SA_LEN, 1, [Do we have sockaddr.sa_len?])], [],
+[
+#include <sys/types.h>
+#include <sys/socket.h>
+])
 
 if [ test -z "$LIBWRAP" ];then
 	libwrap_enabled="no"

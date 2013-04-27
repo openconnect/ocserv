@@ -13,6 +13,18 @@
 #include <netinet/in.h>
 #include <minmax.h>
 
+#ifdef __GNUC__
+# define _OCSERV_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+# if _OCSERV_GCC_VERSION >= 30000
+#  define _ATTR_PACKED __attribute__ ((__packed__))
+# endif
+#endif /* __GNUC__ */
+
+#ifndef _ATTR_PACKED
+# define _ATTR_PACKED
+#endif
+
+
 #define AC_PKT_DATA             0	/* Uncompressed data */
 #define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
 #define AC_PKT_DPD_RESP         4	/* DPD response */

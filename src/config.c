@@ -185,6 +185,7 @@ unsigned j;
 	READ_TF("always-require-cert", config->force_cert_auth, 0, 1);
 	READ_TF("use-utmp", config->use_utmp, 0, 1);
 	READ_TF("try-mtu-discovery", config->try_mtu, 0, 0);
+	READ_TF("ping-leases", config->ping_leases, 0, 0);
 
 	READ_STRING("tls-priorities", config->priorities, 0);
 	READ_STRING("chroot-dir", config->chroot_dir, 0);

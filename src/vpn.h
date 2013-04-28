@@ -104,6 +104,7 @@ struct cfg_st {
 	unsigned try_mtu; /* MTU discovery enabled */
 	unsigned force_cert_auth; /* always require client certificate */
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
+	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
 
 	/* if gdbm is there */
 	char* cookie_db_name;

@@ -172,6 +172,9 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 	time_t now;
 	uint16_t id1, id2;
 	unsigned gotreply = 0, unreachable = 0;
+	
+	if (s->config->ping_leases == 0)
+                return 0;
 
 	gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
 	gnutls_rnd(GNUTLS_RND_NONCE, &id2, sizeof(id2));
@@ -266,6 +269,9 @@ int icmp_ping6(main_server_st * s,
 	unsigned gotreply = 0, unreachable = 0;
 	time_t now;
 
+	if (s->config->ping_leases == 0)
+                return 0;
+
 	gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
 	gnutls_rnd(GNUTLS_RND_NONCE, &id2, sizeof(id2));
 
@@ -279,7 +285,7 @@ int icmp_ping6(main_server_st * s,
 	pkt = (struct icmp6_hdr *) packet2;
 	memset(pkt, 0, sizeof(packet2));
 	pkt->icmp6_type = ICMP6_ECHO_REQUEST;
-	pkt->icmp6_id = id1;
+	pkt->icmp6_id = id2;
 
 	sockopt = offsetof(struct icmp6_hdr, icmp6_cksum);
 	setsockopt(pingsock, SOL_RAW, IPV6_CHECKSUM,

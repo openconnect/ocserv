@@ -2,16 +2,19 @@
 /**
  * \file enumeration.c
  *
- * Time-stamp:      "2012-03-31 13:22:33 bkorb"
+ *  Handle options with enumeration names and bit mask bit names
+ *  for their arguments.
  *
- *   Automated Options Paged Usage module.
- *
+ * @addtogroup autoopts
+ * @{
+ */
+/*
  *  This routine will run run-on options through a pager so the
  *  user may examine, print or edit them at their leisure.
  *
  *  This file is part of AutoOpts, a companion to AutoGen.
  *  AutoOpts is free software.
- *  AutoOpts is Copyright (c) 1992-2012 by Bruce Korb - all rights reserved
+ *  AutoOpts is Copyright (C) 1992-2013 by Bruce Korb - all rights reserved
  *
  *  AutoOpts is available under any one of two licenses.  The license
  *  in use must be one of these two and the choice is under the control
@@ -23,11 +26,11 @@
  *   The Modified Berkeley Software Distribution License
  *      See the file "COPYING.mbsd"
  *
- *  These files have the following md5sums:
+ *  These files have the following sha256 sums:
  *
- *  43b91e8ca915626ed3818ffb1b71248b pkg/libopts/COPYING.gplv3
- *  06a1a2e4760c90ea5e1dad8dfaac4d39 pkg/libopts/COPYING.lgplv3
- *  66a5cedaf62c4b2637025f049f9b826f pkg/libopts/COPYING.mbsd
+ *  8584710e9b04216a394078dc156b781d0b47e1729104d666658aecef8ee32e95  COPYING.gplv3
+ *  4379e7444a0e2ce2b12dd6f5a52a27a4d02d39d247901d3285c88cf0d37f477b  COPYING.lgplv3
+ *  13aa749a5b0a454917a944ed8fffc530b784f5ead522b1aacaf4ec8aa55a6239  COPYING.mbsd
  */
 
 static char const * pz_enum_err_fmt;
@@ -38,12 +41,8 @@ enum_err(tOptions * pOpts, tOptDesc * pOD,
          char const * const * paz_names, int name_ct);
 
 static uintptr_t
-find_name(char const * pzName, tOptions * pOpts, tOptDesc * pOD,
+find_name(char const * name, tOptions * pOpts, tOptDesc * pOD,
           char const * const *  paz_names, unsigned int name_ct);
-
-static void
-set_memb_usage(tOptions * pOpts, tOptDesc * pOD, char const * const * paz_names,
-               unsigned int name_ct);
 
 static void
 set_memb_shell(tOptions * pOpts, tOptDesc * pOD, char const * const * paz_names,
@@ -105,7 +104,7 @@ enum_err(tOptions * pOpts, tOptDesc * pOD,
      */
     if (max_len > 35) {
         do  {
-            fprintf(option_usage_fp, ENUM_ERR_SEP_LINE_FMT, *(paz_names++));
+            fprintf(option_usage_fp, ENUM_ERR_LINE, *(paz_names++));
         } while (--ct_down > 0);
     }
 
@@ -128,7 +127,7 @@ enum_err(tOptions * pOpts, tOptDesc * pOD,
         unsigned int ent_no = 0;
         char  zFmt[16];  /* format for all-but-last entries on a line */
 
-        sprintf(zFmt, ENUM_ERR_STR_WIDTH_FMT, (int)max_len);
+        sprintf(zFmt, ENUM_ERR_WIDTH, (int)max_len);
         max_len = 78 / max_len; /* max_len is now max entries on a line */
         fputs(TWO_SPACES_STR, option_usage_fp);
 
@@ -170,14 +169,14 @@ enum_err(tOptions * pOpts, tOptDesc * pOD,
  * Convert a name or number into a binary number.
  * "~0" and "-1" will be converted to the largest value in the enumeration.
  *
- * @param pzName     the keyword name (number) to convert
+ * @param name       the keyword name (number) to convert
  * @param pOpts      the program's option descriptor
  * @param pOD        the option descriptor for this option
  * @param paz_names  the list of keywords for this option
  * @param name_ct    the count of keywords
  */
 static uintptr_t
-find_name(char const * pzName, tOptions * pOpts, tOptDesc * pOD,
+find_name(char const * name, tOptions * pOpts, tOptDesc * pOD,
           char const * const *  paz_names, unsigned int name_ct)
 {
     /*
@@ -185,23 +184,23 @@ find_name(char const * pzName, tOptions * pOpts, tOptDesc * pOD,
      *  The result gets stashed in a char* pointer.
      */
     uintptr_t   res = name_ct;
-    size_t      len = strlen((char*)pzName);
+    size_t      len = strlen((char*)name);
     uintptr_t   idx;
 
-    if (IS_DEC_DIGIT_CHAR(*pzName)) {
-        char * pz = (char *)(void *)pzName;
+    if (IS_DEC_DIGIT_CHAR(*name)) {
+        char * pz = (char *)(void *)name;
         unsigned long val = strtoul(pz, &pz, 0);
         if ((*pz == NUL) && (val < name_ct))
             return (uintptr_t)val;
-        pz_enum_err_fmt = zTooLarge;
+        pz_enum_err_fmt = znum_too_large;
         option_usage_fp = stderr;
         enum_err(pOpts, pOD, paz_names, (int)name_ct);
         return name_ct;
     }
 
-    if (IS_INVERSION_CHAR(*pzName) && (pzName[2] == NUL)) {
-        if (  ((pzName[0] == '~') && (pzName[1] == '0'))
-           || ((pzName[0] == '-') && (pzName[1] == '1')))
+    if (IS_INVERSION_CHAR(*name) && (name[2] == NUL)) {
+        if (  ((name[0] == '~') && (name[1] == '0'))
+           || ((name[0] == '-') && (name[1] == '1')))
         return (uintptr_t)(name_ct - 1);
         goto oops;
     }
@@ -211,23 +210,23 @@ find_name(char const * pzName, tOptions * pOpts, tOptDesc * pOD,
      *  Multiple partial matches means we have an ambiguous match.
      */
     for (idx = 0; idx < name_ct; idx++) {
-        if (strncmp((char*)paz_names[idx], (char*)pzName, len) == 0) {
+        if (strncmp((char*)paz_names[idx], (char*)name, len) == 0) {
             if (paz_names[idx][len] == NUL)
                 return idx;  /* full match */
 
             if (res == name_ct)
                 res = idx; /* save partial match */
             else
-                res = ~0;  /* may yet find full match */
+                res = (uintptr_t)~0;  /* may yet find full match */
         }
     }
 
     if (res < name_ct)
         return res; /* partial match */
 
-oops:
+ oops:
 
-    pz_enum_err_fmt = (res == name_ct) ? zNoKey : zAmbigKey;
+    pz_enum_err_fmt = (res == name_ct) ? zNoKey : zambiguous_key;
     option_usage_fp = stderr;
     enum_err(pOpts, pOD, paz_names, (int)name_ct);
     return name_ct;
@@ -249,8 +248,8 @@ oops:
 char const *
 optionKeywordName(tOptDesc * pOD, unsigned int enum_val)
 {
-    tOptDesc od = {
-        .optArg.argEnum = enum_val };
+    tOptDesc od = { 0 };
+    od.optArg.argEnum = enum_val;
 
     (*(pOD->pOptProc))(OPTPROC_RETURN_VALNAME, &od );
     return od.optArg.argString;
@@ -295,7 +294,7 @@ optionEnumerationVal(tOptions * pOpts, tOptDesc * pOD,
 
     case (uintptr_t)OPTPROC_EMIT_SHELL:
     {
-        unsigned int ix = pOD->optArg.argEnum;
+        unsigned int ix = (unsigned int)pOD->optArg.argEnum;
         /*
          *  print the name string.
          */
@@ -309,7 +308,7 @@ optionEnumerationVal(tOptions * pOpts, tOptDesc * pOD,
 
     case (uintptr_t)OPTPROC_RETURN_VALNAME:
     {
-        unsigned int ix = pOD->optArg.argEnum;
+        unsigned int ix = (unsigned int)pOD->optArg.argEnum;
         /*
          *  Replace the enumeration value with the name string.
          */
@@ -321,6 +320,9 @@ optionEnumerationVal(tOptions * pOpts, tOptDesc * pOD,
     }
 
     default:
+        if ((pOD->fOptState & OPTST_RESET) != 0)
+            break;
+
         res = find_name(pOD->optArg.argString, pOpts, pOD, paz_names, name_ct);
 
         if (pOD->fOptState & OPTST_ALLOC_ARG) {
@@ -331,17 +333,6 @@ optionEnumerationVal(tOptions * pOpts, tOptDesc * pOD,
     }
 
     return res;
-}
-
-static void
-set_memb_usage(tOptions * pOpts, tOptDesc * pOD, char const * const * paz_names,
-               unsigned int name_ct)
-{
-    /*
-     *  print the list of enumeration names.
-     */
-    (void)pOpts;
-    enum_err(OPTPROC_EMIT_USAGE, pOD, paz_names, (int)name_ct );
 }
 
 static void
@@ -443,7 +434,7 @@ optionSetMembers(tOptions * pOpts, tOptDesc * pOD,
      */
     switch ((uintptr_t)pOpts) {
     case (uintptr_t)OPTPROC_EMIT_USAGE:
-        set_memb_usage(pOpts, pOD, paz_names, name_ct);
+        enum_err(OPTPROC_EMIT_USAGE, pOD, paz_names, name_ct);
         return;
 
     case (uintptr_t)OPTPROC_EMIT_SHELL:
@@ -478,7 +469,7 @@ optionSetMembers(tOptions * pOpts, tOptDesc * pOD,
             if (iv)
                 pzArg = SPN_WHITESPACE_CHARS(pzArg+1);
 
-            len = BRK_SET_SEPARATOR_CHARS(pzArg) - pzArg;
+            len = (int)(BRK_SET_SEPARATOR_CHARS(pzArg) - pzArg);
             if (len == 0)
                 break;
 
@@ -510,7 +501,8 @@ optionSetMembers(tOptions * pOpts, tOptDesc * pOD,
                         p = pzArg;
                     }
 
-                    shift_ct = find_name(p, pOpts, pOD, paz_names, name_ct);
+                    shift_ct = (unsigned int)
+                        find_name(p, pOpts, pOD, paz_names, name_ct);
                     if (shift_ct >= name_ct) {
                         pOD->optCookie = (void*)0;
                         return;
@@ -534,10 +526,11 @@ optionSetMembers(tOptions * pOpts, tOptDesc * pOD,
     }
 }
 
-/*
+/** @}
+ *
  * Local Variables:
  * mode: C
  * c-file-style: "stroustrup"
  * indent-tabs-mode: nil
  * End:
- * end of autoopts/enumeration.c */
+ * end of autoopts/enum.c */

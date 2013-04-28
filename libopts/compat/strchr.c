@@ -24,8 +24,14 @@
        SVID 3, POSIX, BSD 4.3, ISO 9899
 */
 
-char*
-strchr( char const *s, int c)
+static char *
+strchr(char const *s, int c);
+
+static char *
+strrchr(char const *s, int c);
+
+static char *
+strchr(char const *s, int c)
 {
     do {
         if ((unsigned)*s == (unsigned)c)
@@ -36,8 +42,8 @@ strchr( char const *s, int c)
     return NULL;
 }
 
-char*
-strrchr( char const *s, int c)
+static char *
+strrchr(char const *s, int c)
 {
     char const *e = s + strlen(s);
 

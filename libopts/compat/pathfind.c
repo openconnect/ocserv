@@ -2,20 +2,22 @@
 
 /* pathfind.c --- find a FILE  MODE along PATH */
 
-/*
- * Author:           Gary V Vaughan <gvaughan@oranda.demon.co.uk>
- * Time-stamp:       "2012-03-31 13:44:42 bkorb"
- */
+/* Author: Gary V Vaughan <gvaughan@oranda.demon.co.uk> */
 
 /* Code: */
+
+static char *
+pathfind( char const * path,
+          char const * fileName,
+          char const * mode );
 
 #include "compat.h"
 #ifndef HAVE_PATHFIND
 #if defined(__windows__) && !defined(__CYGWIN__)
-char*
-pathfind( char const*  path,
-          char const*  fileName,
-          char const*  mode )
+static char *
+pathfind( char const * path,
+          char const * fileName,
+          char const * mode )
 {
     return NULL;
 }
@@ -80,10 +82,10 @@ static char* extract_colon_unit( char* dir, char const *string, int *p_index );
  *
  * err:  returns NULL if the file is not found.
 =*/
-char*
-pathfind( char const*  path,
-          char const*  fileName,
-          char const*  mode )
+static char *
+pathfind( char const * path,
+          char const * fileName,
+          char const * mode )
 {
     int   p_index   = 0;
     int   mode_bits = 0;
@@ -171,7 +173,7 @@ make_absolute( char const *string, char const *dot_path )
         if (dot_path && dot_path[0]) {
             result = malloc( 2 + strlen( dot_path ) + strlen( string ) );
             strcpy( result, dot_path );
-            result_len = strlen( result );
+            result_len = (int)strlen(result);
             if (result[result_len - 1] != '/') {
                 result[result_len++] = '/';
                 result[result_len] = '\0';
@@ -286,7 +288,7 @@ canonicalize_pathname( char *path )
 static char*
 extract_colon_unit( char* pzDir, char const *string, int *p_index )
 {
-    char*  pzDest = pzDir;
+    char * pzDest = pzDir;
     int    ix     = *p_index;
 
     if (string == NULL)
@@ -296,7 +298,7 @@ extract_colon_unit( char* pzDir, char const *string, int *p_index )
         return NULL;
 
     {
-        char const* pzSrc = string + ix;
+        char const * pzSrc = string + ix;
 
         while (*pzSrc == ':')  pzSrc++;
 
@@ -305,6 +307,7 @@ extract_colon_unit( char* pzDir, char const *string, int *p_index )
             switch (ch) {
             case ':':
                 pzDest[-1] = NUL;
+                /* FALLTHROUGH */
             case NUL:
                 goto copy_done;
             }
@@ -313,7 +316,7 @@ extract_colon_unit( char* pzDir, char const *string, int *p_index )
                 break;
         } copy_done:;
 
-        ix = pzSrc - string;
+        ix = (int)(pzSrc - string);
     }
 
     if (*pzDir == NUL)

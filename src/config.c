@@ -281,7 +281,7 @@ static void check_cfg( struct cfg_st *config)
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	if (config->cert) {
-		config->cert_hash = calc_sha1_hash(config->cert, 1);
+		config->cert_hash = calc_sha1_hash(config->cert[0], 1);
 	}
 
 	if (config->xml_config_file) {

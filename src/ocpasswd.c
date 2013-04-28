@@ -65,6 +65,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 		exit(1);
 	}
 
+	memset(salt, 0, sizeof(salt));
 	p = salt;
 	p += snprintf(salt, sizeof(salt), "$5$");
 
@@ -110,6 +111,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	if (fd == NULL) {
 		fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
 	} else {
+		int found = 0;
 		while ((len = getline(&line, &line_size, fd)) > 0) {
 			p = strchr(line, ':');
 			if (p == NULL)
@@ -118,12 +120,16 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 			l = p-line;
 			if (l == username_len && strncmp(line, username, l) == 0) {
 				fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
+				found = 1;
 			} else {
 				fwrite(line, 1, len, fd2);
 			}
 		}
 		free(line);
 		fclose(fd);
+		
+		if (found == 0)
+			fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
 	}
 
 	fclose(fd2);

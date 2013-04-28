@@ -323,7 +323,6 @@ $ cat << _EOF_ >user.tmpl
 cn = "user"
 ou = "admins"
 serial = 1824
-email = "user@example.com"
 expiration_days = 9999
 signing_key
 tls_www_client

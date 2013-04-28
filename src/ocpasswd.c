@@ -55,7 +55,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	FILE *fd, *fd2;
 	char *line = NULL;
 	size_t line_size;
-	ssize_t len;
+	ssize_t len, l;
 	int ret;
 
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, _salt, sizeof(_salt));
@@ -100,6 +100,60 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 		exit(1);
 	}
 
+	fd2 = fopen(tmp_passwd, "w");
+	if (fd2 == NULL) {
+		fprintf(stderr, "Cannot open '%s' for write\n", tmp_passwd);
+		exit(1);
+	}
+
+	fd = fopen(fpasswd, "r");
+	if (fd == NULL) {
+		fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
+	} else {
+		while ((len = getline(&line, &line_size, fd)) > 0) {
+			p = strchr(line, ':');
+			if (p == NULL)
+				continue;
+
+			l = p-line;
+			if (l == username_len && strncmp(line, username, l) == 0) {
+				fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
+			} else {
+				fwrite(line, 1, len, fd2);
+			}
+		}
+		free(line);
+		fclose(fd);
+	}
+
+	fclose(fd2);
+
+	rename(tmp_passwd, fpasswd);
+	free(tmp_passwd);
+}
+
+static void
+lock_user(const char *fpasswd, const char *username)
+{
+	FILE * fd, *fd2;
+	char *tmp_passwd;
+	char *line, *p;
+	unsigned fpasswd_len = strlen(fpasswd);
+	unsigned tmp_passwd_len;
+	unsigned username_len = strlen(username);
+	ssize_t len, l;
+	size_t line_size;
+	struct stat st;
+
+	tmp_passwd_len = fpasswd_len + 5;
+	tmp_passwd = malloc(tmp_passwd_len);
+
+	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
+	if (stat(tmp_passwd, &st) != -1) {
+		fprintf(stderr, "file '%s' is locked\n", fpasswd);
+		exit(1);
+	}
+
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
 		fprintf(stderr, "Cannot open '%s' for read\n", fpasswd);
@@ -112,13 +166,23 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 		exit(1);
 	}
 
+	line = NULL;
 	while ((len = getline(&line, &line_size, fd)) > 0) {
 		p = strchr(line, ':');
 		if (p == NULL)
 			continue;
 
-		if (strncmp(line, username, MAX(username_len, (unsigned)(p-line))) == 0) {
-			fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
+		l = p-line;
+		if (l == username_len && strncmp(line, username, l) == 0) {
+			p = strchr(p+1, ':');
+			if (p == NULL)
+				continue;
+			p++;
+			
+			l = p-line;
+			fwrite(line, 1, l, fd2);
+			fputc('!', fd2);
+			fwrite(p, 1, len-l, fd2);
 		} else {
 			fwrite(line, 1, len, fd2);
 		}
@@ -129,6 +193,73 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 	fclose(fd2);
 
 	rename(tmp_passwd, fpasswd);
+	free(tmp_passwd);
+}
+
+static void
+unlock_user(const char *fpasswd, const char *username)
+{
+	FILE * fd, *fd2;
+	char *tmp_passwd;
+	char *line, *p;
+	unsigned fpasswd_len = strlen(fpasswd);
+	unsigned tmp_passwd_len;
+	unsigned username_len = strlen(username);
+	ssize_t len, l;
+	size_t line_size;
+	struct stat st;
+
+	tmp_passwd_len = fpasswd_len + 5;
+	tmp_passwd = malloc(tmp_passwd_len);
+
+	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
+	if (stat(tmp_passwd, &st) != -1) {
+		fprintf(stderr, "file '%s' is locked\n", fpasswd);
+		exit(1);
+	}
+
+	fd = fopen(fpasswd, "r");
+	if (fd == NULL) {
+		fprintf(stderr, "Cannot open '%s' for read\n", fpasswd);
+		exit(1);
+	}
+
+	fd2 = fopen(tmp_passwd, "w");
+	if (fd2 == NULL) {
+		fprintf(stderr, "Cannot open '%s' for write\n", tmp_passwd);
+		exit(1);
+	}
+
+	line = NULL;
+	while ((len = getline(&line, &line_size, fd)) > 0) {
+		p = strchr(line, ':');
+		if (p == NULL)
+			continue;
+
+		l = p-line;
+		if (l == username_len && strncmp(line, username, l) == 0) {
+			p = strchr(p+1, ':');
+			if (p == NULL)
+				continue;
+			p++;
+			
+			l = p-line;
+			fwrite(line, 1, l, fd2);
+
+			if (*p=='!') p++;
+			l = p-line;
+			fwrite(p, 1, len-l, fd2);
+		} else {
+			fwrite(line, 1, len, fd2);
+		}
+	}
+
+	free(line);
+	fclose(fd);
+	fclose(fd2);
+
+	rename(tmp_passwd, fpasswd);
+	free(tmp_passwd);
 }
 
 int main(int argc, char **argv)
@@ -147,6 +278,13 @@ int main(int argc, char **argv)
 	optct = optionProcess(&ocpasswdOptions, argc, argv);
 	argc -= optct;
 	argv += optct;
+	
+	if (argc > 0)
+		username = argv[0];
+	else {
+		fprintf(stderr, "Please specify a user\n");
+		return -1;
+	}
 
 	if (HAVE_OPT(PASSWD))
 		fpasswd = OPT_ARG(PASSWD);
@@ -155,26 +293,25 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (HAVE_OPT(USERNAME))
-		username = OPT_ARG(USERNAME);
-	else {
-		fprintf(stderr, "Please specify a user\n");
-		return -1;
-	}
-
 	if (HAVE_OPT(GROUPNAME))
 		groupname = OPT_ARG(GROUPNAME);
 	else {
 		groupname = "*";
 	}
+	
+	if (HAVE_OPT(LOCK))
+		lock_user(fpasswd, username);
+	else if (HAVE_OPT(UNLOCK))
+		unlock_user(fpasswd, username);
+	else { /* set password */
+		passwd = getpass("Enter password: ");
+		if (passwd == NULL) {
+			fprintf(stderr, "Please specify a password\n");
+			return -1;
+		}
 
-	passwd = getpass("Enter password: ");
-	if (passwd == NULL) {
-		fprintf(stderr, "Please specify a password\n");
-		return -1;
+		crypt_int(fpasswd, username, groupname, passwd);
 	}
-
-	crypt_int(fpasswd, username, groupname, passwd);
 	
 	gnutls_global_deinit();
 	return 0;

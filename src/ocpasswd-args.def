@@ -1,15 +1,17 @@
 AutoGen Definitions options;
 prog-name     = ocpasswd;
-prog-title    = "OpenConnect server";
-prog-desc     = "OpenConnect VPN server.";
+prog-title    = "ocpasswd";
+prog-desc     = "OpenConnect VPN server plain password file handling program.";
 disable-save;
 no-xlate = opt;
 gnu-usage;
 config-header = config.h;
 long-opts;
 no-misuse-usage;
-short-usage   = "Usage: ocpasswd [options] -c [passwd]\nocpasswd --help for usage instructions.\n";
+short-usage   = "Usage: ocpasswd -c [passwd] [options] username\nocpasswd --help for usage instructions.\n";
 explain       = "";
+reorder-args;
+argument      = "[username]";
 #include version.def
 
 detail  = "This program is openconnect password (ocpasswd) utility. It allows the generation
@@ -27,16 +29,7 @@ flag = {
     name      = passwd;
     value     = c;
     arg-type  = file;
-    file-exists = yes;
     descrip   = "Password file";
-    doc   = "";
-};
-
-flag = {
-    name      = username;
-    value     = u;
-    arg-type  = string;
-    descrip   = "User name";
     doc   = "";
 };
 
@@ -46,6 +39,20 @@ flag = {
     arg-type  = string;
     descrip   = "User's group name";
     doc   = "";
+};
+
+flag = {
+    name      = lock;
+    value     = l;
+    descrip   = "Lock user";
+    doc   = "Prevents the specified user from logging in";
+};
+
+flag = {
+    name      = unlock;
+    value     = u;
+    descrip   = "Unlock user";
+    doc   = "Re-enables login for the specified user";
 };
 
 help-value    = h;

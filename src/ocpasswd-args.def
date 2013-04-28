@@ -74,3 +74,24 @@ The crypt(3) encoding is used for the encoded-password.
 _EOT_;
 };
 
+doc-section = {
+  ds-type = 'EXAMPLES';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+@subheading Adding a user
+@example
+$ ocpasswd -c ocpasswd my_username
+@end example
+
+@subheading Locking a user
+@example
+$ ocpasswd -c ocpasswd -l my_username
+@end example
+
+@subheading Unlocking a user
+@example
+$ ocpasswd -c ocpasswd -u my_username
+@end example
+_EOT_;
+};
+

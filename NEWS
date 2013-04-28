@@ -3,6 +3,8 @@
 - Several updates to allow compilation in FreeBSD.
 - Prior to leasing an IPv4 ping it to check if it is
   already in use.
+- ocpasswd accepts options to lock and unlock users.
+
 
 * Version 0.1.1 (released 2013-04-03)
 

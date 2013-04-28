@@ -1,14 +1,15 @@
 * Version 0.1.2 (unreleased)
 
 - Several updates to allow compilation in FreeBSD.
-- Prior to leasing an IPv4 ping it to check if it is
-  already in use.
+- Allow prior to leasing an IP to ping it in order to check if it is in use.
 - ocpasswd accepts options to lock and unlock users.
 
 
 * Version 0.1.1 (released 2013-04-03)
 
 - MTU discovery was simplified.
+- Removed support for TLS session tickets to strengthen the
+  notion of privilege separation.
 
 
 * Version 0.1.0 (released 2013-03-23)

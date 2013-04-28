@@ -172,9 +172,9 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 	time_t now;
 	uint16_t id1, id2;
 	unsigned gotreply = 0, unreachable = 0;
-	
+
 	if (s->config->ping_leases == 0)
-                return 0;
+		return 0;
 
 	gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
 	gnutls_rnd(GNUTLS_RND_NONCE, &id2, sizeof(id2));
@@ -217,20 +217,21 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 			continue;
 		} else if (c >= 76 && fromlen == sizeof(struct sockaddr_in)) {	/* icmp6_hdr */
 			if (memcmp
-			     (SA_IN_P(&from), SA_IN_P(addr1),
-			      SA_IN_SIZE(sizeof(*addr1))) == 0 ||
+			    (SA_IN_P(&from), SA_IN_P(addr1),
+			     SA_IN_SIZE(sizeof(*addr1))) == 0 ||
 			    memcmp
-			     (SA_IN_P(&from), SA_IN_P(addr2),
-			      SA_IN_SIZE(sizeof(*addr2))) == 0) {
+			    (SA_IN_P(&from), SA_IN_P(addr2),
+			     SA_IN_SIZE(sizeof(*addr2))) == 0) {
 
 				struct iphdr *iphdr =
 				    (struct iphdr *) packet1;
 				pkt = (struct icmp *) (packet1 + (iphdr->ihl << 2));	/* skip ip hdr */
-				if (pkt->icmp_type == ICMP_ECHOREPLY)
-					gotreply++;
-				else if (pkt->icmp_type ==
-					 ICMP_DEST_UNREACH)
-					unreachable++;
+				if (pkt->icmp_id == id1 || pkt->icmp_id == id2) {
+					if (pkt->icmp_type == ICMP_ECHOREPLY)
+						gotreply++;
+					else if (pkt->icmp_type == ICMP_DEST_UNREACH)
+						unreachable++;
+                                }
 			}
 		}
 	}
@@ -240,24 +241,30 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 	if (gotreply > 0) {
 		mslog(s, NULL, LOG_INFO,
 		      "pinged %s and %s and are in use",
-		      human_addr((void *) addr1, sizeof(struct sockaddr_in), 
-		      buf1, sizeof(buf1)),
-		      human_addr((void *) addr2, sizeof(struct sockaddr_in), 
-		      buf2, sizeof(buf2)));
+		      human_addr((void *) addr1,
+				 sizeof(struct sockaddr_in), buf1,
+				 sizeof(buf1)), human_addr((void *) addr2,
+							   sizeof(struct
+								  sockaddr_in),
+							   buf2,
+							   sizeof(buf2)));
 		return gotreply;
 	} else {
 		mslog(s, NULL, LOG_INFO,
 		      "pinged %s and %s and are not in use",
-		      human_addr((void *) addr1, sizeof(struct sockaddr_in), 
-		      buf1, sizeof(buf1)),
-		      human_addr((void *) addr2, sizeof(struct sockaddr_in), 
-		      buf2, sizeof(buf2)));
+		      human_addr((void *) addr1,
+				 sizeof(struct sockaddr_in), buf1,
+				 sizeof(buf1)), human_addr((void *) addr2,
+							   sizeof(struct
+								  sockaddr_in),
+							   buf2,
+							   sizeof(buf2)));
 		return 0;
 	}
 }
 
 int icmp_ping6(main_server_st * s,
-	       struct sockaddr_in6* addr1, struct sockaddr_in6* addr2)
+	       struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 {
 	struct icmp6_hdr *pkt;
 	char buf1[64], buf2[64];
@@ -270,7 +277,7 @@ int icmp_ping6(main_server_st * s,
 	time_t now;
 
 	if (s->config->ping_leases == 0)
-                return 0;
+		return 0;
 
 	gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
 	gnutls_rnd(GNUTLS_RND_NONCE, &id2, sizeof(id2));
@@ -311,24 +318,26 @@ int icmp_ping6(main_server_st * s,
 		struct sockaddr_in6 from;
 		socklen_t fromlen = sizeof(from);
 		c = recvfrom_timeout(pingsock, packet1,
-				     sizeof(packet1), 0, (struct sockaddr *)
+				     sizeof(packet1), 0,
+				     (struct sockaddr *)
 				     &from, &fromlen);
 		if (c < 0) {
 			continue;
 		} else if (c >= 8 && fromlen == sizeof(struct sockaddr_in6)) {	/* icmp6_hdr */
 			if (memcmp
-			     (SA_IN6_P(&from), SA_IN6_P(addr1),
-			      SA_IN_SIZE(sizeof(*addr1))) == 0 ||
+			    (SA_IN6_P(&from), SA_IN6_P(addr1),
+			     SA_IN_SIZE(sizeof(*addr1))) == 0 ||
 			    memcmp(SA_IN6_P(&from),
-				       SA_IN6_P(addr2),
-				       SA_IN_SIZE(sizeof(*addr2))) == 0) {
+				   SA_IN6_P(addr2),
+				   SA_IN_SIZE(sizeof(*addr2))) == 0) {
 
 				pkt = (struct icmp6_hdr *) packet1;
-				if (pkt->icmp6_type == ICMP6_ECHO_REPLY)
-					gotreply++;
-				else if (pkt->icmp6_type ==
-					 ICMP_DEST_UNREACH)
-					unreachable++;
+				if (pkt->icmp6_id == id1 || pkt->icmp6_id == id2) {
+					if (pkt->icmp6_type == ICMP6_ECHO_REPLY)
+						gotreply++;
+					else if (pkt->icmp6_type == ICMP_DEST_UNREACH)
+						unreachable++;
+				}
 			}
 		}
 	}
@@ -338,18 +347,24 @@ int icmp_ping6(main_server_st * s,
 	if (gotreply > 0) {
 		mslog(s, NULL, LOG_INFO,
 		      "pinged %s and %s and are in use",
-		      human_addr((void *) addr1, sizeof(struct sockaddr_in6),
-		      buf1, sizeof(buf1)),
-		      human_addr((void *) addr2, sizeof(struct sockaddr_in6), 
-		      buf2, sizeof(buf2)));
+		      human_addr((void *) addr1,
+				 sizeof(struct sockaddr_in6), buf1,
+				 sizeof(buf1)), human_addr((void *) addr2,
+							   sizeof(struct
+								  sockaddr_in6),
+							   buf2,
+							   sizeof(buf2)));
 		return gotreply;
 	} else {
 		mslog(s, NULL, LOG_INFO,
 		      "pinged %s and %s and are not in use",
-		      human_addr((void *) addr1, sizeof(struct sockaddr_in6),
-                      buf1, sizeof(buf1)), 
-		      human_addr((void *) addr2, sizeof(struct sockaddr_in6), 
-		      buf2, sizeof(buf2)));
+		      human_addr((void *) addr1,
+				 sizeof(struct sockaddr_in6), buf1,
+				 sizeof(buf1)), human_addr((void *) addr2,
+							   sizeof(struct
+								  sockaddr_in6),
+							   buf2,
+							   sizeof(buf2)));
 		return 0;
 	}
 }

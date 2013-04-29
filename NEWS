@@ -3,6 +3,8 @@
 - Several updates to allow compilation in FreeBSD.
 - Allow prior to leasing an IP to ping it in order to check if it is in use.
 - ocpasswd accepts options to lock and unlock users.
+- Several updates to allow CISCO's anyconnect clients to connect to this
+  server.
 
 
 * Version 0.1.1 (released 2013-04-03)

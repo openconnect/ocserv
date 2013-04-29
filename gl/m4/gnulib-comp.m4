@@ -38,6 +38,7 @@ AC_DEFUN([gl_EARLY],
   m4_pattern_allow([^gl_LIBOBJS$])dnl a variable
   m4_pattern_allow([^gl_LTLIBOBJS$])dnl a variable
   AC_REQUIRE([gl_PROG_AR_RANLIB])
+  # Code from module c-ctype:
   # Code from module clock-time:
   # Code from module cloexec:
   # Code from module close:
@@ -383,6 +384,8 @@ AC_DEFUN([gl_FILE_LIST], [
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
+  lib/c-ctype.c
+  lib/c-ctype.h
   lib/cloexec.c
   lib/cloexec.h
   lib/close.c

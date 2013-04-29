@@ -105,8 +105,8 @@ fi
 fi
 
 AC_ARG_ENABLE(anyconnect-compat,
-  AS_HELP_STRING([--enable-anyconnect-compat], [enable Anyconnect client compatibility (experimental)]),
-    anyconnect_enabled=$enableval, anyconnect_enabled=no)
+  AS_HELP_STRING([--disable-anyconnect-compat], [disable Anyconnect client compatibility (experimental)]),
+    anyconnect_enabled=$enableval, anyconnect_enabled=yes)
 if [ test "$anyconnect_enabled" = "yes" ];then
 	AC_DEFINE([ANYCONNECT_CLIENT_COMPAT], [], [Enable Anyconnect compatibility])
 fi

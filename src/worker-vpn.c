@@ -190,10 +190,11 @@ int ret;
 #endif
 
 #define LL(x,y,z) {x, sizeof(x)-1, y, z}
-struct known_urls_st known_urls[] = {
+const static struct known_urls_st known_urls[] = {
 		LL("/", get_auth_handler, post_auth_handler),
 		LL("/auth", get_auth_handler, post_auth_handler),
 #ifdef ANYCONNECT_CLIENT_COMPAT
+		LL("/1/index.html", get_auth_handler, post_auth_handler),
 		LL("/profiles", get_config_handler, NULL),
 		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
 #endif
@@ -202,7 +203,7 @@ struct known_urls_st known_urls[] = {
 
 static url_handler_fn get_url_handler(const char* url)
 {
-struct known_urls_st *p;
+const struct known_urls_st *p;
 unsigned len = strlen(url);
 
 	p = known_urls;
@@ -220,7 +221,7 @@ unsigned len = strlen(url);
 
 static url_handler_fn post_url_handler(const char* url)
 {
-struct known_urls_st *p;
+const struct known_urls_st *p;
 
 	p = known_urls;
 	do {
@@ -553,6 +554,8 @@ restart:
 	do {
 		nrecvd = tls_recv(session, buf, sizeof(buf));
 		if (nrecvd <= 0) {
+			if (nrecvd == 0)
+			        goto finish;
 			oclog(ws, LOG_INFO, "error receiving client data"); 
 			exit_worker(ws);
 		}
@@ -568,11 +571,10 @@ restart:
 		oclog(ws, LOG_DEBUG, "HTTP GET %s", ws->req.url); 
 		fn = get_url_handler(ws->req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "unexpected URL %s", ws->req.url); 
-			tls_puts(session, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+			oclog(ws, LOG_INFO, "unexpected URL %s", ws->req.url);
+			tls_puts(session, "HTTP/1.1 404 Not found\r\n\r\n");
 			goto finish;
-		}
-		
+                }		
 		ret = fn(ws, parser.http_minor);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;
@@ -594,7 +596,7 @@ restart:
 		fn = post_url_handler(ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_INFO, "unexpected POST URL %s", ws->req.url); 
-			tls_printf(session, "HTTP/1.%u 404 Nah, go away\r\n\r\n", parser.http_minor);
+			tls_puts(session, "HTTP/1.1 404 Not found\r\n\r\n");
 			goto finish;
 		}
 

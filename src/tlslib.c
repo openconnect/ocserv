@@ -39,7 +39,7 @@
 #include <worker.h>
 #include <sys/un.h>
 #include <sys/uio.h>
-
+#include <c-ctype.h>
 
 ssize_t tls_send(gnutls_session_t session, const void *data,
 			size_t data_size)
@@ -576,6 +576,7 @@ gnutls_datum_t data;
 uint8_t digest[20];
 char * retval;
 gnutls_x509_crt_t crt;
+unsigned i;
 
 	ret = gnutls_load_file(file, &data);
 	if (ret < 0) {
@@ -621,6 +622,10 @@ gnutls_x509_crt_t crt;
 		exit(1);
 	}
 	retval[ret_size] = 0;
+	
+	/* convert to all caps */
+	for (i=0;i<ret_size;i++)
+	        retval[i] = c_toupper(retval[i]);
 	
 	return retval;
 }

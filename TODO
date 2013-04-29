@@ -1,3 +1,6 @@
+* IPv6 support is probably broken or non-optimal. See how it can be
+  improved.
+
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
   versions than the current openssl string approach (using PSK ciphersuites
   seem to be like a solution, but then we could not use the session ID to
@@ -6,22 +9,22 @@
 * Try adding salsa20-12 and UMAC as encryption algorithms for DTLS to reduce 
   CPU load in systems without AES accelerator.
 
-* Handle users being in multiple groups.
+* Handle multiple settings/config files per user group.
 
 * Certificate authentication to the main process. Possibly that is just
-  wishful thinking. To verify the TLS client certificate verify signature one
-  needs instead of the signature, the contents of all the handshake messages, 
-  and knowledge of the negotiated TLS version, in addition to being able to
-  select the server hello random. That could be done sanely only if gnutls 
-  provided facilities to set the server hello random, and override the client
-  signature verification at an early stage before data are hashed (to verify
-  that the set random value was present in the handshake).
+  wishful thinking. To verify the TLS client certificate verify signature 
+  packet one needs instead of the signature, the contents of all the handshake 
+  messages, and knowledge of the negotiated TLS version, in addition to being 
+  able to select the server hello random. That could be done sanely only if 
+  gnutls provided facilities to set the server hello random, and override the 
+  client signature verification at an early stage before data are hashed 
+  (to verify that the set random value was present in the handshake).
 
 * When a TUN device is in use and cannot be assigned mark it as such and
   continue.
 
 * When a user (IP) gets into the BAN list multiple times, disable it for
-  long.
+  longer time.
 
 * Change into a hashtables the lists that are used during a client
   connection.

@@ -28,14 +28,13 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <signal.h>
+#include <system.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include <sys/un.h>
-#include "die.h"
 #include <cloexec.h>
 #include "ipc.h"
 #include "setproctitle.h"

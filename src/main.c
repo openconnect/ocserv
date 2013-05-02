@@ -28,7 +28,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <signal.h>
+#include <system.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
@@ -38,7 +38,6 @@
 #include <gnutls/x509.h>
 #include <tlslib.h>
 #include "ipc.h"
-#include "die.h"
 #include "setproctitle.h"
 #ifdef HAVE_LIBWRAP
 # include <tcpd.h>
@@ -638,12 +637,12 @@ int main(int argc, char** argv)
 	tun_st_init(&tun);
 	tls_cache_init(&s.tls_db);
 
-	signal(SIGINT, handle_term);
-	signal(SIGTERM, handle_term);
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGHUP, handle_reload);
-	signal(SIGCHLD, handle_children);
-	signal(SIGALRM, handle_alarm);
+	ocsignal(SIGINT, handle_term);
+	ocsignal(SIGTERM, handle_term);
+	ocsignal(SIGPIPE, SIG_IGN);
+	ocsignal(SIGHUP, handle_reload);
+	ocsignal(SIGCHLD, handle_children);
+	ocsignal(SIGALRM, handle_alarm);
 
 	/* Initialize GnuTLS */
 	tls_global_init(&s);

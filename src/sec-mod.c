@@ -29,7 +29,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <signal.h>
+#include <system.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/un.h>
@@ -163,9 +163,9 @@ uint16_t length;
 struct iovec iov[2];
 int sd;
 
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGINT, SIG_DFL);
-	signal(SIGTERM, SIG_DFL);
+	ocsignal(SIGHUP, SIG_IGN);
+	ocsignal(SIGINT, SIG_DFL);
+	ocsignal(SIGTERM, SIG_DFL);
 
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();

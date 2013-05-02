@@ -38,7 +38,7 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <signal.h>
+#include <system.h>
 #include <time.h>
 #include <common.h>
 
@@ -480,10 +480,10 @@ void vpn_server(struct worker_st* ws)
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
 
-	signal(SIGTERM, handle_term);
-	signal(SIGINT, handle_term);
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGALRM, handle_alarm);
+	ocsignal(SIGTERM, handle_term);
+	ocsignal(SIGINT, handle_term);
+	ocsignal(SIGHUP, SIG_IGN);
+	ocsignal(SIGALRM, handle_alarm);
 
 	if (ws->config->auth_timeout)
 		alarm(ws->config->auth_timeout);

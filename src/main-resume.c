@@ -28,7 +28,6 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <signal.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <gnutls/gnutls.h>

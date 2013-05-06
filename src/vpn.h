@@ -88,6 +88,7 @@ struct cfg_st {
 	char *chroot_dir;	/* where the xml files are served from */
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */
+	char *default_domain; /* domain to be advertised */
 	
 	char* socket_file_prefix;
 	time_t cookie_validity;	/* in seconds */

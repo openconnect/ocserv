@@ -169,6 +169,7 @@ unsigned j;
 #endif
 
 	READ_STRING("ca-cert", config->ca, 0);
+	READ_STRING("default-domain", config->default_domain, 0);
 	READ_STRING("crl", config->crl, 0);
 	READ_STRING("cert-user-oid", config->cert_user_oid, 0);
 	READ_STRING("cert-group-oid", config->cert_group_oid, 0);
@@ -359,6 +360,7 @@ unsigned i;
 	DEL(config->cert_hash);
 #endif
 	DEL(config->socket_file_prefix);
+	DEL(config->default_domain);
 	DEL(config->plain_passwd);
 	DEL(config->ocsp_response);
 	DEL(config->banner);

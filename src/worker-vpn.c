@@ -811,6 +811,11 @@ socklen_t sl;
 	ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", ws->config->dpd);
 	SEND_ERR(ret);
 
+	if (ws->config->default_domain) {
+        	ret = tls_printf(ws->session, "X-CSTP-Default-Domain: %s\r\n", ws->config->default_domain);
+        	SEND_ERR(ret);
+        }
+
 	ws->udp_state = UP_DISABLED;
 	if (req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);

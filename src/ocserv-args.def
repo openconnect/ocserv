@@ -219,6 +219,9 @@ run-as-group = nogroup
 # The name of the tun device
 device = vpns
 
+# The default domain to be advertised
+default-domain = example.com
+
 # The pool of addresses that leases will be given from.
 ipv4-network = 192.168.1.0
 ipv4-netmask = 255.255.255.0

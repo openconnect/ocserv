@@ -84,6 +84,8 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 #include <sys/socket.h>
 ])
 
+AC_CHECK_FUNCS([setproctitle])
+
 if [ test -z "$LIBWRAP" ];then
 	libwrap_enabled="no"
 else

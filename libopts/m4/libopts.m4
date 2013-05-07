@@ -200,7 +200,6 @@ AC_DEFUN([LIBOPTS_WITHLIB_REGEX],[
   esac
   libopts_save_CPPFLAGS="${CPPFLAGS}"
   libopts_save_LIBS="${LIBS}"
-  fi ## disabled by request
 
   case "X${libopts_cv_with_libregex_cflags}" in
   Xyes|Xno|X )
@@ -241,6 +240,8 @@ int main() {
     [libopts_cv_with_libregex=no]) # end of AC_RUN_IFELSE 
   ]) # end of AC_CACHE_VAL for libopts_cv_with_libregex
   AC_MSG_RESULT([${libopts_cv_with_libregex}])
+  fi ## disabled by request
+
   if test "X${libopts_cv_with_libregex}" != Xno
   then
     AC_DEFINE([WITH_LIBREGEX],[1],

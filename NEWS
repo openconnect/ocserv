@@ -1,4 +1,4 @@
-* Version 0.1.2 (unreleased)
+* Version 0.1.2 (released 2013-05-07)
 
 - Several updates to allow compilation in FreeBSD.
 - Allow prior to leasing an IP to ping it in order to check if it is in use.

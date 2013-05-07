@@ -707,6 +707,9 @@
 /* Define to 1 if you have the <setjmp.h> header file. */
 #undef HAVE_SETJMP_H
 
+/* Define to 1 if you have the `setproctitle' function. */
+#undef HAVE_SETPROCTITLE
+
 /* Define to 1 if 'sig_atomic_t' is a signed integer type. */
 #undef HAVE_SIGNED_SIG_ATOMIC_T
 

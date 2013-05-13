@@ -571,6 +571,10 @@ static void check_other_work(main_server_st *s)
 		reload_conf = 0;
 	}
 
+	if (need_children_cleanup != 0) {
+		cleanup_children(s);
+	}
+
 	if (terminate != 0) {
 		mslog(s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
 		kill_children(s);
@@ -589,10 +593,6 @@ static void check_other_work(main_server_st *s)
 		expire_cookies(s);
 		expire_banned(s);
 		alarm(MAINTAINANCE_TIME(s));
-	}
-		
-	if (need_children_cleanup != 0) {
-		cleanup_children(s);
 	}
 }
 

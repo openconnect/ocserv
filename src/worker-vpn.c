@@ -272,8 +272,8 @@ int header_field_cb(http_parser* parser, const char *at, size_t length)
 	} else {
 		req->next_header = 0;
 	}
-	
-	if (length < sizeof(req->dbg_txt)) {
+
+	if (length+1 < sizeof(req->dbg_txt)) {
 		memcpy(req->dbg_txt, at, length);
 		req->dbg_txt[length] = 0;
 	} else {
@@ -309,7 +309,7 @@ int header_value_cb(http_parser* parser, const char *at, size_t length)
 				req->master_secret_set = 1;
 				break;
 			case HEADER_HOSTNAME:
-				if (length >- MAX_HOSTNAME_SIZE) {
+				if (length+1 > MAX_HOSTNAME_SIZE) {
 					req->hostname[0] = 0;
 					return 0;
 				}

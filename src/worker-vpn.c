@@ -490,8 +490,7 @@ void vpn_server(struct worker_st* ws)
 		
 	ret = disable_system_calls(ws);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "could not disable system calls (seccomp error)");
-		exit_worker(ws);
+		oclog(ws, LOG_INFO, "could not disable system calls, kernel might not support seccomp");
 	}
 
 	oclog(ws, LOG_INFO, "accepted connection");

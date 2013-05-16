@@ -31,7 +31,7 @@ int disable_system_calls(struct worker_st *ws)
 	
 	ctx = seccomp_init(SCMP_ACT_KILL);
 	if (ctx == NULL) {
-		oclog(ws, LOG_WARNING, "could not initialize seccomp");
+		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
 		return -1;
 	}
 
@@ -39,7 +39,7 @@ int disable_system_calls(struct worker_st *ws)
 	ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), 0); \
 	/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
 	if (ret < 0 && ret != -EDOM) { \
-		oclog(ws, LOG_WARNING, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
+		oclog(ws, LOG_DEBUG, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
 		ret = -1; \
 		goto fail; \
 	}
@@ -66,7 +66,7 @@ int disable_system_calls(struct worker_st *ws)
 
 	ret = seccomp_load(ctx);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "could not load seccomp filter");
+		oclog(ws, LOG_DEBUG, "could not load seccomp filter");
 		ret = -1;
 		goto fail;
 	}

@@ -26,7 +26,7 @@
 
 int disable_system_calls(struct worker_st *ws)
 {
-	int ret, e;
+	int ret;
 	scmp_filter_ctx ctx;
 	
 	ctx = seccomp_init(SCMP_ACT_KILL);
@@ -37,9 +37,9 @@ int disable_system_calls(struct worker_st *ws)
 
 #define ADD_SYSCALL(name) \
 	ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), 0); \
-	if (ret < 0) { \
-		e = errno; \
-		oclog(ws, LOG_WARNING, "could not add " #name " to seccomp filter: %s", strerror(e)); \
+	/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
+	if (ret < 0 && ret != -EDOM) { \
+		oclog(ws, LOG_WARNING, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
 		ret = -1; \
 		goto fail; \
 	}

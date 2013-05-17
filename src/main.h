@@ -11,6 +11,7 @@
 
 #define ERR_WAIT_FOR_SCRIPT -5
 #define ERR_BAD_COMMAND -2
+#define ERR_MEM -6
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);

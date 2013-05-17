@@ -10,6 +10,7 @@
 #include <vpn.h>
 #include <cookies.h>
 #include <tlslib.h>
+#include <str.h>
 
 typedef enum {
 	UP_DISABLED,
@@ -28,9 +29,18 @@ enum {
 	HEADER_DTLS_MTU,
 };
 
+enum {
+	HTTP_HEADER_INIT = 0,
+	HTTP_HEADER_RECV,
+	HTTP_HEADER_VALUE_RECV
+};
+
 struct http_req_st {
 	char url[256];
-	char dbg_txt[256];
+
+	str_st header;
+	str_st value;
+	unsigned int header_state;
 
 	char hostname[MAX_HOSTNAME_SIZE];
 	unsigned int next_header;

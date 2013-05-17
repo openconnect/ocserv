@@ -254,102 +254,136 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 #define STR_HDR_DMTU "X-DTLS-MTU"
 #define STR_HDR_CMTU "X-CSTP-MTU"
 #define STR_HDR_HOST "X-CSTP-Hostname"
+
+static void value_check(struct worker_st *ws, struct http_req_st *req)
+{
+unsigned length;
+size_t nlen;
+uint8_t* p;
+
+	if (req->value.length <= 0)
+		return;
+
+	oclog(ws, LOG_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length, req->header.data,  
+		(int)req->value.length, req->value.data);
+
+	switch (req->next_header) {
+		case HEADER_MASTER_SECRET:
+			if (req->value.length < TLS_MASTER_SIZE*2) {
+				req->master_secret_set = 0;
+				return;
+			}
+			
+			length = TLS_MASTER_SIZE*2;
+
+			nlen = sizeof(req->master_secret);
+			gnutls_hex2bin((void*)req->value.data, length, req->master_secret, &nlen);
+
+			req->master_secret_set = 1;
+			break;
+
+		case HEADER_HOSTNAME:
+			if (req->value.length+1 > MAX_HOSTNAME_SIZE) {
+				req->hostname[0] = 0;
+				return;
+			}
+			memcpy(req->hostname, req->value.data, req->value.length);
+			req->hostname[req->value.length] = 0;
+			break;
+
+		case HEADER_CSTP_MTU:
+			req->cstp_mtu = atoi((char*)req->value.data);
+			break;
+		case HEADER_DTLS_MTU:
+			req->dtls_mtu = atoi((char*)req->value.data);
+			break;
+		case HEADER_COOKIE:
+			length = req->value.length;
+			p = memmem(req->value.data, length, "webvpn=", 7);
+			if (p == NULL || length <= 7) {
+				req->cookie_set = 0;
+				return;
+			}
+			p += 7;
+			length -= 7;
+				
+			if (length < COOKIE_SIZE*2) {
+				req->cookie_set = 0;
+				return;
+			}
+			length = COOKIE_SIZE*2;
+			nlen = sizeof(req->cookie);
+			gnutls_hex2bin((void*)p, length, req->cookie, &nlen);
+
+			if (nlen < COOKIE_SIZE) {
+				req->cookie_set = 0;
+				return;
+			}
+			req->cookie_set = 1;
+			break;
+	}
+}
+
 int header_field_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
+	int ret;
 
-	if (length == sizeof(STR_HDR_COOKIE)-1 && strncmp(at, STR_HDR_COOKIE, length) == 0) {
+	if (req->header_state != HTTP_HEADER_RECV) {
+		/* handle value */
+		if (req->header_state == HTTP_HEADER_VALUE_RECV)
+			value_check(ws, req);
+		req->header_state = HTTP_HEADER_RECV;
+		str_reset(&req->header);
+	}
+
+	ret = str_append_data(&req->header, at, length);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static void header_check(struct http_req_st *req)
+{
+	if (req->header.length == sizeof(STR_HDR_COOKIE)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_COOKIE, req->header.length) == 0) {
 		req->next_header = HEADER_COOKIE;
-	} else if (length == sizeof(STR_HDR_MS)-1 && strncmp(at, STR_HDR_MS, length) == 0) {
+	} else if (req->header.length == sizeof(STR_HDR_MS)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_MS, req->header.length) == 0) {
 		req->next_header = HEADER_MASTER_SECRET;
-	} else if (length == sizeof(STR_HDR_DMTU)-1 && strncmp(at, STR_HDR_DMTU, length) == 0) {
+	} else if (req->header.length == sizeof(STR_HDR_DMTU)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_DMTU, req->header.length) == 0) {
 		req->next_header = HEADER_DTLS_MTU;
-	} else if (length == sizeof(STR_HDR_CMTU)-1 && strncmp(at, STR_HDR_CMTU, length) == 0) {
+	} else if (req->header.length == sizeof(STR_HDR_CMTU)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_CMTU, req->header.length) == 0) {
 		req->next_header = HEADER_CSTP_MTU;
-	} else if (length == sizeof(STR_HDR_HOST)-1 && strncmp(at, STR_HDR_HOST, length) == 0) {
+	} else if (req->header.length == sizeof(STR_HDR_HOST)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_HOST, req->header.length) == 0) {
 		req->next_header = HEADER_HOSTNAME;
 	} else {
 		req->next_header = 0;
 	}
-
-	if (length+1 < sizeof(req->dbg_txt)) {
-		memcpy(req->dbg_txt, at, length);
-		req->dbg_txt[length] = 0;
-	} else {
-		oclog(ws, LOG_ERR, "oversized HTTP header %.*s\n", (int)length, at);
-		req->dbg_txt[0] = 0;
-	}
-	
-	return 0;
 }
 
 int header_value_cb(http_parser* parser, const char *at, size_t length)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
-	char *p;
-	size_t nlen;
+	int ret;
 
-	if (length > 0) {
-		oclog(ws, LOG_DEBUG, "HTTP: %s: %.*s", req->dbg_txt, (int)length, at);
-
-		switch (req->next_header) {
-			case HEADER_MASTER_SECRET:
-				if (length < TLS_MASTER_SIZE*2) {
-					req->master_secret_set = 0;
-					return 0;
-				}
-				
-				length = TLS_MASTER_SIZE*2;
-
-				nlen = sizeof(req->master_secret);
-
-				gnutls_hex2bin(at, length, req->master_secret, &nlen);
-				req->master_secret_set = 1;
-				break;
-			case HEADER_HOSTNAME:
-				if (length+1 > MAX_HOSTNAME_SIZE) {
-					req->hostname[0] = 0;
-					return 0;
-				}
-				memcpy(req->hostname, at, length);
-				req->hostname[length] = 0;
-
-				break;
-			case HEADER_CSTP_MTU:
-				req->cstp_mtu = atoi(at);
-				break;
-			case HEADER_DTLS_MTU:
-				req->dtls_mtu = atoi(at);
-				break;
-			case HEADER_COOKIE:
-				p = memmem(at, length, "webvpn=", 7);
-				if (p == NULL || length <= 7) {
-					req->cookie_set = 0;
-					return 0;
-				}
-				p += 7;
-				length -= 7;
-				
-				if (length < COOKIE_SIZE*2) {
-					req->cookie_set = 0;
-					return 0;
-				}
-				length = COOKIE_SIZE*2;
-
-				nlen = sizeof(req->cookie);
-				gnutls_hex2bin(p, length, req->cookie, &nlen);
-
-				if (nlen < COOKIE_SIZE) {
-					req->cookie_set = 0;
-					return 0;
-				}
-				req->cookie_set = 1;
-				break;
-		}
+	if (req->header_state != HTTP_HEADER_VALUE_RECV) {
+		/* handle header */
+		header_check(req);
+		req->header_state = HTTP_HEADER_VALUE_RECV;
+		str_reset(&req->value);
 	}
-	
+
+	ret = str_append_data(&req->value, at, length);
+	if (ret < 0)
+		return ret;
+
 	return 0;
 }
 
@@ -357,6 +391,9 @@ int header_complete_cb(http_parser* parser)
 {
 	struct worker_st *ws = parser->data;
 	struct http_req_st *req = &ws->req;
+
+	/* handle header value */
+	value_check(ws, req);
 
 	req->headers_complete = 1;
 	return 0;
@@ -446,18 +483,29 @@ fail:
 	return -1;
 }
 
+static void http_req_init(worker_st * ws)
+{
+	str_init(&ws->req.header);
+	str_init(&ws->req.value);
+}
+
 static void http_req_reset(worker_st * ws)
 {
 	ws->req.headers_complete = 0;
 	ws->req.message_complete = 0;
 	ws->req.body_length = 0;
 	ws->req.url[0] = 0;
-	ws->req.dbg_txt[0] = 0;
+	
+	ws->req.header_state = HTTP_HEADER_INIT;
+	str_reset(&ws->req.header);
+	str_reset(&ws->req.value);
 }
 
 static void http_req_deinit(worker_st * ws)
 {
 	http_req_reset(ws);
+	str_clear(&ws->req.header);
+	str_clear(&ws->req.value);
 	free(ws->req.body);
 	ws->req.body = NULL;
 }
@@ -534,6 +582,7 @@ void vpn_server(struct worker_st* ws)
 	settings.on_headers_complete = header_complete_cb;
 	settings.on_message_complete = message_complete_cb;
 	settings.on_body = body_cb;
+	http_req_init(ws);
 
 	ws->session = session;
 	ws->parser = &parser;
@@ -547,8 +596,6 @@ restart:
 	http_parser_init(&parser, HTTP_REQUEST);
 	parser.data = ws;
 	http_req_reset(ws);
-
-
 	/* parse as we go */
 	do {
 		nrecvd = tls_recv(session, buf, sizeof(buf));

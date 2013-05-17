@@ -251,6 +251,7 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 
 #define STR_HDR_COOKIE "Cookie"
 #define STR_HDR_MS "X-DTLS-Master-Secret"
+#define STR_HDR_CS "X-DTLS-CipherSuite"
 #define STR_HDR_DMTU "X-DTLS-MTU"
 #define STR_HDR_CMTU "X-CSTP-MTU"
 #define STR_HDR_HOST "X-CSTP-Hostname"
@@ -289,6 +290,34 @@ uint8_t* p;
 			}
 			memcpy(req->hostname, req->value.data, req->value.length);
 			req->hostname[req->value.length] = 0;
+			break;
+
+		case HEADER_DTLS_CIPHERSUITE:
+#if GNUTLS_VERSION_NUMBER >= 0x030200
+			if (memmem(req->value.data, req->value.length, "SALSA20-UMAC96", 14) != NULL) {
+			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20:+UMAC96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+			        req->selected_ciphersuite = "SALSA20-UMAC96";
+			        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20;
+			        req->gnutls_mac = GNUTLS_MAC_UMAC96;
+			} else if (memmem(req->value.data, req->value.length, "ESTREAM-SALSA20-UMAC96", 21) != NULL) {
+			        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
+			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20:+UMAC96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+			        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20;
+			        req->gnutls_mac = GNUTLS_MAC_UMAC96;
+                        } else
+#endif
+			if (memmem(req->value.data, req->value.length, "AES128-SHA", 10) != NULL) {
+			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+			        req->selected_ciphersuite = "AES128-SHA";
+			        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC;
+			        req->gnutls_mac = GNUTLS_MAC_SHA1;
+			} else if (memmem(req->value.data, req->value.length, "DES-CBC3-SHA", 11) != NULL) {
+			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+			        req->selected_ciphersuite = "DES-CBC3-SHA";
+			        req->gnutls_cipher = GNUTLS_CIPHER_3DES_CBC;
+			        req->gnutls_mac = GNUTLS_MAC_SHA1;
+                        }
+
 			break;
 
 		case HEADER_CSTP_MTU:
@@ -362,6 +391,9 @@ static void header_check(struct http_req_st *req)
 	} else if (req->header.length == sizeof(STR_HDR_HOST)-1 && 
 	        strncmp((char*)req->header.data, STR_HDR_HOST, req->header.length) == 0) {
 		req->next_header = HEADER_HOSTNAME;
+	} else if (req->header.length == sizeof(STR_HDR_CS)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_CS, req->header.length) == 0) {
+		req->next_header = HEADER_DTLS_CIPHERSUITE;
 	} else {
 		req->next_header = 0;
 	}
@@ -426,15 +458,17 @@ int body_cb(http_parser* parser, const char *at, size_t length)
 	return 0;
 }
 
-#define GNUTLS_CIPHERSUITE "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION"
-#define OPENSSL_CIPHERSUITE "AES128-SHA"
-
 static int setup_dtls_connection(struct worker_st *ws)
 {
 int ret;
 gnutls_session_t session;
 gnutls_datum_t master = { ws->master_secret, sizeof(ws->master_secret) };
 gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
+
+        if (ws->req.gnutls_ciphersuite == NULL) {
+		oclog(ws, LOG_ERR, "no DTLS ciphersuite negotiated");
+		return -1;
+        }
 
 	/* DTLS cookie verified.
 	 * Initialize session.
@@ -444,16 +478,16 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 		oclog(ws, LOG_ERR, "could not initialize TLS session: %s", gnutls_strerror(ret));
 		return -1;
 	}
-	
-	ret = gnutls_priority_set_direct(session, GNUTLS_CIPHERSUITE, NULL);
+
+	ret = gnutls_priority_set_direct(session, ws->req.gnutls_ciphersuite, NULL);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
-		GNUTLS_DTLS0_9, GNUTLS_KX_RSA, GNUTLS_CIPHER_AES_128_CBC,
-		GNUTLS_MAC_SHA1, GNUTLS_COMP_NULL, &master, &sid);
+		GNUTLS_DTLS0_9, GNUTLS_KX_RSA, ws->req.gnutls_cipher,
+		ws->req.gnutls_mac, GNUTLS_COMP_NULL, &master, &sid);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s", gnutls_strerror(ret));
 		goto fail;
@@ -807,7 +841,7 @@ socklen_t sl;
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 	}
-
+	
 	if (ws->auth_ok == 0) {
 		/* authentication didn't occur in this session. Use the
 		 * cookie */
@@ -846,7 +880,7 @@ socklen_t sl;
 	if (ws->config->auth_timeout)
 		alarm(0);
 	http_req_deinit(ws);
-	
+
 	tls_cork(ws->session);
 	ret = tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
 	SEND_ERR(ret);
@@ -976,7 +1010,7 @@ socklen_t sl;
 		ret = tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
 		SEND_ERR(ret);
 
-		ret = tls_puts(ws->session, "X-DTLS-CipherSuite: "OPENSSL_CIPHERSUITE"\r\n");
+		ret = tls_printf(ws->session, "X-DTLS-CipherSuite: %s\r\n", ws->req.selected_ciphersuite);
 		SEND_ERR(ret);
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */

@@ -27,6 +27,7 @@ enum {
 	HEADER_HOSTNAME,
 	HEADER_CSTP_MTU,
 	HEADER_DTLS_MTU,
+	HEADER_DTLS_CIPHERSUITE,
 };
 
 enum {
@@ -50,6 +51,11 @@ struct http_req_st {
 	unsigned int master_secret_set;
 
 	char *body;
+	char *gnutls_ciphersuite; /* static string */
+	char *selected_ciphersuite; /* static string */
+	int gnutls_cipher;
+	int gnutls_mac;
+
 	unsigned int body_length;
 	unsigned int headers_complete;
 	unsigned int message_complete;

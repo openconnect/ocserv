@@ -297,13 +297,13 @@ uint8_t* p;
 			if (memmem(req->value.data, req->value.length, "SALSA20-UMAC96", 14) != NULL) {
 			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20:+UMAC96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 			        req->selected_ciphersuite = "SALSA20-UMAC96";
-			        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20;
-			        req->gnutls_mac = GNUTLS_MAC_UMAC96;
+			        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
+			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
 			} else if (memmem(req->value.data, req->value.length, "ESTREAM-SALSA20-UMAC96", 21) != NULL) {
 			        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
 			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20:+UMAC96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-			        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20;
-			        req->gnutls_mac = GNUTLS_MAC_UMAC96;
+			        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
+			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
                         } else
 #endif
 			if (memmem(req->value.data, req->value.length, "AES128-SHA", 10) != NULL) {

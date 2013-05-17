@@ -100,13 +100,14 @@ int __attribute__ ((format(printf, 2, 3)))
 {
 	char buf[1024];
 	va_list args;
+	size_t s;
 
 	buf[1023] = 0;
 
 	va_start(args, fmt);
-	vsnprintf(buf, 1023, fmt, args);
+	s = vsnprintf(buf, 1023, fmt, args);
 	va_end(args);
-	return tls_send(session, buf, strlen(buf));
+	return tls_send(session, buf, s);
 
 }
 
@@ -621,7 +622,7 @@ unsigned i;
 		fprintf(stderr, "error in hex encode: %s", gnutls_strerror(ret));
 		exit(1);
 	}
-	retval[ret_size] = 0;
+	if (retval[ret_size-1] == 0) ret_size--; /* remove the null terminator */
 	
 	/* convert to all caps */
 	for (i=0;i<ret_size;i++)

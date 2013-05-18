@@ -6,9 +6,6 @@
   seem to be like a solution, but then we could not use the session ID to
   forward the UDP connection to the proper worker).
 
-* Try adding salsa20-12 and UMAC as encryption algorithms for DTLS to reduce 
-  CPU load in systems without AES accelerator.
-
 * Handle multiple settings/config files per user group.
 
 * Certificate authentication to the main process. Possibly that is just

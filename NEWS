@@ -1,5 +1,6 @@
 * Version 0.1.3 (unreleased)
 
+- Updated HTTP header parsing to correct issues seen with openconnect 3.20.
 - seccomp will no longer force an exit if system calls cannot be disabled.
   Patch by Faidon Liambiotis.
 

@@ -249,7 +249,10 @@ int main() {
   else
     CPPFLAGS="${libopts_save_CPPFLAGS}"
     LIBS="${libopts_save_LIBS}"
-    AC_MSG_ERROR([the regex library does not work])
+    libopts_cv_with_libregex_root=no
+    libopts_cv_with_libregex_cflags=no
+    libopts_cv_with_libregex_libs=no
+    AC_MSG_RESULT([the regex library does not work and will not be used])
   fi
 
 ]) # end of AC_DEFUN of LIBOPTS_WITHLIB_REGEX

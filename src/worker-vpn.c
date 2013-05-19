@@ -1010,6 +1010,7 @@ socklen_t sl;
 		ret = tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n", ws->config->keepalive);
 		SEND_ERR(ret);
 
+		oclog(ws, LOG_INFO, "DTLS ciphersuite: %s", ws->req.selected_ciphersuite);
 		ret = tls_printf(ws->session, "X-DTLS-CipherSuite: %s\r\n", ws->req.selected_ciphersuite);
 		SEND_ERR(ret);
 

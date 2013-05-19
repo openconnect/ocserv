@@ -294,15 +294,15 @@ uint8_t* p;
 
 		case HEADER_DTLS_CIPHERSUITE:
 #if GNUTLS_VERSION_NUMBER >= 0x030200
-			if (memmem(req->value.data, req->value.length, "SALSA20-UMAC96", 14) != NULL) {
-			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20:+UMAC96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+			if (memmem(req->value.data, req->value.length, "ESTREAM-SALSA20-UMAC96", 21) != NULL) {
+			        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
+			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+			        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
+			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
+			} else if (memmem(req->value.data, req->value.length, "SALSA20-UMAC96", 14) != NULL) {
+			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 			        req->selected_ciphersuite = "SALSA20-UMAC96";
 			        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
-			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
-			} else if (memmem(req->value.data, req->value.length, "ESTREAM-SALSA20-UMAC96", 21) != NULL) {
-			        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
-			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20:+UMAC96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-			        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
 			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
                         } else
 #endif
@@ -470,6 +470,7 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 		return -1;
         }
 
+	oclog(ws, LOG_INFO, "setting up DTLS connection");
 	/* DTLS cookie verified.
 	 * Initialize session.
 	 */

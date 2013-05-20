@@ -36,3 +36,5 @@ gl/sys/time.h
 gl/sys/types.h
 src/ocpasswd
 src/stamp-man
+doc/stamp-man
+doc/ocpasswd.8

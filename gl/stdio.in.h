@@ -3,16 +3,16 @@
    Copyright (C) 2004, 2007-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   it under the terms of the GNU Lesser General Public License as published by
+   the Free Software Foundation; either version 2.1, or (at your option)
    any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program; if not, see <http://www.gnu.org/licenses/>.  */
 
 #if __GNUC__ >= 3
@@ -579,13 +579,23 @@ _GL_CXXALIAS_SYS (fwrite, size_t,
    <http://sources.redhat.com/bugzilla/show_bug.cgi?id=11959>,
    which sometimes causes an unwanted diagnostic for fwrite calls.
    This affects only function declaration attributes under certain
-   versions of gcc, and is not needed for C++.  */
+   versions of gcc and clang, and is not needed for C++.  */
 #  if (0 < __USE_FORTIFY_LEVEL                                          \
        && __GLIBC__ == 2 && 4 <= __GLIBC_MINOR__ && __GLIBC_MINOR__ <= 15 \
        && 3 < __GNUC__ + (4 <= __GNUC_MINOR__)                          \
        && !defined __cplusplus)
 #   undef fwrite
-#   define fwrite(a, b, c, d) ({size_t __r = fwrite (a, b, c, d); __r; })
+#   undef fwrite_unlocked
+extern size_t __REDIRECT (rpl_fwrite,
+                          (const void *__restrict, size_t, size_t,
+                           FILE *__restrict),
+                          fwrite);
+extern size_t __REDIRECT (rpl_fwrite_unlocked,
+                          (const void *__restrict, size_t, size_t,
+                           FILE *__restrict),
+                          fwrite_unlocked);
+#   define fwrite rpl_fwrite
+#   define fwrite_unlocked rpl_fwrite_unlocked
 #  endif
 # endif
 _GL_CXXALIASWARN (fwrite);

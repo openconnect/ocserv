@@ -4,6 +4,9 @@ SUBDIRS = gl libopts src doc
 
 ACLOCAL_AMFLAGS = -I gl/m4 -I libopts/m4 -I m4
 
+gl:
+	gnulib-tool --add-import --lgpl=2
+
 ctags:
 	find . -type f -name "*.[ch]*" | xargs @CTAGS@
 

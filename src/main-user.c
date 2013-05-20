@@ -36,7 +36,7 @@
 #ifdef HAVE_LIBUTIL
 # include <utmpx.h>
 #endif
-#include <timespec.h>
+#include <gettime.h>
 
 #include <vpn.h>
 #include <cookies.h>

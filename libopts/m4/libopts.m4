@@ -72,7 +72,7 @@ AC_DEFUN([INVOKE_LIBOPTS_MACROS_FIRST],[
   ${lo_have_typ_hdr} || \
     ]AC_MSG_ERROR([you must have inttypes.h or stdint.h on your system])[
 
-  for f in sys_types sys_mman sys_param sys_stat sys_wait \
+  for f in sys_types sys_param sys_stat \
            string errno stdlib memory setjmp
   do eval as_ac_var=\${ac_cv_header_${f}_h}
      test "X${as_ac_var}" = Xyes || {

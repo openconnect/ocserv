@@ -261,6 +261,8 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 unsigned length;
 size_t nlen;
 uint8_t* p;
+char * token;
+char * str;
 
 	if (req->value.length <= 0)
 		return;
@@ -293,30 +295,38 @@ uint8_t* p;
 			break;
 
 		case HEADER_DTLS_CIPHERSUITE:
+			str = (char*)req->value.data;
+			while ((token = strtok(str, ":")) != NULL) {
 #if GNUTLS_VERSION_NUMBER >= 0x030201
-			if (memmem(req->value.data, req->value.length, "ESTREAM-SALSA20-UMAC96", 21) != NULL) {
-			        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
-			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-			        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
-			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
-			} else if (memmem(req->value.data, req->value.length, "SALSA20-UMAC96", 14) != NULL) {
-			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-			        req->selected_ciphersuite = "SALSA20-UMAC96";
-			        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
-			        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
-                        } else
+				if (strcmp(token, "ESTREAM-SALSA20-UMAC96") == 0) {
+				        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
+				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
+				        break;
+				} else if (strcmp(token, "SALSA20-UMAC96") == 0) {
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->selected_ciphersuite = "SALSA20-UMAC96";
+				        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
+				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
+				        break;
+	                        } else
 #endif
-			if (memmem(req->value.data, req->value.length, "AES128-SHA", 10) != NULL) {
-			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-			        req->selected_ciphersuite = "AES128-SHA";
-			        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC;
-			        req->gnutls_mac = GNUTLS_MAC_SHA1;
-			} else if (memmem(req->value.data, req->value.length, "DES-CBC3-SHA", 11) != NULL) {
-			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-			        req->selected_ciphersuite = "DES-CBC3-SHA";
-			        req->gnutls_cipher = GNUTLS_CIPHER_3DES_CBC;
-			        req->gnutls_mac = GNUTLS_MAC_SHA1;
-                        }
+				if (strcmp(token, "AES128-SHA") == 0) {
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->selected_ciphersuite = "AES128-SHA";
+				        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC;
+				        req->gnutls_mac = GNUTLS_MAC_SHA1;
+				        break;
+				} else if (strcmp(token, "DES-CBC3-SHA") == 0) {
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->selected_ciphersuite = "DES-CBC3-SHA";
+				        req->gnutls_cipher = GNUTLS_CIPHER_3DES_CBC;
+				        req->gnutls_mac = GNUTLS_MAC_SHA1;
+				        break;
+	                        }
+				str = NULL;
+			}
 
 			break;
 

@@ -43,7 +43,8 @@ void str_clear(str_st * str)
 }
 
 #define MIN_CHUNK 64
-
+/* This function always null terminates the string in dest.
+ */
 int str_append_data(str_st * dest, const void *data, size_t data_size)
 {
 	size_t tot_len = data_size + dest->length;
@@ -51,7 +52,7 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 	if (data_size == 0)
 		return 0;
 
-	if (dest->max_length >= tot_len) {
+	if (dest->max_length >= tot_len+1) {
 		size_t unused = MEMSUB(dest->data, dest->allocd);
 
 		if (dest->max_length - unused <= tot_len) {
@@ -63,6 +64,7 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 		}
 		memmove(&dest->data[dest->length], data, data_size);
 		dest->length = tot_len;
+		dest->data[dest->length] = 0;
 
 		return tot_len;
 	} else {
@@ -71,7 +73,7 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 		    MAX(data_size, MIN_CHUNK) + MAX(dest->max_length,
 						    MIN_CHUNK);
 
-		dest->allocd = realloc(dest->allocd, new_len);
+		dest->allocd = realloc(dest->allocd, new_len+1);
 		if (dest->allocd == NULL)
 			return ERR_MEM;
 		dest->max_length = new_len;
@@ -83,6 +85,7 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 
 		memcpy(&dest->data[dest->length], data, data_size);
 		dest->length = tot_len;
+		dest->data[dest->length] = 0;
 
 		return tot_len;
 	}

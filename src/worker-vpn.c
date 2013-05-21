@@ -293,7 +293,7 @@ uint8_t* p;
 			break;
 
 		case HEADER_DTLS_CIPHERSUITE:
-#if GNUTLS_VERSION_NUMBER >= 0x030200
+#if GNUTLS_VERSION_NUMBER >= 0x030201
 			if (memmem(req->value.data, req->value.length, "ESTREAM-SALSA20-UMAC96", 21) != NULL) {
 			        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
 			        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";

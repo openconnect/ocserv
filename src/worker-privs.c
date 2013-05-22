@@ -18,6 +18,7 @@
 
 #include <config.h>
 #include <worker.h>
+#include <sys/ioctl.h>
 
 #ifdef HAVE_LIBSECCOMP
 
@@ -35,34 +36,45 @@ int disable_system_calls(struct worker_st *ws)
 		return -1;
 	}
 
-#define ADD_SYSCALL(name) \
-	ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), 0); \
+#define ADD_SYSCALL(name, ...) \
+	ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(name), __VA_ARGS__); \
 	/* libseccomp returns EDOM for pseudo-syscalls due to a bug */ \
 	if (ret < 0 && ret != -EDOM) { \
 		oclog(ws, LOG_DEBUG, "could not add " #name " to seccomp filter: %s", strerror(-ret)); \
 		ret = -1; \
 		goto fail; \
 	}
+
 	
-	ADD_SYSCALL(time);
-	ADD_SYSCALL(recvmsg);
-	ADD_SYSCALL(sendmsg);
-	ADD_SYSCALL(read);
-	ADD_SYSCALL(write);
-	ADD_SYSCALL(writev);
-	ADD_SYSCALL(select);
-	ADD_SYSCALL(alarm);
-	ADD_SYSCALL(close);
-	ADD_SYSCALL(exit);
-	ADD_SYSCALL(exit_group);
-	ADD_SYSCALL(send);
-	ADD_SYSCALL(recv);
-	ADD_SYSCALL(socket);
-	ADD_SYSCALL(connect);
+	ADD_SYSCALL(time, 0);
+	ADD_SYSCALL(recvmsg, 0);
+	ADD_SYSCALL(sendmsg, 0);
+	ADD_SYSCALL(read, 0);
+	ADD_SYSCALL(write, 0);
+	ADD_SYSCALL(writev, 0);
+	ADD_SYSCALL(send, 0);
+	ADD_SYSCALL(recv, 0);
+
+	/* it seems we need to add sendto and recvfrom
+	 * since send() and recv() aren't real system
+	 * calls.
+	 */
+	ADD_SYSCALL(sendto, 0);
+	ADD_SYSCALL(recvfrom, 0);
+
+	ADD_SYSCALL(select, 0);
+	ADD_SYSCALL(alarm, 0);
+	ADD_SYSCALL(close, 0);
+	ADD_SYSCALL(exit, 0);
+	ADD_SYSCALL(exit_group, 0);
+	ADD_SYSCALL(socket, 0);
+	ADD_SYSCALL(connect, 0);
 
 	/* this we need to get the MTU from
 	 * the TUN device */
-	ADD_SYSCALL(ioctl);
+	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFDSTADDR));
+	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFADDR));
+	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFMTU));
 
 	ret = seccomp_load(ctx);
 	if (ret < 0) {
@@ -71,7 +83,6 @@ int disable_system_calls(struct worker_st *ws)
 		goto fail;
 	}
 	
-	seccomp_release(ctx);
 	ret = 0;
 fail:
 	seccomp_release(ctx);

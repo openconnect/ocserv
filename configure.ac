@@ -97,8 +97,7 @@ AC_ARG_ENABLE(seccomp,
     seccomp_enabled=$enableval, seccomp_enabled=no)
 
 if [ test "$seccomp_enabled" = "yes" ];then
-AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <linux/seccomp.h>
-#include <seccomp.h>], [seccomp_init(0);])
+AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <seccomp.h>], [seccomp_init(0);])
 if [ test -z "$LIBSECCOMP" ];then
 	seccomp_enabled="no"
 else

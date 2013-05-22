@@ -334,10 +334,13 @@ struct script_wait_st *stmp, *spos;
 			}
 		}
 	
-		if (estatus != 0 ||
-			(WIFSIGNALED(status) && WTERMSIG(status) == SIGSEGV)) {
-			if (WIFSIGNALED(status))
+		if (WIFSIGNALED(status)) {
+			if (WTERMSIG(status) == SIGSEGV)
 				mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
+			else if (WTERMSIG(status) == SIGSYS)
+				mslog(s, NULL, LOG_ERR, "Child %u died with sigsys\n", (unsigned)pid);
+			else
+				mslog(s, NULL, LOG_ERR, "Child %u died with signal %d\n", (unsigned)pid, (int)WTERMSIG(status));
 		}
 	}
 	need_children_cleanup = 0;

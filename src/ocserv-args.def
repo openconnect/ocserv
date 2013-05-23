@@ -166,7 +166,7 @@ server-key = /path/to/key.pem
 #crl = /path/to/crl.pem
 
 # GnuTLS priority string
-tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE"
+tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE:%COMPAT"
 
 # The time (in seconds) that a client is allowed to stay connected prior
 # to authentication
@@ -180,7 +180,7 @@ auth-timeout = 40
 # Once a client is authenticated he's provided a cookie with
 # which he can reconnect. This option sets the maximum lifetime
 # of that cookie.
-cookie-validity = 43200
+cookie-validity = 172800
 
 # A cookie database. If not set cookies are stored in memory and
 # server restarts won't preserve them.
@@ -208,7 +208,8 @@ pid-file = /var/run/ocserv.pid
 # It must be accessible within the chroot environment (if any)
 socket-file = /var/run/ocserv-socket
 
-# The user the worker processes will be run as.
+# The user the worker processes will be run as. It should be
+# unique (no other services run as this user).
 run-as-user = nobody
 run-as-group = nogroup
 

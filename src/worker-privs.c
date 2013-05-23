@@ -29,7 +29,7 @@ int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
-	
+
 	ctx = seccomp_init(SCMP_ACT_KILL);
 	if (ctx == NULL) {
 		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
@@ -45,8 +45,8 @@ int disable_system_calls(struct worker_st *ws)
 		goto fail; \
 	}
 
-	
 	ADD_SYSCALL(time, 0);
+	ADD_SYSCALL(gettimeofday, 0);
 	ADD_SYSCALL(recvmsg, 0);
 	ADD_SYSCALL(sendmsg, 0);
 	ADD_SYSCALL(read, 0);
@@ -61,7 +61,6 @@ int disable_system_calls(struct worker_st *ws)
 	 */
 	ADD_SYSCALL(sendto, 0);
 	ADD_SYSCALL(recvfrom, 0);
-
 	ADD_SYSCALL(select, 0);
 	ADD_SYSCALL(alarm, 0);
 	ADD_SYSCALL(close, 0);
@@ -84,6 +83,7 @@ int disable_system_calls(struct worker_st *ws)
 	}
 	
 	ret = 0;
+
 fail:
 	seccomp_release(ctx);
 	return ret;

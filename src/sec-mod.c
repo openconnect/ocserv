@@ -283,7 +283,11 @@ int sd;
 		data.size = ret - 2;
 		 
 		if (type == 'S') {
+#if GNUTLS_VERSION_NUMBER >= 0x030200
+		 	ret = gnutls_privkey_sign_hash(key[i], 0, GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA, &data, &out);
+#else
 		 	ret = gnutls_privkey_sign_raw_data(key[i], 0, &data, &out);
+#endif
 		} else if (type == 'D') {
 		 	ret = gnutls_privkey_decrypt_data(key[i], 0, &data, &out);
 		} else {

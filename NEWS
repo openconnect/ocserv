@@ -4,6 +4,8 @@
 - seccomp will no longer force an exit if system calls cannot be disabled.
   Patch by Faidon Liambiotis.
 - Added support for Salsa20 + UMAC ciphers.
+- Will now check X-CSTP-Address-Type header and will not send address types
+  that were not requested.
 
 
 * Version 0.1.2 (released 2013-05-07)

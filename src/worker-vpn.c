@@ -254,6 +254,7 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 #define STR_HDR_CS "X-DTLS-CipherSuite"
 #define STR_HDR_DMTU "X-DTLS-MTU"
 #define STR_HDR_CMTU "X-CSTP-MTU"
+#define STR_HDR_ATYPE "X-CSTP-Address-Type"
 #define STR_HDR_HOST "X-CSTP-Hostname"
 
 static void value_check(struct worker_st *ws, struct http_req_st *req)
@@ -284,7 +285,6 @@ char * str;
 
 			req->master_secret_set = 1;
 			break;
-
 		case HEADER_HOSTNAME:
 			if (req->value.length+1 > MAX_HOSTNAME_SIZE) {
 				req->hostname[0] = 0;
@@ -332,6 +332,12 @@ char * str;
 
 		case HEADER_CSTP_MTU:
 			req->cstp_mtu = atoi((char*)req->value.data);
+			break;
+		case HEADER_CSTP_ATYPE:
+			if (memmem(req->value.data, req->value.length, "IPv4", 4) == NULL)
+				req->no_ipv4 = 1;
+			if (memmem(req->value.data, req->value.length, "IPv6", 4) == NULL)
+				req->no_ipv6 = 1;
 			break;
 		case HEADER_DTLS_MTU:
 			req->dtls_mtu = atoi((char*)req->value.data);
@@ -404,6 +410,9 @@ static void header_check(struct http_req_st *req)
 	} else if (req->header.length == sizeof(STR_HDR_CS)-1 && 
 	        strncmp((char*)req->header.data, STR_HDR_CS, req->header.length) == 0) {
 		req->next_header = HEADER_DTLS_CIPHERSUITE;
+	} else if (req->header.length == sizeof(STR_HDR_ATYPE)-1 && 
+	        strncmp((char*)req->header.data, STR_HDR_ATYPE, req->header.length) == 0) {
+		req->next_header = HEADER_CSTP_ATYPE;
 	} else {
 		req->next_header = 0;
 	}
@@ -650,7 +659,7 @@ restart:
 			oclog(ws, LOG_INFO, "error receiving client data"); 
 			exit_worker(ws);
 		}
-	
+
 		nparsed = http_parser_execute(&parser, &settings, (void*)buf, nrecvd);
 		if (nparsed == 0) {
 			oclog(ws, LOG_INFO, "error parsing HTTP request"); 
@@ -915,7 +924,7 @@ socklen_t sl;
 		oclog(ws, LOG_DEBUG, "disabling UDP (DTLS) connection");
 	}
 
-	if (vinfo.ipv4) {
+	if (vinfo.ipv4 && req->no_ipv4 == 0) {
 		oclog(ws, LOG_DEBUG, "sending IPv4 %s", vinfo.ipv4);
 		ret = tls_printf(ws->session, "X-CSTP-Address: %s\r\n", vinfo.ipv4);
 		SEND_ERR(ret);
@@ -934,7 +943,7 @@ socklen_t sl;
 		}
 	}
 	
-	if (vinfo.ipv6) {
+	if (vinfo.ipv6 && req->no_ipv6 == 0) {
 		oclog(ws, LOG_DEBUG, "sending IPv6 %s", vinfo.ipv6);
 		ret = tls_printf(ws->session, "X-CSTP-Address: %s\r\n", vinfo.ipv6);
 		SEND_ERR(ret);
@@ -954,6 +963,10 @@ socklen_t sl;
 	}
 
 	for (i=0;i<vinfo.routes_size;i++) {
+		if (req->no_ipv6 != 0 && strchr(vinfo.routes[i], ':') != 0)
+			continue;
+		if (req->no_ipv4 != 0 && strchr(vinfo.routes[i], '.') != 0)
+			continue;
 		oclog(ws, LOG_DEBUG, "adding route %s", vinfo.routes[i]);
 		ret = tls_printf(ws->session,
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);

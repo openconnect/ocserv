@@ -26,6 +26,7 @@ enum {
 	HEADER_MASTER_SECRET,
 	HEADER_HOSTNAME,
 	HEADER_CSTP_MTU,
+	HEADER_CSTP_ATYPE,
 	HEADER_DTLS_MTU,
 	HEADER_DTLS_CIPHERSUITE,
 };
@@ -61,6 +62,9 @@ struct http_req_st {
 	unsigned int message_complete;
 	unsigned dtls_mtu;
 	unsigned cstp_mtu;
+	
+	unsigned no_ipv4;
+	unsigned no_ipv6;
 };
 
 typedef struct worker_st {

@@ -265,6 +265,10 @@ route = 192.168.5.0/255.255.255.0
 # It is not used by the openconnect client.
 #user-profile = /path/to/file.xml
 
+# Binary files that may be downloaded by the CISCO client. Must
+# be within any chroot environment.
+binary-files = /path/to/binaries
+
 # Unless set to false it is required for clients to present their
 # certificate even if they are authenticating via a previously granted
 # cookie. Legacy CISCO clients do not do that, and thus this option

@@ -114,6 +114,7 @@ struct cfg_st {
 	char *disconnect_script;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
+	char *binary_path; /* a path to binary files */
 	char *xml_config_file;
 	char *xml_config_hash;
 	char *cert_hash;

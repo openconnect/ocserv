@@ -61,7 +61,7 @@
 #define DPD_MAX_TRIES 3
 
 /* HTTP requests prior to disconnection */
-#define MAX_HTTP_REQUESTS 8
+#define MAX_HTTP_REQUESTS 16
 
 static int terminate = 0;
 static int parse_cstp_data(struct worker_st* ws, uint8_t* buf, size_t buf_size, time_t);
@@ -85,6 +85,7 @@ typedef int (*url_handler_fn)(worker_st*, unsigned http_ver);
 struct known_urls_st {
 	const char* url;
 	unsigned url_size;
+	unsigned partial_match;
 	url_handler_fn get_handler;
 	url_handler_fn post_handler;
 };
@@ -189,7 +190,8 @@ int ret;
 
 #endif
 
-#define LL(x,y,z) {x, sizeof(x)-1, y, z}
+#define LL(x,y,z) {x, sizeof(x)-1, 0, y, z}
+#define LL_DIR(x,y,z) {x, sizeof(x)-1, 1, y, z}
 const static struct known_urls_st known_urls[] = {
 		LL("/", get_auth_handler, post_auth_handler),
 		LL("/auth", get_auth_handler, post_auth_handler),
@@ -197,8 +199,12 @@ const static struct known_urls_st known_urls[] = {
 		LL("/1/index.html", get_auth_handler, post_auth_handler),
 		LL("/profiles", get_config_handler, NULL),
 		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
+		LL("/1/Windows", get_empty_handler, NULL),
+		LL("/1/Linux_64", get_empty_handler, NULL),
+		LL("/1/Linux_32", get_empty_handler, NULL),
+		LL_DIR("/1/binaries/", get_file_handler, NULL),
 #endif
-		{NULL, 0, NULL, NULL}
+		{NULL, 0, 0, NULL, NULL}
 };
 
 static url_handler_fn get_url_handler(const char* url)
@@ -208,11 +214,12 @@ unsigned len = strlen(url);
 
 	p = known_urls;
 	do {
-		if (p->url != NULL && (
-		        (len == p->url_size && strcmp(p->url, url)==0) ||
-			(len >= p->url_size && strncmp(p->url, url, p->url_size)==0 && 
-				(url[p->url_size] == '/' || url[p->url_size] == '?'))))
-			return p->get_handler;
+		if (p->url != NULL) {
+		        if ((len == p->url_size && strcmp(p->url, url)==0) ||
+				(len >= p->url_size && strncmp(p->url, url, p->url_size)==0 && 
+				(p->partial_match != 0 || url[p->url_size] == '/' || url[p->url_size] == '?')))
+				return p->get_handler;
+		}
 		p++;
 	} while(p->url != NULL);
 	

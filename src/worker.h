@@ -120,6 +120,9 @@ int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size);
 int get_auth_handler(worker_st *server, unsigned http_ver);
 int post_auth_handler(worker_st *server, unsigned http_ver);
 
+int get_empty_handler(worker_st *server, unsigned http_ver);
+int get_file_handler(worker_st *ws, unsigned http_ver);
+
 void set_resume_db_funcs(gnutls_session_t);
 
 

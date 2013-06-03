@@ -207,10 +207,7 @@ struct stat st;
 	if (ret < 0)
 		return -1;
 
-#if 0
 	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
-#endif
-	ret = tls_puts(ws->session, "Connection: Close\r\n");
 	if (ret < 0)
 		return -1;
 
@@ -240,7 +237,7 @@ struct stat st;
 	
 	oclog(ws, LOG_DEBUG, "sent file %s (%u bytes)", path, (unsigned)st.st_size);
 
-	return 1;
+	return 0;
 }
 
 #endif

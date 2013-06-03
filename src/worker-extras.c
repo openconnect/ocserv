@@ -185,7 +185,7 @@ const char* file;
 char path[_POSIX_PATH_MAX];
 struct stat st;
 
-	if (ws->req.url == NULL)
+	if (ws->config->binary_path == NULL || ws->req.url == NULL)
 		return -1;
 
 	file = strrchr(ws->req.url, '/');

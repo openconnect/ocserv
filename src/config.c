@@ -165,7 +165,6 @@ unsigned j;
 	READ_STRING("pin-file", config->pin_file, 0);
 	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	READ_STRING("binary-files", config->binary_path, 0);
 	READ_STRING("user-profile", config->xml_config_file, 0);
 #endif
 

@@ -121,7 +121,6 @@ int get_auth_handler(worker_st *server, unsigned http_ver);
 int post_auth_handler(worker_st *server, unsigned http_ver);
 
 int get_empty_handler(worker_st *server, unsigned http_ver);
-int get_file_handler(worker_st *ws, unsigned http_ver);
 int get_config_handler(worker_st *ws, unsigned http_ver);
 int get_cscot_handler(worker_st *ws, unsigned http_ver);
 

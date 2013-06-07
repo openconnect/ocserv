@@ -100,10 +100,6 @@ const static struct known_urls_st known_urls[] = {
 		LL("/1/index.html", get_auth_handler, post_auth_handler),
 		LL("/profiles", get_config_handler, NULL),
 		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
-		LL("/1/Windows", get_empty_handler, NULL),
-		LL("/1/Linux_64", get_empty_handler, NULL),
-		LL("/1/Linux_32", get_empty_handler, NULL),
-		LL_DIR("/1/binaries/", get_file_handler, NULL),
 #endif
 		{NULL, 0, 0, NULL, NULL}
 };

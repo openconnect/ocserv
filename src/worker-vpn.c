@@ -206,15 +206,15 @@ char * str;
 			str = (char*)req->value.data;
 			while ((token = strtok(str, ":")) != NULL) {
 #if GNUTLS_VERSION_NUMBER >= 0x030201
-				if (strcmp(token, "ESTREAM-SALSA20-UMAC96") == 0) {
-				        req->selected_ciphersuite = "ESTREAM-SALSA20-UMAC96";
+				if (strcmp(token, "X-ESTREAM-SALSA20-UMAC96") == 0) {
+				        req->selected_ciphersuite = "X-ESTREAM-SALSA20-UMAC96";
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 				        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
 				        break;
-				} else if (strcmp(token, "SALSA20-UMAC96") == 0) {
+				} else if (strcmp(token, "X-SALSA20-UMAC96") == 0) {
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-				        req->selected_ciphersuite = "SALSA20-UMAC96";
+				        req->selected_ciphersuite = "X-SALSA20-UMAC96";
 				        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
 				        break;

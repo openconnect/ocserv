@@ -740,7 +740,7 @@ static int connect_handler(worker_st *ws)
 {
 struct http_req_st *req = &ws->req;
 fd_set rfds;
-int l, e, max, ret;
+int l, e, max, ret, overhead;
 struct vpn_st vinfo;
 unsigned tls_retry;
 char *p;
@@ -955,7 +955,8 @@ socklen_t sl;
 			oclog(ws, LOG_INFO, "reducing DTLS MTU to peer's DTLS MTU (%u)", req->dtls_mtu);
 		}
 
-		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
+		overhead = tls_get_overhead(GNUTLS_DTLS0_9, ws->req.gnutls_cipher, ws->req.gnutls_mac);
+		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu-overhead);
 	}
 	
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
@@ -966,7 +967,8 @@ socklen_t sl;
 			goto exit;
 	}
 
-	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu);
+	overhead = tls_get_overhead(gnutls_protocol_get_version(ws->session), gnutls_cipher_get(ws->session), gnutls_mac_get(ws->session));
+	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu-overhead);
 	SEND_ERR(ret);
 
 	oclog(ws, LOG_INFO, "selected MTU is %u", ws->conn_mtu);

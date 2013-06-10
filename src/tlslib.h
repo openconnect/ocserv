@@ -22,6 +22,7 @@ void tls_global_init(struct main_server_st* s);
 void tls_global_init_certs(struct main_server_st* s);
 
 ssize_t tls_send_file(gnutls_session_t session, const char *file);
+size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
 
 #define GNUTLS_FATAL_ERR(x) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \

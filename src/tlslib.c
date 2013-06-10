@@ -630,3 +630,49 @@ unsigned i;
 	
 	return retval;
 }
+
+size_t tls_get_overhead(gnutls_protocol_t version, gnutls_cipher_algorithm_t cipher, gnutls_mac_algorithm_t mac)
+{
+unsigned iv_size, overhead = 0, t;
+unsigned block_size;
+
+	block_size = gnutls_cipher_get_block_size(cipher);
+	iv_size = gnutls_cipher_get_iv_size(cipher);
+	
+	switch(version) {
+		case GNUTLS_DTLS0_9:
+		case GNUTLS_DTLS1_0:
+		case GNUTLS_DTLS1_2:
+			overhead += 13;
+			break;
+		default:
+			overhead += 5;
+			break;
+	}
+	
+	switch(cipher) {
+		case GNUTLS_CIPHER_3DES_CBC:
+		case GNUTLS_CIPHER_AES_128_CBC:
+		case GNUTLS_CIPHER_AES_256_CBC:
+		case GNUTLS_CIPHER_CAMELLIA_128_CBC:
+		case GNUTLS_CIPHER_CAMELLIA_256_CBC:
+		case GNUTLS_CIPHER_AES_192_CBC:
+		case GNUTLS_CIPHER_CAMELLIA_192_CBC:
+			overhead += block_size; /* max pad */
+			overhead += iv_size; /* explicit IV */
+			break;
+		case GNUTLS_CIPHER_AES_128_GCM:
+		case GNUTLS_CIPHER_AES_256_GCM:
+			overhead += iv_size; /* explicit IV */
+			overhead += block_size; /* tag size */
+			break;
+		default:
+			break;
+	}
+
+	t = gnutls_hmac_get_len(mac);
+	if (t > 0)
+		overhead += t;
+		
+	return overhead;
+}

@@ -627,8 +627,10 @@ static
 void mtu_set(worker_st* ws, unsigned mtu)
 {
 	ws->conn_mtu = mtu;
-	gnutls_dtls_set_data_mtu (ws->dtls_session, mtu);
-	send_tun_mtu(ws, mtu);
+	
+	if (ws->dtls_session)
+		gnutls_dtls_set_data_mtu (ws->dtls_session, mtu);
+	send_tun_mtu(ws, mtu - 1); /* for DTLS header */
 	oclog(ws, LOG_INFO, "setting MTU to %u", ws->conn_mtu);
 }
 
@@ -1039,7 +1041,7 @@ socklen_t sl;
 			goto exit;
 		
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
-			l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
+			l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu - 1);
 			if (l < 0) {
 				e = errno;
 				
@@ -1060,7 +1062,7 @@ socklen_t sl;
 			if (ws->udp_state == UP_ACTIVE) {
 				ws->buffer[7] = AC_PKT_DATA;
 
-				ret = tls_send(ws->dtls_session, ws->buffer + 7, l+1);
+				ret = tls_send(ws->dtls_session, ws->buffer + 7, l + 1);
 				GNUTLS_FATAL_ERR(ret);
 
 				if (ret == GNUTLS_E_LARGE_PACKET) {

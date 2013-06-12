@@ -1,3 +1,8 @@
+* Version 0.1.4 (unreleased)
+
+- On DTLS ensure that sent packets will not exceed the MTU.
+
+
 * Version 0.1.3 (released 2013-06-12)
 
 - Updated HTTP header parsing to correct issues seen with openconnect 3.20.

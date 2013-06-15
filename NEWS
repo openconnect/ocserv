@@ -1,4 +1,4 @@
-* Version 0.1.4 (unreleased)
+* Version 0.1.4 (2013-06-15)
 
 - On DTLS ensure that sent packets will not exceed the MTU.
 

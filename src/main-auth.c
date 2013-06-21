@@ -205,12 +205,17 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
 		   const struct cmd_auth_req_st * req)
 {
 int ret = -1;
+char ipbuf[128];
+const char* ip;
 unsigned username_set = 0;
+
+	ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
+			    ipbuf, sizeof(ipbuf));
 
 	if (req->user_pass_present != 0) {
 #ifdef HAVE_PAM
 		if ((s->config->auth_types & AUTH_TYPE_PAM) == AUTH_TYPE_PAM) {
-			ret = pam_auth_user(req->user, req->pass, proc->groupname, sizeof(proc->groupname));
+			ret = pam_auth_user(req->user, req->pass, proc->groupname, sizeof(proc->groupname), ip);
 			if (ret != 0)
 				ret = -1;
 

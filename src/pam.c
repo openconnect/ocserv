@@ -64,7 +64,7 @@ struct pam_response *replies;
 
 /* Returns 0 if the user is successfully authenticated
  */
-int pam_auth_user(const char* user, const char* pass, char *groupname, int groupname_size)
+int pam_auth_user(const char* user, const char* pass, char *groupname, int groupname_size, const char* ip)
 {
 pam_handle_t * ph;
 int ret, pret;
@@ -80,6 +80,9 @@ struct passwd * pwd;
 		syslog(LOG_AUTH, "Error in PAM authentication initialization: %s", pam_strerror(ph, pret));
 		return -1;
 	}
+	
+	if (ip != NULL)
+		pam_set_item(ph, PAM_RHOST, ip);
 	
 	pret = pam_authenticate(ph, PAM_SILENT);
 	if (pret != PAM_SUCCESS) {

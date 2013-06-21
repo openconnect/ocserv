@@ -46,17 +46,26 @@
 
 #define SUCCESS_MSG_FOOT "</auth>\n"
 
-const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-	"<auth id=\"main\">\n"
+const char xml_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+
+const char xml_config_start[] = "<config-auth>\n";
+
+const char xml_opaque[] = "<opaque><config-hash>%s</config-hash></opaque>\n";
+
+const char xml_auth[] = "<auth id=\"main\">\n"
 	 "<message>Please enter your username and password.</message>\n"
 	 "<form method=\"post\" action=\"/auth\">\n"
 	 "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
 	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
 	 "</form></auth>\n";
 
+const char xml_config_end[] = "</config-auth>\n";
+
 int get_auth_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
+char opaque[sizeof(xml_opaque)+40]; /* the size of SHA1 hash in hex */
+unsigned int total, opaque_len = 0;
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -71,11 +80,18 @@ int ret;
 	if (ret < 0)
 		return -1;
 
-	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)sizeof(login_msg)-1);
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	total = sizeof(xml_config_end) + sizeof(xml_start) + sizeof(xml_config_start) + sizeof(xml_auth) - 4;
+	if (ws->config->xml_config_hash) {
+		snprintf(opaque, sizeof(opaque), xml_opaque, ws->config->xml_config_hash);
+		opaque_len = strlen(opaque);
+		total += opaque_len;
+	}
+	ret = tls_printf(ws->session, "Content-Length: %u\r\n", total);
 	if (ret < 0)
 		return -1;
 
@@ -83,10 +99,46 @@ int ret;
 	if (ret < 0)
 		return -1;
 
-	ret = tls_send(ws->session, login_msg, sizeof(login_msg)-1);
+	ret = tls_send(ws->session, xml_start, sizeof(xml_start)-1);
 	if (ret < 0)
 		return -1;
-	
+
+	ret = tls_send(ws->session, xml_config_start, sizeof(xml_config_start)-1);
+	if (ret < 0)
+		return -1;
+
+	if (opaque_len > 0) {
+		ret = tls_send(ws->session, opaque, opaque_len);
+		if (ret < 0)
+			return -1;
+	}
+
+	ret = tls_send(ws->session, xml_auth, sizeof(xml_auth)-1);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_send(ws->session, xml_config_end, sizeof(xml_config_end)-1);
+	if (ret < 0)
+		return -1;
+#else
+	total = sizeof(xml_start) + sizeof(xml_auth) - 2;
+
+	ret = tls_printf(ws->session, "Content-Length: %u\r\n", total);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_send(ws->session, xml_start, sizeof(xml_start)-1);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_send(ws->session, xml_auth, sizeof(xml_auth)-1);
+	if (ret < 0)
+		return -1;
+#endif
 	ret = tls_uncork(ws->session);
 	if (ret < 0)
 		return -1;

@@ -50,7 +50,7 @@ const char xml_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 
 const char xml_config_start[] = "<config-auth>\n";
 
-const char xml_opaque[] = "<opaque><config-hash>%s</config-hash></opaque>\n";
+const char xml_opaque[] = "<opaque></opaque>\n";
 
 const char xml_auth[] = "<auth id=\"main\">\n"
 	 "<message>Please enter your username and password.</message>\n"
@@ -59,13 +59,12 @@ const char xml_auth[] = "<auth id=\"main\">\n"
 	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
 	 "</form></auth>\n";
 
-const char xml_config_end[] = "</config-auth>\n";
+const char xml_config_end[] = "<host-scan></host-scan></config-auth>\n";
 
 int get_auth_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
-char opaque[sizeof(xml_opaque)+40]; /* the size of SHA1 hash in hex */
-unsigned int total, opaque_len = 0;
+unsigned int total;
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -85,12 +84,9 @@ unsigned int total, opaque_len = 0;
 		return -1;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	total = sizeof(xml_config_end) + sizeof(xml_start) + sizeof(xml_config_start) + sizeof(xml_auth) - 4;
-	if (ws->config->xml_config_hash) {
-		snprintf(opaque, sizeof(opaque), xml_opaque, ws->config->xml_config_hash);
-		opaque_len = strlen(opaque);
-		total += opaque_len;
-	}
+	total = sizeof(xml_config_end) + sizeof(xml_start) + 
+	        sizeof(xml_config_start) + sizeof(xml_auth) + sizeof(xml_opaque) - 5;
+
 	ret = tls_printf(ws->session, "Content-Length: %u\r\n", total);
 	if (ret < 0)
 		return -1;
@@ -107,11 +103,9 @@ unsigned int total, opaque_len = 0;
 	if (ret < 0)
 		return -1;
 
-	if (opaque_len > 0) {
-		ret = tls_send(ws->session, opaque, opaque_len);
-		if (ret < 0)
-			return -1;
-	}
+	ret = tls_send(ws->session, xml_opaque, sizeof(xml_opaque)-1);
+	if (ret < 0)
+		return -1;
 
 	ret = tls_send(ws->session, xml_auth, sizeof(xml_auth)-1);
 	if (ret < 0)

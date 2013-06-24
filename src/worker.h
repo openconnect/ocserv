@@ -37,6 +37,13 @@ enum {
 	HTTP_HEADER_VALUE_RECV
 };
 
+enum {
+	S_AUTH_INACTIVE = 0,
+	S_AUTH_INIT,
+	S_AUTH_REQ,
+	S_AUTH_COMPLETE
+};
+
 struct http_req_st {
 	char url[256];
 
@@ -52,12 +59,13 @@ struct http_req_st {
 	unsigned int master_secret_set;
 
 	char *body;
+	unsigned int body_length;
+
 	char *gnutls_ciphersuite; /* static string */
 	char *selected_ciphersuite; /* static string */
 	int gnutls_cipher;
 	int gnutls_mac;
 
-	unsigned int body_length;
 	unsigned int headers_complete;
 	unsigned int message_complete;
 	unsigned dtls_mtu;
@@ -76,6 +84,7 @@ typedef struct worker_st {
 	
 	http_parser *parser;
 	struct cfg_st *config;
+	unsigned int auth_state; /* S_AUTH */
 
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
@@ -116,6 +125,7 @@ typedef struct worker_st {
 void vpn_server(struct worker_st* ws);
 
 int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size);
+int auth_user_deinit(worker_st *ws);
 
 int get_auth_handler(worker_st *server, unsigned http_ver);
 int post_auth_handler(worker_st *server, unsigned http_ver);

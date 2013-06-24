@@ -41,12 +41,18 @@ extern int syslog_open;
 #define AUTH_TYPE_CERTIFICATE (1<<2)
 #define AUTH_TYPE_PLAIN (1<<3 | AUTH_TYPE_USERNAME_PASS)
 
+#define ERR_SUCCESS 0
+#define ERR_BAD_COMMAND -2
+#define ERR_AUTH_FAIL -3
+#define ERR_AUTH_CONTINUE -4
+#define ERR_WAIT_FOR_SCRIPT -5
+#define ERR_MEM -6
+
 typedef struct 
 {
 	struct htable ht;
 	unsigned int entries;
 } hash_db_st;
-
 
 struct vpn_st {
 	char *name;	/* device name */

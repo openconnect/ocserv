@@ -1,6 +1,8 @@
 #ifndef PLAIN_H
 #define PLAIN_H
 
-int plain_auth_user(const char* passwd, const char* user, const char* pass, char *groupname, int groupname_size);
+#include <main-auth.h>
+
+extern const struct auth_mod_st plain_auth_funcs;
 
 #endif

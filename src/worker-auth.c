@@ -46,17 +46,25 @@
 
 #define SUCCESS_MSG_FOOT "</auth>\n"
 
-const char login_msg[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+static const char login_msg_user[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 	"<auth id=\"main\">\n"
-	 "<message>Please enter your username and password.</message>\n"
+	 "<message>Please enter your username</message>\n"
 	 "<form method=\"post\" action=\"/auth\">\n"
 	 "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
+	 "</form></auth>\n";
+
+static const char login_msg_no_user[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+	"<auth id=\"main\">\n"
+	 "<message>%s</message>\n"
+	 "<form method=\"post\" action=\"/auth\">\n"
 	 "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
 	 "</form></auth>\n";
 
-int get_auth_handler(worker_st *ws, unsigned http_ver)
+int get_auth_handler2(worker_st *ws, unsigned http_ver, const char* pmsg)
 {
 int ret;
+char login_msg[MAX_MSG_SIZE+sizeof(login_msg_user)];
+unsigned int lsize;
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -70,8 +78,18 @@ int ret;
 	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
 	if (ret < 0)
 		return -1;
+		
+	if (ws->auth_state == S_AUTH_REQ) {
+		/* only ask password */
+        	if (pmsg == NULL)
+	        	pmsg = "Please enter password";
+		lsize = snprintf(login_msg, sizeof(login_msg), login_msg_no_user, pmsg);
+	} else {
+		/* ask for username only */
+		lsize = snprintf(login_msg, sizeof(login_msg), login_msg_user);
+	}
 
-	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)sizeof(login_msg)-1);
+	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)lsize);
 	if (ret < 0)
 		return -1;
 
@@ -83,7 +101,7 @@ int ret;
 	if (ret < 0)
 		return -1;
 
-	ret = tls_send(ws->session, login_msg, sizeof(login_msg)-1);
+	ret = tls_send(ws->session, login_msg, lsize);
 	if (ret < 0)
 		return -1;
 	
@@ -92,6 +110,11 @@ int ret;
 		return -1;
 	
 	return 0;
+}
+
+int get_auth_handler(worker_st *ws, unsigned http_ver)
+{
+	return get_auth_handler2(ws, http_ver, NULL);
 }
 
 static
@@ -166,6 +189,28 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
+static int send_auth_init(int fd, const struct cmd_auth_init_st* r)
+{
+	struct iovec iov[2];
+	uint8_t cmd;
+	struct msghdr hdr;
+
+	memset(&hdr, 0, sizeof(hdr));
+	
+	cmd = AUTH_INIT;
+
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = (void*)r;
+	iov[1].iov_len = sizeof(*r);
+	
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	return(sendmsg(fd, &hdr, 0));
+}
+
 static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 {
 	struct iovec iov[2];
@@ -188,11 +233,10 @@ static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
-static int recv_auth_reply(worker_st *ws)
+static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 {
 	struct iovec iov[2];
 	uint8_t cmd = 0;
-	struct cmd_auth_reply_st resp;
 	struct msghdr hdr;
 	int ret, cmdlen;
 	union {
@@ -204,8 +248,8 @@ static int recv_auth_reply(worker_st *ws)
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
-	iov[1].iov_base = &resp;
-	iov[1].iov_len = sizeof(resp);
+	iov[1].iov_base = resp;
+	iov[1].iov_len = sizeof(*resp);
 
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
@@ -213,44 +257,46 @@ static int recv_auth_reply(worker_st *ws)
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
-	
+
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	
 	cmdlen = ret;
 	
 	if (cmdlen < 2) {
 		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", cmdlen, (int)2);
-		return -1;
+		return ERR_AUTH_FAIL;
 	}
 	if (cmd != AUTH_REP)
-		return -1;
+		return ERR_AUTH_FAIL;
 		
 	cmdlen--;
 
-	switch(resp.reply) {
+	switch(resp->reply) {
+		case REP_AUTH_MSG:
+			return ERR_AUTH_CONTINUE;
 		case REP_AUTH_OK:
-			if (cmdlen < sizeof(resp)) {
-				oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(resp)+1);
-				return -1;
+			if (cmdlen < sizeof(*resp)) {
+				oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
+				return ERR_AUTH_FAIL;
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 				if (cmptr->cmsg_level != SOL_SOCKET)
 					return -1;
 				if (cmptr->cmsg_type != SCM_RIGHTS)
-					return -1;
+					return ERR_AUTH_FAIL;
 				
 				memcpy(&ws->tun_fd, CMSG_DATA(cmptr), sizeof(int));
-				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
-				memcpy(ws->username, resp.user, sizeof(ws->username));
-				memcpy(ws->cookie, resp.cookie, sizeof(ws->cookie));
-				memcpy(ws->session_id, resp.session_id, sizeof(ws->session_id));
+				memcpy(ws->tun_name, resp->vname, sizeof(ws->tun_name));
+				memcpy(ws->username, resp->user, sizeof(ws->username));
+				memcpy(ws->cookie, resp->cookie, sizeof(ws->cookie));
+				memcpy(ws->session_id, resp->session_id, sizeof(ws->session_id));
 				ws->auth_ok = 1;
 			} else
-				return -1;
+				return ERR_AUTH_FAIL;
 			break;
 		default:
-			return -1;
+			return ERR_AUTH_FAIL;
 	}
 	
 	return 0;
@@ -283,33 +329,21 @@ int ret;
 }
 
 /* sends an authentication request to main thread and waits for
- * a reply.
- * Returns 0 on success.
+ * a reply. 
+ * Returns 0 on success, AUTH_ERR_CONTINUE on partial success (must
+ * be called again in that case) and a negative error code on other errors.
  */
-static int auth_user(worker_st *ws, struct cmd_auth_req_st* areq)
+static int auth_user_pass(worker_st *ws, struct cmd_auth_req_st* areq)
 {
 int ret;
-
-	if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (ws->cert_auth_ok == 0) {
-			oclog(ws, LOG_INFO, "no certificate provided for authentication");
-			return -1;
-		}
-
-		ret = get_cert_info(ws, areq->cert_user, sizeof(areq->cert_user),
-					areq->cert_group, sizeof(areq->cert_group));
-		if (ret < 0)
-			return -1;
-
-		areq->tls_auth_ok = 1;
-	}
 	
-	oclog(ws, LOG_DEBUG, "sending authentication request");
+	oclog(ws, LOG_DEBUG, "sending auth request");
+
 	ret = send_auth_req(ws->cmd_fd, areq);
 	if (ret < 0)
 		return ret;
 	
-	return recv_auth_reply(ws);
+	return 0;
 }
 
 /* sends a cookie authentication request to main thread and waits for
@@ -320,6 +354,7 @@ int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size)
 {
 int ret;
 struct cmd_auth_cookie_req_st areq;
+struct cmd_auth_reply_st resp;
 
 	memset(&areq, 0, sizeof(areq));
 
@@ -347,7 +382,7 @@ struct cmd_auth_cookie_req_st areq;
 	if (ret < 0)
 		return ret;
 
-	return recv_auth_reply(ws);
+	return recv_auth_reply(ws, &resp);
 }
 
 int post_common_handler(worker_st *ws, unsigned http_ver)
@@ -437,39 +472,34 @@ char msg[MAX_BANNER_SIZE+32];
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
-int post_auth_handler(worker_st *ws, unsigned http_ver)
+static
+int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** username, char** password)
 {
-int ret;
-struct http_req_st *req = &ws->req;
-const char* reason = "Authentication failed";
-char * username = NULL;
-char * password = NULL;
-char *p;
-struct cmd_auth_req_st areq;
+	char *p;
+	
+	if (memmem(body, body_length, "<?xml", 5) != 0) {
+		oclog(ws, LOG_DEBUG, "POST body: '%.*s'", body_length, body);
 
-	memset(&areq, 0, sizeof(areq));
-
-	if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		if (memmem(req->body, req->body_length, "<?xml", 5) != 0) {
-			oclog(ws, LOG_DEBUG, "POST body: '%.*s'", req->body_length, req->body);
-
+		if (username != NULL) {
 			/* body should contain <username>test</username><password>test</password> */
-			username = memmem(req->body, req->body_length, XMLUSER, sizeof(XMLUSER)-1);
-			if (username == NULL) {
-				reason = "No username";
-				goto ask_auth;
+			*username = memmem(body, body_length, XMLUSER, sizeof(XMLUSER)-1);
+			if (*username == NULL) {
+				return -1;
 			}
-			username += sizeof(XMLUSER)-1;
+			*username += sizeof(XMLUSER)-1;
+		}
 
-			password = memmem(req->body, req->body_length, XMLPASS, sizeof(XMLPASS)-1);
-			if (password == NULL) {
-				reason = "No password";
-				goto auth_fail;
-			}
-			password += sizeof(XMLPASS)-1;
-		
-			/* modify body */
-			p = username;
+		if (password != NULL) {
+        		*password = memmem(body, body_length, XMLPASS, sizeof(XMLPASS)-1);
+	        	if (*password == NULL) {
+	        		return -1;
+	        	}
+	        	*password += sizeof(XMLPASS)-1;
+                }
+	
+		/* modify body */
+		if (username != NULL) {
+			p = *username;
 			while(*p != 0) {
 				if (*p == '<' && (strncmp(p, XMLUSER_END, sizeof(XMLUSER_END)-1) == 0)) {
 					*p = 0;
@@ -477,72 +507,141 @@ struct cmd_auth_req_st areq;
 				}
 				p++;
 			}
-
-			p = password;
-			while(*p != 0) {
-				if (*p == '<' && (strncmp(p, XMLPASS_END, sizeof(XMLPASS_END)-1) == 0)) {
-					*p = 0;
-					break;
-				}
-				p++;
-			}
-		
-			areq.user_pass_present = 1;
-			snprintf(areq.user, sizeof(areq.user), "%s", username);
-			snprintf(areq.pass, sizeof(areq.pass), "%s", password);
-		} else { /* non-xml version */
-			/* body should be "username=test&password=test" */
-			username = memmem(req->body, req->body_length, "username=", sizeof("username=")-1);
-			if (username == NULL) {
-				reason = "No username";
-				goto auth_fail;
-			}
-			username += sizeof("username=")-1;
-
-			password = memmem(req->body, req->body_length, "password=", sizeof("password=")-1);
-			if (password == NULL) {
-				reason = "No password";
-				goto auth_fail;
-			}
-			password += sizeof("password=")-1;
-		
-			/* modify body */
-			p = username;
-			while(*p != 0) {
-				if (*p == '&') {
-					*p = 0;
-					break;
-				}
-				p++;
-			}
-
-			p = password;
-			while(*p != 0) {
-				if (*p == '&') {
-					*p = 0;
-					break;
-				}
-				p++;
-			}
-		
-			areq.user_pass_present = 1;
-			snprintf(areq.user, sizeof(areq.user), "%s", username);
-			snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 		}
-	}
+
+		if (password != NULL) {
+        		p = *password;
+        		while(*p != 0) {
+        			if (*p == '<' && (strncmp(p, XMLPASS_END, sizeof(XMLPASS_END)-1) == 0)) {
+        				*p = 0;
+        				break;
+        			}
+        			p++;
+        		}
+                }
 	
-	if (req->hostname[0] != 0) {
-		memcpy(areq.hostname, req->hostname, sizeof(areq.hostname));
+	} else { /* non-xml version */
+		/* body should be "username=test&password=test" */
+		if (username != NULL) {
+			*username = memmem(body, body_length, "username=", sizeof("username=")-1);
+			if (*username == NULL) {
+				return -1;
+			}
+			*username += sizeof("username=")-1;
+		}
+
+		if (password != NULL) {
+        		*password = memmem(body, body_length, "password=", sizeof("password=")-1);
+        		if (*password == NULL) {
+        			return -1;
+        		}
+        		*password += sizeof("password=")-1;
+                }
+	
+		/* modify body */
+		if (username != NULL) {
+			p = *username;
+			while(*p != 0) {
+				if (*p == '&') {
+					*p = 0;
+					break;
+				}
+				p++;
+			}
+		}
+
+		if (password != NULL) {
+        		p = *password;
+        		while(*p != 0) {
+        			if (*p == '&') {
+        				*p = 0;
+        				break;
+        			}
+        			p++;
+        		}
+                }
+	}
+	return 0;
+}
+
+int post_auth_handler(worker_st *ws, unsigned http_ver)
+{
+int ret;
+struct http_req_st *req = &ws->req;
+const char* reason = "Authentication failed";
+char * username = NULL;
+char * password = NULL;
+struct cmd_auth_reply_st resp;
+
+	if (ws->auth_state == S_AUTH_INACTIVE) {
+		struct cmd_auth_init_st areq;
+
+		memset(&areq, 0, sizeof(areq));
+
+		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+			ret = read_user_pass(ws, req->body, req->body_length, &username, NULL);
+			if (ret < 0)
+				goto ask_auth;
+
+			snprintf(areq.user, sizeof(areq.user), "%s", username);
+			areq.user_present = 1;
+		}
+
+		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+			if (ws->cert_auth_ok == 0) {
+				oclog(ws, LOG_INFO, "no certificate provided for authentication");
+				return -1;
+			}
+
+			ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user),
+						areq.cert_group, sizeof(areq.cert_group));
+			if (ret < 0)
+				return -1;
+
+			areq.tls_auth_ok = 1;
+		}
+
+		if (req->hostname[0] != 0) {
+			memcpy(areq.hostname, req->hostname, sizeof(areq.hostname));
+		}
+
+		ret = send_auth_init(ws->cmd_fd, &areq);
+		if (ret < 0)
+			goto auth_fail;
+		
+		ws->auth_state = S_AUTH_INIT;
+	} else {
+		struct cmd_auth_req_st areq;
+
+		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+			memset(&areq, 0, sizeof(areq));
+
+			ret = read_user_pass(ws, req->body, req->body_length, NULL, &password);
+			if (ret < 0)
+				goto ask_auth;
+
+			snprintf(areq.pass, sizeof(areq.pass), "%s", password);
+
+			ret = auth_user_pass(ws, &areq);
+			if (ret < 0)
+				goto auth_fail;
+		
+			ws->auth_state = S_AUTH_REQ;
+		} else
+			goto auth_fail;
 	}
 
-	ret = auth_user(ws, &areq);
-	if (ret < 0) {
+	ret = recv_auth_reply(ws, &resp);
+	if (ret == ERR_AUTH_CONTINUE) {
+		ws->auth_state = S_AUTH_REQ;
+		return get_auth_handler2(ws, http_ver, resp.msg);
+        } else if (ret < 0)
 		goto auth_fail;
-	}
 
 	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
+	ws->auth_state = S_AUTH_COMPLETE;
 
-	return post_common_handler(ws, http_ver);;
+	return post_common_handler(ws, http_ver);
 
 ask_auth:
 	return get_auth_handler(ws, http_ver);

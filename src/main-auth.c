@@ -41,8 +41,24 @@
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
-#include "pam.h"
-#include "plain.h"
+#include <main-auth.h>
+#include <plain.h>
+#include <pam.h>
+
+static const struct auth_mod_st *module;
+
+void main_auth_init(main_server_st *s)
+{
+#ifdef HAVE_PAM
+	if ((s->config->auth_types & pam_auth_funcs.type) == pam_auth_funcs.type)
+		module = &pam_auth_funcs;
+	else
+#endif
+	if ((s->config->auth_types & plain_auth_funcs.type) == plain_auth_funcs.type) {
+		module = &plain_auth_funcs;
+		s->auth_extra = s->config->plain_passwd;
+	}
+}
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			cmd_auth_reply_t r)
@@ -100,6 +116,41 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
+int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
+{
+	struct iovec iov[2];
+	uint8_t cmd[1];
+	struct msghdr hdr;
+	struct cmd_auth_reply_st resp;
+	int ret;
+
+	if (proc->auth_ctx == NULL)
+		return -1;
+
+	memset(&resp, 0, sizeof(resp));
+	ret = module->auth_msg(proc->auth_ctx, resp.msg, sizeof(resp.msg));
+	if (ret < 0)
+		return ret;
+
+	memset(&hdr, 0, sizeof(hdr));
+	
+	hdr.msg_iov = iov;
+
+	cmd[0] = AUTH_REP;
+	
+	resp.reply = REP_AUTH_MSG;
+
+	iov[0].iov_base = cmd;
+	iov[0].iov_len = 1;
+	hdr.msg_iovlen++;
+
+	iov[1].iov_base = &resp;
+	iov[1].iov_len = sizeof(resp);
+	hdr.msg_iovlen++;
+	
+	return(sendmsg(proc->fd, &hdr, 0));
+}
+
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req)
 {
@@ -144,12 +195,6 @@ time_t now = time(0);
 			ret = -1;
 			goto cleanup;
 		}
-	}
-
-	ret = open_tun(s, &proc->lease);
-	if (ret < 0) {
-		ret = -1; /* sorry */
-		goto cleanup;
 	}
 	
 	/* ok auth ok. Renew the cookie. */
@@ -201,36 +246,38 @@ struct stored_cookie_st *sc;
 	return 0;
 }
 
-int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		   const struct cmd_auth_req_st * req)
+int handle_auth_init(main_server_st *s, struct proc_st* proc,
+		     const struct cmd_auth_init_st * req)
 {
 int ret = -1;
 char ipbuf[128];
 const char* ip;
-unsigned username_set = 0;
 
 	ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
-			    ipbuf, sizeof(ipbuf));
+			ipbuf, sizeof(ipbuf));
 
-	if (req->user_pass_present != 0) {
-#ifdef HAVE_PAM
-		if ((s->config->auth_types & AUTH_TYPE_PAM) == AUTH_TYPE_PAM) {
-			ret = pam_auth_user(req->user, req->pass, proc->groupname, sizeof(proc->groupname), ip);
-			if (ret != 0)
-				ret = -1;
+	if (req->user_present == 0 && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+        	mslog(s, proc, LOG_DEBUG, "auth init from '%s' with no username present", ip);
+	        return -1;
+        }
 
-			memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
-			username_set = 1;
-		}
-#endif
-		if ((s->config->auth_types & AUTH_TYPE_PLAIN) == AUTH_TYPE_PLAIN) {
-			ret = plain_auth_user(s->config->plain_passwd, req->user, req->pass, proc->groupname, sizeof(proc->groupname));
-			if (ret != 0)
-				ret = -1;
+	if (req->hostname[0] != 0) {
+		memcpy(proc->hostname, req->hostname, MAX_HOSTNAME_SIZE);
+		proc->hostname[sizeof(proc->hostname)-1] = 0;
+	}
 
-			memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
-			username_set = 1;
-		}
+	if (req->user_present != 0 && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		ret = module->auth_init(&proc->auth_ctx, req->user, ip, s->auth_extra);
+		if (ret < 0)
+			return ret;
+
+		ret = module->auth_group(proc->auth_ctx, proc->groupname, sizeof(proc->groupname));
+		if (ret != 0)
+			return -1;
+		proc->groupname[sizeof(proc->groupname)-1] = 0;
+
+		memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
+		proc->username[sizeof(proc->username)-1] = 0;
 	}
 
 	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
@@ -238,35 +285,42 @@ unsigned username_set = 0;
 			ret = 0;
 		}
 		
-		if (username_set == 0) {
+		if (proc->username[0] == 0) {
 			memcpy(proc->username, req->cert_user, sizeof(proc->username));
 			memcpy(proc->groupname, req->cert_group, sizeof(proc->groupname));
+			proc->username[sizeof(proc->username)-1] = 0;
+			proc->groupname[sizeof(proc->groupname)-1] = 0;
 		} else {
 			if (strcmp(proc->username, req->cert_user) != 0) {
 				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
-				ret = -1;
+				return -1;
 			}
 			if (strcmp(proc->groupname, req->cert_group) != 0) {
 				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
-				ret = -1;
+				return -1;
 			}
 		}
 	}
 
-	if (ret == 0) { /* open tun */
-		if (req->hostname[0] != 0)
-			memcpy(proc->hostname, req->hostname, MAX_HOSTNAME_SIZE);
+	mslog(s, proc, LOG_DEBUG, "auth init for user '%s' from '%s'", proc->username, ip);
 
-		proc->username[sizeof(proc->username)-1] = 0;
-		proc->groupname[sizeof(proc->groupname)-1] = 0;
-		proc->hostname[sizeof(proc->hostname)-1] = 0;
-
-		ret = open_tun(s, &proc->lease);
-		if (ret < 0)
-		  ret = -1; /* sorry */
+	if (s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+                return ERR_AUTH_CONTINUE;
 	}
 	
-	return ret;
+	return 0;
+}
+
+int handle_auth_req(main_server_st *s, struct proc_st* proc,
+		   const struct cmd_auth_req_st * req)
+{
+	if (proc->auth_ctx == NULL) {
+        	mslog(s, proc, LOG_ERR, "auth req but with no context!");
+		return -1;
+        }
+	mslog(s, proc, LOG_DEBUG, "auth req for user '%s'", proc->username);
+
+	return module->auth_pass(proc->auth_ctx, req->pass);
 }
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc)
@@ -292,3 +346,11 @@ unsigned int entries = 1; /* that one */
 	return 0;
 }
 
+void proc_auth_deinit(main_server_st* s, struct proc_st* proc)
+{
+	mslog(s, proc, LOG_DEBUG, "auth deinit for user '%s'", proc->username);
+	if (proc->auth_ctx != NULL) {
+		module->auth_deinit(proc->auth_ctx);
+		proc->auth_ctx = NULL;
+	}
+}

@@ -9,10 +9,6 @@
 #include <tlslib.h>
 #include "ipc.h"
 
-#define ERR_WAIT_FOR_SCRIPT -5
-#define ERR_BAD_COMMAND -2
-#define ERR_MEM -6
-
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
 void write_pid_file(void);
@@ -45,6 +41,12 @@ struct script_wait_st {
 	struct proc_st* proc;
 };
 
+enum {
+	PS_AUTH_INACTIVE,
+	PS_AUTH_INIT,
+	PS_AUTH_COMPLETED,
+};
+
 struct proc_st {
 	struct list_node list;
 	int fd;
@@ -68,6 +70,9 @@ struct proc_st {
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
+	
+	void * auth_ctx; /* the context of authentication */
+	unsigned auth_status; /* PS_AUTH_ */
 };
 
 struct proc_list_st {
@@ -108,6 +113,8 @@ typedef struct main_server_st {
 	pid_t sec_mod_pid;
 	
 	unsigned active_clients;
+
+	void * auth_extra;
 } main_server_st;
 
 void clear_lists(main_server_st *s);
@@ -144,13 +151,16 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 int open_tun(main_server_st* s, struct lease_st** l);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
+int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			cmd_auth_reply_t r);
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req);
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc);
+int handle_auth_init(main_server_st *s, struct proc_st* proc,
+		     const struct cmd_auth_init_st * req);
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		   const struct cmd_auth_req_st * req);
+		     const struct cmd_auth_req_st * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 

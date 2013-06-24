@@ -10,10 +10,14 @@
 #include <vpn.h>
 #include <tlslib.h>
 
+#define MAX_MSG_SIZE 256
+
 typedef enum {
-	AUTH_REQ = 1,
-	AUTH_COOKIE_REQ,
+	AUTH_INIT=1,
 	AUTH_REP,
+	AUTH_REQ,
+	AUTH_COOKIE_REQ,
+	AUTH_MSG,
 	RESUME_STORE_REQ,
 	RESUME_DELETE_REQ,
 	RESUME_FETCH_REQ,
@@ -24,8 +28,9 @@ typedef enum {
 } cmd_request_t;
 
 typedef enum {
-	REP_AUTH_OK = 0,
-	REP_AUTH_FAILED = 1,
+	REP_AUTH_OK = 1,
+	REP_AUTH_MSG = 2,
+	REP_AUTH_FAILED = 3,
 } cmd_auth_reply_t;
 
 typedef enum {
@@ -43,9 +48,13 @@ struct __attribute__ ((__packed__)) cmd_auth_cookie_req_st {
 
 /* AUTH_REQ */
 struct __attribute__ ((__packed__)) cmd_auth_req_st {
-	uint8_t user_pass_present;
-	char user[MAX_USERNAME_SIZE];
+	uint8_t pass_present;
 	char pass[MAX_PASSWORD_SIZE];
+};
+
+struct __attribute__ ((__packed__)) cmd_auth_init_st {
+	uint8_t user_present;
+	char user[MAX_USERNAME_SIZE];
 	uint8_t tls_auth_ok;
 	char cert_user[MAX_USERNAME_SIZE];
 	char cert_group[MAX_GROUPNAME_SIZE];
@@ -59,6 +68,7 @@ struct __attribute__ ((__packed__)) cmd_auth_reply_st {
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	char vname[IFNAMSIZ]; /* interface name */
 	char user[MAX_USERNAME_SIZE];
+	char msg[MAX_MSG_SIZE]; /* in case of REP_AUTH_CONTINUE */
 };
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

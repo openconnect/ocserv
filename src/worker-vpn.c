@@ -752,6 +752,13 @@ time_t udp_recv_time = 0, now;
 unsigned mtu_overhead = 0;
 socklen_t sl;
 
+        if (ws->auth_state != S_AUTH_COMPLETE) {
+		oclog(ws, LOG_INFO, "authentication was not completed");
+		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_close(ws->session);
+		exit_worker(ws);
+	}
+
 	ws->buffer_size = 16*1024;
 	ws->buffer = malloc(ws->buffer_size);
 	if (ws->buffer == NULL) {

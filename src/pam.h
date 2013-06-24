@@ -1,6 +1,8 @@
 #ifndef PAM_H
 #define PAM_H
 
-int pam_auth_user(const char* user, const char* pass, char *groupname, int groupname_size, const char* ip);
+#include <main-auth.h>
+
+extern const struct auth_mod_st pam_auth_funcs;
 
 #endif

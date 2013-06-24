@@ -44,6 +44,7 @@
 #endif
 
 #include <main.h>
+#include <main-auth.h>
 #include <worker.h>
 #include <cookies.h>
 #include <tun.h>
@@ -299,6 +300,9 @@ static void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 		close(proc->fd);
 	proc->fd = -1;
 	proc->pid = -1;
+	
+	if (proc->auth_ctx != NULL)
+		proc_auth_deinit(s, proc);
 
 	if (proc->lease)
 		proc->lease->in_use = 0;
@@ -669,6 +673,8 @@ int main(int argc, char** argv)
 	s.config = &config;
 	s.tun = &tun;
 
+	main_auth_init(&s);
+
 	ret = cookie_db_init(&s);
 	if (ret < 0) {
 		fprintf(stderr, "Could not initialize cookie database.\n");
@@ -861,6 +867,7 @@ fork_failed:
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {
+fprintf(stderr, "error in command deleting\n");
 					remove_from_script_list(&s, ctmp);
 					remove_proc(&s, ctmp, (ret==ERR_BAD_COMMAND)?1:0);
 				}

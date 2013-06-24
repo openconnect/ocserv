@@ -112,6 +112,22 @@ if [ test "$anyconnect_enabled" = "yes" ];then
 	AC_DEFINE([ANYCONNECT_CLIENT_COMPAT], [], [Enable Anyconnect compatibility])
 fi
 
+pcl_enabled=no
+LIBS="$oldlibs -lpcl"
+AC_MSG_CHECKING([for pcl library])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+		   #include <pcl.h>],[
+		   co_create(0, 0, 0, 0);])],
+		  [AC_MSG_RESULT(yes)
+		   AC_SUBST([PCL_LIBS], [-lpcl])
+		   AC_SUBST([PCL_CFLAGS], [])
+		   pcl_enabled=yes],
+		  [AC_MSG_RESULT(no)
+   	           AC_MSG_ERROR([[
+*** 
+*** libpcl (portable co-routines) was not found.
+*** ]])])
+LIBS="$oldlibs"
 
 enable_local_libopts=yes
 NEED_LIBOPTS_DIR=true

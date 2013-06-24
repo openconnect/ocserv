@@ -147,6 +147,54 @@ fail:
 	return ret;
 }
 
+static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd)
+{
+int ret;
+const char* group;
+
+	mslog(s, proc, LOG_DEBUG, "accepting user '%s'", proc->username);
+	proc_auth_deinit(s, proc);
+
+	ret = open_tun(s, &proc->lease);
+	if (ret < 0) {
+		return -1;
+	}
+
+	/* check for multiple connections */
+	ret = check_multiple_users(s, proc);
+	if (ret < 0) {
+		mslog(s, proc, LOG_INFO, "user '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
+		return ret;
+	}
+
+	if (proc->groupname[0] == 0)
+		group = "[unknown]";
+	else
+		group = proc->groupname;
+
+	if (cmd == AUTH_REQ || cmd == AUTH_INIT) {
+		/* generate and store cookie */
+		ret = generate_and_store_vals(s, proc);
+		if (ret < 0) {
+			return ERR_BAD_COMMAND;
+		}
+		mslog(s, proc, LOG_INFO, "user '%s' of group '%s' authenticated", proc->username, group);
+	} else {
+		mslog(s, proc, LOG_INFO, "user '%s' of group '%s' re-authenticated (using cookie)", proc->username, group);
+	}
+
+	/* do scripts and utmp */
+	ret = user_connected(s, proc);
+	if (ret == ERR_WAIT_FOR_SCRIPT) {
+		return 0;
+	}
+
+	if (ret < 0) {
+		mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
+	}
+	
+	return 0;
+}
 
 int handle_commands(main_server_st *s, struct proc_st* proc)
 {
@@ -159,9 +207,9 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 		struct cmd_resume_store_req_st sresume;
 		struct cmd_resume_fetch_req_st fresume;
 		struct cmd_tun_mtu_st tmtu;
+		struct cmd_auth_init_st auth_init;
 	} cmd_data;
 	int ret, cmd_data_len, e;
-	const char* group;
 
 	memset(&cmd_data, 0, sizeof(cmd_data));
 	
@@ -187,7 +235,12 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	}
 
 	cmd_data_len = ret - 1;
-	
+
+	if (proc->auth_status == PS_AUTH_INIT && cmd != AUTH_REQ) {
+		mslog(s, proc, LOG_ERR, "received message %u when expecting auth req.", (unsigned)cmd);
+		return ERR_BAD_COMMAND;
+	}
+
 	switch(cmd) {
 		case CMD_TUN_MTU:
 			if (cmd_data_len != sizeof(cmd_data.tmtu)) {
@@ -242,64 +295,83 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			
 			break;
 
-		case AUTH_REQ:
-		case AUTH_COOKIE_REQ:
-			if (cmd == AUTH_REQ) {
-				if (cmd_data_len != sizeof(cmd_data.auth)) {
-					mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-					return ERR_BAD_COMMAND;
-				}
-
-				ret = handle_auth_req(s, proc, &cmd_data.auth);
-			} else {
-				if (cmd_data_len != sizeof(cmd_data.cauth)) {
-					mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-					return ERR_BAD_COMMAND;
-				}
-
-				ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth);
+		case AUTH_INIT:
+			if (cmd_data_len != sizeof(cmd_data.auth_init)) {
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
+				return ERR_BAD_COMMAND;
 			}
 
-			if (ret == 0) {
-				/* check for multiple connections */
-				ret = check_multiple_users(s, proc);
+			if (proc->auth_status != PS_AUTH_INACTIVE) {
+				mslog(s, proc, LOG_ERR, "received authentication init when complete.");
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_auth_init(s, proc, &cmd_data.auth_init);
+			if (ret == ERR_AUTH_CONTINUE) {
+				proc->auth_status = PS_AUTH_INIT;
+
+				ret = send_auth_reply_msg(s, proc);
 				if (ret < 0) {
-					mslog(s, proc, LOG_INFO, "user '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
+					mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
+					return ret;
 				}
-
-				if (ret == 0) {
-					if (proc->groupname[0] == 0)
-						group = "[unknown]";
-					else
-						group = proc->groupname;
-
-					if (cmd == AUTH_REQ) {
-						/* generate and store cookie */
-						ret = generate_and_store_vals(s, proc);
-						if (ret < 0) {
-							ret = ERR_BAD_COMMAND;
-							goto cleanup;
-						}
-						mslog(s, proc, LOG_INFO, "user '%s' of group '%s' authenticated", proc->username, group);
-					} else {
-						mslog(s, proc, LOG_INFO, "user '%s' of group '%s' re-authenticated (using cookie)", proc->username, group);
-					}
-				}
-
-				/* do scripts and utmp */
-				if (ret == 0) {
-					ret = user_connected(s, proc);
-					if (ret == ERR_WAIT_FOR_SCRIPT) {
-						return 0;
-					}
-
-					if (ret < 0) {
-						mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
-					}
-				}
-			} else {
+				break; /* wait for another command */
+			} else if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
+				return ret;
 			}
+			
+			break;
+
+		case AUTH_REQ:
+			if (proc->auth_status != PS_AUTH_INIT) {
+				mslog(s, proc, LOG_ERR, "received authentication request when not initialized.");
+				return ERR_BAD_COMMAND;
+			}
+
+			if (cmd_data_len != sizeof(cmd_data.auth)) {
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_auth_req(s, proc, &cmd_data.auth);
+			if (ret == ERR_AUTH_CONTINUE) {
+				ret = send_auth_reply_msg(s, proc);
+				if (ret < 0) {
+					mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
+					return ret;
+				}
+				break; /* wait for another command */
+			} else if (ret < 0) {
+				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
+				return ret;
+			}
+
+			ret = accept_user(s, proc, cmd);
+			if (ret < 0) {
+				goto cleanup;
+			}
+			proc->auth_status = PS_AUTH_COMPLETED;
+			goto cleanup;
+
+		case AUTH_COOKIE_REQ:
+			if (cmd_data_len != sizeof(cmd_data.cauth)) {
+				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth);
+			if (ret < 0) {
+				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
+				return ret;
+			}
+
+			ret = accept_user(s, proc, cmd);
+			if (ret < 0) {
+				goto cleanup;
+			}
+
+			proc->auth_status = PS_AUTH_COMPLETED;
 
 cleanup:
 			/* no script was called. Handle it as a successful script call. */

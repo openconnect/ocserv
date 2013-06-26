@@ -48,7 +48,7 @@ struct __attribute__ ((__packed__)) cmd_auth_cookie_req_st {
 
 /* AUTH_REQ */
 struct __attribute__ ((__packed__)) cmd_auth_req_st {
-	uint8_t pass_present;
+	uint8_t pass_size;
 	char pass[MAX_PASSWORD_SIZE];
 };
 

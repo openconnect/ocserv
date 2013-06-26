@@ -7,7 +7,7 @@ struct auth_mod_st {
 	unsigned int type;
 	int (*auth_init)(void** ctx, const char* username, const char* ip, void* additional);
 	int (*auth_msg)(void* ctx, char* msg, size_t msg_size);
-	int (*auth_pass)(void* ctx, const char* pass);
+	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
 	int (*auth_group)(void* ctx, char *groupname, int groupname_size);
 	void (*auth_deinit)(void* ctx);
 };
@@ -26,6 +26,9 @@ void proc_auth_deinit(main_server_st* s, struct proc_st* proc);
  *
  * The receipt of auth_init message results to auth_init()
  * being called, auth_msg to auth_msg() and auth_req to auth_pass().
+ *
+ * The auth_msg() may contain the message to be printed at
+ * the password entry field.
  *
  * auth_group() is called sometime after auth_init() to retrieve
  * the group of the user.  

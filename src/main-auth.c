@@ -312,15 +312,20 @@ const char* ip;
 }
 
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		   const struct cmd_auth_req_st * req)
+		    struct cmd_auth_req_st * req)
 {
 	if (proc->auth_ctx == NULL) {
         	mslog(s, proc, LOG_ERR, "auth req but with no context!");
 		return -1;
         }
 	mslog(s, proc, LOG_DEBUG, "auth req for user '%s'", proc->username);
+	
+	if (req->pass_size >= sizeof(req->pass))
+	        return -1;
+	        
+        req->pass[req->pass_size] = 0;
 
-	return module->auth_pass(proc->auth_ctx, req->pass);
+	return module->auth_pass(proc->auth_ctx, req->pass, req->pass_size);
 }
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc)

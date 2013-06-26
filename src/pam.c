@@ -205,11 +205,11 @@ struct pam_ctx_st * pctx = ctx;
 
 /* Returns 0 if the user is successfully authenticated
  */
-static int pam_auth_pass(void* ctx, const char* pass)
+static int pam_auth_pass(void* ctx, const char* pass, unsigned pass_len)
 {
 struct pam_ctx_st * pctx = ctx;
 
-	if (pass == NULL)
+	if (pass == NULL || pass_len+1 > sizeof(pctx->password))
 		return -1;
 
 	if (pctx->state != PAM_S_WAIT_FOR_PASS) {
@@ -217,7 +217,8 @@ struct pam_ctx_st * pctx = ctx;
 		return ERR_AUTH_FAIL;
 	}
 
-	snprintf(pctx->password, sizeof(pctx->password), "%s", pass);
+	memcpy(pctx->password, pass, pass_len);
+	pctx->password[pass_len] = 0;
 
 	pctx->cr_ret = PAM_CONV_ERR;
 	co_call(pctx->cr);

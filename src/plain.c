@@ -59,7 +59,7 @@ struct plain_ctx_st* pctx = ctx;
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
-static int plain_auth_pass(void* ctx, const char* pass)
+static int plain_auth_pass(void* ctx, const char* pass, unsigned pass_len)
 {
 struct plain_ctx_st* pctx = ctx;
 unsigned groupname_size;

@@ -620,7 +620,7 @@ struct cmd_auth_reply_st resp;
 			if (ret < 0)
 				goto ask_auth;
 
-			snprintf(areq.pass, sizeof(areq.pass), "%s", password);
+			areq.pass_size = snprintf(areq.pass, sizeof(areq.pass), "%s", password);
 
 			ret = auth_user_pass(ws, &areq);
 			if (ret < 0)

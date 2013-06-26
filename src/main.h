@@ -160,7 +160,7 @@ int generate_and_store_vals(main_server_st *s, struct proc_st* proc);
 int handle_auth_init(main_server_st *s, struct proc_st* proc,
 		     const struct cmd_auth_init_st * req);
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		     const struct cmd_auth_req_st * req);
+		     struct cmd_auth_req_st * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 

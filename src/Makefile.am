@@ -1,3 +1,5 @@
+SUBDIRS =
+
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
@@ -26,7 +28,15 @@ ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv_LDADD = ../gl/libgnu.a ../libopts/libopts.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(PCL_LIBS)
+	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) 
+	
+if PCL
+ocserv_LDADD += $(PCL_LIBS)
+else
+ocserv_LDADD += pcl/libpcl.a
+SUBDIRS += pcl
+AM_CPPFLAGS += -I$(srcdir)/pcl/
+endif
 
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 	@AUTOGEN@ $<

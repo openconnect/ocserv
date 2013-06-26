@@ -112,6 +112,15 @@ if [ test "$anyconnect_enabled" = "yes" ];then
 	AC_DEFINE([ANYCONNECT_CLIENT_COMPAT], [], [Enable Anyconnect compatibility])
 fi
 
+dnl needed in the included PCL
+AC_C_VOLATILE
+AC_C_CONST
+AC_CHECK_FUNCS(memset malloc free)
+AC_CHECK_FUNCS(makecontext getcontext swapcontext)
+AC_CHECK_FUNCS(sigaction)
+AC_CHECK_FUNCS(longjmp setjmp)
+AC_CHECK_FUNCS(sigaltstack)
+
 pcl_enabled=no
 LIBS="$oldlibs -lpcl"
 AC_MSG_CHECKING([for pcl library])
@@ -123,11 +132,14 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		   AC_SUBST([PCL_CFLAGS], [])
 		   pcl_enabled=yes],
 		  [AC_MSG_RESULT(no)
-   	           AC_MSG_ERROR([[
+   	           AC_MSG_WARN([[
 *** 
 *** libpcl (portable co-routines) was not found.
+*** An included version of the library will be used.
 *** ]])])
 LIBS="$oldlibs"
+
+AM_CONDITIONAL(PCL, test "$pcl_enabled" = yes)
 
 enable_local_libopts=yes
 NEED_LIBOPTS_DIR=true
@@ -137,6 +149,7 @@ AC_CONFIG_FILES([
 	Makefile
 	src/version.def
 	src/Makefile
+	src/pcl/Makefile
 	doc/Makefile
 	gl/Makefile
 ])
@@ -153,6 +166,7 @@ Summary of build options:
   GDBM storage backend: ${gdbm_enabled}
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
+  PCL library:          ${pcl_enabled}
 
 Experimental options:
   seccomp:              ${seccomp_enabled}

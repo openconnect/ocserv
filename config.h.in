@@ -187,6 +187,9 @@
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
+/* Define to 1 if you have the `free' function. */
+#undef HAVE_FREE
+
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #undef HAVE_FSEEKO
 
@@ -198,6 +201,9 @@
 
 /* Enable the GDBM library */
 #undef HAVE_GDBM
+
+/* Define to 1 if you have the `getcontext' function. */
+#undef HAVE_GETCONTEXT
 
 /* Define to 1 if you have the `getdelim' function. */
 #undef HAVE_GETDELIM
@@ -247,8 +253,17 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
+/* Define to 1 if you have the `longjmp' function. */
+#undef HAVE_LONGJMP
+
 /* Define to 1 if the system has the type 'long long int'. */
 #undef HAVE_LONG_LONG_INT
+
+/* Define to 1 if you have the `makecontext' function. */
+#undef HAVE_MAKECONTEXT
+
+/* Define to 1 if you have the `malloc' function. */
+#undef HAVE_MALLOC
 
 /* Define if the 'malloc' function is POSIX compliant. */
 #undef HAVE_MALLOC_POSIX
@@ -262,6 +277,9 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the `memset' function. */
+#undef HAVE_MEMSET
 
 /* Define to 1 if <limits.h> defines the MIN and MAX macros. */
 #undef HAVE_MINMAX_IN_LIMITS_H
@@ -682,11 +700,20 @@
 /* Define to 1 if you have the <runetype.h> header file. */
 #undef HAVE_RUNETYPE_H
 
+/* Define to 1 if you have the `setjmp' function. */
+#undef HAVE_SETJMP
+
 /* Define to 1 if you have the <setjmp.h> header file. */
 #undef HAVE_SETJMP_H
 
 /* Define to 1 if you have the `setproctitle' function. */
 #undef HAVE_SETPROCTITLE
+
+/* Define to 1 if you have the `sigaction' function. */
+#undef HAVE_SIGACTION
+
+/* Define to 1 if you have the `sigaltstack' function. */
+#undef HAVE_SIGALTSTACK
 
 /* Define to 1 if 'sig_atomic_t' is a signed integer type. */
 #undef HAVE_SIGNED_SIG_ATOMIC_T
@@ -741,6 +768,9 @@
 
 /* Define to 1 if you have the `strsignal' function. */
 #undef HAVE_STRSIGNAL
+
+/* Define to 1 if you have the `swapcontext' function. */
+#undef HAVE_SWAPCONTEXT
 
 /* Define to 1 if you have the `symlink' function. */
 #undef HAVE_SYMLINK
@@ -1055,6 +1085,9 @@
 /* Define to 1 if you need to in order for 'stat' and other things to work. */
 #undef _POSIX_SOURCE
 
+/* Define to empty if `const' does not conform to ANSI C. */
+#undef const
+
 /* _GL_INLINE is a portable alternative to ISO C99 plain 'inline'.
    _GL_EXTERN_INLINE is a portable alternative to 'extern inline'.
    _GL_INLINE_HEADER_BEGIN contains useful stuff to put
@@ -1183,3 +1216,7 @@
 
 /* Define as `fork' if `vfork' does not work. */
 #undef vfork
+
+/* Define to empty if the keyword `volatile' does not work. Warning: valid
+   code using `volatile' can become incorrect without. Disable with care. */
+#undef volatile

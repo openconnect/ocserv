@@ -72,7 +72,6 @@ unsigned i;
 		switch (msg[i]->msg_style) {
 			case PAM_ERROR_MSG:
 			case PAM_TEXT_INFO:
-			  fprintf(stderr, "msg: %s\n", msg[i]->msg);
 			        if (pctx->sent_msg == 0) {
 					pctx->state = PAM_S_WAIT_FOR_PASS;
 					pctx->cr_msg = msg[i]->msg;
@@ -117,7 +116,7 @@ int pret;
 
 	pctx->state = PAM_S_INIT;
 
-	pret = pam_authenticate(pctx->ph, 0);
+	pret = pam_authenticate(pctx->ph, PAM_SILENT);
 	if (pret != PAM_SUCCESS) {
 		pctx->cr_ret = pret;
 		return;

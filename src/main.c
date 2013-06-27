@@ -867,7 +867,6 @@ fork_failed:
 			if (FD_ISSET(ctmp->fd, &rd)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {
-fprintf(stderr, "error in command deleting\n");
 					remove_from_script_list(&s, ctmp);
 					remove_proc(&s, ctmp, (ret==ERR_BAD_COMMAND)?1:0);
 				}

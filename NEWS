@@ -1,8 +1,9 @@
 * Version 0.1.5 (unreleased)
 
 - More robust support of PAM by allowing more than one factor 
-  authentication. In practice this allows authentication with a
-  password and an one time password.
+  authentication. In practice this allows authentication with more than
+  one password (e.g., with a permanent one and an one time password), as
+  well as changing the password.
 
 
 * Version 0.1.4 (2013-06-15)

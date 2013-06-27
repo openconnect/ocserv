@@ -31,6 +31,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <pcl.h>
+#include <str.h>
 
 #define APP_NAME PACKAGE
 
@@ -49,13 +50,13 @@ struct pam_ctx_st {
 	struct pam_conv dc;
 	coroutine_t cr;
 	int cr_ret;
-	const char* cr_msg;
+	str_st msg;
 	unsigned sent_msg;
 	struct pam_response *replies; /* for safety */
 	unsigned state; /* PAM_S_ */
 };
 
-static int dummy_conv(int msg_size, const struct pam_message **msg, 
+static int ocserv_conv(int msg_size, const struct pam_message **msg, 
 		struct pam_response **resp, void *uptr)
 {
 struct pam_ctx_st * pctx = uptr;
@@ -72,15 +73,9 @@ unsigned i;
 		switch (msg[i]->msg_style) {
 			case PAM_ERROR_MSG:
 			case PAM_TEXT_INFO:
-			        if (pctx->sent_msg == 0) {
-					pctx->state = PAM_S_WAIT_FOR_PASS;
-					pctx->cr_msg = msg[i]->msg;
-					pctx->cr_ret = PAM_SUCCESS;
-
-					pctx->sent_msg = 1;
-					co_resume();
-					pctx->state = PAM_S_INIT;
-				}
+				str_append_str(&pctx->msg, msg[i]->msg);
+				str_append_data(&pctx->msg, " ", 1);
+				pctx->sent_msg = 1;
 				break;
 		}
 		
@@ -90,13 +85,13 @@ unsigned i;
 			case PAM_PROMPT_ECHO_ON:
 				if (pctx->sent_msg == 0) {
 					/* no message, just asking for password */
-					pctx->state = PAM_S_WAIT_FOR_PASS;
-					pctx->cr_msg = NULL;
-					pctx->cr_ret = PAM_SUCCESS;
+					str_reset(&pctx->msg);
 					pctx->sent_msg = 1;
-					co_resume();
-					pctx->state = PAM_S_INIT;
 				}
+				pctx->state = PAM_S_WAIT_FOR_PASS;
+				pctx->cr_ret = PAM_SUCCESS;
+				co_resume();
+				pctx->state = PAM_S_INIT;
 
 				pctx->replies[i].resp = strdup(pctx->password);
 				pctx->sent_msg = 0;
@@ -116,23 +111,32 @@ int pret;
 
 	pctx->state = PAM_S_INIT;
 
-	pret = pam_authenticate(pctx->ph, PAM_SILENT);
+	pret = pam_authenticate(pctx->ph, 0);
 	if (pret != PAM_SUCCESS) {
 		pctx->cr_ret = pret;
-		return;
+		goto wait;
 	}
 	
-	pret = pam_acct_mgmt(pctx->ph, PAM_SILENT);
+	pret = pam_acct_mgmt(pctx->ph, 0);
+	if (pret == PAM_NEW_AUTHTOK_REQD) {
+		/* change password */
+		syslog(LOG_INFO, "Password for user '%s' is expired. Attempting to update...", pctx->username);
+
+		pret = pam_chauthtok(pctx->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
+	}
+	
 	if (pret != PAM_SUCCESS) {
 		pctx->cr_ret = pret;
-		return;
+		goto wait;
 	}
 	
 	pctx->state = PAM_S_COMPLETE;
-
 	pctx->cr_ret = PAM_SUCCESS;
-	
-	co_resume();
+
+wait:
+	while(1) {
+		co_resume();
+	}
 }
 
 static int pam_auth_init(void** ctx, const char* user, const char* ip, void* additional)
@@ -147,20 +151,22 @@ struct pam_ctx_st * pctx;
 	if (pctx == NULL)
 		return -1;
 
-	pctx->cr = co_create(co_auth_user, pctx, NULL, 128*1024);
-	if (pctx->cr == NULL)
-		goto fail;
+	str_init(&pctx->msg);
 
-	pctx->dc.conv = dummy_conv;
+	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
-	snprintf(pctx->username, sizeof(pctx->username), "%s", user);
-
 	pret = pam_start(APP_NAME, user, &pctx->dc, &pctx->ph);
 	if (pret != PAM_SUCCESS) {
 		syslog(LOG_AUTH, "Error in PAM authentication initialization: %s", pam_strerror(pctx->ph, pret));
-		goto fail;
+		goto fail1;
 	}
-	
+
+	pctx->cr = co_create(co_auth_user, pctx, NULL, 32*1024);
+	if (pctx->cr == NULL)
+		goto fail2;
+
+	snprintf(pctx->username, sizeof(pctx->username), "%s", user);
+
 	if (ip != NULL)
 		pam_set_item(pctx->ph, PAM_RHOST, ip);
 
@@ -168,7 +174,9 @@ struct pam_ctx_st * pctx;
 	
 	return 0;
 
-fail:
+fail2:
+	pam_end(pctx->ph, pret);
+fail1:
 	free(pctx);
 	return -1;
 }
@@ -176,6 +184,7 @@ fail:
 static int pam_auth_msg(void* ctx, char* msg, size_t msg_size)
 {
 struct pam_ctx_st * pctx = ctx;
+int size;
 
 	if (pctx->state != PAM_S_INIT && pctx->state != PAM_S_WAIT_FOR_PASS) {
 		syslog(LOG_AUTH, "PAM conversation in wrong state (%d)", pctx->state);
@@ -186,18 +195,21 @@ struct pam_ctx_st * pctx = ctx;
 		/* get the prompt */
 		pctx->cr_ret = PAM_CONV_ERR;
 		co_call(pctx->cr);
-  	}
 
-	if (pctx->cr_ret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "Error in PAM authentication: %s", pam_strerror(pctx->ph, pctx->cr_ret));
-		return ERR_AUTH_FAIL;
+		if (pctx->cr_ret != PAM_SUCCESS) {
+			syslog(LOG_AUTH, "Error in PAM authentication: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+			return ERR_AUTH_FAIL;
+		}
 	}
 
 	if (msg != NULL) {
-		if (pctx->cr_msg == NULL)
+		if (pctx->msg.length == 0)
 			snprintf(msg, msg_size, "Please enter your password");
-		else
-			snprintf(msg, msg_size, "%s", pctx->cr_msg);
+		else {
+			size = MIN(msg_size-1, pctx->msg.length);
+			memcpy(msg, pctx->msg.data, size);
+			msg[size] = 0;
+		}
 	}
 
 	return 0;
@@ -258,7 +270,9 @@ struct pam_ctx_st * pctx = ctx;
 
 	pam_end(pctx->ph, pctx->cr_ret);
 	free(pctx->replies);
-	co_delete(pctx->cr);
+	str_clear(&pctx->msg);
+	if (pctx->cr != NULL)
+		co_delete(pctx->cr);
 	free(pctx);
 }
 

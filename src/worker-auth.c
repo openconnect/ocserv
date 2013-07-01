@@ -291,7 +291,6 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 				memcpy(ws->username, resp->user, sizeof(ws->username));
 				memcpy(ws->cookie, resp->cookie, sizeof(ws->cookie));
 				memcpy(ws->session_id, resp->session_id, sizeof(ws->session_id));
-				ws->auth_ok = 1;
 			} else
 				return ERR_AUTH_FAIL;
 			break;

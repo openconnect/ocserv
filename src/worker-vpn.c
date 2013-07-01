@@ -752,13 +752,6 @@ time_t udp_recv_time = 0, now;
 unsigned mtu_overhead = 0;
 socklen_t sl;
 
-        if (ws->auth_state != S_AUTH_COMPLETE) {
-		oclog(ws, LOG_INFO, "authentication was not completed");
-		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		tls_close(ws->session);
-		exit_worker(ws);
-	}
-
 	ws->buffer_size = 16*1024;
 	ws->buffer = malloc(ws->buffer_size);
 	if (ws->buffer == NULL) {
@@ -768,14 +761,14 @@ socklen_t sl;
 		exit_worker(ws);
 	}
 
-	if (req->cookie_set == 0) {
+        if (ws->auth_state != S_AUTH_COMPLETE && req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "connect request without authentication");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 	}
-	
-	if (ws->auth_ok == 0) {
+
+	if (ws->auth_state != S_AUTH_COMPLETE) {
 		/* authentication didn't occur in this session. Use the
 		 * cookie */
 		ret = auth_cookie(ws, req->cookie, sizeof(req->cookie));

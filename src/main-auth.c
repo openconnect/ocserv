@@ -159,15 +159,11 @@ struct stored_cookie_st sc;
 time_t now = time(0);
 
 	ret = decrypt_cookie(s, req->cookie, sizeof(req->cookie), &sc);
-	if (ret < 0) {
-		ret = -1;
-		goto cleanup;
-	}
+	if (ret < 0)
+		return -1;
 
-	if (sc.expiration < now) {
-		ret = -1;
-		goto cleanup;
-	}
+	if (sc.expiration < now)
+		return -1;
 	
 	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
 	memcpy(proc->username, sc.username, sizeof(proc->username));
@@ -183,19 +179,15 @@ time_t now = time(0);
 	if (req->tls_auth_ok != 0) {
 		if (strcmp(proc->username, req->cert_user) != 0) {
 			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
-			ret = -1;
-			goto cleanup;
+        		return -1;
 		}
 		if (strcmp(proc->groupname, req->cert_group) != 0) {
 			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
-			ret = -1;
-			goto cleanup;
+        		return -1;
 		}
 	}
 	
 	return 0;
-cleanup:
-	return ret;
 }
 
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc)

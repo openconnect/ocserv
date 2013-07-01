@@ -121,7 +121,12 @@ unsigned j;
 	READ_MULTI_LINE("auth", auth, auth_size, 1);
 	for (j=0;j<auth_size;j++) {
 		if (strcasecmp(auth[j], "pam") == 0) {
+			if (config->auth_types & AUTH_TYPE_USERNAME_PASS != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
+				exit(1);
+			}
 #ifdef HAVE_PAM
+			config->auth_types |= AUTH_TYPE_USERNAME_PASS;
 			config->auth_types |= AUTH_TYPE_PAM;
 #else
 			fprintf(stderr, "PAM support is disabled\n");
@@ -129,6 +134,12 @@ unsigned j;
 #endif
 		} else if (strncasecmp(auth[j], "plain[", 6) == 0) {
 			char* p;
+
+			if (config->auth_types & AUTH_TYPE_USERNAME_PASS != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
+				exit(1);
+			}
+
 			config->plain_passwd = strdup(auth[j]+6);
 			p = strchr(config->plain_passwd, ']');
 			if (p == NULL) {
@@ -136,6 +147,7 @@ unsigned j;
 				exit(1);
 			}
 			*p = 0;
+			config->auth_types |= AUTH_TYPE_USERNAME_PASS;
 			config->auth_types |= AUTH_TYPE_PLAIN;
 		} else if (strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;

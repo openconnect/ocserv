@@ -34,8 +34,6 @@
  * Need to use setjmp/longjmp on OSX, since the ucontext bits are
  * both broken and deprecated.
  */
-#define CO_MULTI_THREAD
-
 #elif defined(HAVE_GETCONTEXT) && defined(HAVE_MAKECONTEXT) && defined(HAVE_SWAPCONTEXT)
 
 /*
@@ -46,8 +44,6 @@
 /*
  * Use threads.
  */
-#define CO_MULTI_THREAD
-
 #elif defined(HAVE_SIGACTION)
 
 /*
@@ -69,11 +65,6 @@
 /*
  * This will be using setjmp/longjmp
  */
-
-/*
- * Use threads.
- */
-#define CO_MULTI_THREAD
 
 #endif
 

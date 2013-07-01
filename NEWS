@@ -4,6 +4,8 @@
   authentication. In practice this allows authentication with more than
   one password (e.g., with a permanent one and an one time password), as
   well as changing the password.
+- Cookies are no longer stored in the server side. The server is now
+  stateless.
 
 
 * Version 0.1.4 (released 2013-06-15)

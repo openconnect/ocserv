@@ -150,7 +150,7 @@ __attribute__ ((format(printf, 4, 5)))
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *prefix, uint8_t* bin, unsigned bin_size);
 
-int open_tun(main_server_st* s, struct lease_st** l, const char* prev_name);
+int open_tun(main_server_st* s, struct proc_st* proc);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);

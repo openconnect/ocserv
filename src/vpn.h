@@ -133,8 +133,6 @@ struct cfg_st {
 struct worker_st;
 struct main_server_st;
 
-#include <tun.h>
-
 #define MAX_BANNER_SIZE 256
 #define MAX_USERNAME_SIZE 64
 #define MAX_PASSWORD_SIZE 64
@@ -142,6 +140,8 @@ struct main_server_st;
 #define MAX_HOSTNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_SESSION_DATA_SIZE (4*1024)
+
+#include <tun.h>
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen);

@@ -9,6 +9,7 @@ struct lease_st {
 	struct list_node list;
 
 	char name[IFNAMSIZ];
+	char username[MAX_USERNAME_SIZE]; /* owner */
 	unsigned int tun_nr;
 	unsigned int in_use;
 	time_t available_at; /* when it will be available */

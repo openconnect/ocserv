@@ -147,7 +147,7 @@ fail:
 	return ret;
 }
 
-static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd, const char* prev_user)
+static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd)
 {
 int ret;
 const char* group;
@@ -155,16 +155,16 @@ const char* group;
 	mslog(s, proc, LOG_DEBUG, "accepting user '%s'", proc->username);
 	proc_auth_deinit(s, proc);
 
-	ret = open_tun(s, &proc->lease, prev_user);
-	if (ret < 0) {
-		return -1;
-	}
-
 	/* check for multiple connections */
 	ret = check_multiple_users(s, proc);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "user '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
 		return ret;
+	}
+
+	ret = open_tun(s, proc);
+	if (ret < 0) {
+		return -1;
 	}
 
 	if (proc->groupname[0] == 0)
@@ -348,7 +348,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				return ret;
 			}
 
-			ret = accept_user(s, proc, cmd, NULL);
+			ret = accept_user(s, proc, cmd);
 			if (ret < 0) {
 				goto cleanup;
 			}
@@ -368,7 +368,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				return ret;
 			}
 
-			ret = accept_user(s, proc, cmd, (proc->username[0] != 0)?proc->username:NULL);
+			ret = accept_user(s, proc, cmd);
 			if (ret < 0) {
 				goto cleanup;
 			}

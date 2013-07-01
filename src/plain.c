@@ -40,6 +40,7 @@ struct plain_ctx_st* pctx;
 		return ERR_AUTH_FAIL;
 	
 	snprintf(pctx->username, sizeof(pctx->username), "%s", username);
+	pctx->groupname[0] = 0;
 	pctx->passwd = additional;
 	
 	*ctx = pctx;
@@ -55,7 +56,6 @@ struct plain_ctx_st* pctx = ctx;
 	
 	return 0;
 }
-
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */

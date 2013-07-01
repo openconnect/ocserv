@@ -25,41 +25,18 @@
 #include <vpn.h>
 #include <plain.h>
 
+#define MAX_CPASS_SIZE 128
+
 struct plain_ctx_st {
 	char username[MAX_USERNAME_SIZE];
+	char cpass[MAX_CPASS_SIZE]; /* crypt() passwd */
 	char groupname[MAX_GROUPNAME_SIZE];
-	const char* passwd;
+	const char* passwd; /* password file */
 };
-
-static int plain_auth_init(void** ctx, const char* username, const char* ip, void* additional)
-{
-struct plain_ctx_st* pctx;
-
-	pctx = malloc(sizeof(*pctx));
-	if (pctx == NULL)
-		return ERR_AUTH_FAIL;
-	
-	snprintf(pctx->username, sizeof(pctx->username), "%s", username);
-	pctx->groupname[0] = 0;
-	pctx->passwd = additional;
-	
-	*ctx = pctx;
-	
-	return 0;
-}
-
-static int plain_auth_group(void* ctx, char *groupname, int groupname_size)
-{
-struct plain_ctx_st* pctx = ctx;
-
-	snprintf(groupname, groupname_size, "%s", pctx->groupname);
-	
-	return 0;
-}
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
-static int plain_auth_pass(void* ctx, const char* pass, unsigned pass_len)
+static int read_auth_pass(void* ctx)
 {
 struct plain_ctx_st* pctx = ctx;
 unsigned groupname_size;
@@ -75,7 +52,7 @@ int ret;
 		syslog(LOG_AUTH, "error in plain authentication; cannot open: %s", pctx->passwd);
 		return -1;
 	}
-	
+
 	while((ll=getline(&line, &len, fp)) > 0) {
 		if (ll <= 2)
 			continue;
@@ -96,20 +73,69 @@ int ret;
 					pctx->groupname[0] = 0;
 
 				p = strtok(NULL, ":");
-				if (p != NULL && strcmp(crypt(pass, p), p) == 0) {
+				if (p != NULL) {
+					snprintf(pctx->cpass, sizeof(pctx->cpass), "%s", p);
 					ret = 0;
 					goto exit;
-				}
+                                }
 			}
 		}
 	}
 	
-	ret = -1;
-	syslog(LOG_AUTH, "error in plain authentication; error in user '%s'", pctx->username);
+	/* always succeed */
+	ret = 0;
 exit:
 	fclose(fp);
 	free(line);
 	return ret;
+}
+
+static int plain_auth_init(void** ctx, const char* username, const char* ip, void* additional)
+{
+struct plain_ctx_st* pctx;
+int ret;
+
+	pctx = malloc(sizeof(*pctx));
+	if (pctx == NULL)
+		return ERR_AUTH_FAIL;
+	
+	snprintf(pctx->username, sizeof(pctx->username), "%s", username);
+	pctx->groupname[0] = 0;
+	pctx->cpass[0] = 0;
+	pctx->passwd = additional;
+
+	ret = read_auth_pass(pctx);
+	if (ret < 0) {
+		free(pctx);
+		return ERR_AUTH_FAIL;
+        }
+	
+	*ctx = pctx;
+	
+	return 0;
+}
+
+static int plain_auth_group(void* ctx, char *groupname, int groupname_size)
+{
+struct plain_ctx_st* pctx = ctx;
+
+	snprintf(groupname, groupname_size, "%s", pctx->groupname);
+	
+	return 0;
+}
+
+/* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
+ */
+static int plain_auth_pass(void* ctx, const char* pass, unsigned pass_len)
+{
+struct plain_ctx_st* pctx = ctx;
+
+	if (pctx->cpass[0] != 0 && strcmp(crypt(pass, pctx->cpass), pctx->cpass) == 0)
+		return 0;
+        else {
+		syslog(LOG_AUTH, "error in plain authentication; error in user '%s'", pctx->username);
+		return ERR_AUTH_FAIL;
+        }
 }
 
 static int plain_auth_msg(void* ctx, char* msg, size_t msg_size)

@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <vpn.h>
 #include <tlslib.h>
+#include <cookies.h>
 
 #define MAX_MSG_SIZE 256
 

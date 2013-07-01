@@ -8,6 +8,7 @@
 #include <vpn.h>
 #include <tlslib.h>
 #include "ipc.h"
+#include <cookies.h>
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
@@ -70,7 +71,7 @@ struct proc_st {
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
-	
+
 	void * auth_ctx; /* the context of authentication */
 	unsigned auth_status; /* PS_AUTH_ */
 };
@@ -99,7 +100,8 @@ typedef struct main_server_st {
 	struct cfg_st *config;
 	struct tun_st *tun;
 	hash_db_st *tls_db;
-	hash_db_st *cookie_db;
+	
+	uint8_t cookie_key[16];
 
 	/* tls credentials */
 	struct tls_st creds;
@@ -148,7 +150,7 @@ __attribute__ ((format(printf, 4, 5)))
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *prefix, uint8_t* bin, unsigned bin_size);
 
-int open_tun(main_server_st* s, struct lease_st** l);
+int open_tun(main_server_st* s, struct lease_st** l, const char* prev_name);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);

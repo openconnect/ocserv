@@ -35,28 +35,91 @@
 #include <main.h>
 #include <cookies.h>
 
-cookie_store_fn store_cookie;
-cookie_retrieve_fn retrieve_cookie;
-cookie_db_deinit_fn cookie_db_deinit;
-cookie_expire_fn expire_cookies;
-cookie_expire_fn erase_cookies;
-
-int cookie_db_init(main_server_st* s)
+int decrypt_cookie(main_server_st * s, const uint8_t* cookie, unsigned cookie_size, 
+			struct stored_cookie_st* sc)
 {
-struct cookie_storage_st* funcs;
+gnutls_datum_t iv = { (void*)cookie, COOKIE_IV_SIZE };
+int ret;
+uint8_t tag[COOKIE_MAC_SIZE];
+gnutls_cipher_hd_t h;
+gnutls_datum_t key = { (void*)s->cookie_key, sizeof(s->cookie_key) };
 
-#ifdef HAVE_GDBM
-	if (s->config->cookie_db_name != NULL)
-		funcs = &gdbm_cookie_funcs;
-	else
-#endif
-		funcs = &hash_cookie_funcs;
+	if (cookie_size != COOKIE_SIZE)
+		return -1;
 
-	cookie_db_deinit = funcs->deinit;
-	expire_cookies = funcs->expire;
-	erase_cookies = funcs->erase;
-	store_cookie = funcs->store;
-	retrieve_cookie = funcs->retrieve;
+	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, &key, &iv);
+	if (ret < 0)
+		return -1;
+	
+	cookie += COOKIE_IV_SIZE;
+	
+	ret = gnutls_cipher_decrypt2(h, cookie, sizeof(*sc), sc, sizeof(*sc));
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+	
+	ret = gnutls_cipher_tag(h, tag, sizeof(tag));
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+	
+	cookie += sizeof(*sc);
+	if (memcmp(tag, cookie, COOKIE_MAC_SIZE) != 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
-	return funcs->init(s);
+	ret = 0;
+
+cleanup:
+	gnutls_cipher_deinit(h);
+	
+	return ret;
+}
+
+int encrypt_cookie(main_server_st * s, uint8_t* cookie, unsigned cookie_size, 
+			const struct stored_cookie_st* sc)
+{
+uint8_t _iv[COOKIE_IV_SIZE];
+gnutls_cipher_hd_t h;
+gnutls_datum_t iv = { _iv, sizeof(_iv) };
+gnutls_datum_t key = { (void*)s->cookie_key, sizeof(s->cookie_key) };
+int ret;
+
+	if (cookie_size != COOKIE_SIZE)
+		return -1;
+	
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, _iv, sizeof(_iv));
+	if (ret < 0)
+		return -1;
+	
+	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, &key, &iv);
+	if (ret < 0)
+		return -1;
+
+	memcpy(cookie, _iv, COOKIE_IV_SIZE);
+	cookie += COOKIE_IV_SIZE;
+	
+	ret = gnutls_cipher_encrypt2(h, sc, sizeof(*sc), cookie, sizeof(*sc));
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+	
+	cookie += sizeof(*sc);
+	
+	ret = gnutls_cipher_tag(h, cookie, COOKIE_MAC_SIZE);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+	
+	ret = 0;
+	
+cleanup:
+	gnutls_cipher_deinit(h);
+	return ret;
+
 }

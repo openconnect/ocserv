@@ -27,6 +27,7 @@
 
 #include <vpn.h>
 #include <worker.h>
+#include <main.h>
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		       void *_buf, size_t buflen)

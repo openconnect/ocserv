@@ -147,7 +147,7 @@ fail:
 	return ret;
 }
 
-static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd)
+static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd, const char* prev_user)
 {
 int ret;
 const char* group;
@@ -155,7 +155,7 @@ const char* group;
 	mslog(s, proc, LOG_DEBUG, "accepting user '%s'", proc->username);
 	proc_auth_deinit(s, proc);
 
-	ret = open_tun(s, &proc->lease);
+	ret = open_tun(s, &proc->lease, prev_user);
 	if (ret < 0) {
 		return -1;
 	}
@@ -201,6 +201,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
+	/* FIXME: do not write directly to the union */
 	union {
 		struct cmd_auth_req_st auth;
 		struct cmd_auth_cookie_req_st cauth;
@@ -347,7 +348,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				return ret;
 			}
 
-			ret = accept_user(s, proc, cmd);
+			ret = accept_user(s, proc, cmd, NULL);
 			if (ret < 0) {
 				goto cleanup;
 			}
@@ -355,6 +356,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			goto cleanup;
 
 		case AUTH_COOKIE_REQ:
+			
 			if (cmd_data_len != sizeof(cmd_data.cauth)) {
 				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
 				return ERR_BAD_COMMAND;
@@ -366,7 +368,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				return ret;
 			}
 
-			ret = accept_user(s, proc, cmd);
+			ret = accept_user(s, proc, cmd, (proc->username[0] != 0)?proc->username:NULL);
 			if (ret < 0) {
 				goto cleanup;
 			}

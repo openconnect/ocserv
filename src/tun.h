@@ -11,6 +11,7 @@ struct lease_st {
 	char name[IFNAMSIZ];
 	unsigned int tun_nr;
 	unsigned int in_use;
+	time_t available_at; /* when it will be available */
 
         struct sockaddr_storage rip4;
         socklen_t rip4_len;

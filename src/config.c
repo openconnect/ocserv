@@ -191,8 +191,6 @@ unsigned j;
 	READ_STRING("tls-priorities", config->priorities, 0);
 	READ_STRING("chroot-dir", config->chroot_dir, 0);
 
-	READ_STRING("cookie-db", config->cookie_db_name, 0);
-
 	READ_NUMERIC("cookie-validity", config->cookie_validity, 1);
 	READ_NUMERIC("auth-timeout", config->auth_timeout, 0);
 	READ_NUMERIC("max-clients", config->max_clients, 0);
@@ -376,7 +374,6 @@ unsigned i;
 	DEL(config->cert_group_oid);
 	DEL(config->priorities);
 	DEL(config->chroot_dir);
-	DEL(config->cookie_db_name);
 	DEL(config->connect_script);
 	DEL(config->disconnect_script);
 

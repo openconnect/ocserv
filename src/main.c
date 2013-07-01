@@ -36,6 +36,7 @@
 #include <script-list.h>
 
 #include <gnutls/x509.h>
+#include <gnutls/crypto.h>
 #include <tlslib.h>
 #include "ipc.h"
 #include "setproctitle.h"
@@ -599,7 +600,6 @@ static void check_other_work(main_server_st *s)
 		need_maintainance = 0;
 		mslog(s, NULL, LOG_INFO, "Performing maintainance");
 		expire_tls_sessions(s);
-		expire_cookies(s);
 		expire_banned(s);
 		alarm(MAINTAINANCE_TIME(s));
 	}
@@ -655,6 +655,12 @@ int main(int argc, char** argv)
 
 	/* Initialize GnuTLS */
 	tls_global_init(&s);
+	
+	ret = gnutls_rnd(GNUTLS_RND_RANDOM, s.cookie_key, sizeof(s.cookie_key));
+	if (ret < 0) {
+		fprintf(stderr, "Error in cookie key generation\n");
+		exit(1);
+	}
 
 	/* load configuration */
 	ret = cmd_parser(argc, argv, &config);
@@ -675,12 +681,6 @@ int main(int argc, char** argv)
 
 	main_auth_init(&s);
 
-	ret = cookie_db_init(&s);
-	if (ret < 0) {
-		fprintf(stderr, "Could not initialize cookie database.\n");
-		exit(1);
-	}
-	
 	/* Listen to network ports */
 	ret = listen_ports(&config, &s.llist, config.name);
 	if (ret < 0) {
@@ -808,7 +808,6 @@ int main(int argc, char** argv)
 					 */
 					close(cmd_fd[0]);
 					clear_lists(&s);
-					erase_cookies(&s);
 
 					setproctitle(PACKAGE_NAME"-worker");
 					kill_on_parent_kill(SIGTERM);

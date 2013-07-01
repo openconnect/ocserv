@@ -289,7 +289,7 @@ static int set_network_info( main_server_st* s, const struct lease_st *lease)
 }
 
 
-int open_tun(main_server_st* s, struct lease_st** l)
+int open_tun(main_server_st* s, struct lease_st** l, const char* prev_name)
 {
 	int tunfd, ret, e;
 	struct ifreq ifr;
@@ -298,6 +298,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 	struct lease_st *last4, *tmp;
 	struct lease_st *last6;
 	unsigned current = s->tun->total;
+	time_t now = time(0);
 	
 	last4 = last6 = NULL;
 		
@@ -305,7 +306,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
         list_for_each(&s->tun->head, tmp, list) {
 		/* if the device isn't in use by the server and the IPs
 		 *  are free. */
-		if (tmp->in_use == 0) {
+		if (tmp->in_use == 0 && (tmp->available_at < now || (prev_name != NULL && strcmp(prev_name, tmp->name) == 0))) {
                         if ((tmp->lip6_len != 0 && icmp_ping6(s, (void*)&tmp->lip6, (void*)&tmp->rip6) == 0) ||
                           (tmp->lip4_len != 0 && icmp_ping4(s, (void*)&tmp->lip4, (void*)&tmp->rip4) == 0)) {
         			lease = tmp;
@@ -434,6 +435,7 @@ int open_tun(main_server_st* s, struct lease_st** l)
 	}
 	
 	lease->in_use = 1;
+	lease->available_at = now + s->config->cookie_validity;
 	lease->fd = tunfd;
 	*l = lease;
 

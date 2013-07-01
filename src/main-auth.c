@@ -155,31 +155,27 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req)
 {
 int ret;
-struct stored_cookie_st *sc;
+struct stored_cookie_st sc;
 time_t now = time(0);
 
-	sc = malloc(sizeof(*sc));
-	if (sc == NULL)
-		return -1;
-
-	ret = retrieve_cookie(s, req->cookie, sizeof(req->cookie), sc);
+	ret = decrypt_cookie(s, req->cookie, sizeof(req->cookie), &sc);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 
-	if (sc->expiration < now) {
+	if (sc.expiration < now) {
 		ret = -1;
 		goto cleanup;
 	}
 	
 	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
-	memcpy(proc->username, sc->username, sizeof(proc->username));
-	memcpy(proc->groupname, sc->groupname, sizeof(proc->groupname));
-	memcpy(proc->hostname, sc->hostname, sizeof(proc->hostname));
-	memcpy(proc->session_id, sc->session_id, sizeof(proc->session_id));
+	memcpy(proc->username, sc.username, sizeof(proc->username));
+	memcpy(proc->groupname, sc.groupname, sizeof(proc->groupname));
+	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
+	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	proc->session_id_size = sizeof(proc->session_id);
-	
+
 	proc->username[sizeof(proc->username)-1] = 0;
 	proc->groupname[sizeof(proc->groupname)-1] = 0;
 	proc->hostname[sizeof(proc->hostname)-1] = 0;
@@ -197,52 +193,33 @@ time_t now = time(0);
 		}
 	}
 	
-	/* ok auth ok. Renew the cookie. */
-	sc->expiration = time(0) + s->config->cookie_validity;
-	ret = store_cookie(s, sc);
-	if (ret < 0)
-		goto cleanup;
-
-	/* sc is freed in store_cookie() */
-	
 	return 0;
 cleanup:
-	free(sc);
 	return ret;
 }
 
 int generate_and_store_vals(main_server_st *s, struct proc_st* proc)
 {
 int ret;
-struct stored_cookie_st *sc;
+struct stored_cookie_st sc;
 
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, proc->cookie, sizeof(proc->cookie));
-	if (ret < 0)
-		return -2;
-	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
-	if (ret < 0)
-		return -2;
-	proc->session_id_size = sizeof(proc->session_id);
-	
-	sc = calloc(1, sizeof(*sc));
-	if (sc == NULL)
-		return -2;
+        ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
+        if (ret < 0)
+                return -1;
+        
+        proc->session_id_size = sizeof(proc->session_id);
 
-	sc->expiration = time(0) + s->config->cookie_validity;
+	memcpy(sc.username, proc->username, sizeof(proc->username));
+	memcpy(sc.groupname, proc->groupname, sizeof(proc->groupname));
+	memcpy(sc.hostname, proc->hostname, sizeof(proc->hostname));
+	memcpy(sc.session_id, proc->session_id, sizeof(proc->session_id));
 	
-	memcpy(sc->cookie, proc->cookie, sizeof(proc->cookie));
-	memcpy(sc->username, proc->username, sizeof(sc->username));
-	memcpy(sc->groupname, proc->groupname, sizeof(sc->groupname));
-	memcpy(sc->hostname, proc->hostname, sizeof(sc->hostname));
-	memcpy(sc->session_id, proc->session_id, sizeof(sc->session_id));
+	sc.expiration = time(0) + s->config->cookie_validity;
 	
-	/* the sc pointer stays there */
-	ret = store_cookie(s, sc);
-	if (ret < 0) {
-		free(sc);
+	ret = encrypt_cookie(s, proc->cookie, sizeof(proc->cookie), &sc);
+	if (ret < 0)
 		return -1;
-	}
-	
+
 	return 0;
 }
 

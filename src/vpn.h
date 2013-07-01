@@ -113,9 +113,6 @@ struct cfg_st {
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
 
-	/* if gdbm is there */
-	char* cookie_db_name;
-
 	char *connect_script;
 	char *disconnect_script;
 
@@ -144,7 +141,6 @@ struct main_server_st;
 #define TLS_MASTER_SIZE 48
 #define MAX_HOSTNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
-#define COOKIE_SIZE 32
 #define MAX_SESSION_DATA_SIZE (4*1024)
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,

@@ -237,11 +237,6 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 	cmd_data_len = ret - 1;
 
-	if (proc->auth_status == PS_AUTH_INIT && cmd != AUTH_REQ) {
-		mslog(s, proc, LOG_ERR, "received message %u when expecting auth req.", (unsigned)cmd);
-		return ERR_BAD_COMMAND;
-	}
-
 	switch(cmd) {
 		case CMD_TUN_MTU:
 			if (cmd_data_len != sizeof(cmd_data.tmtu)) {
@@ -319,12 +314,13 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				break; /* wait for another command */
 			} else if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
-				return ret;
+				goto cleanup;
 			}
 			
 			break;
 
 		case AUTH_REQ:
+
 			if (proc->auth_status != PS_AUTH_INIT) {
 				mslog(s, proc, LOG_ERR, "received authentication request when not initialized.");
 				return ERR_BAD_COMMAND;
@@ -345,7 +341,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				break; /* wait for another command */
 			} else if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
-				return ret;
+				goto cleanup;
 			}
 
 			ret = accept_user(s, proc, cmd);
@@ -362,10 +358,15 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				return ERR_BAD_COMMAND;
 			}
 
+			if (proc->auth_status != PS_AUTH_INACTIVE) {
+				mslog(s, proc, LOG_ERR, "received unexpected cookie authentication.");
+				return ERR_BAD_COMMAND;
+			}
+
 			ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth);
 			if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
-				return ret;
+				goto cleanup;
 			}
 
 			ret = accept_user(s, proc, cmd);

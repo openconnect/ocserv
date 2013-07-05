@@ -15,8 +15,8 @@ struct __attribute__ ((__packed__)) stored_cookie_st {
 #define COOKIE_MAC_SIZE 12 /* 96-bits of AES-GCM */
 #define COOKIE_SIZE (COOKIE_IV_SIZE + sizeof(struct stored_cookie_st) + COOKIE_MAC_SIZE)
 
-int encrypt_cookie(struct main_server_st * s, uint8_t* cookie, unsigned cookie_size, 
-			const struct stored_cookie_st* sc);
+int encrypt_cookie(struct main_server_st * s, const struct stored_cookie_st* sc,
+			uint8_t* cookie, unsigned cookie_size);
 int decrypt_cookie(struct main_server_st * s, const uint8_t* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc);
 

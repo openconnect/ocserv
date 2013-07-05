@@ -158,7 +158,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			cmd_auth_reply_t r);
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req);
-int generate_and_store_vals(main_server_st *s, struct proc_st* proc);
+int generate_cookie(main_server_st *s, struct proc_st* proc);
 int handle_auth_init(main_server_st *s, struct proc_st* proc,
 		     const struct cmd_auth_init_st * req);
 int handle_auth_req(main_server_st *s, struct proc_st* proc,

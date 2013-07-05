@@ -173,8 +173,8 @@ const char* group;
 		group = proc->groupname;
 
 	if (cmd == AUTH_REQ || cmd == AUTH_INIT) {
-		/* generate and store cookie */
-		ret = generate_and_store_vals(s, proc);
+		/* generate cookie */
+		ret = generate_cookie(s, proc);
 		if (ret < 0) {
 			return ERR_BAD_COMMAND;
 		}

@@ -79,8 +79,8 @@ cleanup:
 	return ret;
 }
 
-int encrypt_cookie(main_server_st * s, uint8_t* cookie, unsigned cookie_size, 
-			const struct stored_cookie_st* sc)
+int encrypt_cookie(main_server_st * s, const struct stored_cookie_st* sc,
+        uint8_t* cookie, unsigned cookie_size)
 {
 uint8_t _iv[COOKIE_IV_SIZE];
 gnutls_cipher_hd_t h;

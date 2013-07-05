@@ -190,7 +190,7 @@ time_t now = time(0);
 	return 0;
 }
 
-int generate_and_store_vals(main_server_st *s, struct proc_st* proc)
+int generate_cookie(main_server_st *s, struct proc_st* proc)
 {
 int ret;
 struct stored_cookie_st sc;
@@ -208,7 +208,7 @@ struct stored_cookie_st sc;
 	
 	sc.expiration = time(0) + s->config->cookie_validity;
 	
-	ret = encrypt_cookie(s, proc->cookie, sizeof(proc->cookie), &sc);
+	ret = encrypt_cookie(s, &sc, proc->cookie, sizeof(proc->cookie));
 	if (ret < 0)
 		return -1;
 

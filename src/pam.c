@@ -50,6 +50,7 @@ struct pam_ctx_st {
 	struct pam_conv dc;
 	coroutine_t cr;
 	int cr_ret;
+	unsigned changing; /* whether we are entering a new password */
 	str_st msg;
 	unsigned sent_msg;
 	struct pam_response *replies; /* for safety */
@@ -122,6 +123,7 @@ int pret;
 		/* change password */
 		syslog(LOG_INFO, "Password for user '%s' is expired. Attempting to update...", pctx->username);
 
+		pctx->changing = 1;
 		pret = pam_chauthtok(pctx->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
 	}
 	
@@ -204,7 +206,10 @@ int size;
 
 	if (msg != NULL) {
 		if (pctx->msg.length == 0)
-			snprintf(msg, msg_size, "Please enter your password");
+                        if (pctx->changing)
+				snprintf(msg, msg_size, "Please enter the new password");
+                        else
+				snprintf(msg, msg_size, "Please enter your password");
 		else {
 			size = MIN(msg_size-1, pctx->msg.length);
 			memcpy(msg, pctx->msg.data, size);

@@ -5,7 +5,8 @@
   one password (e.g., with a permanent one and an one time password), as
   well as changing the password.
 - Cookies are no longer stored in the server side. The server is now
-  stateless.
+  stateless. A randomly generated key is used to encrypt and authenticate
+  the cookies sent to the client.
 
 
 * Version 0.1.4 (released 2013-06-15)

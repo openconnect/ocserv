@@ -270,8 +270,8 @@ static int set_network_info( main_server_st* s, const struct lease_st *lease)
 	if (lease->lip6_len == 0 && lease->lip4_len == 0) {
 		mslog(s, NULL, LOG_ERR, "%s: Could not set any IP.\n", lease->name);
 		ret = -1;
-	} else
-		ret = 0;
+		goto cleanup;
+	}
 		
 	/* bring interface up */
 	memset(&ifr, 0, sizeof(ifr));
@@ -282,8 +282,10 @@ static int set_network_info( main_server_st* s, const struct lease_st *lease)
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret != 0) {
 		mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface.\n", lease->name);
+		ret = -1;
 	}
 
+cleanup:
 	close(fd);
 	return ret;
 }

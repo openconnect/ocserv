@@ -250,8 +250,8 @@ const char* ip;
 	}
 
 	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (req->tls_auth_ok != 0) {
-			ret = 0;
+		if (req->tls_auth_ok == 0) {
+			return -1;
 		}
 		
 		if (proc->username[0] == 0) {

@@ -257,7 +257,7 @@ int ret;
  * is compatible with all ciphersuites */
 static void certificate_check(main_server_st *s)
 {
-gnutls_datum_t data;
+gnutls_datum_t data = {NULL, 0};
 gnutls_x509_crt_t crt = NULL;
 int ret;
 unsigned usage;

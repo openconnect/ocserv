@@ -376,7 +376,6 @@ unsigned i;
 	DEL(config->banner);
 	DEL(config->dh_params_file);
 	DEL(config->name);
-	DEL(config->cert);
 	DEL(config->pin_file);
 	DEL(config->srk_pin_file);
 	DEL(config->ca);
@@ -402,6 +401,7 @@ unsigned i;
 	DEL(config->key);
 	for (i=0;i<config->cert_size;i++)
 		DEL(config->cert[i]);
+	DEL(config->cert);
 	DEL(config->network.routes);
 	memset(config, 0, sizeof(*config));
 

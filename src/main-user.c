@@ -65,6 +65,9 @@ const char* script;
 		char real[64];
 		char local[64];
 		char remote[64];
+
+		if (proc->lease == NULL)
+			exit(1);
 		
 		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
 			exit(1);

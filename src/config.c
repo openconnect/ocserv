@@ -377,7 +377,6 @@ unsigned i;
 	DEL(config->dh_params_file);
 	DEL(config->name);
 	DEL(config->cert);
-	DEL(config->key);
 	DEL(config->pin_file);
 	DEL(config->srk_pin_file);
 	DEL(config->ca);
@@ -400,6 +399,7 @@ unsigned i;
 		DEL(config->network.routes[i]);
 	for (i=0;i<config->key_size;i++)
 		DEL(config->key[i]);
+	DEL(config->key);
 	for (i=0;i<config->cert_size;i++)
 		DEL(config->cert[i]);
 	DEL(config->network.routes);

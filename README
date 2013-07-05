@@ -58,10 +58,10 @@ You may find some examples in the doc/scripts/ directory.
 Authentication in openconnect VPN server occurs in the initial TLS session.
 That is an HTTPS session over which the client is provided with an XML authentication
 page. The server is authenticated using its certificate and the client, either by
-its certificate, or via a username and password pair which are forwarded to
-PAM, verified against a password file, or a combination of them. Because PAM 
-supports various authentication types, the username, password entered by the user 
-could be a one-time-password or whatever else. After the user is authenticated he 
+its certificate, or via username and password pairs, either via PAM or a
+custom password file. Various combinations can be used, e.g., certificates
+and passwords. Since PAM supports various authentication types, two factor
+authentication methods are also supported. After the user is authenticated he 
 is provided with a cookie that can be used for future connections. The lifetime 
 of the cookie is configurable using the 'cookie-validity' option, and is renewed 
 on every client connection.

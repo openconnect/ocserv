@@ -258,7 +258,7 @@ int ret;
 static void certificate_check(main_server_st *s)
 {
 gnutls_datum_t data;
-gnutls_x509_crt_t crt;
+gnutls_x509_crt_t crt = NULL;
 int ret;
 unsigned usage;
 
@@ -292,7 +292,8 @@ unsigned usage;
 	}
 
 cleanup:
-	gnutls_x509_crt_deinit(crt);
+	if (crt != NULL)
+        	gnutls_x509_crt_deinit(crt);
 	gnutls_free(data.data);
 	return;
 }

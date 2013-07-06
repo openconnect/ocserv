@@ -45,12 +45,12 @@ two IPv4 addresses are assigned, its VPN address and its local image (remember
 this is a point-to-point connection). The image isn't known to the client 
 (the anyconnect protocol doesn't forward it). 
 
-Note that ocserv doesn't do any packet forwarding or filtering between the
-networks. It is expected that the server has any required routes or firewall
-rules set up. You may conditionally enable firewall rules, or even
-enable routing rules through the client using the 'connect-script' and 
-'disconnect-script' scripts based on the user who connected. 
-You may find some examples in the doc/scripts/ directory.
+Note that in order to allow high-speed transfers ocserv doesn't do any packet 
+forwarding or filtering between the networks. It is expected that the server 
+has any required routes or firewall rules set up. You may conditionally 
+enable firewall rules, or even enable routing rules through the client 
+using the 'connect-script' and 'disconnect-script' scripts based on the 
+user who connected. You can find some examples in the doc/scripts/ directory.
 
 
 === Authentication ===

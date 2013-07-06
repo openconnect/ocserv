@@ -151,6 +151,35 @@ int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
+static int check_user_group_status(main_server_st *s, struct proc_st* proc,
+		     int tls_auth_ok, const char* cert_user, const char* cert_group)
+{
+	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		if (tls_auth_ok == 0) {
+			return -1;
+		}
+		
+		if (proc->username[0] == 0) {
+			memcpy(proc->username, cert_user, sizeof(proc->username));
+			memcpy(proc->groupname, cert_group, sizeof(proc->groupname));
+			proc->username[sizeof(proc->username)-1] = 0;
+			proc->groupname[sizeof(proc->groupname)-1] = 0;
+		} else {
+			if (strcmp(proc->username, cert_user) != 0) {
+				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, cert_user);
+				return -1;
+			}
+
+			if (s->config->cert_group_oid != NULL && strcmp(proc->groupname, cert_group) != 0) {
+				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, cert_group, proc->groupname);
+				return -1;
+			}
+		}
+	}
+	
+	return 0;
+}
+
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req)
 {
@@ -176,17 +205,10 @@ time_t now = time(0);
 	proc->groupname[sizeof(proc->groupname)-1] = 0;
 	proc->hostname[sizeof(proc->hostname)-1] = 0;
 
-	if (req->tls_auth_ok != 0) {
-		if (strcmp(proc->username, req->cert_user) != 0) {
-			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
-        		return -1;
-		}
-		if (strcmp(proc->groupname, req->cert_group) != 0) {
-			mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
-        		return -1;
-		}
-	}
-	
+	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user, req->cert_group);
+	if (ret < 0)
+		return ret;
+
 	return 0;
 }
 
@@ -249,27 +271,10 @@ const char* ip;
 		proc->username[sizeof(proc->username)-1] = 0;
 	}
 
-	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (req->tls_auth_ok == 0) {
-			return -1;
-		}
-		
-		if (proc->username[0] == 0) {
-			memcpy(proc->username, req->cert_user, sizeof(proc->username));
-			memcpy(proc->groupname, req->cert_group, sizeof(proc->groupname));
-			proc->username[sizeof(proc->username)-1] = 0;
-			proc->groupname[sizeof(proc->groupname)-1] = 0;
-		} else {
-			if (strcmp(proc->username, req->cert_user) != 0) {
-				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, req->cert_user);
-				return -1;
-			}
-			if (strcmp(proc->groupname, req->cert_group) != 0) {
-				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, req->cert_group, proc->groupname);
-				return -1;
-			}
-		}
-	}
+	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user, req->cert_group);
+	if (ret < 0)
+		return ret;
+
 
 	mslog(s, proc, LOG_DEBUG, "auth init for user '%s' from '%s'", proc->username, ip);
 

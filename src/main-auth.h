@@ -3,6 +3,8 @@
 
 #include <main.h>
 
+#define MAX_AUTH_REQS 8
+
 struct auth_mod_st {
 	unsigned int type;
 	int (*auth_init)(void** ctx, const char* username, const char* ip, void* additional);

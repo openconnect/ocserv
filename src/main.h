@@ -74,6 +74,7 @@ struct proc_st {
 
 	void * auth_ctx; /* the context of authentication */
 	unsigned auth_status; /* PS_AUTH_ */
+	unsigned auth_reqs; /* the number of requests received */
 };
 
 struct proc_list_st {

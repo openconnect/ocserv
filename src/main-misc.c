@@ -330,6 +330,12 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
 				return ERR_BAD_COMMAND;
 			}
+			
+			proc->auth_reqs++;
+			if (proc->auth_reqs > MAX_AUTH_REQS) {
+				mslog(s, proc, LOG_ERR, "received too many authentication requests.");
+				return ERR_BAD_COMMAND;
+			}
 
 			ret = handle_auth_req(s, proc, &cmd_data.auth);
 			if (ret == ERR_AUTH_CONTINUE) {

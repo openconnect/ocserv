@@ -33,7 +33,7 @@
 #include <pcl.h>
 #include <str.h>
 
-#define APP_NAME PACKAGE
+#define PAM_STACK_SIZE (48*1024)
 
 #define MAX_REPLIES 2
 
@@ -157,13 +157,13 @@ struct pam_ctx_st * pctx;
 
 	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
-	pret = pam_start(APP_NAME, user, &pctx->dc, &pctx->ph);
+	pret = pam_start(PACKAGE, user, &pctx->dc, &pctx->ph);
 	if (pret != PAM_SUCCESS) {
 		syslog(LOG_AUTH, "Error in PAM authentication initialization: %s", pam_strerror(pctx->ph, pret));
 		goto fail1;
 	}
 
-	pctx->cr = co_create(co_auth_user, pctx, NULL, 32*1024);
+	pctx->cr = co_create(co_auth_user, pctx, NULL, PAM_STACK_SIZE);
 	if (pctx->cr == NULL)
 		goto fail2;
 

@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of GnuTLS.
+#
+# GnuTLS is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at
+# your option) any later version.
+#
+# GnuTLS is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+
+#this test can only be run as root
+id|grep root >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+if ! test -x /usr/sbin/openconnect;then
+	echo "You need openconnect to run this test"
+	exit 77
+fi
+
+. ./common.sh
+
+echo "Testing local backend with username-password..."
+
+launch_server -d -f -c test1.config & PID=$!
+wait_server $PID
+
+echo "Connecting to obtain cookie..."
+( echo "test" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
+echo "Connecting to obtain cookie with wrong password..."
+( echo "tost" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
+#echo "Normal connection..."
+#( echo "test" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#	fail $PID "Could not connect to server"
+
+kill $PID
+wait
+
+exit 0

@@ -1,6 +1,6 @@
 EXTRA_DIST = m4/lib-link.m4 LICENSE
 
-SUBDIRS = gl libopts src doc
+SUBDIRS = gl libopts src doc tests
 
 ACLOCAL_AMFLAGS = -I gl/m4 -I libopts/m4 -I m4
 

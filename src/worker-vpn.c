@@ -97,9 +97,13 @@ const static struct known_urls_st known_urls[] = {
 		LL("/", get_auth_handler, post_auth_handler),
 		LL("/auth", get_auth_handler, post_auth_handler),
 #ifdef ANYCONNECT_CLIENT_COMPAT
-		LL("/1/index.html", get_auth_handler, post_auth_handler),
+		LL("/1/index.html", get_empty_handler, NULL),
+		LL("/2/index.html", get_empty_handler, NULL),
+		LL("/2/Linux", get_empty_handler, NULL),
+		LL("/2/VPNManifest.xml", get_string_handler, NULL),
+		LL("/2/binaries/update.txt", get_string_handler, NULL),
 		LL("/profiles", get_config_handler, NULL),
-		LL("/+CSCOT+/translation-table", get_cscot_handler, NULL),
+		LL("/+CSCOT+/translation-table", get_string_handler, NULL),
 #endif
 		{NULL, 0, 0, NULL, NULL}
 };

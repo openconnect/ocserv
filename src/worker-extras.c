@@ -98,11 +98,18 @@ struct stat st;
 	return 0;
 }
 
-int get_cscot_handler(worker_st *ws, unsigned http_ver)
+int get_string_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
+const char *data;
+int len;
 
-	oclog(ws, LOG_DEBUG, "requested CSCOT: %s", ws->req.url); 
+	oclog(ws, LOG_DEBUG, "requested fixed string: %s", ws->req.url); 
+	if (!strcmp(ws->req.url, "/2/binaries/update.txt"))
+		data = "0,0,0000\n";
+	else
+		data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n</vpn>\n";
+	len = strlen(data);
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -121,13 +128,11 @@ int ret;
 	if (ret < 0)
 		return -1;
 
-#define MANIFEST "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n" \
-		"</vpn>\n"
-	ret = tls_printf(ws->session, "Content-Length: %u\r\n\r\n", (unsigned)sizeof(MANIFEST)-1);
+	ret = tls_printf(ws->session, "Content-Length: %d\r\n\r\n", len);
 	if (ret < 0)
 		return -1;
 		
-	ret = tls_puts(ws->session, MANIFEST);
+	ret = tls_send(ws->session, data, len);
 	if (ret < 0)
 		return -1;
 

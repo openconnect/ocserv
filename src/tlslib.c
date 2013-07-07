@@ -638,12 +638,18 @@ unsigned iv_size, overhead = 0, t;
 unsigned block_size;
 
 	block_size = gnutls_cipher_get_block_size(cipher);
+#if GNUTLS_VERSION_NUMBER >= 0x030200
 	iv_size = gnutls_cipher_get_iv_size(cipher);
+#else
+	iv_size = block_size;
+#endif
 	
 	switch(version) {
 		case GNUTLS_DTLS0_9:
 		case GNUTLS_DTLS1_0:
+#if GNUTLS_VERSION_NUMBER >= 0x030200
 		case GNUTLS_DTLS1_2:
+#endif
 			overhead += 13;
 			break;
 		default:

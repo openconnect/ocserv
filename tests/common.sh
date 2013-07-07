@@ -20,6 +20,17 @@
 # along with this file; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+#this test can only be run as root
+id|grep root >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+if ! test -x /usr/sbin/openconnect;then
+	echo "You need openconnect to run this test"
+	exit 77
+fi
+
 fail() {
    PID=$1
    shift;

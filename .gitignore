@@ -1,6 +1,8 @@
 ocserv*.tar.lz*
 ocserv*.tar.xz*
 *~
+*.log
+*.trs
 ocserv
 configure
 autom4te.cache

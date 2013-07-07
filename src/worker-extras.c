@@ -98,6 +98,9 @@ struct stat st;
 	return 0;
 }
 
+#define VPN_VERSION "0,0,0000\n"
+#define XML_START "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n</vpn>\n"
+
 int get_string_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
@@ -105,11 +108,13 @@ const char *data;
 int len;
 
 	oclog(ws, LOG_DEBUG, "requested fixed string: %s", ws->req.url); 
-	if (!strcmp(ws->req.url, "/2/binaries/update.txt"))
-		data = "0,0,0000\n";
-	else
-		data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n</vpn>\n";
-	len = strlen(data);
+	if (!strcmp(ws->req.url, "/2/binaries/update.txt")) {
+		data = VPN_VERSION;
+		len = sizeof(VPN_VERSION)-1;
+	} else {
+		data = XML_START;
+		len = sizeof(XML_START)-1;
+	}
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -121,6 +126,52 @@ int len;
 		return -1;
 
 	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_printf(ws->session, "Content-Length: %d\r\n\r\n", len);
+	if (ret < 0)
+		return -1;
+		
+	ret = tls_send(ws->session, data, len);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_uncork(ws->session);
+	if (ret < 0)
+		return -1;
+	
+	return 0;
+}
+
+#define SH_SCRIPT "#!/bin/sh\n\n" \
+	"exit 0"
+
+int get_dl_handler(worker_st *ws, unsigned http_ver)
+{
+int ret;
+const char *data;
+int len;
+
+	oclog(ws, LOG_DEBUG, "requested downloader: %s", ws->req.url); 
+
+	data = SH_SCRIPT;
+	len = sizeof(SH_SCRIPT)-1;
+
+	tls_cork(ws->session);
+	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	if (ret < 0)
+		return -1;
+
+	ret = tls_puts(ws->session, "Content-Type: application/x-shellscript\r\n");
 	if (ret < 0)
 		return -1;
 

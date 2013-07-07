@@ -132,6 +132,7 @@ int post_auth_handler(worker_st *server, unsigned http_ver);
 int get_empty_handler(worker_st *server, unsigned http_ver);
 int get_config_handler(worker_st *ws, unsigned http_ver);
 int get_string_handler(worker_st *ws, unsigned http_ver);
+int get_dl_handler(worker_st *ws, unsigned http_ver);
 
 void set_resume_db_funcs(gnutls_session_t);
 

@@ -9,6 +9,7 @@
   the cookies sent to the client.
 - Added test suite. It requires "make check" to be run as root (in order
   to be able to run the server).
+- Bypass the AnyConnect auto-download mechanism. Patch by Kevin Cernekee.
 
 
 * Version 0.1.4 (released 2013-06-15)

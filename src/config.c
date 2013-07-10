@@ -29,6 +29,7 @@
 #include <ocserv-args.h>
 #include <autoopts/options.h>
 #include <limits.h>
+#include <c-strcase.h>
 
 #include <vpn.h>
 #include <tlslib.h>
@@ -85,7 +86,7 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		READ_STRING(name, tmp_tf, mand); \
 		if (tmp_tf == NULL) s_name = def; \
 		else { \
-			if (strcasecmp(tmp_tf, "true") == 0 || strcasecmp(tmp_tf, "yes") == 0) \
+			if (c_strcasecmp(tmp_tf, "true") == 0 || c_strcasecmp(tmp_tf, "yes") == 0) \
 				s_name = 1; \
 			else \
 				s_name = 0; \
@@ -120,7 +121,7 @@ unsigned j;
 
 	READ_MULTI_LINE("auth", auth, auth_size, 1);
 	for (j=0;j<auth_size;j++) {
-		if (strcasecmp(auth[j], "pam") == 0) {
+		if (c_strcasecmp(auth[j], "pam") == 0) {
 			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
 				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
 				exit(1);
@@ -147,7 +148,7 @@ unsigned j;
 			}
 			*p = 0;
 			config->auth_types |= AUTH_TYPE_PLAIN;
-		} else if (strcasecmp(auth[j], "certificate") == 0) {
+		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 		} else {
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);

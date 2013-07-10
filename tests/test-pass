@@ -39,6 +39,12 @@ echo "Connecting to obtain cookie with wrong username..."
 ( echo "tost" | openconnect -q localhost:4443 -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
+#test special characters
+
+echo "Connecting to obtain cookie..."
+( echo "!@#$%^&*()<>" | openconnect -q localhost:4443 -u special --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
 #echo "Normal connection..."
 #( echo "test" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"

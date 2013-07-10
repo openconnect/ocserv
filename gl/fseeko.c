@@ -19,7 +19,7 @@
 /* Specification.  */
 #include <stdio.h>
 
-/* Get off_t and lseek.  */
+/* Get off_t, lseek, _POSIX_VERSION.  */
 #include <unistd.h>
 
 #include "stdio-impl.h"
@@ -99,8 +99,14 @@ fseeko (FILE *fp, off_t offset, int whence)
 #elif defined EPLAN9                /* Plan9 */
   if (fp->rp == fp->buf
       && fp->wp == fp->buf)
+#elif FUNC_FFLUSH_STDIN < 0 && 200809 <= _POSIX_VERSION
+  /* Cross-compiling to some other system advertising conformance to
+     POSIX.1-2008 or later.  Assume fseeko and fflush work as advertised.
+     If this assumption is incorrect, please report the bug to
+     bug-gnulib.  */
+  if (0)
 #else
-  #error "Please port gnulib fseeko.c to your platform! Look at the code in fpurge.c, then report this to bug-gnulib."
+  #error "Please port gnulib fseeko.c to your platform! Look at the code in fseeko.c, then report this to bug-gnulib."
 #endif
     {
       /* We get here when an fflush() call immediately preceded this one (or

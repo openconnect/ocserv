@@ -34,6 +34,7 @@
 
 #include <vpn.h>
 #include "ipc.h"
+#include "html.h"
 #include <worker.h>
 #include <cookies.h>
 #include <tlslib.h>
@@ -471,6 +472,9 @@ char msg[MAX_BANNER_SIZE+32];
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
+/* Returns the username and password in newly allocated
+ * buffers.
+ */
 static
 int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** username, char** password)
 {
@@ -506,6 +510,8 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 				}
 				p++;
 			}
+
+			*username = unescape_html(*username, strlen(*username), NULL);
 		}
 
 		if (password != NULL) {
@@ -516,7 +522,10 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
         				break;
         			}
         			p++;
+
         		}
+
+			*password = unescape_html(*password, strlen(*password), NULL);
                 }
 	
 	} else { /* non-xml version */
@@ -547,6 +556,8 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 				}
 				p++;
 			}
+			
+			*username = unescape_url(*username, strlen(*username), NULL);
 		}
 
 		if (password != NULL) {
@@ -558,8 +569,17 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
         			}
         			p++;
         		}
+
+			*password = unescape_url(*password, strlen(*password), NULL);
                 }
 	}
+	
+	if (username != NULL && *username == NULL)
+		return -1;
+
+	if (password != NULL && *password == NULL)
+		return -1;
+	
 	return 0;
 }
 
@@ -583,6 +603,7 @@ struct cmd_auth_reply_st resp;
 				goto ask_auth;
 
 			snprintf(areq.user, sizeof(areq.user), "%s", username);
+			free(username);
 			areq.user_present = 1;
 		}
 
@@ -620,6 +641,7 @@ struct cmd_auth_reply_st resp;
 				goto ask_auth;
 
 			areq.pass_size = snprintf(areq.pass, sizeof(areq.pass), "%s", password);
+			free(password);
 
 			ret = auth_user_pass(ws, &areq);
 			if (ret < 0)

@@ -133,7 +133,6 @@ struct plain_ctx_st* pctx = ctx;
 	if (pctx->cpass[0] != 0 && strcmp(crypt(pass, pctx->cpass), pctx->cpass) == 0)
 		return 0;
         else {
-fprintf(stderr, "pass: %s\n", pass);
 		syslog(LOG_AUTH, "error in plain authentication; error in user '%s'", pctx->username);
 		return ERR_AUTH_FAIL;
         }

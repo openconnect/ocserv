@@ -310,11 +310,25 @@ int main(int argc, char **argv)
 	else if (HAVE_OPT(UNLOCK))
 		unlock_user(fpasswd, username);
 	else { /* set password */
+		char* p2;
+
 		passwd = getpass("Enter password: ");
 		if (passwd == NULL) {
 			fprintf(stderr, "Please specify a password\n");
 			return -1;
 		}
+		p2 = strdup(passwd);
+		passwd = getpass("Re-enter password: ");
+		if (passwd == NULL) {
+			fprintf(stderr, "Please specify a password\n");
+			return -1;
+		}
+
+		if (p2 == NULL || strcmp(passwd, p2) != 0) {
+			fprintf(stderr, "Passwords do not match\n");
+			return -1;
+		}
+		free(p2);
 
 		crypt_int(fpasswd, username, groupname, passwd);
 	}

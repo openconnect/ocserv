@@ -20,7 +20,7 @@
 
 SERV="${SERV:-../src/ocserv}"
 
-. ./common.sh
+. `dirname $0`/common.sh
 
 echo "Testing local backend with username-password..."
 

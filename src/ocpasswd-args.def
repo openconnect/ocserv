@@ -1,6 +1,6 @@
 AutoGen Definitions options;
 prog-name     = ocpasswd;
-prog-title    = "ocpasswd";
+prog-title    = "OpenConnect server password utility";
 prog-desc     = "OpenConnect VPN server plain password file handling program.";
 disable-save;
 no-xlate = opt;

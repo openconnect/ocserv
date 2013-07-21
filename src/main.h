@@ -16,7 +16,7 @@ void write_pid_file(void);
 void remove_pid_file(void);
 
 /* set to 1 to start cleaning up cookies, sessions etc. */
-extern unsigned int need_maintainance;
+extern unsigned int need_maintenance;
 
 struct listener_st {
 	struct list_node list;

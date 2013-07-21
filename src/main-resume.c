@@ -151,7 +151,7 @@ unsigned int max;
 	max = MAX(2*s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
 	if (s->tls_db->entries >= max) {
 		mslog(s, NULL, LOG_INFO, "maximum number of stored TLS sessions reached (%u)", max);
-		need_maintainance = 1;
+		need_maintenance = 1;
 		return -1;
 	}
 

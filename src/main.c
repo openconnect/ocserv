@@ -54,7 +54,7 @@
 int syslog_open = 0;
 static unsigned int terminate = 0;
 static unsigned int reload_conf = 0;
-unsigned int need_maintainance = 0;
+unsigned int need_maintenance = 0;
 static unsigned int need_children_cleanup = 0;
 
 static void ms_sleep(unsigned ms)
@@ -358,7 +358,7 @@ static void handle_children(int signo)
 
 static void handle_alarm(int signo)
 {
-	need_maintainance = 1;
+	need_maintenance = 1;
 }
 
 static void drop_privileges(main_server_st* s)
@@ -596,9 +596,9 @@ static void check_other_work(main_server_st *s)
 	}
 
 	/* Check if we need to expire any cookies */
-	if (need_maintainance != 0) {
-		need_maintainance = 0;
-		mslog(s, NULL, LOG_INFO, "Performing maintainance");
+	if (need_maintenance != 0) {
+		need_maintenance = 0;
+		mslog(s, NULL, LOG_INFO, "Performing maintenance");
 		expire_tls_sessions(s);
 		expire_banned(s);
 		alarm(MAINTAINANCE_TIME(s));

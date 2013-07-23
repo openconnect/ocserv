@@ -3,8 +3,8 @@ SUBDIRS =
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
 
-EXTRA_DIST = ccan/licenses/BSD-MIT version.def.in \
-	ccan/licenses/CC0 ccan/licenses/LGPL-2.1
+EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
+	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc
 
 bin_PROGRAMS = ocserv ocpasswd
 

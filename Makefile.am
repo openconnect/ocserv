@@ -20,3 +20,8 @@ cscope:
 	@CSCOPE@ -b -R
 
 cref: ctags cscope
+
+dist-hook: 
+	cd $(distdir)/src/ && for i in *.def;do \
+		autogen $$i; \
+	done

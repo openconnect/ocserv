@@ -10,7 +10,7 @@ long-opts;
 no-misuse-usage;
 short-usage   = "Usage: ocserv [options] -c [config]\nocserv --help for usage instructions.\n";
 explain       = "";
-#include version.def
+#include version.inc
 
 detail  = "This program is openconnect VPN server (ocserv), a server compatible with the
 openconnect VPN client. It follows the protocol used by CISCO's AnyConnect VPN.

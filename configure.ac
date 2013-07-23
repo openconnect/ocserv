@@ -147,7 +147,7 @@ LIBOPTS_CHECK([libopts])
 
 AC_CONFIG_FILES([
 	Makefile
-	src/version.def
+	src/version.inc
 	src/Makefile
 	src/pcl/Makefile
 	doc/Makefile

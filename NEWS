@@ -1,3 +1,9 @@
+* Version 0.1.6 (unreleased)
+
+- Avoid a crash on the configuration file parser when non-ascii
+  characters are present.
+
+
 * Version 0.1.5 (released 2013-07-15)
 
 - More robust support of PAM by allowing more than one factor 

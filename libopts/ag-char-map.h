@@ -489,7 +489,7 @@ spn_ag_char_map_chars(char const * p, unsigned int mask_ix)
     unsigned char const * v = ag_char_map_spanners[mask_ix];
     if (v == NULL)
         v = calc_ag_char_map_spanners(mask_ix);
-    while (v[(unsigned)*p])  p++;
+    while (v[(unsigned char)*p])  p++;
     return (char *)(uintptr_t)p;
 }
 
@@ -499,7 +499,7 @@ brk_ag_char_map_chars(char const * p, unsigned int mask_ix)
     unsigned char const * v = ag_char_map_spanners[mask_ix];
     if (v == NULL)
         v = calc_ag_char_map_spanners(mask_ix);
-    while ((*p != '\0') && (! v[(unsigned)*p]))  p++;
+    while ((*p != '\0') && (! v[(unsigned char)*p]))  p++;
     return (char *)(uintptr_t)p;
 }
 
@@ -510,7 +510,7 @@ spn_ag_char_map_back(char const * s, char const * e, unsigned int mask_ix)
     if (v == NULL)
         v = calc_ag_char_map_spanners(mask_ix);
     if (s >= e) e = s + strlen(s);
-    while ((e > s) && v[(unsigned)e[-1]])  e--;
+    while ((e > s) && v[(unsigned char)e[-1]])  e--;
     return (char *)(uintptr_t)e;
 }
 
@@ -521,7 +521,7 @@ brk_ag_char_map_back(char const * s, char const * e, unsigned int mask_ix)
     if (v == NULL)
         v = calc_ag_char_map_spanners(mask_ix);
     if (s == e) e += strlen(e);
-    while ((e > s) && (! v[(unsigned)e[-1]]))  e--;
+    while ((e > s) && (! v[(unsigned char)e[-1]]))  e--;
     return (char *)(uintptr_t)e;
 }
 #endif /* AG_CHAR_MAP_H_GUARD */

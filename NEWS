@@ -1,7 +1,7 @@
 * Version 0.1.6 (unreleased)
 
 - Avoid a crash on the configuration file parser when non-ascii
-  characters are present.
+  characters are present. Reported by Artem Ivantsov.
 
 
 * Version 0.1.5 (released 2013-07-15)

@@ -12,12 +12,14 @@ short-usage   = "Usage: ocserv [options] -c [config]\nocserv --help for usage in
 explain       = "";
 #include version.inc
 
-detail  = "This program is openconnect VPN server (ocserv), a server compatible with the
-openconnect VPN client. It follows the protocol used by CISCO's AnyConnect VPN.
+detail  = "Openconnect VPN server (ocserv) is a VPN server compatible with the
+openconnect VPN client. It follows the AnyConnect VPN protocol which 
+is used by several CISCO routers.
 
-Multiple authentication methods are available including PAM and certificate
-authentication. Authenticated users are assigned an unprivileged worker process and obtain 
-a networking (tun) device and IP from a configurable pool of addresses.";
+This server supports multiple authentication methods,
+including PAM and certificate authentication. Authenticated users are 
+assigned an unprivileged worker process and obtain a networking (tun) device 
+and an IP from a configurable pool of addresses.";
 
 copyright = {
     date  = "2013";
@@ -374,8 +376,8 @@ doc-section = {
   ds-format = 'texi';
   ds-text   = <<-_EOT_
 The server has been tested to be compatible with the openconnect VPN client. 
-To enable compatibility with CISCO's AnyConnect clients use a simple client
-policy that disables the downloader. An example policy file is shown below.
+To enable compatibility with CISCO's AnyConnect the client's policy must
+set in a way that disables the downloader. An example policy file is shown below.
 @example
 <?xml version="1.0" encoding="UTF-8"?>
 <AnyConnectPreferences>

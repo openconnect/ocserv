@@ -1,4 +1,4 @@
-* Version 0.1.6 (unreleased)
+* Version 0.1.6 (released 2013-09-02)
 
 - Avoid a crash on the configuration file parser when non-ascii
   characters are present. Reported by Artem Ivantsov.

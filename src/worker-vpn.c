@@ -971,8 +971,9 @@ socklen_t sl;
 			oclog(ws, LOG_INFO, "reducing DTLS MTU to peer's DTLS MTU (%u)", req->dtls_mtu);
 		}
 
-		overhead = tls_get_overhead(GNUTLS_DTLS0_9, ws->req.gnutls_cipher, ws->req.gnutls_mac);
+		overhead = CSTP_DTLS_OVERHEAD + tls_get_overhead(GNUTLS_DTLS0_9, ws->req.gnutls_cipher, ws->req.gnutls_mac);
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu-overhead);
+		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", ws->conn_mtu-overhead);
 	}
 	
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
@@ -983,11 +984,12 @@ socklen_t sl;
 			goto exit;
 	}
 
-	overhead = tls_get_overhead(gnutls_protocol_get_version(ws->session), gnutls_cipher_get(ws->session), gnutls_mac_get(ws->session));
+	overhead = CSTP_OVERHEAD + tls_get_overhead(gnutls_protocol_get_version(ws->session), gnutls_cipher_get(ws->session), gnutls_mac_get(ws->session));
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu-overhead);
 	SEND_ERR(ret);
+	oclog(ws, LOG_INFO, "suggesting CSTP MTU %u", ws->conn_mtu-overhead);
 
-	oclog(ws, LOG_INFO, "selected MTU is %u", ws->conn_mtu);
+	oclog(ws, LOG_INFO, "plaintext MTU is %u", ws->conn_mtu);
 	send_tun_mtu(ws, ws->conn_mtu);
 
 	if (ws->config->banner) {

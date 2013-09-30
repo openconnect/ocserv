@@ -63,12 +63,12 @@ custom password file. Various combinations can be used, e.g., certificates
 and passwords. Since PAM supports various authentication types, two factor
 authentication methods are also supported. After the user is authenticated he 
 is provided with a cookie that can be used for future connections. The lifetime 
-of the cookie is configurable using the 'cookie-validity' option, and is renewed 
-on every client connection.
+of the cookie is configurable using the 'cookie-validity' option.
 
 After the user is authenticated, directly, or via the cookie, he issues an HTTP
 CONNECT command which results to a direct connection with the VPN. Additionally
-the user could connect using UDP and Datagram TLS. That connection is authenticated
-using session resumption and a master key provided by the server, i.e., it is not 
-really a DTLS 1.0 compliant connection.
+the user could connect using UDP and Datagram TLS on a port that is provided
+by the server. That connection is authenticated using TLS session resumption and 
+a master key provided by the server, i.e., it is not really a DTLS 1.0 compliant 
+connection.
 

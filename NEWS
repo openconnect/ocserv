@@ -1,3 +1,10 @@
+* Version 0.1.7 (unreleased)
+
+- Instead of suggesting different DTLS and CSTP MTU values, suggest a single
+  value to the peer. That avoids issues with openconnect which reads one of
+  the suggested values and ignores the other.
+
+
 * Version 0.1.6 (released 2013-09-02)
 
 - Avoid a crash on the configuration file parser when non-ascii

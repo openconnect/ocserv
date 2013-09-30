@@ -989,7 +989,8 @@ socklen_t sl;
 
 	overhead = CSTP_OVERHEAD + tls_get_overhead(gnutls_protocol_get_version(ws->session), gnutls_cipher_get(ws->session), gnutls_mac_get(ws->session));
 	cstp_mtu = ws->conn_mtu-overhead;
-	cstp_mtu = MIN(cstp_mtu, dtls_mtu); /* this is a hack for openconnect which reads a single MTU value */
+	if (dtls_mtu > 0) /* this is a hack for openconnect which reads a single MTU value */
+		cstp_mtu = MIN(cstp_mtu, dtls_mtu);
 
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", cstp_mtu);
 	SEND_ERR(ret);

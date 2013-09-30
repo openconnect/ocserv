@@ -758,7 +758,7 @@ struct http_req_st *req = &ws->req;
 fd_set rfds;
 int l, e, max, ret, overhead;
 struct vpn_st vinfo;
-unsigned tls_retry;
+unsigned tls_retry, dtls_mtu, cstp_mtu;
 char *p;
 struct timeval tv;
 unsigned tls_pending, dtls_pending = 0, i;
@@ -972,9 +972,12 @@ socklen_t sl;
 		}
 
 		overhead = CSTP_DTLS_OVERHEAD + tls_get_overhead(GNUTLS_DTLS0_9, ws->req.gnutls_cipher, ws->req.gnutls_mac);
-		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu-overhead);
-		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", ws->conn_mtu-overhead);
-	}
+		dtls_mtu = ws->conn_mtu - overhead;
+
+		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
+		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", dtls_mtu);
+	} else
+		dtls_mtu = 0;
 	
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
 		oclog(ws, LOG_WARNING, "buffer size is smaller than MTU (%u < %u); adjusting", ws->buffer_size, ws->conn_mtu);
@@ -985,9 +988,12 @@ socklen_t sl;
 	}
 
 	overhead = CSTP_OVERHEAD + tls_get_overhead(gnutls_protocol_get_version(ws->session), gnutls_cipher_get(ws->session), gnutls_mac_get(ws->session));
-	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", ws->conn_mtu-overhead);
+	cstp_mtu = ws->conn_mtu-overhead;
+	cstp_mtu = MIN(cstp_mtu, dtls_mtu); /* this is a hack for openconnect which reads a single MTU value */
+
+	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", cstp_mtu);
 	SEND_ERR(ret);
-	oclog(ws, LOG_INFO, "suggesting CSTP MTU %u", ws->conn_mtu-overhead);
+	oclog(ws, LOG_INFO, "suggesting CSTP MTU %u", cstp_mtu);
 
 	oclog(ws, LOG_INFO, "plaintext MTU is %u", ws->conn_mtu);
 	send_tun_mtu(ws, ws->conn_mtu);

@@ -63,6 +63,31 @@ ssize_t tls_send(gnutls_session_t session, const void *data,
 	return data_size;
 }
 
+/* Same as tls_send() but will not retry on EAGAIN errors */
+ssize_t tls_send_nowait(gnutls_session_t session, const void *data,
+			size_t data_size)
+{
+	int ret;
+	int left = data_size;
+	const uint8_t* p = data;
+
+	while(left > 0) {
+		ret = gnutls_record_send(session, p, data_size);
+		if (ret < 0 && ret != GNUTLS_E_INTERRUPTED) {
+			if (ret == GNUTLS_E_AGAIN)
+			  return data_size;
+			return ret;
+		}
+	
+		if (ret > 0) {
+			left -= ret;
+			p += ret;
+		}
+	}
+	
+	return data_size;
+}
+
 ssize_t tls_send_file(gnutls_session_t session, const char *file)
 {
 FILE* fp;

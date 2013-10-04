@@ -1090,7 +1090,7 @@ socklen_t sl;
 			if (ws->udp_state == UP_ACTIVE) {
 				ws->buffer[7] = AC_PKT_DATA;
 
-				ret = tls_send(ws->dtls_session, ws->buffer + 7, l + 1);
+				ret = tls_send_nowait(ws->dtls_session, ws->buffer + 7, l + 1);
 				GNUTLS_FATAL_ERR(ret);
 
 				if (ret == GNUTLS_E_LARGE_PACKET) {

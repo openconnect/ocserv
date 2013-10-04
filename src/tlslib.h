@@ -14,6 +14,8 @@ int __attribute__ ((format(printf, 2, 3)))
 ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size);
 ssize_t tls_send(gnutls_session_t session, const void *data,
 			size_t data_size);
+ssize_t tls_send_nowait(gnutls_session_t session, const void *data,
+			size_t data_size);
 
 void tls_cork(gnutls_session_t session);
 int tls_uncork(gnutls_session_t session);

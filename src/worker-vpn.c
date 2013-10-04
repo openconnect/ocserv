@@ -934,6 +934,8 @@ socklen_t sl;
 	}
 
 	if (ws->udp_state != UP_DISABLED) {
+		int sndbuf;
+
 		p = (char*)ws->buffer;
 		for (i=0;i<sizeof(ws->session_id);i++) {
 			sprintf(p, "%.2x", (unsigned int)ws->session_id[i]);
@@ -976,6 +978,9 @@ socklen_t sl;
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", dtls_mtu);
+		
+		sndbuf = ws->conn_mtu * 4;
+		setsockopt( ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
 	} else
 		dtls_mtu = 0;
 	

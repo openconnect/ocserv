@@ -3,10 +3,8 @@
 - Instead of suggesting different DTLS and CSTP MTU values, suggest a single
   value to the peer. That avoids issues with openconnect which reads one of
   the suggested values and ignores the other.
-- Reduce limit of output buffer on DTLS socket to reduce latency (following
-  similar openconnect change).
 - Added config option "output-buffer" to allow selecting between high throughput 
-  or low latency.
+  or low latency (following similar openconnect change).
 - Enabled config option "mtu".
 
 

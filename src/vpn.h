@@ -112,6 +112,9 @@ struct cfg_st {
 	unsigned force_cert_auth; /* always require client certificate */
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
+	
+	unsigned output_buffer;
+	unsigned default_mtu;
 
 	char *connect_script;
 	char *disconnect_script;

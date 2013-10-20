@@ -912,6 +912,10 @@ socklen_t sl;
 		);
 	SEND_ERR(ret);
 
+	if (ws->config->default_mtu > 0) {
+		vinfo.mtu = ws->config->default_mtu;
+	}
+
 	mtu_overhead = CSTP_OVERHEAD;
 	ws->conn_mtu = vinfo.mtu - mtu_overhead;
 	if (req->cstp_mtu > 0) {
@@ -979,8 +983,10 @@ socklen_t sl;
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", dtls_mtu);
 		
-		sndbuf = ws->conn_mtu * 4;
-		setsockopt( ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+		if (ws->config->output_buffer > 0) {
+			sndbuf = ws->conn_mtu * ws->config->output_buffer;
+			setsockopt( ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+		}
 	} else
 		dtls_mtu = 0;
 	

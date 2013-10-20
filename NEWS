@@ -5,6 +5,9 @@
   the suggested values and ignores the other.
 - Reduce limit of output buffer on DTLS socket to reduce latency (following
   similar openconnect change).
+- Added config option "output-buffer" to allow selecting between high throughput 
+  or low latency.
+- Enabled config option "mtu".
 
 
 * Version 0.1.6 (released 2013-09-02)

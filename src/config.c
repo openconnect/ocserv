@@ -202,6 +202,9 @@ unsigned j;
 	READ_STRING("tls-priorities", config->priorities, 0);
 	READ_STRING("chroot-dir", config->chroot_dir, 0);
 
+	READ_NUMERIC("mtu", config->default_mtu, 0);
+	READ_NUMERIC("output-buffer", config->output_buffer, 0);
+
 	READ_NUMERIC("cookie-validity", config->cookie_validity, 1);
 	READ_NUMERIC("auth-timeout", config->auth_timeout, 0);
 	READ_NUMERIC("max-clients", config->max_clients, 0);

@@ -6,6 +6,8 @@
 - Added config option "output-buffer" to allow selecting between high throughput 
   or low latency (following similar openconnect change).
 - Enabled config option "mtu".
+- Configuration file parsing was modified to allow detecting mispellings of
+  directives and unknown options.
 
 
 * Version 0.1.6 (released 2013-09-02)

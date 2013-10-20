@@ -41,8 +41,86 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 
 #define MAX_ENTRIES 64
 
-#define READ_MULTI_LINE(name, s_name, num, mand) \
-	val = optionGetValue(pov, name); \
+enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
+
+struct cfg_options {
+	const char* name;
+	unsigned type;
+	unsigned mandatory;
+	const tOptionValue* val;
+};
+
+static struct cfg_options available_options[] = {
+	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
+	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 1 },
+	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "rate-limit-ms", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ocsp-response", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "server-cert", .type = OPTION_STRING, .mandatory = 1 },
+	{ .name = "server-key", .type = OPTION_STRING, .mandatory = 1 },
+	{ .name = "dh-params", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "pin-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "srk-pin-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "user-profile", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ca-cert", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "default-domain", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "crl", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "cert-user-oid", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "cert-group-oid", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "connect-script", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "disconnect-script", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
+	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "chroot-dir", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "mtu", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
+	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "max-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "min-reauth-time", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "max-same-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
+
+	{ .name = "run-as-user", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "run-as-group", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "device", .type = OPTION_STRING, .mandatory = 1 },
+
+	{ .name = "ipv4-network", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv4-netmask", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv4-dns", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv4-nbns", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv6-network", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv6-netmask", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv6-dns", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv6-nbns", .type = OPTION_STRING, .mandatory = 0 },
+};
+
+static const tOptionValue* get_option(const char* name, unsigned * mand)
+{
+unsigned j;
+
+	for (j=0;j<sizeof(available_options)/sizeof(available_options[0]);j++) {
+		if (strcasecmp(name, available_options[j].name) == 0) {
+			if (mand)
+				*mand = available_options[j].mandatory;
+			return available_options[j].val;
+		}
+	}
+	
+	return NULL;
+}
+
+#define READ_MULTI_LINE(name, s_name, num) \
+	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
 			num = 0; \
@@ -62,18 +140,8 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		exit(1); \
 	}
 
-#define READ_BOOLEAN(name, s_name, mand) \
-	val = optionGetValue(pov, name); \
-	if (val != NULL) { \
-		s_name = 1; \
-	} else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
-		exit(1); \
-	}
-
-
-#define READ_STRING(name, s_name, mand) \
-	val = optionGetValue(pov, name); \
+#define READ_STRING(name, s_name) \
+	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
 		s_name = strdup(val->v.strVal); \
 	else if (mand != 0) { \
@@ -81,9 +149,9 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		exit(1); \
 	}
 	
-#define READ_TF(name, s_name, mand, def) \
+#define READ_TF(name, s_name, def) \
 	{ char* tmp_tf = NULL; \
-		READ_STRING(name, tmp_tf, mand); \
+		READ_STRING(name, tmp_tf); \
 		if (tmp_tf == NULL) s_name = def; \
 		else { \
 			if (c_strcasecmp(tmp_tf, "true") == 0 || c_strcasecmp(tmp_tf, "yes") == 0) \
@@ -93,8 +161,8 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		} \
 	}
 
-#define READ_NUMERIC(name, s_name, mand) \
-	val = optionGetValue(pov, name); \
+#define READ_NUMERIC(name, s_name) \
+	val = get_option(name, &mand); \
 	if (val != NULL) { \
 		if (val->valType == OPARG_TYPE_NUMERIC) \
 			s_name = val->v.longVal; \
@@ -105,13 +173,39 @@ static const char* cfg_file = DEFAULT_CFG_FILE;
 		exit(1); \
 	}
 
+
+
+static int handle_option(const tOptionValue* val)
+{
+unsigned j;
+
+	for (j=0;j<sizeof(available_options)/sizeof(available_options[0]);j++) {
+		if (strcasecmp(val->pzName, available_options[j].name) == 0) {
+			if (available_options[j].val == NULL)
+				available_options[j].val = val;
+			return 1;
+		}
+	}
+	
+	return 0;
+}
+
+static void zero_options(void)
+{
+unsigned j;
+
+	for (j=0;j<sizeof(available_options)/sizeof(available_options[0]);j++) {
+		available_options[j].val = NULL;
+	}
+}
+
 static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
-const tOptionValue* val;
+const tOptionValue* val, *prev;
+unsigned j, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
-unsigned j;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
@@ -119,7 +213,22 @@ unsigned j;
 		exit(1);
 	}
 
-	READ_MULTI_LINE("auth", auth, auth_size, 1);
+	zero_options();
+
+	val = optionGetValue(pov, NULL);
+	if (val == NULL) {
+		fprintf(stderr, "No configuration directives found.\n");
+		exit(1);
+	}
+
+	do {
+		if (handle_option(val) == 0) {
+			fprintf(stderr, "Skipping unknown option '%s'\n", val->pzName);
+		}
+		prev = val;
+	} while((val = optionNextValue(pov, prev)) != NULL);
+
+	READ_MULTI_LINE("auth", auth, auth_size);
 	for (j=0;j<auth_size;j++) {
 		if (c_strcasecmp(auth[j], "pam") == 0) {
 			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
@@ -161,57 +270,57 @@ unsigned j;
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
 	 */
-	READ_STRING("listen-host", config->name, 0);
+	READ_STRING("listen-host", config->name);
 
-	READ_NUMERIC("tcp-port", config->port, 1);
-	READ_NUMERIC("udp-port", config->udp_port, 0);
-	READ_NUMERIC("keepalive", config->keepalive, 0);
-	READ_NUMERIC("dpd", config->dpd, 0);
-	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms, 0);
+	READ_NUMERIC("tcp-port", config->port);
+	READ_NUMERIC("udp-port", config->udp_port);
+	READ_NUMERIC("keepalive", config->keepalive);
+	READ_NUMERIC("dpd", config->dpd);
+	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms);
 
-	READ_STRING("ocsp-response", config->ocsp_response, 0);
-	READ_MULTI_LINE("server-cert", config->cert, config->cert_size, 1);
-	READ_MULTI_LINE("server-key", config->key, config->key_size, 1);
-	READ_STRING("dh-params", config->dh_params_file, 0);
-	READ_STRING("pin-file", config->pin_file, 0);
-	READ_STRING("srk-pin-file", config->srk_pin_file, 0);
+	READ_STRING("ocsp-response", config->ocsp_response);
+	READ_MULTI_LINE("server-cert", config->cert, config->cert_size);
+	READ_MULTI_LINE("server-key", config->key, config->key_size);
+	READ_STRING("dh-params", config->dh_params_file);
+	READ_STRING("pin-file", config->pin_file);
+	READ_STRING("srk-pin-file", config->srk_pin_file);
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	READ_STRING("user-profile", config->xml_config_file, 0);
+	READ_STRING("user-profile", config->xml_config_file);
 #endif
 
-	READ_STRING("ca-cert", config->ca, 0);
-	READ_STRING("default-domain", config->default_domain, 0);
-	READ_STRING("crl", config->crl, 0);
-	READ_STRING("cert-user-oid", config->cert_user_oid, 0);
-	READ_STRING("cert-group-oid", config->cert_group_oid, 0);
+	READ_STRING("ca-cert", config->ca);
+	READ_STRING("default-domain", config->default_domain);
+	READ_STRING("crl", config->crl);
+	READ_STRING("cert-user-oid", config->cert_user_oid);
+	READ_STRING("cert-group-oid", config->cert_group_oid);
 
-	READ_STRING("connect-script", config->connect_script, 0);
-	READ_STRING("disconnect-script", config->disconnect_script, 0);
+	READ_STRING("connect-script", config->connect_script);
+	READ_STRING("disconnect-script", config->disconnect_script);
 	
 	if (pid_file == NULL)
-		READ_STRING("pid-file", pid_file, 0);
+		READ_STRING("pid-file", pid_file);
 
-	READ_STRING("socket-file", config->socket_file_prefix, 1);
+	READ_STRING("socket-file", config->socket_file_prefix);
 
-	READ_STRING("banner", config->banner, 0);
-	READ_TF("always-require-cert", config->force_cert_auth, 0, 1);
-	READ_TF("use-utmp", config->use_utmp, 0, 1);
-	READ_TF("try-mtu-discovery", config->try_mtu, 0, 0);
-	READ_TF("ping-leases", config->ping_leases, 0, 0);
+	READ_STRING("banner", config->banner);
+	READ_TF("always-require-cert", config->force_cert_auth, 1);
+	READ_TF("use-utmp", config->use_utmp, 1);
+	READ_TF("try-mtu-discovery", config->try_mtu, 0);
+	READ_TF("ping-leases", config->ping_leases, 0);
 
-	READ_STRING("tls-priorities", config->priorities, 0);
-	READ_STRING("chroot-dir", config->chroot_dir, 0);
+	READ_STRING("tls-priorities", config->priorities);
+	READ_STRING("chroot-dir", config->chroot_dir);
 
-	READ_NUMERIC("mtu", config->default_mtu, 0);
-	READ_NUMERIC("output-buffer", config->output_buffer, 0);
+	READ_NUMERIC("mtu", config->default_mtu);
+	READ_NUMERIC("output-buffer", config->output_buffer);
 
-	READ_NUMERIC("cookie-validity", config->cookie_validity, 1);
-	READ_NUMERIC("auth-timeout", config->auth_timeout, 0);
-	READ_NUMERIC("max-clients", config->max_clients, 0);
-	READ_NUMERIC("min-reauth-time", config->min_reauth_time, 0);
-	READ_NUMERIC("max-same-clients", config->max_same_clients, 0);
+	READ_NUMERIC("cookie-validity", config->cookie_validity);
+	READ_NUMERIC("auth-timeout", config->auth_timeout);
+	READ_NUMERIC("max-clients", config->max_clients);
+	READ_NUMERIC("min-reauth-time", config->min_reauth_time);
+	READ_NUMERIC("max-same-clients", config->max_same_clients);
 
-	val = optionGetValue(pov, "run-as-user"); \
+	val = get_option("run-as-user", NULL);
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) {
 		const struct passwd* pwd = getpwnam(val->v.strVal);
 		if (pwd == NULL) {
@@ -221,7 +330,7 @@ unsigned j;
 		config->uid = pwd->pw_uid;
 	}
 
-	val = optionGetValue(pov, "run-as-group"); \
+	val = get_option("run-as-group", NULL);
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) {
 		const struct group *grp = getgrnam(val->v.strVal);
 		if (grp == NULL) {
@@ -231,21 +340,21 @@ unsigned j;
 		config->gid = grp->gr_gid;
 	}
 
-	READ_STRING("device", config->network.name, 1);
+	READ_STRING("device", config->network.name);
 
-	READ_STRING("ipv4-network", config->network.ipv4, 0);
-	READ_STRING("ipv4-netmask", config->network.ipv4_netmask, 0);
-	READ_STRING("ipv4-dns", config->network.ipv4_dns, 0);
+	READ_STRING("ipv4-network", config->network.ipv4);
+	READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
+	READ_STRING("ipv4-dns", config->network.ipv4_dns);
 
-	READ_STRING("ipv6-network", config->network.ipv6, 0);
-	READ_STRING("ipv6-netmask", config->network.ipv6_netmask, 0);
-	READ_STRING("ipv6-dns", config->network.ipv6_dns, 0);
+	READ_STRING("ipv6-network", config->network.ipv6);
+	READ_STRING("ipv6-netmask", config->network.ipv6_netmask);
+	READ_STRING("ipv6-dns", config->network.ipv6_dns);
 
-	READ_STRING("ipv4-nbns", config->network.ipv4_nbns, 0);
-	READ_STRING("ipv6-nbns", config->network.ipv6_nbns, 0);
+	READ_STRING("ipv4-nbns", config->network.ipv4_nbns);
+	READ_STRING("ipv6-nbns", config->network.ipv6_nbns);
 
-	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size, 0);
-	
+	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
+		
 	optionUnloadNested(pov);
 }
 

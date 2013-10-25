@@ -1,4 +1,4 @@
-* Version 0.1.7 (unreleased)
+* Version 0.1.7 (released 2013-10-25)
 
 - Instead of suggesting different DTLS and CSTP MTU values, suggest a single
   value to the peer. That avoids issues with openconnect which reads one of

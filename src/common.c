@@ -20,6 +20,9 @@
 #include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
+#include <vpn.h>
+#include <sys/socket.h>
 
 ssize_t force_write(int sockfd, const void *buf, size_t len)
 {
@@ -63,4 +66,13 @@ uint8_t * p = buf;
 	}
 	
 	return len;
+}
+
+int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n)
+{
+	if (((struct sockaddr*)s1)->sa_family == AF_INET) {
+		return memcmp(SA_IN_P(s1), SA_IN_P(s2), sizeof(struct in_addr));
+	} else { /* inet6 */
+		return memcmp(SA_IN6_P(s1), SA_IN6_P(s2), sizeof(struct in6_addr));
+	}
 }

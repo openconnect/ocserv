@@ -157,22 +157,47 @@ struct ifreq ifr;
                 oclog(ws, LOG_DEBUG, "cannot obtain IPv4 local IP for %s", vinfo->name);
 
 #define LOCAL "local"
-	if (ws->config->network.ipv4_dns && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
+	if (ws->ipv4_dns != NULL)
+		vinfo->ipv4_dns = ws->ipv4_dns;
+	else if (ws->config->network.ipv4_dns && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
 		vinfo->ipv4_dns = vinfo->ipv4_local;
 	else
 		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
 
-	if (ws->config->network.ipv6_dns && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
+	if (ws->ipv6_dns != NULL)
+		vinfo->ipv6_dns = ws->ipv6_dns;
+	else if (ws->config->network.ipv6_dns && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
 		vinfo->ipv6_dns = vinfo->ipv6_local;
 	else
 		vinfo->ipv6_dns = ws->config->network.ipv6_dns;
+
+	if (ws->ipv4_nbns != NULL)
+		vinfo->ipv4_nbns = ws->ipv4_nbns;
+	else if (ws->config->network.ipv4_nbns && strcmp(ws->config->network.ipv4_nbns, LOCAL) == 0)
+		vinfo->ipv4_nbns = vinfo->ipv4_local;
+	else
+		vinfo->ipv4_nbns = ws->config->network.ipv4_nbns;
+
+	if (ws->ipv6_nbns != NULL)
+		vinfo->ipv6_nbns = ws->ipv6_nbns;
+	else if (ws->config->network.ipv6_nbns && strcmp(ws->config->network.ipv6_nbns, LOCAL) == 0)
+		vinfo->ipv6_nbns = vinfo->ipv6_local;
+	else
+		vinfo->ipv6_nbns = ws->config->network.ipv6_nbns;
 
 	vinfo->routes_size = ws->config->network.routes_size;
 	if (ws->config->network.routes_size > 0)
 		vinfo->routes = ws->config->network.routes;
 
-	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
-	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
+	if (ws->ipv4_netmask != NULL)
+		vinfo->ipv4_netmask = ws->ipv4_netmask;
+	else
+		vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
+
+	if (ws->ipv6_netmask != NULL)
+		vinfo->ipv6_netmask = ws->ipv6_netmask;
+	else
+		vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = AF_INET;

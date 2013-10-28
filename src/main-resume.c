@@ -32,12 +32,12 @@
 #include <sys/ioctl.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
-#include <tlslib.h>
 #include "ipc.h"
 #include <ccan/hash/hash.h>
 
 #include <vpn.h>
 #include <main.h>
+#include <common.h>
 #include <tlslib.h>
 
 int send_resume_fetch_reply(main_server_st* s, struct proc_st * proc,
@@ -69,7 +69,7 @@ tls_cache_st* cache;
 struct htable_iter iter;
 size_t key;
 
-	key = hash_stable_8(req->session_id, req->session_id_size, 0);
+	key = hash_any(req->session_id, req->session_id_size, 0);
 
 	cache = htable_firstval(&s->tls_db->ht, &iter, key);
 	while(cache != NULL) {
@@ -91,15 +91,6 @@ size_t key;
         return 0;
 }
 
-static int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n)
-{
-	if (((struct sockaddr*)s1)->sa_family == AF_INET) {
-		return memcmp(SA_IN_P(s1), SA_IN_P(s2), sizeof(struct in_addr));
-	} else { /* inet6 */
-		return memcmp(SA_IN6_P(s1), SA_IN6_P(s2), sizeof(struct in6_addr));
-	}
-}
-
 int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
   			   const struct cmd_resume_fetch_req_st * req, 
   			   struct cmd_resume_fetch_reply_st * rep)
@@ -110,7 +101,7 @@ size_t key;
 
 	rep->reply = REP_RESUME_FAILED;
 
-	key = hash_stable_8(req->session_id, req->session_id_size, 0);
+	key = hash_any(req->session_id, req->session_id_size, 0);
 
 	cache = htable_firstval(&s->tls_db->ht, &iter, key);
 	while(cache != NULL) {
@@ -155,7 +146,7 @@ unsigned int max;
 		return -1;
 	}
 
-	key = hash_stable_8(req->session_id, req->session_id_size, 0);
+	key = hash_any(req->session_id, req->session_id_size, 0);
 	
 	cache = malloc(sizeof(*cache));
 	if (cache == NULL)

@@ -42,6 +42,7 @@
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
+#include <ip-lease.h>
 #include <script-list.h>
 #include <ccan/list/list.h>
 
@@ -66,32 +67,32 @@ const char* script;
 		char local[64];
 		char remote[64];
 
-		if (proc->lease == NULL)
+		if (proc->ipv4 == NULL && proc->ipv6 == NULL)
 			exit(1);
 		
 		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
 			exit(1);
 
-		if (proc->lease->lip4_len > 0) {
-			if (getnameinfo((void*)&proc->lease->lip4, proc->lease->lip4_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+		if (proc->ipv4 && proc->ipv4->lip_len > 0) {
+			if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		} else {
-			if (getnameinfo((void*)&proc->lease->lip6, proc->lease->lip6_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
 
-		if (proc->lease->rip4_len > 0) {
-			if (getnameinfo((void*)&proc->lease->rip4, proc->lease->rip4_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+		if (proc->ipv4 && proc->ipv4->rip_len > 0) {
+			if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		} else {
-			if (getnameinfo((void*)&proc->lease->rip6, proc->lease->rip6_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
 				exit(1);
 		}
 
 		setenv("USERNAME", proc->username, 1);
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
-		setenv("DEVICE", proc->lease->name, 1);
+		setenv("DEVICE", proc->tun_lease.name, 1);
 		setenv("IP_REAL", real, 1);
 		setenv("IP_LOCAL", local, 1);
 		setenv("IP_REMOTE", remote, 1);
@@ -134,7 +135,7 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc)
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = USER_PROCESS;
 	entry.ut_pid = proc->pid;
-	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
+	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->tun_lease.name);
 	snprintf(entry.ut_user, sizeof(entry.ut_user), "%s", proc->username);
 #ifdef __linux__
 	if (proc->remote_addr_len == sizeof(struct sockaddr_in))
@@ -171,8 +172,8 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = DEAD_PROCESS;
-	if (proc->lease && proc->lease->name)
-		snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->lease->name);
+	if (proc->tun_lease.name[0] != 0)
+		snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->tun_lease.name);
 	entry.ut_pid = proc->pid;
 
 	setutxent();

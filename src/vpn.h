@@ -47,8 +47,8 @@ extern int syslog_open;
 #define ERR_AUTH_CONTINUE -4
 #define ERR_WAIT_FOR_SCRIPT -5
 #define ERR_MEM -6
-#define ERR_READ_ROUTES -7
-#define ERR_READ_CONFIG -8
+#define ERR_READ_CONFIG -7
+#define ERR_NO_IP -8
 
 typedef struct 
 {
@@ -62,6 +62,12 @@ struct group_cfg_st {
 
 	char *ipv4_dns;
 	char *ipv6_dns;
+	char *ipv4_nbns;
+	char *ipv6_nbns;
+	char *ipv4_network;
+	char *ipv6_network;
+	char *ipv4_netmask;
+	char *ipv6_netmask;
 };
 
 struct vpn_st {

@@ -121,6 +121,10 @@ typedef struct worker_st {
 	/* additional data - received per user or per group */
 	char *ipv4_dns;
 	char *ipv6_dns;
+	char *ipv4_nbns;
+	char *ipv6_nbns;
+	char *ipv4_netmask;
+	char *ipv6_netmask;
 	unsigned routes_size;
 	struct route_st routes[MAX_ROUTES];
 	

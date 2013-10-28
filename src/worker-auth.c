@@ -235,10 +235,105 @@ static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 	return(sendmsg(fd, &hdr, 0));
 }
 
+static int read_str_value_length(worker_st *ws, char** res)
+{
+int ret;
+uint8_t len;
+
+	ret = force_read(ws->cmd_fd, &len, 1);
+	if (ret != 1) {
+		oclog(ws, LOG_ERR, "Error receiving length-value from main (%d)", ret);
+		return ERR_BAD_COMMAND;
+	}
+				
+	if (len > 0) {
+		*res = malloc(((int)len)+1);
+		if (*res == NULL)
+			return ERR_MEM;
+
+		ret = force_read(ws->cmd_fd, *res, len);
+		if (ret != len) {
+			oclog(ws, LOG_ERR, "Error receiving value from main (%d)", ret);
+			return ERR_BAD_COMMAND;
+		}
+		(*res)[len] = 0;
+	}
+	
+	return 0;
+}
+
+static
+int deserialize_additional_data(worker_st* ws)
+{
+int ret;
+uint8_t len;
+unsigned i;
+
+	/* IPV4 DNS */
+	ret = read_str_value_length(ws, &ws->ipv4_dns);
+	if (ret < 0)
+		return ret;
+
+	/* IPV6 DNS */
+	ret = read_str_value_length(ws, &ws->ipv6_dns);
+	if (ret < 0)
+		return ret;
+
+	/* IPV4 NBNS */
+	ret = read_str_value_length(ws, &ws->ipv4_nbns);
+	if (ret < 0)
+		return ret;
+
+	/* IPV6 NBNS */
+	ret = read_str_value_length(ws, &ws->ipv6_nbns);
+	if (ret < 0)
+		return ret;
+
+	/* IPV4 netmask */
+	ret = read_str_value_length(ws, &ws->ipv4_netmask);
+	if (ret < 0)
+		return ret;
+
+	/* IPV6 netmask */
+	ret = read_str_value_length(ws, &ws->ipv6_netmask);
+	if (ret < 0)
+		return ret;
+
+	/* number of routes */
+	ret = force_read(ws->cmd_fd, &len, 1);
+	if (ret != 1) {
+		oclog(ws, LOG_ERR, "Error receiving length-value from main (%d)", ret);
+		return ERR_BAD_COMMAND;
+	}
+	ws->routes_size = len;
+
+	/* routes */
+	for (i=0;i<ws->routes_size;i++) {
+		ret = force_read(ws->cmd_fd, &ws->routes[i].size, 1);
+		if (ret != 1) {
+			oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
+			return ERR_BAD_COMMAND;
+		}
+
+		ws->routes[i].route = malloc(ws->routes[i].size+1);
+		if (ws->routes[i].route == NULL)
+			return ERR_MEM;
+
+		ret = force_read(ws->cmd_fd, ws->routes[i].route, ws->routes[i].size);
+		if (ret != ws->routes[i].size) {
+			oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
+			return ERR_BAD_COMMAND;
+		}
+		ws->routes[i].route[ws->routes[i].size] = 0;
+	}
+	
+	return 0;
+}
+
 static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 {
 	struct iovec iov[2];
-	uint8_t cmd = 0, len;
+	uint8_t cmd = 0;
 	struct msghdr hdr;
 	int ret, cmdlen;
 	union {
@@ -246,7 +341,6 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 		char              control[CMSG_SPACE(sizeof(int))];
 	} control_un;
 	struct cmsghdr  *cmptr;
-	unsigned i;
 	
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
@@ -295,69 +389,11 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 				memcpy(ws->cookie, resp->data.ok.cookie, sizeof(ws->cookie));
 				memcpy(ws->session_id, resp->data.ok.session_id, sizeof(ws->session_id));
 
-				ws->routes_size = resp->data.ok.routes_size;
-
 				/* Read any additional data */
 				
-				/* IPV4 DNS */
-				ret = force_read(ws->cmd_fd, &len, 1);
-				if (ret != 1) {
-					oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
-					return ERR_BAD_COMMAND;
-				}
-				
-				if (len > 0) {
-					ws->ipv4_dns = malloc(len+1);
-					if (ws->ipv4_dns == NULL)
-						return ERR_MEM;
-
-					ret = force_read(ws->cmd_fd, ws->ipv4_dns, len);
-					if (ret != len) {
-						oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
-						return ERR_BAD_COMMAND;
-					}
-					ws->ipv4_dns[len] = 0;
-				}
-
-				/* IPV6 DNS */
-				ret = force_read(ws->cmd_fd, &len, 1);
-				if (ret != 1) {
-					oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
-					return ERR_BAD_COMMAND;
-				}
-				
-				if (len > 0) {
-					ws->ipv6_dns = malloc(len+1);
-					if (ws->ipv6_dns == NULL)
-						return ERR_MEM;
-
-					ret = force_read(ws->cmd_fd, ws->ipv6_dns, len);
-					if (ret != len) {
-						oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
-						return ERR_BAD_COMMAND;
-					}
-					ws->ipv6_dns[len] = 0;
-				}
-				
-				/* routes */
-				for (i=0;i<ws->routes_size;i++) {
-					ret = force_read(ws->cmd_fd, &ws->routes[i].size, 1);
-					if (ret != 1) {
-						oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
-						return ERR_BAD_COMMAND;
-					}
-					ws->routes[i].route = malloc(ws->routes[i].size+1);
-					if (ws->routes[i].route == NULL)
-						return ERR_MEM;
-
-					ret = force_read(ws->cmd_fd, ws->routes[i].route, ws->routes[i].size);
-					if (ret != ws->routes[i].size) {
-						oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
-						return ERR_BAD_COMMAND;
-					}
-					ws->routes[i].route[ws->routes[i].size] = 0;
-
-				}
+				ret = deserialize_additional_data(ws);
+				if (ret < 0)
+					return ret;
 					
 			} else
 				return ERR_AUTH_FAIL;

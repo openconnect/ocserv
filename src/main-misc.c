@@ -53,10 +53,10 @@ int fd, ret, e;
 struct ifreq ifr;
 const char* name;
 
-	if (proc->lease == NULL)
+	if (proc->tun_lease.name[0] == 0)
 		return -1;
 
-	name = proc->lease->name;
+	name = proc->tun_lease.name;
 
 	mslog(s, proc, LOG_DEBUG, "setting %s MTU to %u", name, mtu);
 	fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -112,119 +112,12 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
-static void del_additional_config(struct group_cfg_st* config)
-{
-unsigned i;
-
-	for(i=0;i<config->routes_size;i++) {
-		free(config->routes[i]);
-	}
-	free(config->routes);
-	free(config->ipv4_dns);
-	free(config->ipv6_dns);
-}
-
-static int read_additional_config(main_server_st* s, struct proc_st* proc,
-	struct group_cfg_st *config)
-{
-struct group_cfg_st u_cfg;
-struct group_cfg_st g_cfg;
-char file[_POSIX_PATH_MAX];
-int ret;
-unsigned i;
-
-	memset(config, 0, sizeof(*config));
-
-	if (s->config->per_user_dir != NULL) {
-		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir, proc->username);
-
-		if (access(file, R_OK) == 0) {
-			mslog(s, proc, LOG_INFO, "Loading user configuration '%s'", file);
-
-			ret = parse_group_cfg_file(s, file, &u_cfg);
-			if (ret < 0)
-				return ERR_READ_CONFIG;
-		
-			if (u_cfg.routes_size > 0) {
-				config->routes = u_cfg.routes;
-				config->routes_size = u_cfg.routes_size;
-				
-				u_cfg.routes = NULL;
-				u_cfg.routes_size = 0;
-				
-			}
-			config->ipv4_dns = u_cfg.ipv4_dns;
-			u_cfg.ipv4_dns = NULL;
-
-			config->ipv6_dns = u_cfg.ipv6_dns;
-			u_cfg.ipv6_dns = NULL;
-			del_additional_config(&u_cfg);
-			
-			
-		} else
-			mslog(s, proc, LOG_INFO, "No user configuration for '%s'", proc->username);
-	}
-
-	if (s->config->per_group_dir != NULL) {
-		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir, proc->groupname);
-
-		if (access(file, R_OK) == 0) {
-			mslog(s, proc, LOG_INFO, "Loading group configuration '%s'", file);
-
-			ret = parse_group_cfg_file(s, file, &g_cfg);
-			if (ret < 0)
-				return ERR_READ_CONFIG;
-
-			if (g_cfg.routes_size > 0) {
-				config->routes = realloc(config->routes, (config->routes_size+g_cfg.routes_size) * sizeof(config->routes[0]));
-				if (config->routes == NULL)
-					return ERR_MEM;
-				
-				for (i=0;i<g_cfg.routes_size;i++) {
-					config->routes[config->routes_size] = g_cfg.routes[i];
-					g_cfg.routes[i] = NULL;
-					config->routes_size++;
-				}
-			}
-
-			if (config->ipv4_dns == NULL) {
-				config->ipv4_dns = g_cfg.ipv4_dns;
-				g_cfg.ipv4_dns = NULL;
-			}
-
-			if (config->ipv6_dns == NULL) {
-				config->ipv6_dns = g_cfg.ipv6_dns;
-				g_cfg.ipv6_dns = NULL;
-			}
-
-			del_additional_config(&g_cfg);
-
-		} else
-			mslog(s, proc, LOG_INFO, "No group configuration for '%s'", proc->groupname);
-	}
-	
-	return 0;
-}
-
-
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code)
 {
 int ret;
 
 	if (code == 0) {
-		struct group_cfg_st cfg;
-
-		ret = read_additional_config(s, proc, &cfg);
-		if (ret < 0) {
-			mslog(s, proc, LOG_ERR, "error reading additional routes");
-			ret = ERR_READ_ROUTES;
-			goto fail;
-		}
-
-		ret = send_auth_reply(s, proc, REP_AUTH_OK, &cfg);
-
-		del_additional_config(&cfg);
-
+		ret = send_auth_reply(s, proc, REP_AUTH_OK);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
 			ret = ERR_BAD_COMMAND;
@@ -232,7 +125,7 @@ int ret;
 		}
 	} else {
 		mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
-		ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
+		ret = send_auth_reply( s, proc, REP_AUTH_FAILED);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
 			ret = ERR_BAD_COMMAND;
@@ -245,13 +138,139 @@ fail:
 	/* we close the lease tun fd both on success and failure.
 	 * The parent doesn't need to keep the tunfd.
 	 */
-	if (proc->lease) {
-		if (proc->lease->fd >= 0)
-			close(proc->lease->fd);
-		proc->lease->fd = -1;
+	if (proc->tun_lease.name[0] != 0) {
+		if (proc->tun_lease.fd >= 0)
+			close(proc->tun_lease.fd);
+		proc->tun_lease.fd = -1;
 	}
 
 	return ret;
+}
+
+void del_additional_config(struct group_cfg_st* config)
+{
+unsigned i;
+
+	for(i=0;i<config->routes_size;i++) {
+		free(config->routes[i]);
+	}
+	free(config->routes);
+	free(config->ipv4_dns);
+	free(config->ipv6_dns);
+	free(config->ipv4_nbns);
+	free(config->ipv6_nbns);
+	free(config->ipv4_network);
+	free(config->ipv6_network);
+	free(config->ipv4_netmask);
+	free(config->ipv6_netmask);
+}
+
+static int read_config_file(main_server_st* s, struct proc_st* proc, const char* file, const char* type)
+{
+struct group_cfg_st cfg;
+int ret;
+unsigned i;
+
+	if (access(file, R_OK) == 0) {
+		mslog(s, proc, LOG_DEBUG, "Loading %s configuration '%s'", type, file);
+
+		ret = parse_group_cfg_file(s, file, &cfg);
+		if (ret < 0)
+			return ERR_READ_CONFIG;
+		
+		if (cfg.routes_size > 0) {
+			if (proc->config.routes == NULL) {
+				proc->config.routes = cfg.routes;
+				proc->config.routes_size = cfg.routes_size;
+				
+				cfg.routes = NULL;
+				cfg.routes_size = 0;
+			} else {
+				proc->config.routes = realloc(proc->config.routes, (proc->config.routes_size + cfg.routes_size) * sizeof(proc->config.routes[0]));
+				if (proc->config.routes == NULL)
+					return ERR_MEM;
+				
+				for (i=0;i<cfg.routes_size;i++) {
+					proc->config.routes[proc->config.routes_size] = cfg.routes[i];
+					cfg.routes[i] = NULL;
+					proc->config.routes_size++;
+				}
+			}
+		}
+
+		if (proc->config.ipv4_dns == NULL) {
+			proc->config.ipv4_dns = cfg.ipv4_dns;
+			cfg.ipv4_dns = NULL;
+		}
+
+		if (proc->config.ipv6_dns == NULL) {
+			proc->config.ipv6_dns = cfg.ipv6_dns;
+			cfg.ipv6_dns = NULL;
+		}
+
+		if (proc->config.ipv4_nbns == NULL) {
+			proc->config.ipv4_nbns = cfg.ipv4_nbns;
+			cfg.ipv4_nbns = NULL;
+		}
+
+		if (proc->config.ipv6_nbns == NULL) {
+			proc->config.ipv6_nbns = cfg.ipv6_nbns;
+			cfg.ipv6_nbns = NULL;
+		}
+
+		if (proc->config.ipv4_network == NULL) {
+			proc->config.ipv4_network = cfg.ipv4_network;
+			cfg.ipv4_network = NULL;
+		}
+
+		if (proc->config.ipv6_network == NULL) {
+			proc->config.ipv6_network = cfg.ipv6_network;
+			cfg.ipv6_network = NULL;
+		}
+
+		if (proc->config.ipv4_netmask == NULL) {
+			proc->config.ipv4_netmask = cfg.ipv4_netmask;
+			cfg.ipv4_netmask = NULL;
+		}
+
+		if (proc->config.ipv6_netmask == NULL) {
+			proc->config.ipv6_netmask = cfg.ipv6_netmask;
+			cfg.ipv6_netmask = NULL;
+		}
+
+		del_additional_config(&cfg);
+
+	} else
+		mslog(s, proc, LOG_DEBUG, "No %s configuration for '%s'", type, proc->username);
+	
+	return 0;
+}
+
+
+static int read_additional_config(struct main_server_st* s, struct proc_st* proc)
+{
+char file[_POSIX_PATH_MAX];
+int ret;
+
+	memset(&proc->config, 0, sizeof(proc->config));
+
+	if (s->config->per_user_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir, proc->username);
+
+		ret = read_config_file(s, proc, file, "user");
+		if (ret < 0)
+			return ret;
+	}
+
+	if (s->config->per_group_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir, proc->groupname);
+
+		ret = read_config_file(s, proc, file, "group");
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd)
@@ -267,6 +286,12 @@ const char* group;
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "user '%s' tried to connect more than %u times", proc->username, s->config->max_same_clients);
 		return ret;
+	}
+
+	ret = read_additional_config(s, proc);
+	if (ret < 0) {
+		mslog(s, proc, LOG_ERR, "error reading additional configuration");
+		return ERR_READ_CONFIG;
 	}
 
 	ret = open_tun(s, proc);

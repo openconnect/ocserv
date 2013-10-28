@@ -61,8 +61,103 @@ void main_auth_init(main_server_st *s)
 	}
 }
 
+static int send_str_value_length(main_server_st* s, struct proc_st* proc, char* data)
+{
+	uint8_t len;
+	int ret;
+
+	if (data != NULL) {
+		len = strlen(data);
+		ret = force_write(proc->fd, &len, 1);
+		if (ret < 0)
+			return ret;
+
+		ret = force_write(proc->fd, proc->config.ipv4_dns, len);
+		if (ret < 0)
+			return ret;
+	} else {
+		len = 0;
+		ret = force_write(proc->fd, &len, 1);
+		if (ret < 0)
+			return ret;
+	}
+	
+	return 0;
+}
+
+static
+int serialize_additional_data(main_server_st* s, struct proc_st* proc)
+{
+int ret;
+unsigned i;
+uint8_t len;
+
+	/* IPv4 DNS */
+	if (proc->config.ipv4_dns)
+		mslog(s, proc, LOG_DEBUG, "sending DNS '%s'", proc->config.ipv4_dns);
+	ret = send_str_value_length(s, proc, proc->config.ipv4_dns);
+	if (ret < 0)
+		return ret;
+
+	/* IPv6 DNS */
+	if (proc->config.ipv6_dns)
+		mslog(s, proc, LOG_DEBUG, "sending DNS '%s'", proc->config.ipv6_dns);
+	ret = send_str_value_length(s, proc, proc->config.ipv6_dns);
+	if (ret < 0)
+		return ret;
+
+	/* IPv4 NBNS */
+	if (proc->config.ipv4_nbns)
+		mslog(s, proc, LOG_DEBUG, "sending NBNS '%s'", proc->config.ipv4_nbns);
+	ret = send_str_value_length(s, proc, proc->config.ipv4_nbns);
+	if (ret < 0)
+		return ret;
+
+	/* IPv6 NBNS */
+	if (proc->config.ipv6_nbns)
+		mslog(s, proc, LOG_DEBUG, "sending NBNS '%s'", proc->config.ipv6_nbns);
+	ret = send_str_value_length(s, proc, proc->config.ipv6_nbns);
+	if (ret < 0)
+		return ret;
+
+	/* IPv4 netmask */
+	if (proc->config.ipv4_netmask)
+		mslog(s, proc, LOG_DEBUG, "sending netmask '%s'", proc->config.ipv4_netmask);
+	ret = send_str_value_length(s, proc, proc->config.ipv4_netmask);
+	if (ret < 0)
+		return ret;
+
+	/* IPv6 netmask */
+	if (proc->config.ipv6_netmask)
+		mslog(s, proc, LOG_DEBUG, "sending netmask '%s'", proc->config.ipv6_netmask);
+	ret = send_str_value_length(s, proc, proc->config.ipv6_netmask);
+	if (ret < 0)
+		return ret;
+
+	/* routes */
+	len = proc->config.routes_size;
+	ret = force_write(proc->fd, &len, 1);
+	if (ret < 0)
+		return ret;
+
+	for (i=0;i<proc->config.routes_size;i++) {
+		len = strlen(proc->config.routes[i]);
+
+		mslog(s, proc, LOG_DEBUG, "sending route '%s'", proc->config.routes[i]);
+		ret = force_write(proc->fd, &len, 1);
+		if (ret < 0)
+			return ret;
+
+		ret = force_write(proc->fd, proc->config.routes[i], len);
+		if (ret < 0)
+			return ret;
+	}
+	
+	return 0;
+}
+
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r, struct group_cfg_st* cfg)
+			cmd_auth_reply_t r)
 {
 	struct iovec iov[2];
 	uint8_t cmd[2];
@@ -73,12 +168,11 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	} control_un;
 	struct cmd_auth_reply_st resp;
 	struct cmsghdr  *cmptr;
-	unsigned i;
 	int ret;
 	
-	if (cfg->routes_size > MAX_ROUTES) {
-		mslog(s, proc, LOG_INFO, "Note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)cfg->routes_size, (int)MAX_ROUTES);
-		cfg->routes_size = MAX_ROUTES;
+	if (proc->config.routes_size > MAX_ROUTES) {
+		mslog(s, proc, LOG_INFO, "Note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)proc->config.routes_size, (int)MAX_ROUTES);
+		proc->config.routes_size = MAX_ROUTES;
 	}
 
 	memset(&control_un, 0, sizeof(control_un));
@@ -86,7 +180,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	
 	hdr.msg_iov = iov;
 
-	if (r == REP_AUTH_OK && proc->lease != NULL) {
+	if (r == REP_AUTH_OK && proc->tun_lease.name[0] != 0) {
 		cmd[0] = AUTH_REP;
 
 		iov[0].iov_base = cmd;
@@ -96,14 +190,12 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		resp.reply = r;
 		memcpy(resp.data.ok.cookie, proc->cookie, COOKIE_SIZE);
 		memcpy(resp.data.ok.session_id, proc->session_id, sizeof(resp.data.ok.session_id));
-		memcpy(resp.data.ok.vname, proc->lease->name, sizeof(resp.data.ok.vname));
+		memcpy(resp.data.ok.vname, proc->tun_lease.name, sizeof(resp.data.ok.vname));
 		memcpy(resp.data.ok.user, proc->username, sizeof(resp.data.ok.user));
 
 		iov[1].iov_base = &resp;
 		iov[1].iov_len = sizeof(resp);
 		hdr.msg_iovlen++;
-
-		resp.data.ok.routes_size = cfg->routes_size;
 
 		/* Send the tun fd */
 		hdr.msg_control = control_un.control;
@@ -113,7 +205,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
 		cmptr->cmsg_level = SOL_SOCKET;
 		cmptr->cmsg_type = SCM_RIGHTS;
-		memcpy(CMSG_DATA(cmptr), &proc->lease->fd, sizeof(int));
+		memcpy(CMSG_DATA(cmptr), &proc->tun_lease.fd, sizeof(int));
 	} else {
 		cmd[0] = AUTH_REP;
 		cmd[1] = REP_AUTH_FAILED;
@@ -128,55 +220,11 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		return ret;
 
 	if (r == REP_AUTH_OK) {
-		uint8_t len;
-
-		if (cfg->ipv4_dns) {
-			len = strlen(cfg->ipv4_dns);
-			mslog(s, proc, LOG_INFO, "sending DNS '%s' with size %d", cfg->ipv4_dns, len);
-			ret = force_write(proc->fd, &len, 1);
-			if (ret < 0)
-				return ret;
-
-			ret = force_write(proc->fd, cfg->ipv4_dns, len);
-			if (ret < 0)
-				return ret;
-		} else {
-			len = 0;
-			ret = force_write(proc->fd, &len, 1);
-			if (ret < 0)
-				return ret;
-		}
-
-		if (cfg->ipv6_dns) {
-			len = strlen(cfg->ipv6_dns);
-			mslog(s, proc, LOG_INFO, "sending DNS '%s' with size %d", cfg->ipv6_dns, len);
-			ret = force_write(proc->fd, &len, 1);
-			if (ret < 0)
-				return ret;
-
-			ret = force_write(proc->fd, cfg->ipv6_dns, len);
-			if (ret < 0)
-				return ret;
-		} else {
-			len = 0;
-			ret = force_write(proc->fd, &len, 1);
-			if (ret < 0)
-				return ret;
-		}
-
-		for (i=0;i<cfg->routes_size;i++) {
-			len = strlen(cfg->routes[i]);
-
-			mslog(s, proc, LOG_INFO, "sending route '%s' with size %d", cfg->routes[i], len);
-			ret = force_write(proc->fd, &len, 1);
-			if (ret < 0)
-				return ret;
-
-			ret = force_write(proc->fd, cfg->routes[i], len);
-			if (ret < 0)
-				return ret;
-		}
+		ret = serialize_additional_data(s, proc);
+		if (ret < 0)
+			return ret;
 	}
+
 	return 0;
 }
 

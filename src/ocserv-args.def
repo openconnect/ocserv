@@ -263,7 +263,8 @@ route = 192.168.5.0/255.255.255.0
 # Configuration files that will be applied per user connection or
 # per group. Each file name on these directories must match the username
 # or the groupname.
-# The options allow in such configuration files are ipv?-dns, and route.
+# The options allow in such configuration files are ipv?-dns, ipv?-nbns,
+#  ipv?-network, ipv?-netmask and route.
 #config-per-user = /etc/ocserv/config-per-user/
 #config-per-group = /etc/ocserv/config-per-group/
 

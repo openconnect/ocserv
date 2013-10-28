@@ -854,13 +854,11 @@ socklen_t sl;
 			SEND_ERR(ret);
 		}
 
-		if (ws->ipv4_dns) {
-			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", ws->ipv4_dns);
-			SEND_ERR(ret);
-		} else if (vinfo.ipv4_dns) {
+		if (vinfo.ipv4_dns) {
 			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
 			SEND_ERR(ret);
 		}
+
 		if (vinfo.ipv4_nbns) {
 			ret = tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n", vinfo.ipv4_nbns);
 			SEND_ERR(ret);
@@ -877,18 +875,17 @@ socklen_t sl;
 			SEND_ERR(ret);
 		}
 		
-		if (ws->ipv6_dns) {
-			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", ws->ipv6_dns);
-			SEND_ERR(ret);
-		} else if (vinfo.ipv6_dns) {
+		if (vinfo.ipv6_dns) {
 			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
 			SEND_ERR(ret);
 		}
+
 		if (vinfo.ipv6_nbns) {
 			ret = tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n", vinfo.ipv6_nbns);
 			SEND_ERR(ret);
 		}
 	}
+
 
 	for (i=0;i<vinfo.routes_size;i++) {
 		if (req->no_ipv6 != 0 && strchr(vinfo.routes[i], ':') != 0)

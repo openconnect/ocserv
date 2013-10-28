@@ -43,6 +43,12 @@ static struct cfg_options available_options[] = {
 	{ .name = "route", .type = OPTION_MULTI_LINE },
 	{ .name = "ipv4-dns", .type = OPTION_STRING },
 	{ .name = "ipv6-dns", .type = OPTION_STRING },
+	{ .name = "ipv4-nbns", .type = OPTION_STRING },
+	{ .name = "ipv6-nbns", .type = OPTION_STRING },
+	{ .name = "ipv4-network", .type = OPTION_STRING },
+	{ .name = "ipv6-network", .type = OPTION_STRING },
+	{ .name = "ipv4-netmask", .type = OPTION_STRING },
+	{ .name = "ipv6-netmask", .type = OPTION_STRING },
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) \
@@ -114,6 +120,12 @@ const tOptionValue* val, *prev;
 
 	READ_RAW_STRING("ipv4-dns", config->ipv4_dns);
 	READ_RAW_STRING("ipv6-dns", config->ipv6_dns);
+	READ_RAW_STRING("ipv4-nbns", config->ipv4_nbns);
+	READ_RAW_STRING("ipv6-nbns", config->ipv6_nbns);
+	READ_RAW_STRING("ipv4-network", config->ipv4_network);
+	READ_RAW_STRING("ipv6-network", config->ipv6_network);
+	READ_RAW_STRING("ipv4-netmask", config->ipv4_netmask);
+	READ_RAW_STRING("ipv6-netmask", config->ipv6_netmask);
 
 	optionUnloadNested(pov);
 	

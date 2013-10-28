@@ -55,7 +55,9 @@ struct proc_st {
 	unsigned udp_fd_received; /* if the corresponding process has received a UDP fd */
 	
 	/* the tun lease this process has */
-	struct lease_st* lease;
+	struct tun_lease_st tun_lease;
+	struct ip_lease_st *ipv4;
+	struct ip_lease_st *ipv6;
 
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
@@ -75,6 +77,13 @@ struct proc_st {
 	void * auth_ctx; /* the context of authentication */
 	unsigned auth_status; /* PS_AUTH_ */
 	unsigned auth_reqs; /* the number of requests received */
+	
+	struct group_cfg_st config; /* custom user/group config */
+};
+
+struct ip_lease_db_st {
+	struct htable ht;
+	unsigned entries;
 };
 
 struct proc_list_st {
@@ -99,7 +108,9 @@ struct ban_list_st {
 
 typedef struct main_server_st {
 	struct cfg_st *config;
-	struct tun_st *tun;
+	
+	struct ip_lease_db_st ip_leases;
+
 	hash_db_st *tls_db;
 	
 	uint8_t cookie_key[16];
@@ -157,7 +168,7 @@ int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r, struct group_cfg_st*);
+			cmd_auth_reply_t r);
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req);
@@ -178,5 +189,7 @@ int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 void run_sec_mod(main_server_st * s);
 
 int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_st *config);
+
+void del_additional_config(struct group_cfg_st* config);
 
 #endif

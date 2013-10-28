@@ -87,8 +87,7 @@ struct __attribute__ ((__packed__)) cmd_auth_reply_st {
 			char vname[IFNAMSIZ]; /* interface name */
 			char user[MAX_USERNAME_SIZE];
 			
-			uint8_t routes_size; /* up to MAX_ROUTES */
-			/* routes_size routes of cmd_auth_reply_route_st follow */
+			/* additional data follow */
 		} ok;
 		/* in case of REP_AUTH_MSG */
 		char msg[MAX_MSG_SIZE]; 

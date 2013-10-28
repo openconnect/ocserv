@@ -49,6 +49,7 @@
 #include <worker.h>
 #include <cookies.h>
 #include <tun.h>
+#include <ip-lease.h>
 #include <ccan/list/list.h>
 
 int syslog_open = 0;
@@ -302,11 +303,14 @@ static void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 	proc->fd = -1;
 	proc->pid = -1;
 	
+	del_additional_config(&proc->config);
+	
 	if (proc->auth_ctx != NULL)
 		proc_auth_deinit(s, proc);
 
-	if (proc->lease)
-		proc->lease->in_use = 0;
+	if (proc->ipv4 || proc->ipv6)
+		remove_ip_leases(s, proc);
+
 	list_del(&proc->list);
 	free(proc);
 	s->active_clients--;
@@ -459,6 +463,9 @@ void clear_lists(main_server_st *s)
 	}
 
 	tls_cache_deinit(s->tls_db);
+	
+	ip_lease_deinit(&s->ip_leases);
+
 }
 
 static void kill_children(main_server_st* s)
@@ -628,7 +635,6 @@ int main(int argc, char** argv)
 	int fd, pid, e;
 	struct listener_st *ltmp;
 	struct proc_st *ctmp, *cpos;
-	struct tun_st tun;
 	fd_set rd;
 	int val, n = 0, ret, flags;
 	struct timeval tv;
@@ -643,9 +649,9 @@ int main(int argc, char** argv)
 	list_head_init(&s.clist.head);
 	list_head_init(&s.ban_list.head);
 	list_head_init(&s.script_list.head);
-	tun_st_init(&tun);
 	tls_cache_init(&s.tls_db);
-
+	ip_lease_init(&s.ip_leases);
+	
 	ocsignal(SIGINT, handle_term);
 	ocsignal(SIGTERM, handle_term);
 	ocsignal(SIGPIPE, SIG_IGN);
@@ -677,7 +683,6 @@ int main(int argc, char** argv)
 	}
 
 	s.config = &config;
-	s.tun = &tun;
 
 	main_auth_init(&s);
 

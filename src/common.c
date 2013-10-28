@@ -42,3 +42,25 @@ const uint8_t * p = buf;
 	
 	return len;
 }
+
+ssize_t force_read(int sockfd, void *buf, size_t len)
+{
+int left = len;
+int ret;
+uint8_t * p = buf;
+
+	while(left > 0) {
+		ret = read(sockfd, p, left);
+		if (ret == -1) {
+			if (errno != EAGAIN && errno != EINTR)
+				return ret;
+		}
+		
+		if (ret > 0) {
+			left -= ret;
+			p += ret;
+		}
+	}
+	
+	return len;
+}

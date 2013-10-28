@@ -853,7 +853,11 @@ socklen_t sl;
 			ret = tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv4_netmask);
 			SEND_ERR(ret);
 		}
-		if (vinfo.ipv4_dns) {
+
+		if (ws->ipv4_dns) {
+			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", ws->ipv4_dns);
+			SEND_ERR(ret);
+		} else if (vinfo.ipv4_dns) {
 			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv4_dns);
 			SEND_ERR(ret);
 		}
@@ -872,7 +876,11 @@ socklen_t sl;
 			ret = tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n", vinfo.ipv6_netmask);
 			SEND_ERR(ret);
 		}
-		if (vinfo.ipv6_dns) {
+		
+		if (ws->ipv6_dns) {
+			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", ws->ipv6_dns);
+			SEND_ERR(ret);
+		} else if (vinfo.ipv6_dns) {
 			ret = tls_printf(ws->session, "X-CSTP-DNS: %s\r\n", vinfo.ipv6_dns);
 			SEND_ERR(ret);
 		}
@@ -890,6 +898,17 @@ socklen_t sl;
 		oclog(ws, LOG_DEBUG, "adding route %s", vinfo.routes[i]);
 		ret = tls_printf(ws->session,
 			"X-CSTP-Split-Include: %s\r\n", vinfo.routes[i]);
+		SEND_ERR(ret);
+	}
+
+	for (i=0;i<ws->routes_size;i++) {
+		if (req->no_ipv6 != 0 && strchr(ws->routes[i].route, ':') != 0)
+			continue;
+		if (req->no_ipv4 != 0 && strchr(ws->routes[i].route, '.') != 0)
+			continue;
+		oclog(ws, LOG_DEBUG, "adding route %s", ws->routes[i].route);
+		ret = tls_printf(ws->session,
+			"X-CSTP-Split-Include: %s\r\n", ws->routes[i].route);
 		SEND_ERR(ret);
 	}
 	ret = tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);

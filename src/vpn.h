@@ -47,12 +47,22 @@ extern int syslog_open;
 #define ERR_AUTH_CONTINUE -4
 #define ERR_WAIT_FOR_SCRIPT -5
 #define ERR_MEM -6
+#define ERR_READ_ROUTES -7
+#define ERR_READ_CONFIG -8
 
 typedef struct 
 {
 	struct htable ht;
 	unsigned int entries;
 } hash_db_st;
+
+struct group_cfg_st {
+	char **routes;
+	unsigned int routes_size;
+
+	char *ipv4_dns;
+	char *ipv6_dns;
+};
 
 struct vpn_st {
 	char *name;	/* device name */
@@ -127,6 +137,10 @@ struct cfg_st {
 
 	uid_t uid;
 	gid_t gid;
+
+	/* additional configuration files */
+	char *per_group_dir;
+	char *per_user_dir;
 	
 	/* the tun network */
 	struct vpn_st network;
@@ -144,6 +158,10 @@ struct main_server_st;
 #define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_SESSION_DATA_SIZE (4*1024)
 
+#define MAX_CONFIG_ENTRIES 64
+
+#define MAX_ROUTES 32
+
 #include <tun.h>
 
 const char *human_addr(const struct sockaddr *sa, socklen_t salen,
@@ -160,4 +178,13 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 
 #define SA_IN_P_GENERIC(addr, size) ((size==sizeof(struct sockaddr_in))?SA_IN_U8_P(addr):SA_IN6_U8_P(addr))
 #define SA_IN_SIZE(size) ((size==sizeof(struct sockaddr_in))?sizeof(struct in_addr):sizeof(struct in6_addr))
+
+/* Helper structures */
+struct route_st {
+	uint8_t size;
+	char *route;
+};
+
+enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
+
 #endif

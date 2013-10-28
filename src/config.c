@@ -39,10 +39,6 @@
 static const char* pid_file = NULL;
 static const char* cfg_file = DEFAULT_CFG_FILE;
 
-#define MAX_ENTRIES 64
-
-enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
-
 struct cfg_options {
 	const char* name;
 	unsigned type;
@@ -102,6 +98,8 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-netmask", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-dns", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-nbns", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "config-per-group", .type = OPTION_STRING, .mandatory = 0 },
 };
 
 static const tOptionValue* get_option(const char* name, unsigned * mand)
@@ -124,13 +122,13 @@ unsigned j;
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
 			num = 0; \
-			s_name = malloc(sizeof(char*)*MAX_ENTRIES); \
+			s_name = malloc(sizeof(char*)*MAX_CONFIG_ENTRIES); \
 			do { \
 			        if (val && !strcmp(val->pzName, name)==0) \
 					continue; \
 			        s_name[num] = strdup(val->v.strVal); \
 			        num++; \
-			        if (num>=MAX_ENTRIES) \
+			        if (num>=MAX_CONFIG_ENTRIES) \
 			        break; \
 		      } while((val = optionNextValue(pov, val)) != NULL); \
 		      s_name[num] = NULL; \
@@ -354,6 +352,9 @@ unsigned auth_size = 0;
 	READ_STRING("ipv6-nbns", config->network.ipv6_nbns);
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
+
+	READ_STRING("config-per-user", config->per_user_dir);
+	READ_STRING("config-per-group", config->per_group_dir);
 		
 	optionUnloadNested(pov);
 }
@@ -480,6 +481,8 @@ unsigned i;
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
 #endif
+	DEL(config->per_user_dir);
+	DEL(config->per_group_dir);
 	DEL(config->socket_file_prefix);
 	DEL(config->default_domain);
 	DEL(config->plain_passwd);
@@ -514,6 +517,7 @@ unsigned i;
 		DEL(config->cert[i]);
 	DEL(config->cert);
 	DEL(config->network.routes);
+
 	memset(config, 0, sizeof(*config));
 
 	parse_cfg_file(cfg_file, config);

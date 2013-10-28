@@ -155,8 +155,10 @@ int open_tun(main_server_st* s, struct proc_st* proc);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);
+
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r);
+			cmd_auth_reply_t r, struct group_cfg_st*);
+
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const struct cmd_auth_cookie_req_st * req);
 int generate_cookie(main_server_st *s, struct proc_st* proc);
@@ -174,5 +176,7 @@ int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t 
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
 void run_sec_mod(main_server_st * s);
+
+int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_st *config);
 
 #endif

@@ -39,20 +39,9 @@ typedef enum {
 	REP_RESUME_FAILED = 1,
 } cmd_resume_reply_t;
 
-/* AUTH_COOKIE_REQ */
-struct __attribute__ ((__packed__)) cmd_auth_cookie_req_st {
-	uint8_t cookie[COOKIE_SIZE];
-	uint8_t tls_auth_ok;
-	char cert_user[MAX_USERNAME_SIZE];
-	char cert_group[MAX_GROUPNAME_SIZE];
-};
-
-/* AUTH_REQ */
-struct __attribute__ ((__packed__)) cmd_auth_req_st {
-	uint8_t pass_size;
-	char pass[MAX_PASSWORD_SIZE];
-};
-
+/* AUTH_INIT:
+ *  Message sent by worker to main to initialize authentication process.
+ */
 struct __attribute__ ((__packed__)) cmd_auth_init_st {
 	uint8_t user_present;
 	char user[MAX_USERNAME_SIZE];
@@ -62,23 +51,62 @@ struct __attribute__ ((__packed__)) cmd_auth_init_st {
 	char hostname[MAX_HOSTNAME_SIZE];
 };
 
-/* AUTH_REP */
-struct __attribute__ ((__packed__)) cmd_auth_reply_st {
-	uint8_t reply;
+/* AUTH_COOKIE_REQ:
+ *  Message sent by worker to main to follow up authentication (after AUTH_INIT).
+ *  Sent if the client tried to authenticate using cookie.
+ */
+struct __attribute__ ((__packed__)) cmd_auth_cookie_req_st {
 	uint8_t cookie[COOKIE_SIZE];
-	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
-	char vname[IFNAMSIZ]; /* interface name */
-	char user[MAX_USERNAME_SIZE];
-	char msg[MAX_MSG_SIZE]; /* in case of REP_AUTH_CONTINUE */
+	uint8_t tls_auth_ok;
+	char cert_user[MAX_USERNAME_SIZE];
+	char cert_group[MAX_GROUPNAME_SIZE];
 };
 
-/* RESUME_FETCH_REQ + RESUME_DELETE_REQ */
+/* AUTH_REQ:
+ *  Message sent by worker to main to follow up authentication (after AUTH_INIT).
+ *  Sent if the client tried to authenticate using password.
+ */
+struct __attribute__ ((__packed__)) cmd_auth_req_st {
+	uint8_t pass_size;
+	char pass[MAX_PASSWORD_SIZE];
+};
+
+
+/* AUTH_REP:
+ *  Message sent by main to worker to follow up authentication (after AUTH_*REQ).
+ *  Sent if the client tried to authenticate using password.
+ */
+struct __attribute__ ((__packed__)) cmd_auth_reply_st {
+	uint8_t reply; /* REP_AUTH_OK, REP_AUTH_MSG or REP_AUTH_FAILED */
+	
+	/* These fields are not filled on REP_AUTH_FAILED */
+	union {
+		struct {
+			uint8_t cookie[COOKIE_SIZE];
+			uint8_t session_id[GNUTLS_MAX_SESSION_ID];
+			char vname[IFNAMSIZ]; /* interface name */
+			char user[MAX_USERNAME_SIZE];
+			
+			uint8_t routes_size; /* up to MAX_ROUTES */
+			/* routes_size routes of cmd_auth_reply_route_st follow */
+		} ok;
+		/* in case of REP_AUTH_MSG */
+		char msg[MAX_MSG_SIZE]; 
+	} data;
+};
+
+/* RESUME_FETCH_REQ + RESUME_DELETE_REQ: 
+ *  Message sent by worker to main to ask for TLS resumption data, or
+ *  to delete such data. 
+ */
 struct __attribute__ ((__packed__)) cmd_resume_fetch_req_st {
 	uint8_t session_id_size;
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 };
 
-/* RESUME_STORE_REQ */
+/* RESUME_STORE_REQ:
+ *  Message sent by worker to main to store TLS resumption data.
+ */
 struct __attribute__ ((__packed__)) cmd_resume_store_req_st {
 	uint8_t session_id_size;
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
@@ -86,14 +114,18 @@ struct __attribute__ ((__packed__)) cmd_resume_store_req_st {
 	uint8_t session_data[MAX_SESSION_DATA_SIZE];
 };
 
-/* RESUME_FETCH_REP */
+/* RESUME_FETCH_REP:
+ *  Message sent by main to worker to return stored TLS resumption data.
+ */
 struct __attribute__ ((__packed__)) cmd_resume_fetch_reply_st {
 	uint8_t reply;
 	uint16_t session_data_size;
 	uint8_t session_data[MAX_SESSION_DATA_SIZE];
 };
 
-/* TUN_MTU */
+/* TUN_MTU:
+ *  Message sent by worker to main to alter the MTU of the TUN device.
+ */
 struct __attribute__ ((__packed__)) cmd_tun_mtu_st {
 	uint16_t mtu;
 };

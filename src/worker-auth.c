@@ -37,6 +37,7 @@
 #include "html.h"
 #include <worker.h>
 #include <cookies.h>
+#include <common.h>
 #include <tlslib.h>
 
 #include <http-parser/http_parser.h>
@@ -237,7 +238,7 @@ static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 {
 	struct iovec iov[2];
-	uint8_t cmd = 0;
+	uint8_t cmd = 0, len;
 	struct msghdr hdr;
 	int ret, cmdlen;
 	union {
@@ -245,16 +246,17 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 		char              control[CMSG_SPACE(sizeof(int))];
 	} control_un;
 	struct cmsghdr  *cmptr;
+	unsigned i;
 	
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
 	iov[1].iov_base = resp;
 	iov[1].iov_len = sizeof(*resp);
-
+	
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
+	hdr.msg_iovlen = 2 + MAX_ROUTES;
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
@@ -288,10 +290,75 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 					return ERR_AUTH_FAIL;
 				
 				memcpy(&ws->tun_fd, CMSG_DATA(cmptr), sizeof(int));
-				memcpy(ws->tun_name, resp->vname, sizeof(ws->tun_name));
-				memcpy(ws->username, resp->user, sizeof(ws->username));
-				memcpy(ws->cookie, resp->cookie, sizeof(ws->cookie));
-				memcpy(ws->session_id, resp->session_id, sizeof(ws->session_id));
+				memcpy(ws->tun_name, resp->data.ok.vname, sizeof(ws->tun_name));
+				memcpy(ws->username, resp->data.ok.user, sizeof(ws->username));
+				memcpy(ws->cookie, resp->data.ok.cookie, sizeof(ws->cookie));
+				memcpy(ws->session_id, resp->data.ok.session_id, sizeof(ws->session_id));
+
+				ws->routes_size = resp->data.ok.routes_size;
+
+				/* Read any additional data */
+				
+				/* IPV4 DNS */
+				ret = force_read(ws->cmd_fd, &len, 1);
+				if (ret != 1) {
+					oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
+					return ERR_BAD_COMMAND;
+				}
+				
+				if (len > 0) {
+					ws->ipv4_dns = malloc(len+1);
+					if (ws->ipv4_dns == NULL)
+						return ERR_MEM;
+
+					ret = force_read(ws->cmd_fd, ws->ipv4_dns, len);
+					if (ret != len) {
+						oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
+						return ERR_BAD_COMMAND;
+					}
+					ws->ipv4_dns[len] = 0;
+				}
+
+				/* IPV6 DNS */
+				ret = force_read(ws->cmd_fd, &len, 1);
+				if (ret != 1) {
+					oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
+					return ERR_BAD_COMMAND;
+				}
+				
+				if (len > 0) {
+					ws->ipv6_dns = malloc(len+1);
+					if (ws->ipv6_dns == NULL)
+						return ERR_MEM;
+
+					ret = force_read(ws->cmd_fd, ws->ipv6_dns, len);
+					if (ret != len) {
+						oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
+						return ERR_BAD_COMMAND;
+					}
+					ws->ipv6_dns[len] = 0;
+				}
+				
+				/* routes */
+				for (i=0;i<ws->routes_size;i++) {
+					ret = force_read(ws->cmd_fd, &ws->routes[i].size, 1);
+					if (ret != 1) {
+						oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
+						return ERR_BAD_COMMAND;
+					}
+					ws->routes[i].route = malloc(ws->routes[i].size+1);
+					if (ws->routes[i].route == NULL)
+						return ERR_MEM;
+
+					ret = force_read(ws->cmd_fd, ws->routes[i].route, ws->routes[i].size);
+					if (ret != ws->routes[i].size) {
+						oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
+						return ERR_BAD_COMMAND;
+					}
+					ws->routes[i].route[ws->routes[i].size] = 0;
+
+				}
+					
 			} else
 				return ERR_AUTH_FAIL;
 			break;
@@ -655,7 +722,7 @@ struct cmd_auth_reply_st resp;
 	ret = recv_auth_reply(ws, &resp);
 	if (ret == ERR_AUTH_CONTINUE) {
 		ws->auth_state = S_AUTH_REQ;
-		return get_auth_handler2(ws, http_ver, resp.msg);
+		return get_auth_handler2(ws, http_ver, resp.data.msg);
         } else if (ret < 0)
 		goto auth_fail;
 

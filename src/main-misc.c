@@ -112,12 +112,119 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 	return(sendmsg(proc->fd, &hdr, 0));
 }
 
+static void del_additional_config(struct group_cfg_st* config)
+{
+unsigned i;
+
+	for(i=0;i<config->routes_size;i++) {
+		free(config->routes[i]);
+	}
+	free(config->routes);
+	free(config->ipv4_dns);
+	free(config->ipv6_dns);
+}
+
+static int read_additional_config(main_server_st* s, struct proc_st* proc,
+	struct group_cfg_st *config)
+{
+struct group_cfg_st u_cfg;
+struct group_cfg_st g_cfg;
+char file[_POSIX_PATH_MAX];
+int ret;
+unsigned i;
+
+	memset(config, 0, sizeof(*config));
+
+	if (s->config->per_user_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir, proc->username);
+
+		if (access(file, R_OK) == 0) {
+			mslog(s, proc, LOG_INFO, "Loading user configuration '%s'", file);
+
+			ret = parse_group_cfg_file(s, file, &u_cfg);
+			if (ret < 0)
+				return ERR_READ_CONFIG;
+		
+			if (u_cfg.routes_size > 0) {
+				config->routes = u_cfg.routes;
+				config->routes_size = u_cfg.routes_size;
+				
+				u_cfg.routes = NULL;
+				u_cfg.routes_size = 0;
+				
+			}
+			config->ipv4_dns = u_cfg.ipv4_dns;
+			u_cfg.ipv4_dns = NULL;
+
+			config->ipv6_dns = u_cfg.ipv6_dns;
+			u_cfg.ipv6_dns = NULL;
+			del_additional_config(&u_cfg);
+			
+			
+		} else
+			mslog(s, proc, LOG_INFO, "No user configuration for '%s'", proc->username);
+	}
+
+	if (s->config->per_group_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir, proc->groupname);
+
+		if (access(file, R_OK) == 0) {
+			mslog(s, proc, LOG_INFO, "Loading group configuration '%s'", file);
+
+			ret = parse_group_cfg_file(s, file, &g_cfg);
+			if (ret < 0)
+				return ERR_READ_CONFIG;
+
+			if (g_cfg.routes_size > 0) {
+				config->routes = realloc(config->routes, (config->routes_size+g_cfg.routes_size) * sizeof(config->routes[0]));
+				if (config->routes == NULL)
+					return ERR_MEM;
+				
+				for (i=0;i<g_cfg.routes_size;i++) {
+					config->routes[config->routes_size] = g_cfg.routes[i];
+					g_cfg.routes[i] = NULL;
+					config->routes_size++;
+				}
+			}
+
+			if (config->ipv4_dns == NULL) {
+				config->ipv4_dns = g_cfg.ipv4_dns;
+				g_cfg.ipv4_dns = NULL;
+			}
+
+			if (config->ipv6_dns == NULL) {
+				config->ipv6_dns = g_cfg.ipv6_dns;
+				g_cfg.ipv6_dns = NULL;
+			}
+
+			del_additional_config(&g_cfg);
+
+		} else
+			mslog(s, proc, LOG_INFO, "No group configuration for '%s'", proc->groupname);
+	}
+	
+	return 0;
+}
+
+
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code)
 {
 int ret;
 
 	if (code == 0) {
-		ret = send_auth_reply(s, proc, REP_AUTH_OK);
+		struct group_cfg_st cfg;
+
+		ret = read_additional_config(s, proc, &cfg);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR, "error reading additional routes");
+			ret = ERR_READ_ROUTES;
+			goto fail;
+		}
+
+		ret = send_auth_reply(s, proc, REP_AUTH_OK, &cfg);
+
+		del_additional_config(&cfg);
+
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
 			ret = ERR_BAD_COMMAND;
@@ -125,7 +232,7 @@ int ret;
 		}
 	} else {
 		mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
-		ret = send_auth_reply( s, proc, REP_AUTH_FAILED);
+		ret = send_auth_reply( s, proc, REP_AUTH_FAILED, NULL);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
 			ret = ERR_BAD_COMMAND;

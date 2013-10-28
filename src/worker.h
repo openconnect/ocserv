@@ -118,6 +118,12 @@ typedef struct worker_st {
 	unsigned cert_auth_ok;
 	int tun_fd;
 	
+	/* additional data - received per user or per group */
+	char *ipv4_dns;
+	char *ipv6_dns;
+	unsigned routes_size;
+	struct route_st routes[MAX_ROUTES];
+	
 	struct http_req_st req;
 } worker_st;
 
@@ -142,7 +148,6 @@ void __attribute__ ((format(printf, 3, 4)))
 
 int get_rt_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo, char* buffer, size_t buffer_size);
-ssize_t tun_write(int sockfd, const void *buf, size_t len);
 
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);

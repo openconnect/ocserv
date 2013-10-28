@@ -43,6 +43,7 @@
 #include <ccan/list/list.h>
 #include <main-auth.h>
 #include <plain.h>
+#include <common.h>
 #include <pam.h>
 
 static const struct auth_mod_st *module;
@@ -61,7 +62,7 @@ void main_auth_init(main_server_st *s)
 }
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r)
+			cmd_auth_reply_t r, struct group_cfg_st* cfg)
 {
 	struct iovec iov[2];
 	uint8_t cmd[2];
@@ -71,7 +72,14 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
 	struct cmd_auth_reply_st resp;
-	struct cmsghdr  *cmptr;	
+	struct cmsghdr  *cmptr;
+	unsigned i;
+	int ret;
+	
+	if (cfg->routes_size > MAX_ROUTES) {
+		mslog(s, proc, LOG_INFO, "Note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)cfg->routes_size, (int)MAX_ROUTES);
+		cfg->routes_size = MAX_ROUTES;
+	}
 
 	memset(&control_un, 0, sizeof(control_un));
 	memset(&hdr, 0, sizeof(hdr));
@@ -86,14 +94,16 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		hdr.msg_iovlen++;
 		
 		resp.reply = r;
-		memcpy(resp.cookie, proc->cookie, COOKIE_SIZE);
-		memcpy(resp.session_id, proc->session_id, sizeof(resp.session_id));
-		memcpy(resp.vname, proc->lease->name, sizeof(resp.vname));
-		memcpy(resp.user, proc->username, sizeof(resp.user));
+		memcpy(resp.data.ok.cookie, proc->cookie, COOKIE_SIZE);
+		memcpy(resp.data.ok.session_id, proc->session_id, sizeof(resp.data.ok.session_id));
+		memcpy(resp.data.ok.vname, proc->lease->name, sizeof(resp.data.ok.vname));
+		memcpy(resp.data.ok.user, proc->username, sizeof(resp.data.ok.user));
 
 		iov[1].iov_base = &resp;
 		iov[1].iov_len = sizeof(resp);
 		hdr.msg_iovlen++;
+
+		resp.data.ok.routes_size = cfg->routes_size;
 
 		/* Send the tun fd */
 		hdr.msg_control = control_un.control;
@@ -113,7 +123,61 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		hdr.msg_iovlen++;
 	}
 	
-	return(sendmsg(proc->fd, &hdr, 0));
+	ret = sendmsg(proc->fd, &hdr, 0);
+	if (ret < 0)
+		return ret;
+
+	if (r == REP_AUTH_OK) {
+		uint8_t len;
+
+		if (cfg->ipv4_dns) {
+			len = strlen(cfg->ipv4_dns);
+			mslog(s, proc, LOG_INFO, "sending DNS '%s' with size %d", cfg->ipv4_dns, len);
+			ret = force_write(proc->fd, &len, 1);
+			if (ret < 0)
+				return ret;
+
+			ret = force_write(proc->fd, cfg->ipv4_dns, len);
+			if (ret < 0)
+				return ret;
+		} else {
+			len = 0;
+			ret = force_write(proc->fd, &len, 1);
+			if (ret < 0)
+				return ret;
+		}
+
+		if (cfg->ipv6_dns) {
+			len = strlen(cfg->ipv6_dns);
+			mslog(s, proc, LOG_INFO, "sending DNS '%s' with size %d", cfg->ipv6_dns, len);
+			ret = force_write(proc->fd, &len, 1);
+			if (ret < 0)
+				return ret;
+
+			ret = force_write(proc->fd, cfg->ipv6_dns, len);
+			if (ret < 0)
+				return ret;
+		} else {
+			len = 0;
+			ret = force_write(proc->fd, &len, 1);
+			if (ret < 0)
+				return ret;
+		}
+
+		for (i=0;i<cfg->routes_size;i++) {
+			len = strlen(cfg->routes[i]);
+
+			mslog(s, proc, LOG_INFO, "sending route '%s' with size %d", cfg->routes[i], len);
+			ret = force_write(proc->fd, &len, 1);
+			if (ret < 0)
+				return ret;
+
+			ret = force_write(proc->fd, cfg->routes[i], len);
+			if (ret < 0)
+				return ret;
+		}
+	}
+	return 0;
 }
 
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
@@ -128,7 +192,7 @@ int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 		return -1;
 
 	memset(&resp, 0, sizeof(resp));
-	ret = module->auth_msg(proc->auth_ctx, resp.msg, sizeof(resp.msg));
+	ret = module->auth_msg(proc->auth_ctx, resp.data.msg, sizeof(resp.data.msg));
 	if (ret < 0)
 		return ret;
 

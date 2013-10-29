@@ -269,7 +269,9 @@ route = 192.168.5.0/255.255.255.0
 #  ipv?-network, ipv?-netmask, ipv6-prefix, iroute and route.
 #
 # Note that the 'iroute' option allows to add routes on the server
-# based on a user or group (needs route-add-cmd and route-del-cmd).
+# based on a user or group. The syntax is identical to route and
+# it requires route-add-cmd and route-del-cmd to be set.
+
 #config-per-user = /etc/ocserv/config-per-user/
 #config-per-group = /etc/ocserv/config-per-group/
 

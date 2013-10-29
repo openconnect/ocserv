@@ -49,6 +49,8 @@ extern int syslog_open;
 #define ERR_MEM -6
 #define ERR_READ_CONFIG -7
 #define ERR_NO_IP -8
+#define ERR_PARSING -9
+#define ERR_EXEC -10
 
 typedef struct 
 {
@@ -131,6 +133,9 @@ struct cfg_st {
 	
 	unsigned output_buffer;
 	unsigned default_mtu;
+
+	char *route_add_cmd;
+	char *route_del_cmd;
 
 	char *connect_script;
 	char *disconnect_script;

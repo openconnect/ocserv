@@ -270,6 +270,12 @@ route = 192.168.5.0/255.255.255.0
 #config-per-user = /etc/ocserv/config-per-user/
 #config-per-group = /etc/ocserv/config-per-group/
 
+# The system command to use to setup a route. The following
+# example is from linux systems. %R will be replaced with the
+# route/mask and %D with the (tun) device.
+#route-add-cmd = "ip route add %R dev %D"
+#route-del-cmd = "ip route delete %R dev %D"
+
 #
 # The following options are for (experimental) AnyConnect client 
 # compatibility. 

@@ -20,7 +20,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	vpn.h cookies.h tlslib.h http-parser/http_parser.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
 	worker-extras.c main-auth.h html.c html.h \
-	main-user.c worker-misc.c setproctitle.h \
+	main-user.c worker-misc.c setproctitle.h route-add.c route-add.h \
 	setproctitle.c worker-privs.c plain.c plain.h common.h common.c \
 	sec-mod.c sec-mod.h script-list.h system.c system.h icmp-ping.c icmp-ping.h \
 	str.c str.h gettime.h $(CCAN_SOURCES)

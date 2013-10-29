@@ -100,6 +100,8 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "ipv6-dns", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-nbns", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "route-add-cmd", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "route-del-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-group", .type = OPTION_STRING, .mandatory = 0 },
 };
@@ -361,6 +363,8 @@ unsigned prefix = 0;
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
 
+	READ_STRING("route-add-cmd", config->route_add_cmd);
+	READ_STRING("route-del-cmd", config->route_del_cmd);
 	READ_STRING("config-per-user", config->per_user_dir);
 	READ_STRING("config-per-group", config->per_group_dir);
 		
@@ -489,6 +493,8 @@ unsigned i;
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
 #endif
+	DEL(config->route_add_cmd);
+	DEL(config->route_del_cmd);
 	DEL(config->per_user_dir);
 	DEL(config->per_group_dir);
 	DEL(config->socket_file_prefix);

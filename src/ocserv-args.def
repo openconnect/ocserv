@@ -265,7 +265,7 @@ route = 192.168.5.0/255.255.255.0
 # Configuration files that will be applied per user connection or
 # per group. Each file name on these directories must match the username
 # or the groupname.
-# The options allow in such configuration files are ipv?-dns, ipv?-nbns,
+# The options allowed in the configuration files are ipv?-dns, ipv?-nbns,
 #  ipv?-network, ipv?-netmask, ipv6-prefix, iroute and route.
 #
 # Note that the 'iroute' option allows to add routes on the server

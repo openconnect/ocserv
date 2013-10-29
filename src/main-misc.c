@@ -260,7 +260,7 @@ int ret;
 			return ret;
 	}
 
-	if (s->config->per_group_dir != NULL) {
+	if (s->config->per_group_dir != NULL && proc->groupname[0] != 0) {
 		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir, proc->groupname);
 
 		ret = read_config_file(s, proc, file, "group");

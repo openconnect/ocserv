@@ -437,6 +437,13 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 					return ret;
 				}
 				break; /* wait for another command */
+			} else if (ret == 0) {
+				ret = accept_user(s, proc, cmd);
+				if (ret < 0) {
+					goto cleanup;
+				}
+				proc->auth_status = PS_AUTH_COMPLETED;
+				goto cleanup;
 			} else if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
 				goto cleanup;

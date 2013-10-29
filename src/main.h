@@ -78,6 +78,7 @@ struct proc_st {
 	unsigned auth_status; /* PS_AUTH_ */
 	unsigned auth_reqs; /* the number of requests received */
 	
+	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
 	struct group_cfg_st config; /* custom user/group config */
 };
 

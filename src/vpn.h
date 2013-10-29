@@ -59,8 +59,13 @@ typedef struct
 } hash_db_st;
 
 struct group_cfg_st {
+	/* routes to be forwarded to the client */
 	char **routes;
 	unsigned int routes_size;
+
+	/* routes to be applied to the server */
+	char **iroutes;
+	unsigned int iroutes_size;
 
 	char *ipv4_dns;
 	char *ipv6_dns;

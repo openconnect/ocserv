@@ -42,6 +42,7 @@ struct cfg_options {
 
 static struct cfg_options available_options[] = {
 	{ .name = "route", .type = OPTION_MULTI_LINE },
+	{ .name = "iroute", .type = OPTION_MULTI_LINE },
 	{ .name = "ipv4-dns", .type = OPTION_STRING },
 	{ .name = "ipv6-dns", .type = OPTION_STRING },
 	{ .name = "ipv4-nbns", .type = OPTION_STRING },
@@ -128,6 +129,7 @@ unsigned prefix = 0;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
 	READ_RAW_MULTI_LINE("route", config->routes, config->routes_size);
+	READ_RAW_MULTI_LINE("iroute", config->iroutes, config->iroutes_size);
 
 	READ_RAW_STRING("ipv4-dns", config->ipv4_dns);
 	READ_RAW_STRING("ipv6-dns", config->ipv6_dns);
@@ -154,6 +156,12 @@ unsigned i;
 		free(config->routes[i]);
 	}
 	free(config->routes);
+
+	for(i=0;i<config->iroutes_size;i++) {
+		free(config->iroutes[i]);
+	}
+	free(config->iroutes);
+
 	free(config->ipv4_dns);
 	free(config->ipv6_dns);
 	free(config->ipv4_nbns);

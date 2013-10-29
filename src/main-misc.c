@@ -39,6 +39,7 @@
 #include "ipc.h"
 #include "setproctitle.h"
 #include <sec-mod.h>
+#include <route-add.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -123,6 +124,8 @@ int ret;
 			ret = ERR_BAD_COMMAND;
 			goto fail;
 		}
+		
+		apply_iroutes(s, proc);
 	} else {
 		mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
 		ret = send_auth_reply( s, proc, REP_AUTH_FAILED);
@@ -178,6 +181,14 @@ unsigned i;
 					proc->config.routes_size++;
 				}
 			}
+		}
+
+		if (proc->config.iroutes == NULL) {
+			proc->config.iroutes = cfg.iroutes;
+			proc->config.iroutes_size = cfg.iroutes_size;
+				
+			cfg.iroutes = NULL;
+			cfg.iroutes_size = 0;
 		}
 
 		if (proc->config.ipv4_dns == NULL) {

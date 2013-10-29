@@ -5,6 +5,10 @@
   group from the setup directory.
 - Added the ipv6-prefix configuration option to replace ipv6-netmask. The
   new option accepts IPv6 subnet prefixes.
+- Added the 'iroute' configuration directive, applicable only to group or
+  user configuration files. It allows setting routes on the server based on
+  the connected client.
+
 
 * Version 0.1.7 (released 2013-10-25)
 

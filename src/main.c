@@ -45,6 +45,7 @@
 #endif
 
 #include <main.h>
+#include <route-add.h>
 #include <main-auth.h>
 #include <worker.h>
 #include <cookies.h>
@@ -303,6 +304,7 @@ static void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 	proc->fd = -1;
 	proc->pid = -1;
 	
+	remove_iroutes(s, proc);
 	del_additional_config(&proc->config);
 	
 	if (proc->auth_ctx != NULL)

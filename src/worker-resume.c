@@ -107,7 +107,8 @@ static int recv_resume_fetch_reply(worker_st *ws, struct cmd_resume_fetch_reply_
 
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret <= sizeof(*resp)-MAX_SESSION_DATA_SIZE) {
-		oclog(ws, LOG_ERR, "received incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
+		int e = errno;
+		oclog(ws, LOG_ERR, "received incorrect data (%d, expected %d) from main: %s", ret, (int)sizeof(*resp)+1, strerror(e));
 		return -1;
 	}
 

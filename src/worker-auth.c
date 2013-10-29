@@ -356,11 +356,11 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 	hdr.msg_controllen = sizeof(control_un.control);
 
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	
 	cmdlen = ret;
-	
+
 	if (cmdlen < 2) {
-		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", cmdlen, (int)2);
+		int e = errno;
+		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main: %s", cmdlen, (int)2, strerror(e));
 		return ERR_AUTH_FAIL;
 	}
 	if (cmd != AUTH_REP)

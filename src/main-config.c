@@ -29,6 +29,7 @@
 #include <ocserv-args.h>
 #include <autoopts/options.h>
 #include <limits.h>
+#include <common.h>
 #include <c-strcase.h>
 
 #include <vpn.h>
@@ -48,6 +49,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv4-network", .type = OPTION_STRING },
 	{ .name = "ipv6-network", .type = OPTION_STRING },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING },
+	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC },
 	{ .name = "ipv6-netmask", .type = OPTION_STRING },
 };
 
@@ -69,11 +71,19 @@ static struct cfg_options available_options[] = {
 		} \
 	}
 
-#undef READ_RAW_STRING
 #define READ_RAW_STRING(name, s_name) \
 	val = optionGetValue(pov, name); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		s_name = strdup(val->v.strVal); \
+	}
+
+#define READ_RAW_NUMERIC(name, s_name) \
+	val = optionGetValue(pov, name); \
+	if (val != NULL) { \
+		if (val->valType == OPARG_TYPE_NUMERIC) \
+			s_name = val->v.longVal; \
+		else if (val->valType == OPARG_TYPE_STRING) \
+			s_name = atoi(val->v.strVal); \
 	}
 
 
@@ -94,6 +104,7 @@ int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_s
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
+unsigned prefix = 0;
 
 	memset(config, 0, sizeof(*config));
 
@@ -126,6 +137,9 @@ const tOptionValue* val, *prev;
 	READ_RAW_STRING("ipv6-network", config->ipv6_network);
 	READ_RAW_STRING("ipv4-netmask", config->ipv4_netmask);
 	READ_RAW_STRING("ipv6-netmask", config->ipv6_netmask);
+	READ_RAW_NUMERIC("ipv6-prefix", prefix);
+	if (prefix > 0) 
+		config->ipv6_netmask = ipv6_prefix_to_mask(prefix);
 
 	optionUnloadNested(pov);
 	

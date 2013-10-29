@@ -29,6 +29,7 @@
 #include <ocserv-args.h>
 #include <autoopts/options.h>
 #include <limits.h>
+#include <common.h>
 #include <c-strcase.h>
 
 #include <vpn.h>
@@ -96,6 +97,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv4-nbns", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-netmask", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "ipv6-dns", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-nbns", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
@@ -204,6 +206,7 @@ const tOptionValue* val, *prev;
 unsigned j, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
+unsigned prefix = 0;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
@@ -346,6 +349,11 @@ unsigned auth_size = 0;
 
 	READ_STRING("ipv6-network", config->network.ipv6);
 	READ_STRING("ipv6-netmask", config->network.ipv6_netmask);
+
+	READ_NUMERIC("ipv6-prefix", prefix);
+	if (prefix > 0) 
+		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
+	
 	READ_STRING("ipv6-dns", config->network.ipv6_dns);
 
 	READ_STRING("ipv4-nbns", config->network.ipv4_nbns);

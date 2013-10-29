@@ -76,3 +76,29 @@ int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2,
 		return memcmp(SA_IN6_P(s1), SA_IN6_P(s2), sizeof(struct in6_addr));
 	}
 }
+
+/* returns an allocated string with the mask to apply for the prefix
+ */
+char* ipv6_prefix_to_mask(unsigned prefix)
+{
+	switch (prefix) {
+		case 16:
+			return strdup("FFFF::");
+		case 32:
+			return strdup("FFFF:FFFF::");
+		case 48:
+			return strdup("FFFF:FFFF:FFFF::");
+		case 64:
+			return strdup("FFFF:FFFF:FFFF:FFFF::");
+		case 80:
+			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF::");
+		case 96:
+			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF::");
+		case 112:
+			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF::");
+		case 128:
+			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+		default:
+			return NULL;
+	}
+}

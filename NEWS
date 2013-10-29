@@ -1,4 +1,4 @@
-* Version 0.1.8 (unreleased)
+* Version 0.2.0 (unreleased)
 
 - Added configuration directives 'config-per-user' and 'config-per-group'.
   They allow loading an additional configuration client per user or per

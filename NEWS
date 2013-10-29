@@ -8,6 +8,7 @@
 - Added the 'iroute' configuration directive, applicable only to group or
   user configuration files. It allows setting routes on the server based on
   the connected client.
+- Corrected authentication using only certificates.
 
 
 * Version 0.1.7 (released 2013-10-25)

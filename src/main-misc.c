@@ -147,24 +147,6 @@ fail:
 	return ret;
 }
 
-void del_additional_config(struct group_cfg_st* config)
-{
-unsigned i;
-
-	for(i=0;i<config->routes_size;i++) {
-		free(config->routes[i]);
-	}
-	free(config->routes);
-	free(config->ipv4_dns);
-	free(config->ipv6_dns);
-	free(config->ipv4_nbns);
-	free(config->ipv6_nbns);
-	free(config->ipv4_network);
-	free(config->ipv6_network);
-	free(config->ipv4_netmask);
-	free(config->ipv6_netmask);
-}
-
 static int read_config_file(main_server_st* s, struct proc_st* proc, const char* file, const char* type)
 {
 struct group_cfg_st cfg;

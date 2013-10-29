@@ -92,7 +92,7 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
 	struct cmsghdr  *cmptr;	
-
+	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
 	iov[0].iov_base = &cmd;
@@ -110,7 +110,12 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 	cmptr->cmsg_type = SCM_RIGHTS;
 	memcpy(CMSG_DATA(cmptr), &fd, sizeof(int));
 	
-	return(sendmsg(proc->fd, &hdr, 0));
+	ret = sendmsg(proc->fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		mslog(s, proc, LOG_ERR, "sendmsg: %s", strerror(e));
+	}
+	return ret;
 }
 
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code)
@@ -120,7 +125,7 @@ int ret;
 	if (code == 0) {
 		ret = send_auth_reply(s, proc, REP_AUTH_OK);
 		if (ret < 0) {
-			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
+			mslog(s, proc, LOG_ERR, "could not send auth reply cmd.");
 			ret = ERR_BAD_COMMAND;
 			goto fail;
 		}

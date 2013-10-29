@@ -108,12 +108,12 @@ static int recv_resume_fetch_reply(worker_st *ws, struct cmd_resume_fetch_reply_
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret <= sizeof(*resp)-MAX_SESSION_DATA_SIZE) {
 		int e = errno;
-		oclog(ws, LOG_ERR, "received incorrect data (%d, expected %d) from main: %s", ret, (int)sizeof(*resp)+1, strerror(e));
+		oclog(ws, LOG_ERR, "resume_fetch_reply: incorrect data (%d, expected %d) from main: %s", ret, (int)sizeof(*resp)+1, strerror(e));
 		return -1;
 	}
 
 	if (cmd != RESUME_FETCH_REP) {
-		oclog(ws, LOG_ERR, "received unexpected response (%d, expected %d) from main", (int)cmd, (int)RESUME_FETCH_REP);
+		oclog(ws, LOG_ERR, "resume_fetch_reply: unexpected response (%d, expected %d) from main", (int)cmd, (int)RESUME_FETCH_REP);
 		return -1;
 	}
 

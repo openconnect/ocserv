@@ -174,6 +174,7 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
+	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
 	
@@ -188,7 +189,12 @@ static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
 
-	return(sendmsg(fd, &hdr, 0));
+	ret = sendmsg(fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		syslog(LOG_ERR, "send_auth_req: sendmsg: %s", strerror(e));
+	}
+	return ret;
 }
 
 static int send_auth_init(int fd, const struct cmd_auth_init_st* r)
@@ -196,6 +202,7 @@ static int send_auth_init(int fd, const struct cmd_auth_init_st* r)
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
+	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
 	
@@ -210,7 +217,12 @@ static int send_auth_init(int fd, const struct cmd_auth_init_st* r)
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
 
-	return(sendmsg(fd, &hdr, 0));
+	ret = sendmsg(fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		syslog(LOG_ERR, "send_auth_req: sendmsg: %s", strerror(e));
+	}
+	return ret;
 }
 
 static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
@@ -218,6 +230,7 @@ static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 	struct iovec iov[2];
 	uint8_t cmd;
 	struct msghdr hdr;
+	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
 	
@@ -232,7 +245,12 @@ static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
 
-	return(sendmsg(fd, &hdr, 0));
+	ret = sendmsg(fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		syslog(LOG_ERR, "send_auth_req: sendmsg: %s", strerror(e));
+	}
+	return ret;
 }
 
 static int read_str_value_length(worker_st *ws, char** res)
@@ -360,7 +378,7 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 
 	if (cmdlen < 2) {
 		int e = errno;
-		oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main: %s", cmdlen, (int)2, strerror(e));
+		oclog(ws, LOG_ERR, "auth_reply: incorrect data (%d, expected %d) from main: %s", cmdlen, (int)2, strerror(e));
 		return ERR_AUTH_FAIL;
 	}
 	if (cmd != AUTH_REP)
@@ -373,7 +391,7 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 			return ERR_AUTH_CONTINUE;
 		case REP_AUTH_OK:
 			if (cmdlen < sizeof(*resp)) {
-				oclog(ws, LOG_ERR, "Received incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
+				oclog(ws, LOG_ERR, "auth_reply: incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
 				return ERR_AUTH_FAIL;
 			}
 

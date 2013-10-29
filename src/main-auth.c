@@ -216,8 +216,11 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	}
 	
 	ret = sendmsg(proc->fd, &hdr, 0);
-	if (ret < 0)
+	if (ret < 0) {
+		int e = errno;
+		mslog(s, proc, LOG_ERR, "sendmsg: %s", strerror(e));
 		return ret;
+	}
 
 	if (r == REP_AUTH_OK) {
 		ret = serialize_additional_data(s, proc);
@@ -260,7 +263,12 @@ int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 	iov[1].iov_len = sizeof(resp);
 	hdr.msg_iovlen++;
 	
-	return(sendmsg(proc->fd, &hdr, 0));
+	ret = sendmsg(proc->fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		mslog(s, proc, LOG_ERR, "sendmsg: %s", strerror(e));
+	}
+	return ret;
 }
 
 static int check_user_group_status(main_server_st *s, struct proc_st* proc,

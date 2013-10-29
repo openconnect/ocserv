@@ -22,30 +22,30 @@ SERV="${SERV:-../src/ocserv}"
 
 . `dirname $0`/common.sh
 
-echo "Testing local backend with username-password..."
+echo "Testing local backend with username-password... "
 
 launch_server -d -f -c test1.config & PID=$!
 wait_server $PID
 
-echo "Connecting to obtain cookie..."
+echo "Connecting to obtain cookie... "
 ( echo "test" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-echo "Connecting to obtain cookie with wrong password..."
+echo "Connecting to obtain cookie with wrong password... "
 ( echo "tost" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
-echo "Connecting to obtain cookie with wrong username..."
+echo "Connecting to obtain cookie with wrong username... "
 ( echo "tost" | openconnect -q localhost:4443 -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
 #test special characters
 
-echo "Connecting to obtain cookie..."
+echo "Connecting to obtain cookie... "
 ( echo "!@#$%^&*()<>" | openconnect -q localhost:4443 -u special --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-#echo "Normal connection..."
+#echo "Normal connection... "
 #( echo "test" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
 

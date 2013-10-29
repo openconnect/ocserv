@@ -22,19 +22,19 @@ SERV="${SERV:-../src/ocserv}"
 
 . `dirname $0`/common.sh
 
-echo "Testing local backend with username-password and certificate... "
+echo "Testing ocserv with certificates... "
 
-launch_server -d -f -c test2.config & PID=$!
+launch_server -d -f -c test3.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
-( echo "test" | openconnect -q localhost:4443 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( openconnect -q localhost:4443 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected without certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( echo "test" | openconnect -q localhost:4443 --sslkey ./user-key.pem -c ./user-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( openconnect -q localhost:4443 --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok

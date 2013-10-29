@@ -368,7 +368,7 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 	
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2 + MAX_ROUTES;
+	hdr.msg_iovlen = 2;
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);

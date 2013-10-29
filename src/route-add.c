@@ -82,17 +82,17 @@ char cmd[_POSIX_PATH_MAX];
 	ret = system(cmd);
 	if (ret == -1) {
 		int e = errno;
-		mslog(s, NULL, LOG_DEBUG, "failed to spawn cmd: %s: %s", cmd, strerror(e));
+		mslog(s, NULL, LOG_INFO, "failed to spawn cmd: %s: %s", cmd, strerror(e));
 		return ERR_EXEC;
 	}
 	
 	if (!WIFEXITED(ret)) {
-		mslog(s, NULL, LOG_DEBUG, "cmd: %s: exited abnormally", cmd);
+		mslog(s, NULL, LOG_INFO, "cmd: %s: exited abnormally", cmd);
 		return ERR_EXEC;
 	}
 
 	if (WEXITSTATUS(ret)) {
-		mslog(s, NULL, LOG_DEBUG, "cmd: %s: exited with error %d", cmd, WEXITSTATUS(ret));
+		mslog(s, NULL, LOG_INFO, "cmd: %s: exited with error %d", cmd, WEXITSTATUS(ret));
 		return ERR_EXEC;
 	}
 	

@@ -35,6 +35,7 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include "ipc.h"
+#include "str.h"
 
 #include <vpn.h>
 #include <cookies.h>
@@ -61,23 +62,22 @@ void main_auth_init(main_server_st *s)
 	}
 }
 
-static int send_str_value_length(main_server_st* s, struct proc_st* proc, char* data)
+static int send_value_length(main_server_st* s, struct proc_st* proc, const void* data, size_t _len)
 {
-	uint8_t len;
+	uint16_t len = _len;
 	int ret;
 
-	if (data != NULL) {
-		len = strlen(data);
-		ret = force_write(proc->fd, &len, 1);
+	if (len > 0) {
+		ret = force_write(proc->fd, &len, 2);
 		if (ret < 0)
 			return ret;
 
-		ret = force_write(proc->fd, proc->config.ipv4_dns, len);
+		ret = force_write(proc->fd, data, len);
 		if (ret < 0)
 			return ret;
 	} else {
 		len = 0;
-		ret = force_write(proc->fd, &len, 1);
+		ret = force_write(proc->fd, &len, 2);
 		if (ret < 0)
 			return ret;
 	}
@@ -91,69 +91,75 @@ int serialize_additional_data(main_server_st* s, struct proc_st* proc)
 int ret;
 unsigned i;
 uint8_t len;
+str_st buffer;
+
+	str_init(&buffer);
 
 	/* IPv4 DNS */
 	if (proc->config.ipv4_dns)
 		mslog(s, proc, LOG_DEBUG, "sending DNS '%s'", proc->config.ipv4_dns);
-	ret = send_str_value_length(s, proc, proc->config.ipv4_dns);
+
+	ret = str_append_str_prefix1(&buffer, proc->config.ipv4_dns);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPv6 DNS */
 	if (proc->config.ipv6_dns)
 		mslog(s, proc, LOG_DEBUG, "sending DNS '%s'", proc->config.ipv6_dns);
-	ret = send_str_value_length(s, proc, proc->config.ipv6_dns);
+	ret = str_append_str_prefix1(&buffer, proc->config.ipv6_dns);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPv4 NBNS */
 	if (proc->config.ipv4_nbns)
 		mslog(s, proc, LOG_DEBUG, "sending NBNS '%s'", proc->config.ipv4_nbns);
-	ret = send_str_value_length(s, proc, proc->config.ipv4_nbns);
+	ret = str_append_str_prefix1(&buffer, proc->config.ipv4_nbns);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPv6 NBNS */
 	if (proc->config.ipv6_nbns)
 		mslog(s, proc, LOG_DEBUG, "sending NBNS '%s'", proc->config.ipv6_nbns);
-	ret = send_str_value_length(s, proc, proc->config.ipv6_nbns);
+	ret = str_append_str_prefix1(&buffer, proc->config.ipv6_nbns);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPv4 netmask */
 	if (proc->config.ipv4_netmask)
 		mslog(s, proc, LOG_DEBUG, "sending netmask '%s'", proc->config.ipv4_netmask);
-	ret = send_str_value_length(s, proc, proc->config.ipv4_netmask);
+	ret = str_append_str_prefix1(&buffer, proc->config.ipv4_netmask);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPv6 netmask */
 	if (proc->config.ipv6_netmask)
 		mslog(s, proc, LOG_DEBUG, "sending netmask '%s'", proc->config.ipv6_netmask);
-	ret = send_str_value_length(s, proc, proc->config.ipv6_netmask);
+	ret = str_append_str_prefix1(&buffer, proc->config.ipv6_netmask);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* routes */
 	len = proc->config.routes_size;
-	ret = force_write(proc->fd, &len, 1);
+	ret = str_append_data(&buffer, &len, 1);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	for (i=0;i<proc->config.routes_size;i++) {
-		len = strlen(proc->config.routes[i]);
-
 		mslog(s, proc, LOG_DEBUG, "sending route '%s'", proc->config.routes[i]);
-		ret = force_write(proc->fd, &len, 1);
-		if (ret < 0)
-			return ret;
-
-		ret = force_write(proc->fd, proc->config.routes[i], len);
+		ret = str_append_str_prefix1(&buffer, proc->config.routes[i]);
 		if (ret < 0)
 			return ret;
 	}
+
+	ret = send_value_length(s, proc, buffer.data, buffer.length);
+	if (ret < 0)
+		goto cleanup;
 	
-	return 0;
+	ret = 0;
+
+cleanup:
+	str_clear(&buffer);
+	return ret;
 }
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,

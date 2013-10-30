@@ -196,11 +196,6 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 #define SA_IN_SIZE(size) ((size==sizeof(struct sockaddr_in))?sizeof(struct in_addr):sizeof(struct in6_addr))
 
 /* Helper structures */
-struct route_st {
-	uint8_t size;
-	char *route;
-};
-
 enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
 
 #endif

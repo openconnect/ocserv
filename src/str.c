@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2002-2012 Free Software Foundation, Inc.
+ * Copyright (C) 2013 Nikos Mavrogiannopoulos
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -43,9 +44,9 @@ void str_clear(str_st * str)
 }
 
 #define MIN_CHUNK 64
-/* This function always null terminates the string in dest.
+/* This function makes sure there is an additional byte in dest;
  */
-int str_append_data(str_st * dest, const void *data, size_t data_size)
+int str_append_size(str_st * dest, size_t data_size)
 {
 	size_t tot_len = data_size + dest->length;
 
@@ -62,9 +63,6 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 
 			dest->data = dest->allocd;
 		}
-		memmove(&dest->data[dest->length], data, data_size);
-		dest->length = tot_len;
-		dest->data[dest->length] = 0;
 
 		return tot_len;
 	} else {
@@ -83,12 +81,38 @@ int str_append_data(str_st * dest, const void *data, size_t data_size)
 			memmove(dest->allocd, dest->data, dest->length);
 		dest->data = dest->allocd;
 
-		memcpy(&dest->data[dest->length], data, data_size);
-		dest->length = tot_len;
-		dest->data[dest->length] = 0;
-
 		return tot_len;
 	}
+}
+
+/* This function always null terminates the string in dest.
+ */
+int str_append_data(str_st * dest, const void *data, size_t data_size)
+{
+int ret;
+
+	ret = str_append_size(dest, data_size);
+	if (ret < 0)
+		return ret;
+	
+	memcpy(&dest->data[dest->length], data, data_size);
+	dest->length = data_size + dest->length;
+	dest->data[dest->length] = 0;
+	
+	return 0;
+}
+
+int str_append_data_prefix1(str_st * dest, const void *data, size_t data_size)
+{
+	int ret;
+	uint8_t prefix = data_size;
+
+	ret = str_append_data(dest, &prefix, 1);
+	if (ret >= 0) {
+		ret = str_append_data(dest, data, data_size);
+	}
+
+	return ret;
 }
 
 /* Appends the provided string. The null termination byte is appended
@@ -102,4 +126,45 @@ int str_append_str(str_st * dest, const char *src)
 		dest->length--;
 
 	return ret;
+}
+
+/* Makes sure that the data read are null terminated (but not counted in *data_size) 
+ * If the size of the data is zero then *data will be null;
+ */
+int str_read_data_prefix1(str_st * src, char **data, size_t *data_size)
+{
+	uint8_t prefix;
+	
+	if (src->length < 1)
+		return ERR_MEM;
+
+	prefix = src->data[0];
+
+	if (src->length < prefix)
+		return ERR_MEM;
+	
+	src->data++;
+	src->length--;
+
+	if (prefix == 0) {
+		if (data_size)
+			*data_size = 0;
+		*data = NULL;
+
+	} else {
+
+		if (data_size)
+			*data_size = prefix + 1;
+
+		*data = malloc(((int)prefix)+1);
+		if (*data == NULL)
+			return ERR_MEM;
+	
+		memcpy(*data, src->data, prefix);
+		(*data)[prefix] = 0;
+		
+		src->data += prefix;
+	}
+
+	return 0;
 }

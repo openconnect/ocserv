@@ -126,7 +126,7 @@ typedef struct worker_st {
 	char *ipv4_netmask;
 	char *ipv6_netmask;
 	unsigned routes_size;
-	struct route_st routes[MAX_ROUTES];
+	char* routes[MAX_ROUTES];
 	
 	struct http_req_st req;
 } worker_st;

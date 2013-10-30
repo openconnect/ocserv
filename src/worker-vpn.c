@@ -899,13 +899,13 @@ socklen_t sl;
 	}
 
 	for (i=0;i<ws->routes_size;i++) {
-		if (req->no_ipv6 != 0 && strchr(ws->routes[i].route, ':') != 0)
+		if (req->no_ipv6 != 0 && strchr(ws->routes[i], ':') != 0)
 			continue;
-		if (req->no_ipv4 != 0 && strchr(ws->routes[i].route, '.') != 0)
+		if (req->no_ipv4 != 0 && strchr(ws->routes[i], '.') != 0)
 			continue;
-		oclog(ws, LOG_DEBUG, "adding route %s", ws->routes[i].route);
+		oclog(ws, LOG_DEBUG, "adding private route %s", ws->routes[i]);
 		ret = tls_printf(ws->session,
-			"X-CSTP-Split-Include: %s\r\n", ws->routes[i].route);
+			"X-CSTP-Split-Include: %s\r\n", ws->routes[i]);
 		SEND_ERR(ret);
 	}
 	ret = tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n", ws->config->keepalive);

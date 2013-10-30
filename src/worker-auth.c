@@ -253,28 +253,29 @@ static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
 	return ret;
 }
 
-static int read_str_value_length(worker_st *ws, char** res)
+static int recv_value_length(worker_st *ws, str_st* b)
 {
 int ret;
-uint8_t len;
+uint16_t len;
 
-	ret = force_read(ws->cmd_fd, &len, 1);
-	if (ret != 1) {
+	ret = force_read(ws->cmd_fd, &len, 2);
+	if (ret != 2) {
 		oclog(ws, LOG_ERR, "Error receiving length-value from main (%d)", ret);
 		return ERR_BAD_COMMAND;
 	}
 				
 	if (len > 0) {
-		*res = malloc(((int)len)+1);
-		if (*res == NULL)
-			return ERR_MEM;
-
-		ret = force_read(ws->cmd_fd, *res, len);
+		ret = str_append_size(b, len);
+		if (ret < 0)
+			return ret;
+		
+		ret = force_read(ws->cmd_fd, b->data, len);
 		if (ret != len) {
 			oclog(ws, LOG_ERR, "Error receiving value from main (%d)", ret);
 			return ERR_BAD_COMMAND;
 		}
-		(*res)[len] = 0;
+		b->length += len;
+		b->data[len] = 0;
 	}
 	
 	return 0;
@@ -284,68 +285,69 @@ static
 int deserialize_additional_data(worker_st* ws)
 {
 int ret;
-uint8_t len;
 unsigned i;
+str_st b;
 
-	/* IPV4 DNS */
-	ret = read_str_value_length(ws, &ws->ipv4_dns);
+	str_init(&b);
+	
+	ret = recv_value_length(ws, &b);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
+	
+	/* IPV4 DNS */
+	ret = str_read_data_prefix1(&b, &ws->ipv4_dns, NULL);
+	if (ret < 0)
+		goto cleanup;
 
 	/* IPV6 DNS */
-	ret = read_str_value_length(ws, &ws->ipv6_dns);
+	ret = str_read_data_prefix1(&b, &ws->ipv6_dns, NULL);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPV4 NBNS */
-	ret = read_str_value_length(ws, &ws->ipv4_nbns);
+	ret = str_read_data_prefix1(&b, &ws->ipv4_nbns, NULL);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPV6 NBNS */
-	ret = read_str_value_length(ws, &ws->ipv6_nbns);
+	ret = str_read_data_prefix1(&b, &ws->ipv6_nbns, NULL);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPV4 netmask */
-	ret = read_str_value_length(ws, &ws->ipv4_netmask);
+	ret = str_read_data_prefix1(&b, &ws->ipv4_netmask, NULL);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* IPV6 netmask */
-	ret = read_str_value_length(ws, &ws->ipv6_netmask);
+	ret = str_read_data_prefix1(&b, &ws->ipv6_netmask, NULL);
 	if (ret < 0)
-		return ret;
+		goto cleanup;
 
 	/* number of routes */
-	ret = force_read(ws->cmd_fd, &len, 1);
-	if (ret != 1) {
-		oclog(ws, LOG_ERR, "Error receiving length-value from main (%d)", ret);
-		return ERR_BAD_COMMAND;
+	if (b.length < 1) {
+		oclog(ws, LOG_ERR, "Error in received length-value from main");
+		ret = ERR_BAD_COMMAND;
+		goto cleanup;
 	}
-	ws->routes_size = len;
+	ws->routes_size = b.data[0];
+	b.length--;
+	b.data++;
 
 	/* routes */
 	for (i=0;i<ws->routes_size;i++) {
-		ret = force_read(ws->cmd_fd, &ws->routes[i].size, 1);
-		if (ret != 1) {
-			oclog(ws, LOG_ERR, "Error received route size from main (%d)", ret);
-			return ERR_BAD_COMMAND;
+		ret = str_read_data_prefix1(&b, &ws->routes[i], NULL);
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "Error receiving private routes from main");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
 		}
-
-		ws->routes[i].route = malloc(ws->routes[i].size+1);
-		if (ws->routes[i].route == NULL)
-			return ERR_MEM;
-
-		ret = force_read(ws->cmd_fd, ws->routes[i].route, ws->routes[i].size);
-		if (ret != ws->routes[i].size) {
-			oclog(ws, LOG_ERR, "Error received routes from main (%d)", ret);
-			return ERR_BAD_COMMAND;
-		}
-		ws->routes[i].route[ws->routes[i].size] = 0;
 	}
 	
-	return 0;
+	ret = 0;
+cleanup:
+	str_clear(&b);
+	return ret;
 }
 
 static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)

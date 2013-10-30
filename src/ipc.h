@@ -78,20 +78,19 @@ struct __attribute__ ((__packed__)) cmd_auth_req_st {
  */
 struct __attribute__ ((__packed__)) cmd_auth_reply_st {
 	uint8_t reply; /* REP_AUTH_OK, REP_AUTH_MSG or REP_AUTH_FAILED */
-	
-	/* These fields are not filled on REP_AUTH_FAILED */
-	union {
-		struct {
-			uint8_t cookie[COOKIE_SIZE];
-			uint8_t session_id[GNUTLS_MAX_SESSION_ID];
-			char vname[IFNAMSIZ]; /* interface name */
-			char user[MAX_USERNAME_SIZE];
-			
-			/* additional data follow */
-		} ok;
-		/* in case of REP_AUTH_MSG */
-		char msg[MAX_MSG_SIZE]; 
-	} data;
+};
+
+/* REP_AUTH_OK */
+struct __attribute__ ((__packed__)) cmd_auth_reply_info_st {
+	uint8_t cookie[COOKIE_SIZE];
+	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
+	char vname[IFNAMSIZ]; /* interface name */
+	char user[MAX_USERNAME_SIZE];
+};
+
+/* in case of REP_AUTH_MSG */
+struct __attribute__ ((__packed__)) cmd_auth_reply_msg_st {
+	char msg[MAX_MSG_SIZE]; 
 };
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ: 

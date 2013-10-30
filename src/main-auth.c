@@ -159,17 +159,16 @@ uint8_t len;
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			cmd_auth_reply_t r)
 {
-	struct iovec iov[2];
+	struct iovec iov[1];
 	uint8_t cmd[2];
 	struct msghdr hdr;
 	union {
 		struct cmsghdr    cm;
 		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
-	struct cmd_auth_reply_st resp;
 	struct cmsghdr  *cmptr;
 	int ret;
-	
+
 	if (proc->config.routes_size > MAX_ROUTES) {
 		mslog(s, proc, LOG_INFO, "Note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)proc->config.routes_size, (int)MAX_ROUTES);
 		proc->config.routes_size = MAX_ROUTES;
@@ -182,20 +181,11 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 
 	if (r == REP_AUTH_OK && proc->tun_lease.name[0] != 0) {
 		cmd[0] = AUTH_REP;
-
-		iov[0].iov_base = cmd;
-		iov[0].iov_len = 1;
-		hdr.msg_iovlen++;
+		cmd[1] = REP_AUTH_OK;
 		
-		resp.reply = r;
-		memcpy(resp.data.ok.cookie, proc->cookie, COOKIE_SIZE);
-		memcpy(resp.data.ok.session_id, proc->session_id, sizeof(resp.data.ok.session_id));
-		memcpy(resp.data.ok.vname, proc->tun_lease.name, sizeof(resp.data.ok.vname));
-		memcpy(resp.data.ok.user, proc->username, sizeof(resp.data.ok.user));
-
-		iov[1].iov_base = &resp;
-		iov[1].iov_len = sizeof(resp);
-		hdr.msg_iovlen++;
+		iov[0].iov_base = cmd;
+		iov[0].iov_len = 2;
+		hdr.msg_iovlen = 1;
 
 		/* Send the tun fd */
 		hdr.msg_control = control_un.control;
@@ -212,17 +202,30 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	
 		iov[0].iov_base = cmd;
 		iov[0].iov_len = 2;
-		hdr.msg_iovlen++;
+		hdr.msg_iovlen = 1;
 	}
 	
 	ret = sendmsg(proc->fd, &hdr, 0);
 	if (ret < 0) {
 		int e = errno;
-		mslog(s, proc, LOG_ERR, "sendmsg: %s", strerror(e));
+		mslog(s, proc, LOG_ERR, "auth_reply: sendmsg: %s", strerror(e));
 		return ret;
 	}
 
-	if (r == REP_AUTH_OK) {
+	if (cmd[1] == REP_AUTH_OK) {
+		struct cmd_auth_reply_info_st resp;
+
+		memcpy(resp.cookie, proc->cookie, COOKIE_SIZE);
+		memcpy(resp.session_id, proc->session_id, sizeof(resp.session_id));
+		memcpy(resp.vname, proc->tun_lease.name, sizeof(resp.vname));
+		memcpy(resp.user, proc->username, sizeof(resp.user));
+
+		ret = force_write(proc->fd, &resp, sizeof(resp));
+		if (ret < 0) {
+			int e = errno;
+			mslog(s, proc, LOG_ERR, "auth_reply: write: %s", strerror(e));
+		}
+
 		ret = serialize_additional_data(s, proc);
 		if (ret < 0)
 			return ret;
@@ -234,16 +237,16 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 {
 	struct iovec iov[2];
-	uint8_t cmd[1];
+	uint8_t cmd[2];
 	struct msghdr hdr;
-	struct cmd_auth_reply_st resp;
+	struct cmd_auth_reply_msg_st resp;
 	int ret;
 
 	if (proc->auth_ctx == NULL)
 		return -1;
 
 	memset(&resp, 0, sizeof(resp));
-	ret = module->auth_msg(proc->auth_ctx, resp.data.msg, sizeof(resp.data.msg));
+	ret = module->auth_msg(proc->auth_ctx, resp.msg, sizeof(resp.msg));
 	if (ret < 0)
 		return ret;
 
@@ -252,22 +255,24 @@ int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 	hdr.msg_iov = iov;
 
 	cmd[0] = AUTH_REP;
-	
-	resp.reply = REP_AUTH_MSG;
+	cmd[1] = REP_AUTH_MSG;
 
 	iov[0].iov_base = cmd;
-	iov[0].iov_len = 1;
+	iov[0].iov_len = 2;
 	hdr.msg_iovlen++;
 
-	iov[1].iov_base = &resp;
-	iov[1].iov_len = sizeof(resp);
-	hdr.msg_iovlen++;
-	
 	ret = sendmsg(proc->fd, &hdr, 0);
 	if (ret < 0) {
 		int e = errno;
-		mslog(s, proc, LOG_ERR, "sendmsg: %s", strerror(e));
+		mslog(s, proc, LOG_ERR, "auth_reply_msg: sendmsg: %s", strerror(e));
 	}
+
+	ret = force_write(proc->fd, &resp, sizeof(resp));
+	if (ret < 0) {
+		int e = errno;
+		mslog(s, proc, LOG_ERR, "auth_reply_msg: write: %s", strerror(e));
+	}
+
 	return ret;
 }
 

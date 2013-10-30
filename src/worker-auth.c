@@ -348,64 +348,79 @@ unsigned i;
 	return 0;
 }
 
-static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
+static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
 {
-	struct iovec iov[2];
-	uint8_t cmd = 0;
+	struct iovec iov[1];
+	uint8_t cmd[2] = {0};
 	struct msghdr hdr;
-	int ret, cmdlen;
+	int ret;
 	union {
 		struct cmsghdr    cm;
 		char              control[CMSG_SPACE(sizeof(int))];
 	} control_un;
 	struct cmsghdr  *cmptr;
+	struct cmd_auth_reply_info_st resp;
 	
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
+	iov[0].iov_base = cmd;
+	iov[0].iov_len = 2;
 
-	iov[1].iov_base = resp;
-	iov[1].iov_len = sizeof(*resp);
-	
 	memset(&hdr, 0, sizeof(hdr));
+	memset(&control_un, 0, sizeof(control_un));
+
 	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
+	hdr.msg_iovlen = 1;
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	cmdlen = ret;
-
-	if (cmdlen < 2) {
+	if (ret != 2) {
 		int e = errno;
-		oclog(ws, LOG_ERR, "auth_reply: incorrect data (%d, expected %d) from main: %s", cmdlen, (int)2, strerror(e));
+		oclog(ws, LOG_ERR, "auth_reply: incorrect data (%d, expected %d) from main: %s", ret, (int)2, strerror(e));
 		return ERR_AUTH_FAIL;
 	}
-	if (cmd != AUTH_REP)
-		return ERR_AUTH_FAIL;
-		
-	cmdlen--;
 
-	switch(resp->reply) {
+	if (cmd[0] != AUTH_REP) {
+		oclog(ws, LOG_ERR, "auth_reply: received unexpected message (%d)", (int)cmd[0]);
+		return ERR_AUTH_FAIL;
+	}
+		
+	switch(cmd[1]) {
 		case REP_AUTH_MSG:
-			return ERR_AUTH_CONTINUE;
-		case REP_AUTH_OK:
-			if (cmdlen < sizeof(*resp)) {
-				oclog(ws, LOG_ERR, "auth_reply: incorrect data (%d, expected %d) from main", ret, (int)sizeof(*resp)+1);
+			if (mresp == NULL) {
+				oclog(ws, LOG_ERR, "recv_auth_reply: received unexpected msg");
+				return ERR_AUTH_FAIL;
+			}
+			
+			ret = force_read(ws->cmd_fd, mresp, sizeof(*mresp));
+			if (ret < sizeof(*mresp)) {
+				int e = errno;
+				oclog(ws, LOG_ERR, "recv_auth_reply_msg: read(%d): %s", ret, strerror(e));
 				return ERR_AUTH_FAIL;
 			}
 
+			return ERR_AUTH_CONTINUE;
+		case REP_AUTH_OK:
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-				if (cmptr->cmsg_level != SOL_SOCKET)
-					return -1;
-				if (cmptr->cmsg_type != SCM_RIGHTS)
+
+				if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
+					oclog(ws, LOG_ERR, "recv_auth_reply: incorrect message type");
 					return ERR_AUTH_FAIL;
-				
+				}
+
 				memcpy(&ws->tun_fd, CMSG_DATA(cmptr), sizeof(int));
-				memcpy(ws->tun_name, resp->data.ok.vname, sizeof(ws->tun_name));
-				memcpy(ws->username, resp->data.ok.user, sizeof(ws->username));
-				memcpy(ws->cookie, resp->data.ok.cookie, sizeof(ws->cookie));
-				memcpy(ws->session_id, resp->data.ok.session_id, sizeof(ws->session_id));
+				
+				ret = force_read(ws->cmd_fd, &resp, sizeof(resp));
+				if (ret < sizeof(resp)) {
+					int e = errno;
+					oclog(ws, LOG_ERR, "recv_auth_reply: read(%d): %s", ret, strerror(e));
+					return ERR_AUTH_FAIL;
+				}
+				
+				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
+				memcpy(ws->username, resp.user, sizeof(ws->username));
+				memcpy(ws->cookie, resp.cookie, sizeof(ws->cookie));
+				memcpy(ws->session_id, resp.session_id, sizeof(ws->session_id));
 
 				/* Read any additional data */
 				
@@ -413,8 +428,10 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_st *resp)
 				if (ret < 0)
 					return ret;
 					
-			} else
+			} else {
+				oclog(ws, LOG_ERR, "recv_auth_reply: error in received message");
 				return ERR_AUTH_FAIL;
+			}
 			break;
 		default:
 			return ERR_AUTH_FAIL;
@@ -475,7 +492,6 @@ int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size)
 {
 int ret;
 struct cmd_auth_cookie_req_st areq;
-struct cmd_auth_reply_st resp;
 
 	memset(&areq, 0, sizeof(areq));
 
@@ -503,7 +519,7 @@ struct cmd_auth_reply_st resp;
 	if (ret < 0)
 		return ret;
 
-	return recv_auth_reply(ws, &resp);
+	return recv_auth_reply(ws, NULL);
 }
 
 int post_common_handler(worker_st *ws, unsigned http_ver)
@@ -711,7 +727,7 @@ struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char * username = NULL;
 char * password = NULL;
-struct cmd_auth_reply_st resp;
+struct cmd_auth_reply_msg_st resp;
 
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		struct cmd_auth_init_st areq;
@@ -776,7 +792,7 @@ struct cmd_auth_reply_st resp;
 	ret = recv_auth_reply(ws, &resp);
 	if (ret == ERR_AUTH_CONTINUE) {
 		ws->auth_state = S_AUTH_REQ;
-		return get_auth_handler2(ws, http_ver, resp.data.msg);
+		return get_auth_handler2(ws, http_ver, resp.msg);
         } else if (ret < 0)
 		goto auth_fail;
 

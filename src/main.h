@@ -84,7 +84,6 @@ struct proc_st {
 
 struct ip_lease_db_st {
 	struct htable ht;
-	unsigned entries;
 };
 
 struct proc_list_st {

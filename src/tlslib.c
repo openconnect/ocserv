@@ -153,7 +153,7 @@ static size_t rehash(const void *_e, void *unused)
 {
 const tls_cache_st *e = _e;
 
-	return hash_stable_8(e->session_id, e->session_id_size, 0);
+	return hash_any(e->session_id, e->session_id_size, 0);
 }
 
 void tls_cache_init(hash_db_st** _db)

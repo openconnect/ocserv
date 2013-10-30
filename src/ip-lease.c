@@ -62,7 +62,6 @@ struct htable_iter iter;
 	}
 	
 	htable_clear(&db->ht);
-	db->entries = 0;
 	
 	return;
 }
@@ -71,13 +70,12 @@ static size_t rehash(const void* _e, void* unused)
 {
 const struct ip_lease_st * e = _e;
 
-	return hash_stable_8(&e->rip, e->rip_len, 0);
+	return hash_any(&e->rip, e->rip_len, 0);
 }
 
 void ip_lease_init(struct ip_lease_db_st* db)
 {
 	htable_init(&db->ht, rehash, NULL);
-	db->entries = 0;
 }
 
 static bool ip_lease_cmp(const void* _c1, void* _c2)
@@ -362,14 +360,22 @@ int ret;
 	if (ret < 0)
 		return ret;
 	
-	if (proc->ipv4)
-		htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4);
+	if (proc->ipv4) {
+		if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {
+			mslog(s, proc, LOG_ERR, "Could not add IPv4 lease to hash table.\n");
+			return -1;
+		}
+	}
 
-	if (proc->ipv6)
-		htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6);
+	if (proc->ipv6) {
+		if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
+			mslog(s, proc, LOG_ERR, "Could not add IPv6 lease to hash table.\n");
+			return -1;
+		}
+	}
 
 	if (proc->ipv4 == 0 && proc->ipv6 == 0) {
-		mslog(s, NULL, LOG_ERR, "No IPv4 or IPv6 addresses are configured. Cannot obtain lease.\n");
+		mslog(s, proc, LOG_ERR, "No IPv4 or IPv6 addresses are configured. Cannot obtain lease.\n");
 		return -1;
 	}
 		

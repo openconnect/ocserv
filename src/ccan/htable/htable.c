@@ -254,7 +254,7 @@ bool htable_del(struct htable *ht, size_t h, const void *p)
 {
 	struct htable_iter i;
 	void *c;
-
+	
 	for (c = htable_firstval(ht,&i,h); c; c = htable_nextval(ht,&i,h)) {
 		if (c == p) {
 			htable_delval(ht, &i);

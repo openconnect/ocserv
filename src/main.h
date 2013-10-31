@@ -52,7 +52,7 @@ struct proc_st {
 	struct list_node list;
 	int fd;
 	pid_t pid;
-	unsigned udp_fd_received; /* if the corresponding process has received a UDP fd */
+	time_t udp_fd_receive_time; /* when the corresponding process has received a UDP fd */
 	
 	/* the tun lease this process has */
 	struct tun_lease_st tun_lease;
@@ -191,5 +191,6 @@ void run_sec_mod(main_server_st * s);
 int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_st *config);
 
 void del_additional_config(struct group_cfg_st* config);
+void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k);
 
 #endif

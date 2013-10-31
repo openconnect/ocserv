@@ -291,32 +291,6 @@ int s, y, e;
 	return 0;
 }
 
-static void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
-{
-	if (k)
-		kill(proc->pid, SIGTERM);
-
-	user_disconnected(s, proc);
-
-	/* close the intercomm fd */
-	if (proc->fd >= 0)
-		close(proc->fd);
-	proc->fd = -1;
-	proc->pid = -1;
-	
-	remove_iroutes(s, proc);
-	del_additional_config(&proc->config);
-	
-	if (proc->auth_ctx != NULL)
-		proc_auth_deinit(s, proc);
-
-	if (proc->ipv4 || proc->ipv6)
-		remove_ip_leases(s, proc);
-
-	list_del(&proc->list);
-	free(proc);
-	s->active_clients--;
-}
 
 static void cleanup_children(main_server_st *s)
 {
@@ -495,6 +469,10 @@ static void handle_reload(int signo)
 	reload_conf = 1;
 }
 
+/* A UDP fd will not be forwarded to worker process before this number of
+ * seconds has passed. That is to prevent a duplicate message messing the worker.
+ */
+#define UDP_FD_RESEND_TIME 60
 
 #define RECORD_PAYLOAD_POS 13
 #define HANDSHAKE_SESSION_ID_POS 46
@@ -509,6 +487,7 @@ uint8_t  *session_id;
 int session_id_size;
 ssize_t buffer_size;
 int connected = 0;
+time_t now;
 
 	/* first receive from the correct client and connect socket */
 	cli_addr_size = sizeof(cli_addr);
@@ -542,10 +521,12 @@ int connected = 0;
 	session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 
 	/* search for the IP and the session ID in all procs */
+	now = time(0);
 
 	list_for_each(&s->clist.head, ctmp, list) {
 		if (session_id_size == ctmp->session_id_size &&
-			memcmp(session_id, ctmp->session_id, session_id_size) == 0) {
+			memcmp(session_id, ctmp->session_id, session_id_size) == 0 &&
+			(now - ctmp->udp_fd_receive_time > UDP_FD_RESEND_TIME)) {
 
 			ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
 			if (ret == -1) {
@@ -560,7 +541,7 @@ int connected = 0;
 				return -1;
 			}
 			mslog(s, ctmp, LOG_DEBUG, "passed UDP socket");
-			ctmp->udp_fd_received = 1;
+			ctmp->udp_fd_receive_time = now;
 			connected = 1;
 			
 			reopen_udp_port(listener);

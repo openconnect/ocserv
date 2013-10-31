@@ -40,6 +40,7 @@
 #include "setproctitle.h"
 #include <sec-mod.h>
 #include <route-add.h>
+#include <ip-lease.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -271,6 +272,35 @@ int ret;
 	return 0;
 }
 
+void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
+{
+	if (k)
+		kill(proc->pid, SIGTERM);
+
+	user_disconnected(s, proc);
+
+	/* close the intercomm fd */
+	if (proc->fd >= 0)
+		close(proc->fd);
+	proc->fd = -1;
+	proc->pid = -1;
+	
+	remove_iroutes(s, proc);
+	del_additional_config(&proc->config);
+	
+	if (proc->auth_ctx != NULL)
+		proc_auth_deinit(s, proc);
+
+	if (proc->ipv4 || proc->ipv6)
+		remove_ip_leases(s, proc);
+
+	list_del(&proc->list);
+	free(proc);
+	s->active_clients--;
+}
+
+
+/* This is the function after which proc is populated */
 static int accept_user(main_server_st *s, struct proc_st* proc, unsigned cmd)
 {
 int ret;

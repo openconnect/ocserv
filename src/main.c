@@ -312,7 +312,7 @@ struct script_wait_st *stmp, *spos;
 				mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
 				ret = handle_script_exit(s, stmp->proc, estatus);
 				if (ret < 0)
-					remove_proc(s, stmp->proc, 0);
+					remove_proc(s, stmp->proc, 1);
 				list_del(&stmp->list);
 				free(stmp);
 				break;
@@ -855,7 +855,7 @@ fork_failed:
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {
 					remove_from_script_list(&s, ctmp);
-					remove_proc(&s, ctmp, (ret==ERR_BAD_COMMAND)?1:0);
+					remove_proc(&s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
 				}
 			}
 		}

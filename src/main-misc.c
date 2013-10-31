@@ -85,7 +85,7 @@ fail:
 
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 {
-	struct iovec iov[2];
+	struct iovec iov[1];
 	uint8_t cmd = CMD_UDP_FD;
 	struct msghdr hdr;
 	union {
@@ -98,8 +98,8 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
 	memset(&hdr, 0, sizeof(hdr));
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
-	hdr.msg_iovlen++;
 
+	hdr.msg_iovlen = 1;
 	hdr.msg_iov = iov;
 
 	hdr.msg_control = control_un.control;
@@ -392,7 +392,9 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	}
 
 	if (ret == 0) {
-		return -1;
+		e = errno;
+		mslog(s, proc, LOG_ERR, "command socket closed");
+		return ERR_WORKER_TERMINATED;
 	}
 
 	cmd_data_len = ret - 1;

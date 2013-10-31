@@ -51,6 +51,7 @@ extern int syslog_open;
 #define ERR_NO_IP -8
 #define ERR_PARSING -9
 #define ERR_EXEC -10
+#define ERR_WORKER_TERMINATED -11
 
 typedef struct 
 {

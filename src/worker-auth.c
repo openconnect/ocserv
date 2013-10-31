@@ -266,8 +266,10 @@ uint16_t len;
 				
 	if (len > 0) {
 		ret = str_append_size(b, len);
-		if (ret < 0)
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "Memory error in str_append_size()");
 			return ret;
+		}
 		
 		ret = force_read(ws->cmd_fd, b->data, len);
 		if (ret != len) {
@@ -411,7 +413,7 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
 				}
 
 				memcpy(&ws->tun_fd, CMSG_DATA(cmptr), sizeof(int));
-				
+
 				ret = force_read(ws->cmd_fd, &resp, sizeof(resp));
 				if (ret < sizeof(resp)) {
 					int e = errno;
@@ -425,11 +427,13 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
 				memcpy(ws->session_id, resp.session_id, sizeof(ws->session_id));
 
 				/* Read any additional data */
-				
+
 				ret = deserialize_additional_data(ws);
-				if (ret < 0)
-					return ret;
-					
+				if (ret < 0) {
+					int e = errno;
+					oclog(ws, LOG_ERR, "recv_auth_reply: deserialize failed");
+					return ERR_AUTH_FAIL;
+				}
 			} else {
 				oclog(ws, LOG_ERR, "recv_auth_reply: error in received message");
 				return ERR_AUTH_FAIL;

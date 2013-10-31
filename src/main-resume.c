@@ -46,6 +46,7 @@ int send_resume_fetch_reply(main_server_st* s, struct proc_st * proc,
 	struct iovec iov[3];
 	uint8_t cmd = RESUME_FETCH_REP;
 	struct msghdr hdr;
+	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
 	
@@ -54,12 +55,17 @@ int send_resume_fetch_reply(main_server_st* s, struct proc_st * proc,
 	hdr.msg_iovlen++;
 
 	iov[1].iov_base = reply;
-	iov[1].iov_len = 3 + reply->session_data_size;
+	iov[1].iov_len = sizeof(*reply);
 	hdr.msg_iovlen++;
 
 	hdr.msg_iov = iov;
 
-	return(sendmsg(proc->fd, &hdr, 0));
+	ret = sendmsg(proc->fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		mslog(s, proc, LOG_ERR, "send_resume_fetch_reply: sendmsg: %s", strerror(e));
+	}
+	return ret;
 }
 
 int handle_resume_delete_req(main_server_st* s, struct proc_st * proc,

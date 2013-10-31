@@ -66,6 +66,7 @@ int handle_worker_commands(struct worker_st *ws)
 {
 	struct iovec iov[2];
 	uint8_t cmd;
+	int e;
 	struct msghdr hdr;
 	union {
 		char x[32];
@@ -96,7 +97,8 @@ int handle_worker_commands(struct worker_st *ws)
 	
 	ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	if (ret == -1) {
-		oclog(ws, LOG_ERR, "cannot obtain data from command socket");
+		e = errno;
+		oclog(ws, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
 		exit(1);
 	}
 
@@ -115,18 +117,19 @@ int handle_worker_commands(struct worker_st *ws)
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-				if (cmptr->cmsg_level != SOL_SOCKET)
+				if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
+					oclog(ws, LOG_ERR, "received UDP fd message of wrong type");
 					goto udp_fd_fail;
-				if (cmptr->cmsg_type != SCM_RIGHTS)
-					goto udp_fd_fail;
+				}
 
-				if (ws->udp_fd != -1)
+				if (ws->udp_fd != -1) {
 					close(ws->udp_fd);
+				}
 
 				memcpy(&ws->udp_fd, CMSG_DATA(cmptr), sizeof(int));
 				ws->udp_state = UP_SETUP;
 
-				oclog(ws, LOG_DEBUG, "received UDP fd and connected to peer");
+				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
 				return 0;
 			} else {
 				oclog(ws, LOG_ERR, "Could not receive peer's UDP fd");
@@ -141,8 +144,8 @@ int handle_worker_commands(struct worker_st *ws)
 	return 0;
 
 udp_fd_fail:
-	ws->udp_state = UP_DISABLED;
-	close(ws->udp_fd);
-	ws->udp_fd = -1;
+	if (ws->udp_fd == -1)
+		ws->udp_state = UP_DISABLED;
+
 	return -1;
 }

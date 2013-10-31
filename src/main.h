@@ -50,7 +50,7 @@ enum {
 
 struct proc_st {
 	struct list_node list;
-	int fd;
+	int fd; /* the command file descriptor */
 	pid_t pid;
 	time_t udp_fd_receive_time; /* when the corresponding process has received a UDP fd */
 	

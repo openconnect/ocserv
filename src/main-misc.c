@@ -124,6 +124,8 @@ int handle_script_exit(main_server_st *s, struct proc_st* proc, int code)
 int ret;
 
 	if (code == 0) {
+		proc->auth_status = PS_AUTH_COMPLETED;
+
 		ret = send_auth_reply(s, proc, REP_AUTH_OK);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send auth reply cmd.");
@@ -345,10 +347,6 @@ const char* group;
 
 	/* do scripts and utmp */
 	ret = user_connected(s, proc);
-	if (ret == ERR_WAIT_FOR_SCRIPT) {
-		return 0;
-	}
-
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 	}
@@ -552,8 +550,12 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			proc->auth_status = PS_AUTH_COMPLETED;
 
 cleanup:
-			/* no script was called. Handle it as a successful script call. */
-			return handle_script_exit(s, proc, ret);
+			if (ret == ERR_WAIT_FOR_SCRIPT)
+				return 0;
+			else {
+				/* no script was called. Handle it as a successful script call. */
+				return handle_script_exit(s, proc, ret);
+			}
 
 		default:
 			mslog(s, proc, LOG_ERR, "unknown CMD 0x%x.", (unsigned)cmd);

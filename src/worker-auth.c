@@ -430,7 +430,6 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
 
 				ret = deserialize_additional_data(ws);
 				if (ret < 0) {
-					int e = errno;
 					oclog(ws, LOG_ERR, "recv_auth_reply: deserialize failed");
 					return ERR_AUTH_FAIL;
 				}

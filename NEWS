@@ -11,6 +11,7 @@
 - Corrected authentication using only certificates.
 - The UDP file descriptor from main to workers is forwarded once per minute
   to avoid a duplicate DTLS client hello message tearing the worker's session.
+- Corrected client disconnection issues when connect-script was specified.
 
 
 * Version 0.1.7 (released 2013-10-25)

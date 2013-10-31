@@ -353,7 +353,7 @@ const char* group;
 		mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 	}
 	
-	return 0;
+	return ret;
 }
 
 int handle_commands(main_server_st *s, struct proc_st* proc)

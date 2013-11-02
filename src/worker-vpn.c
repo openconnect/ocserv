@@ -1228,7 +1228,7 @@ hsk_restart:
 						ws->udp_state = UP_ACTIVE;
 						mtu_discovery_init(ws, mtu);
 						mtu_set(ws, mtu);
-						oclog(ws, LOG_INFO, "DTLS handshake completed (MTU: %u)\n", ws->conn_mtu);
+						oclog(ws, LOG_INFO, "DTLS handshake completed (plaintext MTU: %u)\n", ws->conn_mtu-1);
 					}
 					
 					break;

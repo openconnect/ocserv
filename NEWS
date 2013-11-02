@@ -1,8 +1,8 @@
 * Version 0.2.0 (released 2013-10-31)
 
 - Added configuration directives 'config-per-user' and 'config-per-group'.
-  They allow loading an additional configuration client per user or per
-  group from the setup directory.
+  They allow loading an additional configuration file per user or per
+  group from a directory.
 - Added the ipv6-prefix configuration option to replace ipv6-netmask. The
   new option accepts IPv6 subnet prefixes.
 - Added the 'iroute' configuration directive, applicable only to group or

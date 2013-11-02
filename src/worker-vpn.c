@@ -997,7 +997,7 @@ socklen_t sl;
 		dtls_mtu = ws->conn_mtu - overhead;
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
-		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", dtls_mtu);
+		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", dtls_mtu);
 		
 		if (ws->config->output_buffer > 0) {
 			sndbuf = ws->conn_mtu * ws->config->output_buffer;
@@ -1021,9 +1021,9 @@ socklen_t sl;
 
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", cstp_mtu);
 	SEND_ERR(ret);
-	oclog(ws, LOG_INFO, "suggesting CSTP MTU %u", cstp_mtu);
+	oclog(ws, LOG_DEBUG, "suggesting CSTP MTU %u", cstp_mtu);
 
-	oclog(ws, LOG_INFO, "plaintext MTU is %u", ws->conn_mtu);
+	oclog(ws, LOG_DEBUG, "plaintext MTU is %u", ws->conn_mtu-1);
 	send_tun_mtu(ws, ws->conn_mtu);
 
 	if (ws->config->banner) {

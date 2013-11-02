@@ -15,11 +15,7 @@ explain       = "";
 detail  = "Openconnect VPN server (ocserv) is a VPN server compatible with the
 openconnect VPN client. It follows the AnyConnect VPN protocol which 
 is used by several CISCO routers.
-
-This server supports multiple authentication methods,
-including PAM and certificate authentication. Authenticated users are 
-assigned an unprivileged worker process and obtain a networking (tun) device 
-and an IP from a configurable pool of addresses.";
+";
 
 copyright = {
     date  = "2013";
@@ -306,6 +302,42 @@ route = 192.168.5.0/255.255.255.0
 
 @end example
 
+_EOT_;
+};
+
+doc-section = {
+  ds-type = 'SYNOPSIS';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+Openconnect VPN server (ocserv) is a VPN server compatible with the
+openconnect VPN client. It follows the AnyConnect VPN protocol which 
+is used by several CISCO routers.
+_EOT_;
+};
+
+doc-section = {
+  ds-type = 'DESCRIPTION';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+This a standalone server that reads a configuration file (see below for more details),
+and waits for client connections.
+
+The server maintains two connections/channels with the client. The main VPN 
+channel is established over TCP and TLS. This is the control channel as well 
+as the backup data channel. After its establishment a UDP channel using DTLS 
+is initiated which serves as the main data channel. If the UDP channel fails 
+to establish or is temporarily unavailable the backup channel over TCP/TLS 
+is being used.
+
+This server supports multiple authentication methods,
+including PAM and certificate authentication. Authenticated users are 
+assigned an unprivileged worker process and obtain a networking (tun) device 
+and an IP from a configurable pool of addresses.
+
+Once authenticated, the server provides the client with an IP address and a list 
+of routes that it may access. In order to allow high-speed transfers the 
+server does not process or filter packets. It is expected that the server has 
+or will set up any required routes or firewall rules. 
 _EOT_;
 };
 

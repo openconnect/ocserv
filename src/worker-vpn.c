@@ -1163,7 +1163,7 @@ socklen_t sl;
 
 				if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
 					/* client switched to TLS for some reason */
-					if (time(0) - udp_recv_time > UDP_SWITCH_TIME)
+					if (now - udp_recv_time > UDP_SWITCH_TIME)
 						ws->udp_state = UP_INACTIVE;
 				}
 			}
@@ -1192,7 +1192,7 @@ socklen_t sl;
 					} else
 						oclog(ws, LOG_DEBUG, "no data received (%d)", ret);
 
-					udp_recv_time = time(0);
+					udp_recv_time = now;
 					break;
 				case UP_SETUP:
 					ret = setup_dtls_connection(ws);

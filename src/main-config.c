@@ -111,8 +111,8 @@ unsigned prefix = 0;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
-		mslog(s, NULL, LOG_ERR, "Error loading config file %s", file);
-		return ERR_READ_CONFIG;
+		mslog(s, NULL, LOG_ERR, "Cannot load config file %s", file);
+		return 0;
 	}
 
 	val = optionGetValue(pov, NULL);

@@ -1,3 +1,9 @@
+* Version 0.2.1 (unreleased)
+
+- Added configuration directives 'rx-per-sec' and 'tx-per-sec' to allow
+  setting bandwidth limitations globally or per group/user.
+
+
 * Version 0.2.0 (released 2013-10-31)
 
 - Added configuration directives 'config-per-user' and 'config-per-group'.

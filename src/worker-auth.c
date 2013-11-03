@@ -289,6 +289,7 @@ int deserialize_additional_data(worker_st* ws)
 int ret;
 unsigned i;
 str_st b;
+uint32_t t;
 
 	str_init(&b);
 	
@@ -297,32 +298,32 @@ str_st b;
 		goto cleanup;
 	
 	/* IPV4 DNS */
-	ret = str_read_data_prefix1(&b, &ws->ipv4_dns, NULL);
+	ret = str_read_str_prefix1(&b, &ws->ipv4_dns, NULL);
 	if (ret < 0)
 		goto cleanup;
 
 	/* IPV6 DNS */
-	ret = str_read_data_prefix1(&b, &ws->ipv6_dns, NULL);
+	ret = str_read_str_prefix1(&b, &ws->ipv6_dns, NULL);
 	if (ret < 0)
 		goto cleanup;
 
 	/* IPV4 NBNS */
-	ret = str_read_data_prefix1(&b, &ws->ipv4_nbns, NULL);
+	ret = str_read_str_prefix1(&b, &ws->ipv4_nbns, NULL);
 	if (ret < 0)
 		goto cleanup;
 
 	/* IPV6 NBNS */
-	ret = str_read_data_prefix1(&b, &ws->ipv6_nbns, NULL);
+	ret = str_read_str_prefix1(&b, &ws->ipv6_nbns, NULL);
 	if (ret < 0)
 		goto cleanup;
 
 	/* IPV4 netmask */
-	ret = str_read_data_prefix1(&b, &ws->ipv4_netmask, NULL);
+	ret = str_read_str_prefix1(&b, &ws->ipv4_netmask, NULL);
 	if (ret < 0)
 		goto cleanup;
 
 	/* IPV6 netmask */
-	ret = str_read_data_prefix1(&b, &ws->ipv6_netmask, NULL);
+	ret = str_read_str_prefix1(&b, &ws->ipv6_netmask, NULL);
 	if (ret < 0)
 		goto cleanup;
 
@@ -332,13 +333,26 @@ str_st b;
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
+	
+	ret = str_read_data(&b, &t, sizeof(t));
+	if (ret < 0)
+		goto cleanup;
+		
+	ws->rx_per_sec = t;
+
+	ret = str_read_data(&b, &t, sizeof(t));
+	if (ret < 0)
+		goto cleanup;
+		
+	ws->tx_per_sec = t;
+
 	ws->routes_size = b.data[0];
 	b.length--;
 	b.data++;
 
 	/* routes */
 	for (i=0;i<ws->routes_size;i++) {
-		ret = str_read_data_prefix1(&b, &ws->routes[i], NULL);
+		ret = str_read_str_prefix1(&b, &ws->routes[i], NULL);
 		if (ret < 0) {
 			oclog(ws, LOG_ERR, "Error receiving private routes from main");
 			ret = ERR_BAD_COMMAND;

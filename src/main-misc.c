@@ -239,6 +239,14 @@ unsigned i;
 			cfg.ipv6_netmask = NULL;
 		}
 
+		if (proc->config.rx_per_sec == 0) {
+			proc->config.rx_per_sec = cfg.rx_per_sec;
+		}
+
+		if (proc->config.tx_per_sec == 0) {
+			proc->config.tx_per_sec = cfg.tx_per_sec;
+		}
+
 		del_additional_config(&cfg);
 
 	} else

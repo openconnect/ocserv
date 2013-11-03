@@ -91,6 +91,7 @@ int serialize_additional_data(main_server_st* s, struct proc_st* proc)
 int ret;
 unsigned i;
 uint8_t len;
+uint32_t t;
 str_st buffer;
 
 	str_init(&buffer);
@@ -138,6 +139,16 @@ str_st buffer;
 	if (ret < 0)
 		goto cleanup;
 
+	t = proc->config.rx_per_sec;
+	ret = str_append_data(&buffer, &t, sizeof(t));
+	if (ret < 0)
+		goto cleanup;
+
+	t = proc->config.tx_per_sec;
+	ret = str_append_data(&buffer, &t, sizeof(t));
+	if (ret < 0)
+		goto cleanup;
+
 	/* routes */
 	len = proc->config.routes_size;
 	ret = str_append_data(&buffer, &len, 1);
@@ -154,6 +165,7 @@ str_st buffer;
 	ret = send_value_length(s, proc, buffer.data, buffer.length);
 	if (ret < 0)
 		goto cleanup;
+
 	
 	ret = 0;
 

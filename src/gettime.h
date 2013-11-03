@@ -42,4 +42,12 @@ struct timeval tv;
 #endif
 }
 
+inline static
+unsigned int
+timespec_sub_ms (struct timespec *a, struct timespec *b)
+{
+  return (a->tv_sec * 1000 + a->tv_nsec / (1000 * 1000) -
+          (b->tv_sec * 1000 + b->tv_nsec / (1000 * 1000)));
+}
+
 #endif

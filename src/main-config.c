@@ -52,6 +52,8 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv4-netmask", .type = OPTION_STRING },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC },
 	{ .name = "ipv6-netmask", .type = OPTION_STRING },
+	{ .name = "rx-per-sec", .type = OPTION_NUMERIC, },
+	{ .name = "tx-per-sec", .type = OPTION_NUMERIC, },
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) \
@@ -142,6 +144,9 @@ unsigned prefix = 0;
 	READ_RAW_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) 
 		config->ipv6_netmask = ipv6_prefix_to_mask(prefix);
+
+	READ_RAW_NUMERIC("rx-per-sec", config->rx_per_sec);
+	READ_RAW_NUMERIC("tx-per-sec", config->tx_per_sec);
 
 	optionUnloadNested(pov);
 	

@@ -128,6 +128,9 @@ typedef struct worker_st {
 	unsigned routes_size;
 	char* routes[MAX_ROUTES];
 	
+	size_t rx_per_sec;
+	size_t tx_per_sec;
+	
 	struct http_req_st req;
 } worker_st;
 

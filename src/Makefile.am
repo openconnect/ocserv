@@ -23,6 +23,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	main-user.c worker-misc.c setproctitle.h route-add.c route-add.h \
 	setproctitle.c worker-privs.c plain.c plain.h common.h common.c \
 	sec-mod.c sec-mod.h script-list.h system.c system.h icmp-ping.c icmp-ping.h \
+	worker-bandwidth.c worker-bandwidth.h \
 	str.c str.h gettime.h $(CCAN_SOURCES)
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h

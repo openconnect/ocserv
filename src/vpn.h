@@ -76,6 +76,9 @@ struct group_cfg_st {
 	char *ipv6_network;
 	char *ipv4_netmask;
 	char *ipv6_netmask;
+
+	size_t rx_per_sec;
+	size_t tx_per_sec;
 };
 
 struct vpn_st {
@@ -137,6 +140,9 @@ struct cfg_st {
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
 	
+	size_t rx_per_sec;
+	size_t tx_per_sec;
+
 	unsigned output_buffer;
 	unsigned default_mtu;
 

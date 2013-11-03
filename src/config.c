@@ -87,6 +87,9 @@ static struct cfg_options available_options[] = {
 	{ .name = "min-reauth-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-same-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
 
+	{ .name = "rx-per-sec", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "tx-per-sec", .type = OPTION_NUMERIC, .mandatory = 0 },
+
 	{ .name = "run-as-user", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "run-as-group", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "device", .type = OPTION_STRING, .mandatory = 1 },
@@ -316,6 +319,9 @@ unsigned prefix = 0;
 
 	READ_NUMERIC("mtu", config->default_mtu);
 	READ_NUMERIC("output-buffer", config->output_buffer);
+
+	READ_NUMERIC("rx-per-sec", config->rx_per_sec);
+	READ_NUMERIC("tx-per-sec", config->tx_per_sec);
 
 	READ_NUMERIC("cookie-validity", config->cookie_validity);
 	READ_NUMERIC("auth-timeout", config->auth_timeout);

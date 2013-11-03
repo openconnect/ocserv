@@ -41,6 +41,7 @@
 #include <system.h>
 #include <time.h>
 #include <common.h>
+#include <worker-bandwidth.h>
 
 #include <vpn.h>
 #include "ipc.h"
@@ -765,6 +766,8 @@ unsigned tls_pending, dtls_pending = 0, i;
 time_t udp_recv_time = 0, now;
 unsigned mtu_overhead = 0;
 socklen_t sl;
+bandwidth_st b_tx;
+bandwidth_st b_rx;
 
 	ws->buffer_size = 16*1024;
 	ws->buffer = malloc(ws->buffer_size);
@@ -1039,6 +1042,14 @@ socklen_t sl;
 
 	/* start dead peer detection */
 	ws->last_msg_tcp = ws->last_msg_udp = time(0);
+	
+	if (ws->rx_per_sec == 0)
+		ws->rx_per_sec = ws->config->rx_per_sec;
+	if (ws->tx_per_sec == 0)
+		ws->tx_per_sec = ws->config->tx_per_sec;
+
+	bandwidth_init(&b_rx, ws->rx_per_sec);
+	bandwidth_init(&b_tx, ws->tx_per_sec);
 
 	/* main loop  */
 	for(;;) {
@@ -1106,39 +1117,41 @@ socklen_t sl;
 				oclog(ws, LOG_INFO, "TUN device returned zero");
 				continue;
 			}
+			
+			/* only transmit if allowed */
+			if (bandwidth_update(&b_tx, l-1, ws->conn_mtu) != 0) {
+				tls_retry = 0;
+				oclog(ws, LOG_DEBUG, "sending %d byte(s)\n", l);
+				if (ws->udp_state == UP_ACTIVE) {
+					ws->buffer[7] = AC_PKT_DATA;
 
-			tls_retry = 0;
-			oclog(ws, LOG_DEBUG, "sending %d byte(s)\n", l);
-			if (ws->udp_state == UP_ACTIVE) {
-				ws->buffer[7] = AC_PKT_DATA;
+					ret = tls_send_nowait(ws->dtls_session, ws->buffer + 7, l + 1);
+					GNUTLS_FATAL_ERR(ret);
 
-				ret = tls_send_nowait(ws->dtls_session, ws->buffer + 7, l + 1);
-				GNUTLS_FATAL_ERR(ret);
+					if (ret == GNUTLS_E_LARGE_PACKET) {
+						mtu_not_ok(ws);
 
-				if (ret == GNUTLS_E_LARGE_PACKET) {
-					mtu_not_ok(ws);
+						oclog(ws, LOG_DEBUG, "retrying (TLS) %d\n", l);
+						tls_retry = 1;
+					} else if (ret >= ws->conn_mtu && ws->config->try_mtu != 0) {
+						mtu_ok(ws);
+					}
+				}
 
-					oclog(ws, LOG_DEBUG, "retrying (TLS) %d\n", l);
-					tls_retry = 1;
-				} else if (ret >= ws->conn_mtu && ws->config->try_mtu != 0) {
-					mtu_ok(ws);
+				if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
+					ws->buffer[0] = 'S';
+					ws->buffer[1] = 'T';
+					ws->buffer[2] = 'F';
+					ws->buffer[3] = 1;
+					ws->buffer[4] = l >> 8;
+					ws->buffer[5] = l & 0xff;
+					ws->buffer[6] = AC_PKT_DATA;
+					ws->buffer[7] = 0;
+
+					ret = tls_send(ws->session, ws->buffer, l + 8);
+					GNUTLS_FATAL_ERR(ret);
 				}
 			}
-
-			if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
-				ws->buffer[0] = 'S';
-				ws->buffer[1] = 'T';
-				ws->buffer[2] = 'F';
-				ws->buffer[3] = 1;
-				ws->buffer[4] = l >> 8;
-				ws->buffer[5] = l & 0xff;
-				ws->buffer[6] = AC_PKT_DATA;
-				ws->buffer[7] = 0;
-
-				ret = tls_send(ws->session, ws->buffer, l + 8);
-				GNUTLS_FATAL_ERR(ret);
-			}
-
 		}
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
@@ -1151,20 +1164,23 @@ socklen_t sl;
 				oclog(ws, LOG_INFO, "client disconnected");
 				goto exit_nomsg;
 			}
-			
+
+
 			if (ret > 0) {
 				l = ret;
 
-				ret = parse_cstp_data(ws, ws->buffer, l, now);
-				if (ret < 0) {
-					oclog(ws, LOG_INFO, "error parsing CSTP data");
-					goto exit;
-				}
+				if (bandwidth_update(&b_rx, l-8, ws->conn_mtu) != 0) {
+					ret = parse_cstp_data(ws, ws->buffer, l, now);
+					if (ret < 0) {
+						oclog(ws, LOG_INFO, "error parsing CSTP data");
+						goto exit;
+					}
 
-				if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
-					/* client switched to TLS for some reason */
-					if (now - udp_recv_time > UDP_SWITCH_TIME)
-						ws->udp_state = UP_INACTIVE;
+					if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) { 
+						/* client switched to TLS for some reason */
+						if (now - udp_recv_time > UDP_SWITCH_TIME)
+							ws->udp_state = UP_INACTIVE;
+					}
 				}
 			}
 		}
@@ -1183,10 +1199,12 @@ socklen_t sl;
 						l = ret;
 						ws->udp_state = UP_ACTIVE;
 
-						ret = parse_dtls_data(ws, ws->buffer, l, now);
-						if (ret < 0) {
-							oclog(ws, LOG_INFO, "error parsing CSTP data");
-							goto exit;
+						if (bandwidth_update(&b_rx, l-1, ws->conn_mtu) != 0) {
+							ret = parse_dtls_data(ws, ws->buffer, l, now);
+							if (ret < 0) {
+								oclog(ws, LOG_INFO, "error parsing CSTP data");
+								goto exit;
+							}
 						}
 					
 					} else

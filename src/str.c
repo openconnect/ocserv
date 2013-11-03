@@ -131,7 +131,7 @@ int str_append_str(str_st * dest, const char *src)
 /* Makes sure that the data read are null terminated (but not counted in *data_size) 
  * If the size of the data is zero then *data will be null;
  */
-int str_read_data_prefix1(str_st * src, char **data, size_t *data_size)
+int str_read_str_prefix1(str_st * src, char **data, size_t *data_size)
 {
 	uint8_t prefix;
 	
@@ -166,5 +166,17 @@ int str_read_data_prefix1(str_st * src, char **data, size_t *data_size)
 		src->data += prefix;
 	}
 
+	return 0;
+}
+
+int str_read_data(str_st * src, void *data, size_t data_size)
+{
+	if (src->length < data_size)
+		return ERR_MEM;
+
+	memcpy(data, src->data, data_size);
+	src->data += data_size;
+	src->length -= data_size;
+	
 	return 0;
 }

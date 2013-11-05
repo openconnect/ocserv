@@ -415,11 +415,17 @@ file_preset(tOptions * opts, char const * fname, int dir)
     tmap_info_t       cfgfile;
     tOptState         optst = OPTSTATE_INITIALIZER(PRESET);
     opt_state_mask_t  st_flags = optst.flags;
+    opt_state_mask_t  fl_save  = opts->fOptSet;
     char *            ftext =
         text_mmap(fname, PROT_READ|PROT_WRITE, MAP_PRIVATE, &cfgfile);
 
     if (TEXT_MMAP_FAILED_ADDR(ftext))
         return;
+
+    /*
+     * While processing config files, we ignore errors.
+     */
+    opts->fOptSet &= ~OPTPROC_ERRSTOP;
 
     if (dir == DIRECTION_CALLED) {
         st_flags = OPTST_DEFINED;
@@ -483,6 +489,7 @@ file_preset(tOptions * opts, char const * fname, int dir)
 
  all_done:
     text_munmap(&cfgfile);
+    opts->fOptSet = fl_save;
 }
 
 /**

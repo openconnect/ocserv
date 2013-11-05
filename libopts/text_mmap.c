@@ -176,24 +176,6 @@ validate_mmap(char const * fname, int prot, int flags, tmap_info_t * mapinfo)
     mapinfo->txt_flags   = flags;
 
     /*
-     *  Make sure we can stat the regular file.  Save the file size.
-     */
-    {
-        struct stat sb;
-        if (stat(fname, &sb) != 0) {
-            mapinfo->txt_errno = errno;
-            return;
-        }
-
-        if (! S_ISREG(sb.st_mode)) {
-            mapinfo->txt_errno = errno = EINVAL;
-            return;
-        }
-
-        mapinfo->txt_size = (size_t)sb.st_size;
-    }
-
-    /*
      *  Map mmap flags and protections into open flags and do the open.
      */
     {
@@ -213,6 +195,31 @@ validate_mmap(char const * fname, int prot, int flags, tmap_info_t * mapinfo)
             o_flag |= O_EXCL;
 
         mapinfo->txt_fd = open(fname, o_flag);
+        if (mapinfo->txt_fd < 0) {
+            mapinfo->txt_errno = errno;
+            mapinfo->txt_fd = AO_INVALID_FD;
+            return;
+        }
+    }
+
+    /*
+     *  Make sure we can stat the regular file.  Save the file size.
+     */
+    {
+        struct stat sb;
+        if (fstat(mapinfo->txt_fd, &sb) != 0) {
+            mapinfo->txt_errno = errno;
+            close(mapinfo->txt_fd);
+            return;
+        }
+
+        if (! S_ISREG(sb.st_mode)) {
+            mapinfo->txt_errno = errno = EINVAL;
+            close(mapinfo->txt_fd);
+            return;
+        }
+
+        mapinfo->txt_size = (size_t)sb.st_size;
     }
 
     if (mapinfo->txt_fd == AO_INVALID_FD)

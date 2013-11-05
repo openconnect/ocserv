@@ -319,6 +319,7 @@ print_offer_usage(tOptions * opts)
         case OPTPROC_LONGOPT:
         case (OPTPROC_LONGOPT | OPTPROC_SHORTOPT):
             strcpy(help, "--help");
+            break;
         
         case 0:
             strcpy(help, "help");

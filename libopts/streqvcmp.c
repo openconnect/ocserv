@@ -243,7 +243,7 @@ strequate(char const* s)
     if ((s != NULL) && (*s != NUL)) {
         unsigned char equiv = (unsigned char)*s;
         while (*s != NUL)
-            charmap[ (unsigned)*(s++) ] = equiv;
+            charmap[(unsigned char)*(s++)] = equiv;
     }
 }
 
@@ -270,7 +270,7 @@ void
 strtransform(char* d, char const* s)
 {
     do  {
-        *(d++) = (char)charmap[ (unsigned)*s ];
+        *(d++) = (char)charmap[(unsigned char)*s];
     } while (*(s++) != NUL);
 }
 

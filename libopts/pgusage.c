@@ -50,7 +50,11 @@ open_tmp_usage(char ** buf)
     }
 
     {
+        static mode_t const cmask = S_IRWXO | S_IRWXG;
+        mode_t svmsk = umask(cmask);
         int fd = mkstemp(bf);
+        (void)umask(svmsk);
+
         if (fd < 0) {
             AGFREE(bf);
             return NULL;

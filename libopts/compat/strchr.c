@@ -34,7 +34,7 @@ static char *
 strchr(char const *s, int c)
 {
     do {
-        if ((unsigned)*s == (unsigned)c)
+        if ((unsigned char)*s == (unsigned char)c)
             return s;
 
     } while (*(++s) != NUL);
@@ -51,7 +51,7 @@ strrchr(char const *s, int c)
         if (--e < s)
             break;
 
-        if ((unsigned)*e == (unsigned)c)
+        if ((unsigned char)*e == (unsigned char)c)
             return e;
     }
     return NULL;

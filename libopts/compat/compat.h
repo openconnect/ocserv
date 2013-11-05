@@ -237,7 +237,7 @@
 #endif
 
 #if !defined (MAXPATHLEN)
-#  define MAXPATHLEN ((size_t)4096)
+#  define MAXPATHLEN 4096
 #endif /* MAXPATHLEN */
 
 #define AG_PATH_MAX  ((size_t)MAXPATHLEN)

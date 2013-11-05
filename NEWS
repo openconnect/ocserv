@@ -2,6 +2,13 @@
 
 - Added configuration directives 'rx-data-per-sec' and 'tx-data-per-sec' to allow
   setting bandwidth limitations globally or per group/user.
+- Call setgroups() after setgid() to avoid propagation of supplementary groups
+  to the unprivileged worker processes.
+- If a system's libopts is available as well as automake then the system's 
+  libopts will be used.
+- Added --pid-file command line option to ocserv. This overrides any
+  configured pid-file.
+- The ocserv binary is now installed in sbin instead of bin.
 
 
 * Version 0.2.0 (released 2013-10-31)

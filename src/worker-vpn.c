@@ -384,7 +384,7 @@ int body_cb(http_parser* parser, const char *at, size_t length)
 	struct http_req_st *req = &ws->req;
 	char* tmp;
 	
-	tmp = realloc(req->body, req->body_length+length+1);
+	tmp = safe_realloc(req->body, req->body_length+length+1);
 	if (tmp == NULL)
 		return 1;
 		
@@ -1012,7 +1012,7 @@ bandwidth_st b_rx;
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
 		oclog(ws, LOG_WARNING, "buffer size is smaller than MTU (%u < %u); adjusting", ws->buffer_size, ws->conn_mtu);
 		ws->buffer_size = ws->conn_mtu+mtu_overhead;
-		ws->buffer = realloc(ws->buffer, ws->buffer_size);
+		ws->buffer = safe_realloc(ws->buffer, ws->buffer_size);
 		if (ws->buffer == NULL)
 			goto exit;
 	}

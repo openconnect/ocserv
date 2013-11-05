@@ -42,6 +42,18 @@ void str_clear(str_st * str)
 	str->length = 0;
 }
 
+void *safe_realloc(void *ptr, size_t size)
+{
+	void* tmp, *ret;
+	
+	tmp = ptr;
+	ret = realloc(ptr, size);
+	if (ret == NULL) {
+		free(tmp);
+	}
+	return ret;
+}
+
 #define MIN_CHUNK 64
 /* This function makes sure there is an additional byte in dest;
  */
@@ -70,7 +82,7 @@ int str_append_size(str_st * dest, size_t data_size)
 		    MAX(data_size, MIN_CHUNK) + MAX(dest->max_length,
 						    MIN_CHUNK);
 
-		dest->allocd = realloc(dest->allocd, new_len+1);
+		dest->allocd = safe_realloc(dest->allocd, new_len+1);
 		if (dest->allocd == NULL)
 			return ERR_MEM;
 		dest->max_length = new_len;

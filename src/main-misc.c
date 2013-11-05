@@ -36,6 +36,7 @@
 #include <sys/un.h>
 #include <cloexec.h>
 #include "ipc.h"
+#include "str.h"
 #include "setproctitle.h"
 #include <sec-mod.h>
 #include <route-add.h>
@@ -178,7 +179,7 @@ unsigned i;
 				cfg.routes = NULL;
 				cfg.routes_size = 0;
 			} else {
-				proc->config.routes = realloc(proc->config.routes, (proc->config.routes_size + cfg.routes_size) * sizeof(proc->config.routes[0]));
+				proc->config.routes = safe_realloc(proc->config.routes, (proc->config.routes_size + cfg.routes_size) * sizeof(proc->config.routes[0]));
 				if (proc->config.routes == NULL)
 					return ERR_MEM;
 				

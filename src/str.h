@@ -57,6 +57,7 @@ int str_append_size(str_st *, size_t data_size);
 int str_append_data_prefix1(str_st *, const void *data, size_t data_size);
 int str_read_str_prefix1(str_st * src, char **data, size_t *data_size);
 int str_read_data(str_st * src, void *data, size_t data_size);
+void *safe_realloc(void *ptr, size_t size);
 
 #define str_append_str_prefix1(s, str) (((str)==NULL)?str_append_data_prefix1(s, NULL, 0):str_append_data_prefix1(s, str, strlen(str)))
 

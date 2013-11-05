@@ -467,6 +467,9 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 	if (HAVE_OPT(FOREGROUND))
 		config->foreground = 1;
 
+	if (HAVE_OPT(PID_FILE))
+		pid_file = OPT_ARG(PID_FILE);
+
 	if (HAVE_OPT(TLS_DEBUG))
 		config->tls_debug = 1;
 

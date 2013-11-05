@@ -54,6 +54,14 @@ flag = {
     doc   = "";
 };
 
+flag = {
+    name      = pid-file;
+    value     = p;
+    arg-type  = file;
+    descrip   = "Specify pid file for the server";
+    doc   = "";
+};
+
 help-value    = h;
 
 

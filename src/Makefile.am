@@ -21,7 +21,9 @@ CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
 	ccan/list/list.c ccan/list/list.h
 
 
-ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
+ocserv_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
+
+ocserv_SOURCES += main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	http-parser/http_parser.c ipc.h cookies.c worker-tun.c main-misc.c \
 	main-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h http-parser/http_parser.h log.c tun.c tun.h \
@@ -33,7 +35,6 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	worker-bandwidth.c worker-bandwidth.h \
 	str.c str.h gettime.h $(CCAN_SOURCES)
 
-ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv_LDADD = ../gl/libgnu.a $(LIBOPTS)
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
@@ -50,7 +51,8 @@ endif
 ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 	@AUTOGEN@ $<
 
-ocpasswd_SOURCES = ocpasswd.c ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
+ocpasswd_SOURCES = ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h \
+	ocpasswd.c
 
 ocpasswd_LDADD = ../gl/libgnu.a $(LIBOPTS)
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)

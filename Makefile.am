@@ -1,6 +1,10 @@
 EXTRA_DIST = LICENSE
 
-SUBDIRS = gl libopts src doc tests
+SUBDIRS = gl
+if NEED_LIBOPTS
+SUBDIRS += libopts
+endif
+SUBDIRS += src doc tests
 
 ACLOCAL_AMFLAGS = -I gl/m4 -I libopts/m4
 

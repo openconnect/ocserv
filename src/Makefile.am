@@ -1,7 +1,13 @@
 SUBDIRS =
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
-	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../libopts
+	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS)
+
+if NEED_LIBOPTS
+LIBOPTS = ../libopts/libopts.a
+else
+LIBOPTS = $(LIBOPTS_LDADD)
+endif
 
 EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc
@@ -29,7 +35,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 
-ocserv_LDADD = ../gl/libgnu.a ../libopts/libopts.a
+ocserv_LDADD = ../gl/libgnu.a $(LIBOPTS)
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) 
 	
@@ -46,7 +52,7 @@ ocserv-args.c ocserv-args.h: $(srcdir)/ocserv-args.def
 
 ocpasswd_SOURCES = ocpasswd.c ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
 
-ocpasswd_LDADD = ../gl/libgnu.a ../libopts/libopts.a
+ocpasswd_LDADD = ../gl/libgnu.a $(LIBOPTS)
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
 
 ocpasswd-args.c ocpasswd-args.h: $(srcdir)/ocpasswd-args.def

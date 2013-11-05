@@ -123,8 +123,6 @@ LIBS="$oldlibs"
 
 AM_CONDITIONAL(PCL, test "$pcl_enabled" = yes)
 
-enable_local_libopts=yes
-NEED_LIBOPTS_DIR=true
 LIBOPTS_CHECK([libopts])
 
 AC_CONFIG_FILES([

@@ -71,5 +71,7 @@ typedef int tSuccess;
 #  define MODE extern
 #endif
 
+#define parse_duration option_parse_duration
+
 #endif /* AUTOGEN_PROJECT_H */
 /* end of project.h */

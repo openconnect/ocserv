@@ -53,6 +53,7 @@ validate_struct(tOptions * opts, char const * pname)
         fputs(zno_opt_arg, stderr);
         return FAILURE;
     }
+    print_exit = ((opts->fOptSet & OPTPROC_SHELL_OUTPUT) != 0);
 
     /*
      *  IF the client has enabled translation and the translation procedure
@@ -103,14 +104,14 @@ validate_struct(tOptions * opts, char const * pname)
         char const ** pp =
             (char const **)(void **)&(opts->pzProgName);
 
-        if (pz != NULL) {
+        if (pz != NULL)
             *pp = pz+1;
-        } else {
+        else
             *pp = pname;
-            pz = pathfind(getenv("PATH"), (char *)pname, "rx");
-            if (pz != NULL)
-                pname = (void *)pz;
-        }
+
+        pz = pathfind(getenv("PATH"), (char *)pname, "rx");
+        if (pz != NULL)
+            pname = (void *)pz;
 
         pp  = (char const **)(void **)&(opts->pzProgPath);
         *pp = pname;

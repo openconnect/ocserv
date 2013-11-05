@@ -141,7 +141,7 @@ optionRestore(tOptions* pOpts)
                 pzName = zNil;
         }
         fprintf(stderr, zNoState, pzName);
-        exit(EXIT_FAILURE);
+        option_exits(EXIT_FAILURE);
     }
 
     pOpts->pSavedState = NULL;

@@ -519,7 +519,7 @@ handle_cfg(tOptions * opts, tOptState * ost, char * txt, int dir)
     if (txt > pzEnd) {
     name_only:
         *pzEnd++ = NUL;
-        loadOptionLine(opts, ost, pzName, dir, OPTION_LOAD_UNCOOKED);
+        load_opt_line(opts, ost, pzName, dir, OPTION_LOAD_UNCOOKED);
         return pzEnd;
     }
 
@@ -575,7 +575,7 @@ handle_cfg(tOptions * opts, tOptState * ost, char * txt, int dir)
      *  "pzName" points to what looks like text for one option/configurable.
      *  It is NUL terminated.  Process it.
      */
-    loadOptionLine(opts, ost, pzName, dir, OPTION_LOAD_UNCOOKED);
+    load_opt_line(opts, ost, pzName, dir, OPTION_LOAD_UNCOOKED);
 
     return pzEnd;
 }
@@ -939,7 +939,7 @@ handle_struct(tOptions * opts, tOptState * ost, char * txt, int dir)
             return NULL;
         *txt = NUL;
         txt += 2;
-        loadOptionLine(opts, ost, pzName, dir, mode);
+        load_opt_line(opts, ost, pzName, dir, mode);
         return txt;
 
     case '>':
@@ -963,7 +963,7 @@ handle_struct(tOptions * opts, tOptState * ost, char * txt, int dir)
         return txt;
 
     /*
-     *  Rejoin the name and value for parsing by "loadOptionLine()".
+     *  Rejoin the name and value for parsing by "load_opt_line()".
      *  Erase any attributes parsed by "parse_attrs()".
      */
     memset(pcNulPoint, ' ', (size_t)(pzData - pcNulPoint));
@@ -980,7 +980,7 @@ handle_struct(tOptions * opts, tOptState * ost, char * txt, int dir)
      *  "pzName" points to what looks like text for one option/configurable.
      *  It is NUL terminated.  Process it.
      */
-    loadOptionLine(opts, ost, pzName, dir, mode);
+    load_opt_line(opts, ost, pzName, dir, mode);
 
     return txt;
 }

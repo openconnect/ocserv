@@ -33,24 +33,71 @@
 
 /* = = = START-STATIC-FORWARD = = = */
 static bool
-add_prog_path(char * pzBuf, int b_sz, char const * pzName,
-              char const * pzProgPath);
+get_realpath(char * buf, size_t b_sz);
+
+static bool
+add_prog_path(char * buf, int b_sz, char const * fname, char const * prg_path);
 
 static bool
 add_env_val(char * buf, int buf_sz, char const * name);
 
 static char *
 assemble_arg_val(char * txt, tOptionLoadMode mode);
+
+static char *
+trim_quotes(char * arg);
+
+static bool
+direction_ok(opt_state_mask_t f, int dir);
 /* = = = END-STATIC-FORWARD = = = */
+
+static bool
+get_realpath(char * buf, size_t b_sz)
+{
+#if defined(HAVE_CANONICALIZE_FILE_NAME)
+    {
+        size_t name_len;
+
+        char * pz = canonicalize_file_name(buf);
+        if (pz == NULL)
+            return false;
+
+        name_len = strlen(pz);
+        if (name_len >= (size_t)b_sz) {
+            free(pz);
+            return false;
+        }
+
+        memcpy(buf, pz, name_len + 1);
+        free(pz);
+    }
+
+#elif defined(HAVE_REALPATH)
+    {
+        size_t name_len;
+        char z[PATH_MAX+1];
+
+        if (realpath(buf, z) == NULL)
+            return false;
+
+        name_len = strlen(z);
+        if (name_len >= b_sz)
+            return false;
+
+        memcpy(buf, z, name_len + 1);
+    }
+#endif
+    return true;
+}
 
 /*=export_func  optionMakePath
  * private:
  *
  * what:  translate and construct a path
- * arg:   + char*       + pzBuf      + The result buffer +
- * arg:   + int         + bufSize    + The size of this buffer +
- * arg:   + char const* + pzName     + The input name +
- * arg:   + char const* + pzProgPath + The full path of the current program +
+ * arg:   + char*       + p_buf     + The result buffer +
+ * arg:   + int         + b_sz      + The size of this buffer +
+ * arg:   + char const* + fname     + The input name +
+ * arg:   + char const* + prg_path  + The full path of the current program +
  *
  * ret-type: bool
  * ret-desc: true if the name was handled, otherwise false.
@@ -95,24 +142,25 @@ assemble_arg_val(char * txt, tOptionLoadMode mode);
  *                 errors (cannot resolve the resulting path).
 =*/
 bool
-optionMakePath(char * pzBuf, int b_sz, char const * pzName,
-               char const * pzProgPath)
+optionMakePath(char * p_buf, int b_sz, char const * fname, char const * prg_path)
 {
-    size_t name_len = strlen(pzName);
+    {
+        size_t len = strlen(fname);
 
-    if (((size_t)b_sz <= name_len) || (name_len == 0))
-        return false;
+        if (((size_t)b_sz <= len) || (len == 0))
+            return false;
+    }
 
     /*
      *  IF not an environment variable, just copy the data
      */
-    if (*pzName != '$') {
-        char const*  pzS = pzName;
-        char* pzD = pzBuf;
-        int   ct  = b_sz;
+    if (*fname != '$') {
+        char   const * src = fname;
+        char * dst = p_buf;
+        int    ct  = b_sz;
 
         for (;;) {
-            if ( (*(pzD++) = *(pzS++)) == NUL)
+            if ( (*(dst++) = *(src++)) == NUL)
                 break;
             if (--ct <= 0)
                 return false;
@@ -124,12 +172,12 @@ optionMakePath(char * pzBuf, int b_sz, char const * pzName,
      *  it must start with "$$/".  In either event, replace the "$$"
      *  with the path to the executable and append a "/" character.
      */
-    else switch (pzName[1]) {
+    else switch (fname[1]) {
     case NUL:
         return false;
 
     case '$':
-        if (! add_prog_path(pzBuf, b_sz, pzName, pzProgPath))
+        if (! add_prog_path(p_buf, b_sz, fname, prg_path))
             return false;
         break;
 
@@ -137,59 +185,30 @@ optionMakePath(char * pzBuf, int b_sz, char const * pzName,
         if (program_pkgdatadir[0] == NUL)
             return false;
 
-        if (snprintf(pzBuf, (size_t)b_sz, "%s%s",
-                     program_pkgdatadir, pzName + 2) >= b_sz)
+        if (snprintf(p_buf, (size_t)b_sz, "%s%s",
+                     program_pkgdatadir, fname + 2) >= b_sz)
             return false;
         break;
 
     default:
-        if (! add_env_val(pzBuf, b_sz, pzName))
+        if (! add_env_val(p_buf, b_sz, fname))
             return false;
     }
 
-#if defined(HAVE_CANONICALIZE_FILE_NAME)
-    {
-        char * pz = canonicalize_file_name(pzBuf);
-        if (pz == NULL)
-            return false;
-
-        name_len = strlen(pz);
-        if (name_len >= (size_t)b_sz) {
-            free(pz);
-            return false;
-        }
-
-        memcpy(pzBuf, pz, name_len + 1);
-        free(pz);
-    }
-
-#elif defined(HAVE_REALPATH)
-    {
-        char z[PATH_MAX+1];
-
-        if (realpath(pzBuf, z) == NULL)
-            return false;
-
-        name_len = strlen(z);
-        if (name_len >= b_sz)
-            return false;
-
-        memcpy(pzBuf, z, name_len + 1);
-    }
-#endif
-
-    return true;
+    return get_realpath(p_buf, b_sz);
 }
 
+/**
+ * convert a leading "$$" into a path to the executable.
+ */
 static bool
-add_prog_path(char * pzBuf, int b_sz, char const * pzName,
-              char const * pzProgPath)
+add_prog_path(char * buf, int b_sz, char const * fname, char const * prg_path)
 {
-    char const*    pzPath;
-    char const*    pz;
+    char const *   path;
+    char const *   pz;
     int     skip = 2;
 
-    switch (pzName[2]) {
+    switch (fname[2]) {
     case DIRCH:
         skip = 3;
     case NUL:
@@ -203,16 +222,16 @@ add_prog_path(char * pzBuf, int b_sz, char const * pzName,
      *  If it is, we're done.  Otherwise, we have to hunt
      *  for the program using "pathfind".
      */
-    if (strchr(pzProgPath, DIRCH) != NULL)
-        pzPath = pzProgPath;
+    if (strchr(prg_path, DIRCH) != NULL)
+        path = prg_path;
     else {
-        pzPath = pathfind(getenv("PATH"), (char*)pzProgPath, "rx");
+        path = pathfind(getenv("PATH"), (char*)prg_path, "rx");
 
-        if (pzPath == NULL)
+        if (path == NULL)
             return false;
     }
 
-    pz = strrchr(pzPath, DIRCH);
+    pz = strrchr(path, DIRCH);
 
     /*
      *  IF we cannot find a directory name separator,
@@ -221,27 +240,30 @@ add_prog_path(char * pzBuf, int b_sz, char const * pzName,
     if (pz == NULL)
         return false;
 
-    pzName += skip;
+    fname += skip;
 
     /*
      *  Concatenate the file name to the end of the executable path.
      *  The result may be either a file or a directory.
      */
-    if ((unsigned)(pz - pzPath) + 1 + strlen(pzName) >= (unsigned)b_sz)
+    if ((unsigned)(pz - path) + 1 + strlen(fname) >= (unsigned)b_sz)
         return false;
 
-    memcpy(pzBuf, pzPath, (size_t)((pz - pzPath)+1));
-    strcpy(pzBuf + (pz - pzPath) + 1, pzName);
+    memcpy(buf, path, (size_t)((pz - path)+1));
+    strcpy(buf + (pz - path) + 1, fname);
 
     /*
-     *  If the "pzPath" path was gotten from "pathfind()", then it was
+     *  If the "path" path was gotten from "pathfind()", then it was
      *  allocated and we need to deallocate it.
      */
-    if (pzPath != pzProgPath)
-        AGFREE(pzPath);
+    if (path != prg_path)
+        AGFREE(path);
     return true;
 }
 
+/**
+ * Add an environment variable value.
+ */
 static bool
 add_env_val(char * buf, int buf_sz, char const * name)
 {
@@ -291,9 +313,9 @@ munge_str(char * txt, tOptionLoadMode mode)
         return;
 
     if (IS_WHITESPACE_CHAR(*txt)) {
-        char * pzS = SPN_WHITESPACE_CHARS(txt+1);
-        size_t l   = strlen(pzS) + 1;
-        memmove(txt, pzS, l);
+        char * src = SPN_WHITESPACE_CHARS(txt+1);
+        size_t l   = strlen(src) + 1;
+        memmove(txt, src, l);
         pzE = txt + l - 1;
 
     } else
@@ -323,13 +345,13 @@ munge_str(char * txt, tOptionLoadMode mode)
 static char *
 assemble_arg_val(char * txt, tOptionLoadMode mode)
 {
-    char* pzEnd = strpbrk(txt, ARG_BREAK_STR);
-    int   space_break;
+    char * end = strpbrk(txt, ARG_BREAK_STR);
+    int    space_break;
 
     /*
      *  Not having an argument to a configurable name is okay.
      */
-    if (pzEnd == NULL)
+    if (end == NULL)
         return txt + strlen(txt);
 
     /*
@@ -338,8 +360,8 @@ assemble_arg_val(char * txt, tOptionLoadMode mode)
      *  of which character caused it.
      */
     if (mode == OPTION_LOAD_KEEP) {
-        *(pzEnd++) = NUL;
-        return pzEnd;
+        *(end++) = NUL;
+        return end;
     }
 
     /*
@@ -347,14 +369,99 @@ assemble_arg_val(char * txt, tOptionLoadMode mode)
      *  because we'll have to skip over an immediately following ':' or '='
      *  (and the white space following *that*).
      */
-    space_break = IS_WHITESPACE_CHAR(*pzEnd);
-    *(pzEnd++) = NUL;
+    space_break = IS_WHITESPACE_CHAR(*end);
+    *(end++) = NUL;
 
-    pzEnd = SPN_WHITESPACE_CHARS(pzEnd);
-    if (space_break && ((*pzEnd == ':') || (*pzEnd == '=')))
-        pzEnd = SPN_WHITESPACE_CHARS(pzEnd+1);
+    end = SPN_WHITESPACE_CHARS(end);
+    if (space_break && ((*end == ':') || (*end == '=')))
+        end = SPN_WHITESPACE_CHARS(end+1);
 
-    return pzEnd;
+    return end;
+}
+
+static char *
+trim_quotes(char * arg)
+{
+    switch (*arg) {
+    case '"':
+    case '\'':
+        ao_string_cook(arg, NULL);
+    }
+    return arg;
+}
+
+/**
+ * See if the option is to be processed in the current scan direction
+ * (-1 or +1).
+ */
+static bool
+direction_ok(opt_state_mask_t f, int dir)
+{
+    if (dir == 0)
+        return true;
+
+    switch (f & (OPTST_IMM|OPTST_DISABLE_IMM)) {
+    case 0:
+        /*
+         *  The selected option has no immediate action.
+         *  THEREFORE, if the direction is PRESETTING
+         *  THEN we skip this option.
+         */
+        if (PRESETTING(dir))
+            return false;
+        break;
+
+    case OPTST_IMM:
+        if (PRESETTING(dir)) {
+            /*
+             *  We are in the presetting direction with an option we handle
+             *  immediately for enablement, but normally for disablement.
+             *  Therefore, skip if disabled.
+             */
+            if ((f & OPTST_DISABLED) == 0)
+                return false;
+        } else {
+            /*
+             *  We are in the processing direction with an option we handle
+             *  immediately for enablement, but normally for disablement.
+             *  Therefore, skip if NOT disabled.
+             */
+            if ((f & OPTST_DISABLED) != 0)
+                return false;
+        }
+        break;
+
+    case OPTST_DISABLE_IMM:
+        if (PRESETTING(dir)) {
+            /*
+             *  We are in the presetting direction with an option we handle
+             *  immediately for disablement, but normally for disablement.
+             *  Therefore, skip if NOT disabled.
+             */
+            if ((f & OPTST_DISABLED) != 0)
+                return false;
+        } else {
+            /*
+             *  We are in the processing direction with an option we handle
+             *  immediately for disablement, but normally for disablement.
+             *  Therefore, skip if disabled.
+             */
+            if ((f & OPTST_DISABLED) == 0)
+                return false;
+        }
+        break;
+
+    case OPTST_IMM|OPTST_DISABLE_IMM:
+        /*
+         *  The selected option is always for immediate action.
+         *  THEREFORE, if the direction is PROCESSING
+         *  THEN we skip this option.
+         */
+        if (PROCESSING(dir))
+            return false;
+        break;
+    }
+    return true;
 }
 
 /**
@@ -370,88 +477,35 @@ assemble_arg_val(char * txt, tOptionLoadMode mode)
  * @param[in]     load_mode  option loading mode (OPTION_LOAD_*)
  */
 LOCAL void
-loadOptionLine(
-    tOptions *  opts,
-    tOptState * opt_state,
-    char *      line,
-    tDirection  direction,
-    tOptionLoadMode   load_mode )
+load_opt_line(tOptions * opts, tOptState * opt_state, char * line,
+              tDirection direction, tOptionLoadMode load_mode )
 {
+    /*
+     * When parsing a stored line, we only look at the characters after
+     * a hyphen.  Long names must always be at least two characters and
+     * short options are always exactly one character long.
+     */
     line = SPN_LOAD_LINE_SKIP_CHARS(line);
 
     {
         char * arg = assemble_arg_val(line, load_mode);
 
-        if (! SUCCESSFUL(opt_find_long(opts, line, opt_state)))
+        if (IS_OPTION_NAME_CHAR(line[1])) {
+
+            if (! SUCCESSFUL(opt_find_long(opts, line, opt_state)))
+                return;
+
+        } else if (! SUCCESSFUL(opt_find_short(opts, *line, opt_state)))
             return;
 
-        if (opt_state->flags & OPTST_NO_INIT)
+        if ((! CALLED(direction)) && (opt_state->flags & OPTST_NO_INIT))
             return;
 
-        opt_state->pzOptArg = arg;
+        opt_state->pzOptArg = trim_quotes(arg);
     }
 
-    switch (opt_state->flags & (OPTST_IMM|OPTST_DISABLE_IMM)) {
-    case 0:
-        /*
-         *  The selected option has no immediate action.
-         *  THEREFORE, if the direction is PRESETTING
-         *  THEN we skip this option.
-         */
-        if (PRESETTING(direction))
-            return;
-        break;
-
-    case OPTST_IMM:
-        if (PRESETTING(direction)) {
-            /*
-             *  We are in the presetting direction with an option we handle
-             *  immediately for enablement, but normally for disablement.
-             *  Therefore, skip if disabled.
-             */
-            if ((opt_state->flags & OPTST_DISABLED) == 0)
-                return;
-        } else {
-            /*
-             *  We are in the processing direction with an option we handle
-             *  immediately for enablement, but normally for disablement.
-             *  Therefore, skip if NOT disabled.
-             */
-            if ((opt_state->flags & OPTST_DISABLED) != 0)
-                return;
-        }
-        break;
-
-    case OPTST_DISABLE_IMM:
-        if (PRESETTING(direction)) {
-            /*
-             *  We are in the presetting direction with an option we handle
-             *  immediately for disablement, but normally for disablement.
-             *  Therefore, skip if NOT disabled.
-             */
-            if ((opt_state->flags & OPTST_DISABLED) != 0)
-                return;
-        } else {
-            /*
-             *  We are in the processing direction with an option we handle
-             *  immediately for disablement, but normally for disablement.
-             *  Therefore, skip if disabled.
-             */
-            if ((opt_state->flags & OPTST_DISABLED) == 0)
-                return;
-        }
-        break;
-
-    case OPTST_IMM|OPTST_DISABLE_IMM:
-        /*
-         *  The selected option is always for immediate action.
-         *  THEREFORE, if the direction is PROCESSING
-         *  THEN we skip this option.
-         */
-        if (PROCESSING(direction))
-            return;
-        break;
-    }
+    if (! direction_ok(opt_state->flags, direction))
+        return;
 
     /*
      *  Fix up the args.
@@ -516,10 +570,13 @@ void
 optionLoadLine(tOptions * opts, char const * line)
 {
     tOptState st = OPTSTATE_INITIALIZER(SET);
-    char* pz;
-    AGDUPSTR(pz, line, "user option line");
-    loadOptionLine(opts, &st, pz, DIRECTION_PROCESS, OPTION_LOAD_COOKED);
+    char *    pz;
+    proc_state_mask_t sv_flags = opts->fOptSet;
+    opts->fOptSet &= ~OPTPROC_ERRSTOP;
+    AGDUPSTR(pz, line, "opt line");
+    load_opt_line(opts, &st, pz, DIRECTION_CALLED, OPTION_LOAD_COOKED);
     AGFREE(pz);
+    opts->fOptSet = sv_flags;
 }
 /** @}
  *

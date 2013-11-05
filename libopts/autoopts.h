@@ -129,8 +129,19 @@
 #define SKIP_OPT(p)  (((p)->fOptState & OPTST_IMMUTABLE_MASK) != 0)
 
 typedef int tDirection;
+/**
+ * handling option presets.  Start with command line and work through
+ * config settings in reverse order.
+ */
 #define DIRECTION_PRESET        -1
+/**
+ * handling normal options.  Start with first config file, then environment
+ * variables and finally the command line.
+ */
 #define DIRECTION_PROCESS       1
+/**
+ * An initialzation phase or an option being loaded from program sources.
+ */
 #define DIRECTION_CALLED        0
 
 #define PROCESSING(d)           ((d)>0)
@@ -391,6 +402,65 @@ static char const * program_pkgdatadir;
  * privately exported functions
  */
 extern tOptProc optionPrintVersion, optionPagedUsage, optionLoadOpt;
+
+#ifdef AUTOOPTS_INTERNAL
+
+#ifndef PKGDATADIR
+#  define PKGDATADIR ""
+#endif
+#define APOSTROPHE '\''
+
+#define OPTPROC_L_N_S  (OPTPROC_LONGOPT | OPTPROC_SHORTOPT)
+#if defined(ENABLE_NLS) && defined(HAVE_LIBINTL_H)
+# include <libintl.h>
+#endif
+
+typedef struct {
+    size_t          fnm_len;
+    uint32_t        fnm_mask;
+    char const *    fnm_name;
+} ao_flag_names_t;
+
+/**
+ * Automated Options Usage Flags.
+ * NB: no entry may be a prefix of another entry
+ */
+#define AOFLAG_TABLE                            \
+    _aof_(gnu,             OPTPROC_GNUUSAGE )   \
+    _aof_(autoopts,        ~OPTPROC_GNUUSAGE)   \
+    _aof_(no_misuse_usage, OPTPROC_MISUSE   )   \
+    _aof_(misuse_usage,    ~OPTPROC_MISUSE  )   \
+    _aof_(compute,         OPTPROC_COMPUTE  )
+
+#define _aof_(_n, _f)   AOUF_ ## _n ## _ID,
+typedef enum { AOFLAG_TABLE AOUF_COUNT } ao_flag_id_t;
+#undef  _aof_
+
+#define _aof_(_n, _f)   AOUF_ ## _n = (1 << AOUF_ ## _n ## _ID),
+typedef enum { AOFLAG_TABLE } ao_flags_t;
+#undef  _aof_
+
+static char const   zNil[] = "";
+static arg_types_t  argTypes             = { NULL };
+static char         line_fmt_buf[32];
+static bool         displayEnum          = false;
+static char const   pkgdatadir_default[] = PKGDATADIR;
+static char const * program_pkgdatadir   = pkgdatadir_default;
+static tOptionLoadMode option_load_mode  = OPTION_LOAD_UNCOOKED;
+static tePagerState pagerState           = PAGER_STATE_INITIAL;
+
+       FILE *       option_usage_fp      = NULL;
+
+static char const * pz_enum_err_fmt;
+
+tOptions * optionParseShellOptions = NULL;
+
+static char const * shell_prog = NULL;
+static char * script_leader    = NULL;
+static char * script_trailer   = NULL;
+static char * script_text      = NULL;
+static bool   print_exit       = false;
+#endif /* AUTOOPTS_INTERNAL */
 
 #endif /* AUTOGEN_AUTOOPTS_H */
 /**

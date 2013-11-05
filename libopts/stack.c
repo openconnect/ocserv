@@ -133,8 +133,8 @@ optionUnstackArg(tOptions * pOpts, tOptDesc * pOptDesc)
          *  we are keeping a define.
          */
         for (i = 0, dIdx = 0, ct = pAL->useCt; --ct >= 0; i++) {
-            const char ** pzSrc = pAL->apzArgs[ i ];
-            char *        pzEq  = strchr(pzSrc, '=');
+            const char * pzSrc = pAL->apzArgs[ i ];
+            char *       pzEq  = strchr(pzSrc, '=');
 
             if (pzEq != NULL)
                 *pzEq = NUL;

@@ -1,7 +1,7 @@
 /* -*- buffer-read-only: t -*- vi: set ro:
  *
  * Prototypes for autoopts
- * Generated Sun Mar 31 10:41:38 PDT 2013
+ * Generated Sun Jul 14 17:37:20 PDT 2013
  */
 #ifndef AUTOOPTS_PROTO_H_GUARD
 #define AUTOOPTS_PROTO_H_GUARD 1
@@ -92,16 +92,18 @@ static void
 munge_str(char * txt, tOptionLoadMode mode);
 
 static void
-loadOptionLine(
-    tOptions *  opts,
-    tOptState * opt_state,
-    char *      line,
-    tDirection  direction,
-    tOptionLoadMode   load_mode );
+load_opt_line(tOptions * opts, tOptState * opt_state, char * line,
+              tDirection direction, tOptionLoadMode load_mode );
 
 /*
  *  Extracted from makeshell.c
  */
+static void
+option_exits(int exit_code);
+
+static void
+ao_bug(char const * msg);
+
 static void
 fserr_warn(char const * prog, char const * op, char const * fname);
 
@@ -140,8 +142,5 @@ addArgListEntry(void** ppAL, void* entry);
  */
 static void
 set_usage_flags(tOptions * opts, char const * flg_txt);
-
-static void
-ao_bug(char const * msg);
 
 #endif /* AUTOOPTS_PROTO_H_GUARD */

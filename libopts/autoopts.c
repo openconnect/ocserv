@@ -32,64 +32,10 @@
  *  13aa749a5b0a454917a944ed8fffc530b784f5ead522b1aacaf4ec8aa55a6239  COPYING.mbsd
  */
 
-#ifndef PKGDATADIR
-#  define PKGDATADIR ""
-#endif
-
-static char const   zNil[] = "";
-static arg_types_t  argTypes             = { NULL };
-static char         line_fmt_buf[32];
-static bool         displayEnum          = false;
-static char const   pkgdatadir_default[] = PKGDATADIR;
-static char const * program_pkgdatadir   = pkgdatadir_default;
-static tOptionLoadMode option_load_mode  = OPTION_LOAD_UNCOOKED;
-static tePagerState pagerState           = PAGER_STATE_INITIAL;
-
-       FILE *       option_usage_fp      = NULL;
-
 /**
  * The number of tab characters to skip when printing continuation lines.
  */
 static unsigned int tab_skip_ct          = 0;
-
-LOCAL void *
-ao_malloc(size_t sz)
-{
-    void * res = malloc(sz);
-    if (res == NULL) {
-        fprintf(stderr, zalloc_fail, (int)sz);
-        exit(EXIT_FAILURE);
-    }
-    return res;
-}
-#undef  malloc
-#define malloc(_s)        ao_malloc(_s)
-
-LOCAL void *
-ao_realloc(void *p, size_t sz)
-{
-    void * res = (p == NULL) ? malloc(sz) : realloc(p, sz);
-    if (res == NULL) {
-        fprintf(stderr, zrealloc_fail, (int)sz, p);
-        exit(EXIT_FAILURE);
-    }
-    return res;
-}
-#undef  realloc
-#define realloc(_p,_s)    ao_realloc(_p,_s)
-
-LOCAL char *
-ao_strdup(char const *str)
-{
-    char * res = strdup(str);
-    if (res == NULL) {
-        fprintf(stderr, zalloc_fail, (int)strlen(str));
-        exit(EXIT_FAILURE);
-    }
-    return res;
-}
-#undef  strdup
-#define strdup(_p)        ao_strdup(_p)
 
 #ifndef HAVE_PATHFIND
 #  define  pathfind(_p, _n, _m) option_pathfind(_p, _n, _m)
@@ -112,6 +58,45 @@ ao_strdup(char const *str)
 #  define strchr(_s, _c)  option_strchr(_s, _c)
 #  include "compat/strchr.c"
 #endif
+
+LOCAL void *
+ao_malloc(size_t sz)
+{
+    void * res = malloc(sz);
+    if (res == NULL) {
+        fprintf(stderr, zalloc_fail, (int)sz);
+        option_exits(EXIT_FAILURE);
+    }
+    return res;
+}
+#undef  malloc
+#define malloc(_s)        ao_malloc(_s)
+
+LOCAL void *
+ao_realloc(void *p, size_t sz)
+{
+    void * res = (p == NULL) ? malloc(sz) : realloc(p, sz);
+    if (res == NULL) {
+        fprintf(stderr, zrealloc_fail, (int)sz, p);
+        option_exits(EXIT_FAILURE);
+    }
+    return res;
+}
+#undef  realloc
+#define realloc(_p,_s)    ao_realloc(_p,_s)
+
+LOCAL char *
+ao_strdup(char const *str)
+{
+    char * res = strdup(str);
+    if (res == NULL) {
+        fprintf(stderr, zalloc_fail, (int)strlen(str));
+        option_exits(EXIT_FAILURE);
+    }
+    return res;
+}
+#undef  strdup
+#define strdup(_p)        ao_strdup(_p)
 
 /**
  *  handle an option.
@@ -386,7 +371,7 @@ optionProcess(tOptions * opts, int a_ct, char ** a_v)
 
         if (SELECTED_OPT(od)) {
             optionSaveFile(opts);
-            exit(EXIT_SUCCESS);
+            option_exits(EXIT_SUCCESS);
         }
     }
     }

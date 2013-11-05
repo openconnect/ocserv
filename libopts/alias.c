@@ -74,7 +74,7 @@ optionAlias(tOptions * opts, tOptDesc * old_od, unsigned int alias)
     new_od = opts->pOptDesc + alias;
     if ((unsigned)opts->optCt <= alias) {
         fputs(zbad_alias_id, stderr);
-        exit(EXIT_FAILURE);
+        option_exits(EXIT_FAILURE);
     }
 
     /*

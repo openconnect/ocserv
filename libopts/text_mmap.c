@@ -233,7 +233,7 @@ close_mmap_files(tmap_info_t * mi)
     close(mi->txt_fd);
     mi->txt_fd = AO_INVALID_FD;
 
-#if ! defined(MAP_ANONYMOUS)
+#if defined(HAVE_MMAP) && ! defined(MAP_ANONYMOUS)
     if (mi->txt_zero_fd == AO_INVALID_FD)
         return;
 

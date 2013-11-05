@@ -166,7 +166,7 @@ print_ver(tOptions * opts, tOptDesc * od, FILE * fp)
 
     default:
         fprintf(stderr, zBadVerArg, ch);
-        exit(EXIT_FAILURE);
+        option_exits(EXIT_FAILURE);
     }
 
     fflush(fp);
@@ -174,7 +174,7 @@ print_ver(tOptions * opts, tOptDesc * od, FILE * fp)
         fserr_exit(opts->pzProgName, zwriting,
                    (fp == stdout) ? zstdout_name : zstderr_name);
 
-    exit(EXIT_SUCCESS);
+    option_exits(EXIT_SUCCESS);
 }
 
 /*=export_func  optionPrintVersion
@@ -190,7 +190,7 @@ print_ver(tOptions * opts, tOptDesc * od, FILE * fp)
 void
 optionPrintVersion(tOptions * opts, tOptDesc * od)
 {
-    print_ver(opts, od, stdout);
+    print_ver(opts, od, print_exit ? stderr : stdout);
 }
 
 /*=export_func  optionVersionStderr

@@ -107,6 +107,9 @@ opt_ambiguities(tOptions * opts, char const * name, int nm_len)
 
     fputs(zambig_list_msg, stderr);
     do  {
+        if (pOD->pz_Name == NULL)
+            continue; /* doc option */
+
         if (strneqvcmp(name, pOD->pz_Name, nm_len) == 0)
             fprintf(stderr, zambig_file, hyph, pOD->pz_Name);
 
@@ -375,7 +378,10 @@ opt_find_long(tOptions * opts, char const * opt_name, tOptState * state)
     bool    disable  = false;
     int     ct;
 
-    if (nm_len <= 0) {
+    if (nm_len <= 1) {
+        if ((opts->fOptSet & OPTPROC_ERRSTOP) == 0)
+            return FAILURE;
+        
         fprintf(stderr, zInvalOptName, opts->pzProgName, opt_name);
         (*opts->pUsageProc)(opts, EXIT_FAILURE);
         /* NOTREACHED */
@@ -418,6 +424,9 @@ opt_find_short(tOptions* pOpts, uint_t optValue, tOptState* pOptState)
         if (SKIP_OPT(pRes)) {
             if (  (pRes->fOptState == (OPTST_OMITTED | OPTST_NO_INIT))
                && (pRes->pz_Name != NULL)) {
+                if ((pOpts->fOptSet & OPTPROC_ERRSTOP) == 0)
+                    return FAILURE;
+        
                 fprintf(stderr, zDisabledErr, pOpts->pzProgPath, pRes->pz_Name);
                 if (pRes->pzText != NULL)
                     fprintf(stderr, SET_OFF_FMT, pRes->pzText);
@@ -500,7 +509,7 @@ get_opt_arg_must(tOptions * opts, tOptState * o_st)
     default:
 #ifdef DEBUG
         fputs("AutoOpts lib error: option type not selected\n", stderr);
-        exit(EXIT_FAILURE);
+        option_exits(EXIT_FAILURE);
 #endif
 
     case TOPT_DEFAULT:

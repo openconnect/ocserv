@@ -37,36 +37,6 @@
  *  13aa749a5b0a454917a944ed8fffc530b784f5ead522b1aacaf4ec8aa55a6239  COPYING.mbsd
  */
 
-#define OPTPROC_L_N_S  (OPTPROC_LONGOPT | OPTPROC_SHORTOPT)
-#if defined(ENABLE_NLS) && defined(HAVE_LIBINTL_H)
-# include <libintl.h>
-#endif
-
-typedef struct {
-    size_t          fnm_len;
-    uint32_t        fnm_mask;
-    char const *    fnm_name;
-} ao_flag_names_t;
-
-/**
- * Automated Options Usage Flags.
- * NB: no entry may be a prefix of another entry
- */
-#define AOFLAG_TABLE                            \
-    _aof_(gnu,             OPTPROC_GNUUSAGE )   \
-    _aof_(autoopts,        ~OPTPROC_GNUUSAGE)   \
-    _aof_(no_misuse_usage, OPTPROC_MISUSE   )   \
-    _aof_(misuse_usage,    ~OPTPROC_MISUSE  )   \
-    _aof_(compute,         OPTPROC_COMPUTE  )
-
-#define _aof_(_n, _f)   AOUF_ ## _n ## _ID,
-typedef enum { AOFLAG_TABLE AOUF_COUNT } ao_flag_id_t;
-#undef  _aof_
-
-#define _aof_(_n, _f)   AOUF_ ## _n = (1 << AOUF_ ## _n ## _ID),
-typedef enum { AOFLAG_TABLE } ao_flags_t;
-#undef  _aof_
-
 /* = = = START-STATIC-FORWARD = = = */
 static unsigned int
 parse_usage_flags(ao_flag_names_t const * fnt, char const * txt);
@@ -100,8 +70,8 @@ static void
 prt_extd_usage(tOptions * opts, tOptDesc * od, char const * title);
 
 static void
-prt_ini_list(char const * const * papz, bool * need_intro,
-             char const * ini_file, char const * path_nm);
+prt_ini_list(char const * const * papz, char const * ini_file,
+             char const * path_nm);
 
 static void
 prt_preamble(tOptions * opts, tOptDesc * od, arg_types_t * at);
@@ -302,13 +272,6 @@ optionOnlyUsage(tOptions * pOpts, int ex_code)
     if (ferror(option_usage_fp) != 0)
         fserr_exit(pOpts->pzProgName, zwriting, (option_usage_fp == stderr)
                    ? zstderr_name : zstdout_name);
-}
-
-LOCAL void
-ao_bug(char const * msg)
-{
-    fprintf(stderr, zao_bug_msg, msg);
-    exit(EX_SOFTWARE);
 }
 
 /**
@@ -626,7 +589,8 @@ optionUsage(tOptions * opts, int usage_exit_code)
                 ? opts->pzFullUsage : NULL;
 
             if (option_usage_fp == NULL)
-                option_usage_fp = stdout;
+                option_usage_fp = print_exit ? stderr : stdout;
+
         } else {
             pz = (opts->structVersion >= 30 * 4096)
                 ? opts->pzShortUsage : NULL;
@@ -659,7 +623,7 @@ optionUsage(tOptions * opts, int usage_exit_code)
         fserr_exit(opts->pzProgName, zwriting, (option_usage_fp == stdout)
                    ? zstdout_name : zstderr_name);
 
-    exit(exit_code);
+    option_exits(exit_code);
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -959,24 +923,24 @@ prt_extd_usage(tOptions * opts, tOptDesc * od, char const * title)
         fputs(zDefaultOpt + tab_skip_ct, option_usage_fp);
 }
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**
+ * Figure out where all the initialization files might live.  This requires
+ * translating some environment variables and testing to see if a name is a
+ * directory or a file.  It's squishy, but important to tell users how to
+ * find these files.
  *
- *   Figure out where all the initialization files might live.
- *   This requires translating some environment variables and
- *   testing to see if a name is a directory or a file.  It's
- *   squishy, but important to tell users how to find these files.
+ * @param[in]  papz        search path
+ * @param[out] ini_file    an output buffer of AG_PATH_MAX+1 bytes
+ * @param[in]  path_nm     the name of the file we're hunting for
  */
 static void
-prt_ini_list(char const * const * papz, bool * need_intro,
-             char const * ini_file, char const * path_nm)
+prt_ini_list(char const * const * papz, char const * ini_file,
+             char const * path_nm)
 {
     char pth_buf[AG_PATH_MAX+1];
 
-    if (papz == NULL)
-        return;
-
     fputs(zPresetIntro, option_usage_fp);
-    *need_intro = false;
 
     for (;;) {
         char const * path   = *(papz++);
@@ -1021,7 +985,13 @@ prt_ini_list(char const * const * papz, bool * need_intro,
     }
 }
 
-
+/**
+ *  Print the usage line preamble text
+ *
+ * @param opts  the program option descriptor
+ * @param od    the option descriptor
+ * @param at    names of the option argument types
+ */
 static void
 prt_preamble(tOptions * opts, tOptDesc * od, arg_types_t * at)
 {
@@ -1108,10 +1078,10 @@ prt_one_usage(tOptions * opts, tOptDesc * od, arg_types_t * at)
 
  bogus_desc:
     fprintf(stderr, zbad_od, opts->pzProgName, od->pz_Name);
-    exit(EX_SOFTWARE);
+    option_exits(EX_SOFTWARE);
 }
 
-/*
+/**
  *  Print out the usage information for just the options.
  */
 static void
@@ -1196,20 +1166,22 @@ prt_opt_usage(tOptions * opts, int ex_code, char const * title)
 }
 
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *
- *   PROGRAM DETAILS
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**
+ *  Print program details.
+ * @param[in] opts  the program option descriptor
  */
 static void
 prt_prog_detail(tOptions * opts)
 {
-    bool need_intro = true;
+    bool need_intro = (opts->papzHomeList == NULL);
 
     /*
-     *  Display all the places we look for config files
+     *  Display all the places we look for config files, if we have
+     *  a list of directories to search.
      */
-    prt_ini_list(opts->papzHomeList, &need_intro,
-                 opts->pzRcName, opts->pzProgPath);
+    if (! need_intro)
+        prt_ini_list(opts->papzHomeList, opts->pzRcName, opts->pzProgPath);
 
     /*
      *  Let the user know about environment variable settings

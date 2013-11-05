@@ -63,7 +63,7 @@ static void
 prt_str_arg(FILE * fp, tOptDesc * pOD);
 
 static void
-prt_enum_arg(FILE * fp, tOptDesc * pOD);
+prt_enum_arg(FILE * fp, tOptDesc * od);
 
 static void
 prt_set_arg(FILE * fp, tOptDesc * od);
@@ -138,7 +138,7 @@ find_dir_name(tOptions * opts, int * p_free)
 
         {
             size_t sz = strlen(pzEnv) + strlen(pzEndDir) + 2;
-            pzFileName = (char*)AGALOC(sz, "dir name");
+            pzFileName = (char *)AGALOC(sz, "dir name");
         }
 
         if (pzFileName == NULL)
@@ -277,6 +277,8 @@ find_file_name(tOptions * opts, int * p_free_name)
 static void
 prt_entry(FILE * fp, tOptDesc * od, char const * l_arg)
 {
+    int space_ct;
+
     /*
      *  There is an argument.  Pad the name so values line up.
      *  Not disabled *OR* this got equivalenced to another opt,
@@ -284,29 +286,29 @@ prt_entry(FILE * fp, tOptDesc * od, char const * l_arg)
      *  Otherwise, there must be a disablement name.
      */
     {
-        char const * pz;
-        if (! DISABLED_OPT(od) || (od->optEquivIndex != NO_EQUIVALENT))
-            pz = od->pz_Name;
-        else
-            pz = od->pz_DisableName;
-
-        fprintf(fp, "%-18s", pz);
+        char const * pz =
+            (! DISABLED_OPT(od) || (od->optEquivIndex != NO_EQUIVALENT))
+            ? od->pz_Name
+            : od->pz_DisableName;
+        space_ct = 17 - strlen(pz);
+        fputs(pz, fp);
     }
+
+    if (  (l_arg == NULL)
+       && (OPTST_GET_ARGTYPE(od->fOptState) != OPARG_TYPE_NUMERIC))
+        goto end_entry;
+
+    fputs(" = ", fp);
+    while (space_ct-- > 0)  fputc(' ', fp);
+
     /*
      *  IF the option is numeric only,
      *  THEN the char pointer is really the number
      */
     if (OPTST_GET_ARGTYPE(od->fOptState) == OPARG_TYPE_NUMERIC)
-        fprintf(fp, "  %d\n", (int)(t_word)l_arg);
-
-    /*
-     *  OTHERWISE, FOR each line of the value text, ...
-     */
-    else if (l_arg == NULL)
-        fputc(NL, fp);
+        fprintf(fp, "%d", (int)(t_word)l_arg);
 
     else {
-        fputc(' ', fp); fputc(' ', fp);
         for (;;) {
             char const * eol = strchr(l_arg, NL);
 
@@ -329,8 +331,10 @@ prt_entry(FILE * fp, tOptDesc * od, char const * l_arg)
          *  Terminate the entry
          */
         fputs(l_arg, fp);
-        fputc(NL, fp);
     }
+
+end_entry:
+    fputc(NL, fp);
 }
 
 /**
@@ -610,20 +614,24 @@ prt_str_arg(FILE * fp, tOptDesc * pOD)
 }
 
 /**
+ * print the string value of an enumeration.
+ *
+ * @param[in] fp  the file pointer to write to
+ * @param[in] od  the option descriptor with the enumerated value
  */
 static void
-prt_enum_arg(FILE * fp, tOptDesc * pOD)
+prt_enum_arg(FILE * fp, tOptDesc * od)
 {
-    uintptr_t val = pOD->optArg.argEnum;
+    uintptr_t val = od->optArg.argEnum;
 
     /*
      *  This is a magic incantation that will convert the
      *  bit flag values back into a string suitable for printing.
      */
-    (*(pOD->pOptProc))(OPTPROC_RETURN_VALNAME, pOD);
-    prt_entry(fp, pOD, (void*)(pOD->optArg.argString));
+    (*(od->pOptProc))(OPTPROC_RETURN_VALNAME, od);
+    prt_entry(fp, od, (void*)(od->optArg.argString));
 
-    pOD->optArg.argEnum = val;
+    od->optArg.argEnum = val;
 }
 
 /**
@@ -638,24 +646,14 @@ prt_enum_arg(FILE * fp, tOptDesc * pOD)
 static void
 prt_set_arg(FILE * fp, tOptDesc * od)
 {
-    uintptr_t val = od->optArg.argEnum;
-
-    /*
-     *  This is a magic incantation that will convert the
-     *  bit flag values back into a string suitable for printing.
-     */
-    (*(od->pOptProc))(OPTPROC_RETURN_VALNAME, od);
-    prt_entry(fp, od, (void*)(od->optArg.argString));
-
-    if (od->optArg.argString != NULL) {
-        /*
-         *  set membership strings get allocated
-         */
-        AGFREE((void*)od->optArg.argString);
-        od->fOptState &= ~OPTST_ALLOC_ARG;
-    }
-
-    od->optArg.argEnum = val;
+    char * list = optionMemberList(od);
+    size_t len  = strlen(list);
+    char * buf  = (char *)AGALOC(len + 3, "dir name");
+    *buf= '=';
+    memcpy(buf+1, list, len + 1);
+    prt_entry(fp, od, buf);
+    AGFREE(buf);
+    AGFREE(list);
 }
 
 /**

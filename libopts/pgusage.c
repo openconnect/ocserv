@@ -32,12 +32,70 @@
  *  13aa749a5b0a454917a944ed8fffc530b784f5ead522b1aacaf4ec8aa55a6239  COPYING.mbsd
  */
 
+#if defined(HAVE_WORKING_FORK)
+static FILE *
+open_tmp_usage(char ** buf)
+{
+    char * bf;
+    size_t bfsz;
+
+    {
+        unsigned int my_pid = (unsigned int)getpid();
+        char const * tmpdir = getenv(TMPDIR);
+        if (tmpdir == NULL)
+            tmpdir = tmp_dir;
+        bfsz = TMP_FILE_FMT_LEN + strlen(tmpdir) + 10;
+        bf   = AGALOC(bfsz, "tmp fil");
+        snprintf(bf, bfsz, TMP_FILE_FMT, tmpdir, my_pid);
+    }
+
+    {
+        int fd = mkstemp(bf);
+        if (fd < 0) {
+            AGFREE(bf);
+            return NULL;
+        }
+        *buf = bf;
+        return fdopen(fd, "w");
+    }
+}
+
+static char *
+mk_pager_cmd(char const * fname)
+{
+    /*
+     * Page the file and remove it when done.  For shell script processing,
+     * we must redirect the output to the current stderr, otherwise stdout.
+     */
+    fclose(option_usage_fp);
+    option_usage_fp = NULL;
+
+    {
+        char const * pager  = (char const *)getenv(PAGER_NAME);
+        size_t bfsz;
+        char * res;
+
+        /*
+         *  Use the "more(1)" program if "PAGER" has not been defined
+         */
+        if (pager == NULL)
+            pager = MORE_STR;
+
+        bfsz = strlen(fname) + strlen(pager) + PAGE_USAGE_FMT_LEN;
+        res  = AGALOC(bfsz, "more cmd");
+        snprintf(res, bfsz, PAGE_USAGE_FMT, pager, fname);
+        AGFREE((void*)fname);
+        return res;
+    }
+}
+#endif
+
 /*=export_func  optionPagedUsage
  * private:
  *
- * what:  Decipher a boolean value
- * arg:   + tOptions* + opts + program options descriptor +
- * arg:   + tOptDesc* + od   + the descriptor for this arg +
+ * what:  emit help text and pass through a pager program.
+ * arg:   + tOptions * + opts + program options descriptor +
+ * arg:   + tOptDesc * + od   + the descriptor for this arg +
  *
  * doc:
  *  Run the usage output through a pager.
@@ -53,8 +111,8 @@ optionPagedUsage(tOptions * opts, tOptDesc * od)
 
     (*opts->pUsageProc)(opts, EXIT_SUCCESS);
 #else
-    static pid_t     my_pid;
-    char fil_name[1024];
+    static bool sv_print_exit = false;
+    static char * fil_name = NULL;
 
     /*
      *  IF we are being called after the usage proc is done
@@ -66,20 +124,12 @@ optionPagedUsage(tOptions * opts, tOptDesc * od)
     {
         if ((od->fOptState & OPTST_RESET) != 0)
             return;
-
-        my_pid  = getpid();
-        snprintf(fil_name, sizeof(fil_name), TMP_USAGE_FMT,
-                 (unsigned long)my_pid);
-        unlink(fil_name);
-
-        /*
-         *  Set usage output to this temporary file
-         */
-        option_usage_fp = fopen(fil_name, "w" FOPEN_BINARY_FLAG);
+        option_usage_fp = open_tmp_usage(&fil_name);
         if (option_usage_fp == NULL)
-            _exit(EXIT_FAILURE);
+            (*opts->pUsageProc)(opts, EXIT_SUCCESS);
 
-        pagerState = PAGER_STATE_READY;
+        pagerState    = PAGER_STATE_READY;
+        sv_print_exit = print_exit;
 
         /*
          *  Set up so this routine gets called during the exit logic
@@ -88,8 +138,10 @@ optionPagedUsage(tOptions * opts, tOptDesc * od)
 
         /*
          *  The usage procedure will now put the usage information into
-         *  the temporary file we created above.
+         *  the temporary file we created above.  Keep any shell commands
+         *  out of the result.
          */
+        print_exit = false;
         (*opts->pUsageProc)(opts, EXIT_SUCCESS);
 
         /* NOTREACHED */
@@ -97,25 +149,20 @@ optionPagedUsage(tOptions * opts, tOptDesc * od)
     }
 
     case PAGER_STATE_READY:
-    {
-        char const * pager  = (char const *)getenv(PAGER_NAME);
+        fil_name = mk_pager_cmd(fil_name);
 
-        /*
-         *  Use the "more(1)" program if "PAGER" has not been defined
-         */
-        if (pager == NULL)
-            pager = MORE_STR;
+        if (sv_print_exit) {
+            fputs("\nexit 0\n", stdout);
+            fclose(stdout);
+            dup2(STDERR_FILENO, STDOUT_FILENO);
 
-        /*
-         *  Page the file and remove it when done.
-         */
-        snprintf(fil_name, sizeof(fil_name), PAGE_USAGE_FMT, pager,
-                 (unsigned long)my_pid);
-        fclose(stderr);
-        dup2(STDOUT_FILENO, STDERR_FILENO);
+        } else {
+            fclose(stderr);
+            dup2(STDOUT_FILENO, STDERR_FILENO);
+        }
 
         ignore_val( system( fil_name));
-    }
+        AGFREE(fil_name);
 
     case PAGER_STATE_CHILD:
         /*

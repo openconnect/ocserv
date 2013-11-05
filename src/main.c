@@ -49,6 +49,7 @@
 #include <worker.h>
 #include <cookies.h>
 #include <tun.h>
+#include <grp.h>
 #include <ip-lease.h>
 #include <ccan/list/list.h>
 
@@ -362,7 +363,14 @@ static void drop_privileges(main_server_st* s)
 			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
 			       (int) s->config->gid, strerror(e));
 			exit(1);
-
+		}
+		
+		ret = setgroups(1, &s->config->gid);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "cannot set groups to %d: %s\n",
+			       (int) s->config->gid, strerror(e));
+			exit(1);
 		}
 	}
 

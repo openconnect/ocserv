@@ -43,3 +43,4 @@ src/stamp-man
 doc/stamp-man
 doc/ocpasswd.8
 src/pcl/libpcl.a
+src/version.inc

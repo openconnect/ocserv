@@ -25,7 +25,13 @@ cscope:
 
 cref: ctags cscope
 
-dist-hook: 
+ChangeLog:
+	git log --pretty --numstat --summary -- | git2cl > ChangeLog
+.PHONY: ChangeLog
+
+dist-hook: ChangeLog
+	mv ChangeLog $(distdir)
+	touch ChangeLog
 	cd $(distdir)/src/ && for i in *.def;do \
 		autogen $$i; \
 	done

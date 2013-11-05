@@ -309,7 +309,11 @@ int sd;
 		
 		iov[1].iov_base = out.data;
 		iov[1].iov_len = out.size;
-		writev(cfd, iov, 2);
+		ret = writev(cfd, iov, 2);
+		if (ret == -1) {
+		        e = errno;
+		 	syslog(LOG_ERR, "sec-mod error in writev: %s", strerror(e));
+		}
 
 		gnutls_free(out.data);
 cont:

@@ -347,7 +347,13 @@ static void drop_privileges(main_server_st* s)
 	struct rlimit rl;
 
 	if (s->config->chroot_dir) {
-		chdir(s->config->chroot_dir);
+		ret = chdir(s->config->chroot_dir);
+		if (ret != 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->config->chroot_dir, strerror(e));
+			exit(1);
+		}
+
 		ret = chroot(s->config->chroot_dir);
 		if (ret != 0) {
 			e = errno;

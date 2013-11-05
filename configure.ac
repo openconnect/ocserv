@@ -2,7 +2,6 @@ AC_PREREQ(2.61)
 AC_INIT([ocserv], [0.2.0], [nmav@gnutls.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_MACRO_DIR([gl/m4])
 
 AM_INIT_AUTOMAKE([1.11.3 no-dist-gzip dist-xz dist-lzip -Wall -Wno-override])
@@ -19,13 +18,14 @@ if [ test "$GCC" = "yes" ];then
 fi
 AC_PATH_PROG(CTAGS, ctags, /bin/true)
 AC_PATH_PROG(CSCOPE, cscope, /bin/true)
-AC_PATH_PROG(AUTOGEN, autogen, /bin/true)
+AC_CHECK_PROG([AUTOGEN], [autogen], [autogen], [/bin/true])
 
 if test x"$AUTOGEN" = "x/bin/true"; then
 	AC_MSG_WARN([[
 ***
-*** autogen not found.  We will not build manpages.
+*** autogen not found. Will not link against libopts.
 *** ]])
+NEED_LIBOPTS_DIR=true
 fi
 
 AC_CHECK_SIZEOF([unsigned long])
@@ -143,7 +143,8 @@ Summary of build options:
   Install prefix:       ${prefix}
   Compiler:             ${CC}
   CFlags:               ${CFLAGS}
-
+  libopts:              ${LIBOPTS_LDADD}
+  
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
   PCL library:          ${pcl_enabled}

@@ -44,3 +44,7 @@ doc/stamp-man
 doc/ocpasswd.8
 src/pcl/libpcl.a
 src/version.inc
+src/ocserv-args.c
+src/ocserv-args.h
+src/ocpasswd-args.h
+src/ocpasswd-args.c

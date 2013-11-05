@@ -30,7 +30,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 ocserv_SOURCES += ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv_LDADD = ../gl/libgnu.a ../libopts/libopts.a
-ocserv_LDADD += $(LIBGNUTLS_LIBS) $(GDBM_LIBS) $(PAM_LIBS) $(LIBUTIL) \
+ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) 
 	
 if PCL

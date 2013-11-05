@@ -36,25 +36,6 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
-gdbm_enabled=no
-LIBS="$oldlibs -lgdbm"
-AC_MSG_CHECKING([for gdbm library])
-AC_LINK_IFELSE([AC_LANG_PROGRAM([
-		   #include <gdbm.h>],[
-		   GDBM_FILE dbf;
-		   dbf = gdbm_open("",0,0,0,0);])],
-		  [AC_MSG_RESULT(yes)
-		   AC_SUBST([GDBM_LIBS], [-lgdbm])
-		   AC_SUBST([GDBM_CFLAGS], [])
-		   gdbm_enabled=yes
-		   AC_DEFINE([HAVE_GDBM], 1, [Enable the GDBM library])],
-		  [AC_MSG_RESULT(no)
-   	           AC_MSG_WARN([[
-*** 
-*** gdbm was not found. The server will not be able to maintain state across restarts.
-*** ]])])
-LIBS="$oldlibs"
-
 pam_enabled=no
 LIBS="$oldlibs -lpam"
 AC_MSG_CHECKING([for pam library])
@@ -165,7 +146,6 @@ Summary of build options:
   Compiler:             ${CC}
   CFlags:               ${CFLAGS}
 
-  GDBM storage backend: ${gdbm_enabled}
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
   PCL library:          ${pcl_enabled}

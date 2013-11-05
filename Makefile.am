@@ -1,8 +1,8 @@
-EXTRA_DIST = m4/lib-link.m4 LICENSE
+EXTRA_DIST = LICENSE
 
 SUBDIRS = gl libopts src doc tests
 
-ACLOCAL_AMFLAGS = -I gl/m4 -I libopts/m4 -I m4
+ACLOCAL_AMFLAGS = -I gl/m4 -I libopts/m4
 
 gl:
 	gnulib-tool --add-import --lgpl=2

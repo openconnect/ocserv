@@ -58,6 +58,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module getdtablesize:
   # Code from module getline:
   # Code from module getpass:
+  # Code from module havelib:
   # Code from module include_next:
   # Code from module largefile:
   AC_REQUIRE([AC_SYS_LARGEFILE])
@@ -365,6 +366,7 @@ AC_DEFUN([gltests_LIBSOURCES], [
 # This macro records the list of files which have been installed by
 # gnulib-tool and may be removed by future gnulib-tool invocations.
 AC_DEFUN([gl_FILE_LIST], [
+  build-aux/config.rpath
   build-aux/snippet/_Noreturn.h
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
@@ -435,6 +437,9 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/gnulib-common.m4
   m4/include_next.m4
   m4/largefile.m4
+  m4/lib-ld.m4
+  m4/lib-link.m4
+  m4/lib-prefix.m4
   m4/longlong.m4
   m4/lseek.m4
   m4/malloc.m4

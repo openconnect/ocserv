@@ -15,9 +15,6 @@
   client signature verification at an early stage before data are hashed 
   (to verify that the set random value was present in the handshake).
 
-* When a TUN device is in use and cannot be assigned mark it as such and
-  continue.
-
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time.
 

@@ -257,8 +257,8 @@ ping-leases = false
 
 # Unset to enable bandwidth restrictions (in bytes/sec). The
 # setting here is global, but can also be set per user or per group.
-#rx-per-sec = 40000
-#tx-per-sec = 40000
+#rx-data-per-sec = 40000
+#tx-data-per-sec = 40000
 
 # The number of packets (of MTU size) that are available in
 # the output buffer. The default is low to improve latency.
@@ -275,7 +275,7 @@ route = 192.168.5.0/255.255.255.0
 # per group. Each file name on these directories must match the username
 # or the groupname.
 # The options allowed in the configuration files are ipv?-dns, ipv?-nbns,
-#  ipv?-network, ipv?-netmask, ipv6-prefix, iroute and route.
+#  ipv?-network, ipv?-netmask, ipv6-prefix, rx/tx-per-sec, iroute and route.
 #
 # Note that the 'iroute' option allows to add routes on the server
 # based on a user or group. The syntax depends on the input accepted

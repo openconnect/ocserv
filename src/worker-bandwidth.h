@@ -24,23 +24,38 @@
 #include <time.h>
 #include <unistd.h>
 
+#define COUNT_UPDATE_MS 500
+
 typedef struct bandwidth_st {
 	struct timespec count_start;
 	size_t transferred_bytes;
-	size_t allowed_bytes;
+	size_t allowed_kb;
 
-	size_t bytes_per_sec;
+	/* only touched once */
+	size_t allowed_kb_per_count;
+	size_t kb_per_sec;
 } bandwidth_st;
 
-inline static void bandwidth_init(bandwidth_st* b, size_t bytes_per_sec)
+inline static void bandwidth_init(bandwidth_st* b, size_t kb_per_sec)
 {
 	memset(b, 0, sizeof(*b));
-	b->bytes_per_sec = bytes_per_sec;
+	b->kb_per_sec = kb_per_sec;
+	b->allowed_kb_per_count = (b->kb_per_sec*COUNT_UPDATE_MS)/1000;
 }
+
+int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu);
 
 /* returns true or false, depending on whether to send
  * the bytes */
-int bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu);
+inline static
+int bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu)
+{
+	/* if bandwidth control is disabled */
+	if (b->kb_per_sec == 0)
+		return 1;
+
+	return _bandwidth_update(b, bytes, mtu);
+}
 
 
 #endif

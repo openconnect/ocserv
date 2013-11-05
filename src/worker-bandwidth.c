@@ -26,40 +26,35 @@
 
 #include <stdio.h>
 
-#define COUNT_UPDATE_MS 500
 
-int bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu)
+int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu)
 {
 size_t sum;
 struct timespec now;
-ssize_t t, new_allowed_bytes, remain;
+ssize_t t, remain;
 unsigned int diff;
-
-	/* if bandwidth control is disabled */
-	if (b->bytes_per_sec == 0)
-		return 1;
+size_t transferred_kb;
 
 	gettime(&now);
 
 	diff = timespec_sub_ms(&now, &b->count_start);
 	if (diff >= COUNT_UPDATE_MS) {
-		b->transferred_bytes = (b->transferred_bytes*COUNT_UPDATE_MS)/diff;
+		transferred_kb = b->transferred_bytes / 1000;
+		transferred_kb = (transferred_kb*COUNT_UPDATE_MS)/diff;
 
 		memcpy(&b->count_start, &now, sizeof(now));
 
-		new_allowed_bytes = mtu - 1 + ((b->bytes_per_sec*COUNT_UPDATE_MS)/1000);
+		remain = b->allowed_kb - transferred_kb;
+		t = b->allowed_kb_per_count + remain;
 
-		remain = b->allowed_bytes - b->transferred_bytes;
-		t = new_allowed_bytes + remain;
-
-		b->allowed_bytes = MIN(t, new_allowed_bytes*1000/COUNT_UPDATE_MS);
+		b->allowed_kb = MIN(t, b->kb_per_sec);
 		b->transferred_bytes = bytes;
 		
 		return 1;
 	}
 	
 	sum = b->transferred_bytes + bytes;
-	if (sum > b->allowed_bytes)
+	if (sum > b->allowed_kb*1000)
 		return 0; /* NO */
 
 	b->transferred_bytes = sum;

@@ -126,8 +126,8 @@ AM_CONDITIONAL(PCL, test "$pcl_enabled" = yes)
 LIBOPTS_CHECK([libopts])
 if [ test "$NEED_LIBOPTS_DIR" != "true" ];then
 	dnl delete libopts-generated files
-	rm -f src/ocserv-args.c src/ocserv-args.h
-	rm -f src/ocpasswd-args.c src/ocpasswd-args.h
+	rm -f ${srcdir}/src/ocserv-args.c ${srcdir}/src/ocserv-args.h
+	rm -f ${srcdir}/src/ocpasswd-args.c ${srcdir}/src/ocpasswd-args.h
 fi
 
 AC_CONFIG_FILES([

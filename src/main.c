@@ -717,6 +717,7 @@ int main(int argc, char** argv)
 	/* Initialize certificates */
 	tls_global_init_certs(&s);
 
+	mslog(&s, NULL, LOG_INFO, "initializing %s", PACKAGE_STRING);
 	alarm(MAINTAINANCE_TIME(&s));
 
 	for (;;) {

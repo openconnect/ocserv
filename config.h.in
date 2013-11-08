@@ -921,6 +921,9 @@
 /* Define to a substitute value for mmap()'s MAP_ANONYMOUS flag. */
 #undef MAP_ANONYMOUS
 
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
+
 /* Define this if optional arguments are disallowed */
 #undef NO_OPTIONAL_OPT_ARGS
 

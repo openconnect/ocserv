@@ -31,7 +31,9 @@
 inline static void
 gettime (struct timespec *t)
 {
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME_COARSE)
+  clock_gettime (CLOCK_REALTIME_COARSE, t);
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
   clock_gettime (CLOCK_REALTIME, t);
 #else
 struct timeval tv;

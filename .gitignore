@@ -48,3 +48,5 @@ src/ocserv-args.c
 src/ocserv-args.h
 src/ocpasswd-args.h
 src/ocpasswd-args.c
+src/libcmd-ocpasswd.a
+src/libcmd-ocserv.a

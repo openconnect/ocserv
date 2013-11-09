@@ -126,10 +126,12 @@ AM_CONDITIONAL(PCL, test "$pcl_enabled" = yes)
 LIBOPTS_CHECK([libopts])
 if [ test "$NEED_LIBOPTS_DIR" = "true" ];then
 	dnl create libopts-generated files
-	cp -f ${srcdir}/src/ocserv-args.c.bak ${srcdir}/src/ocserv-args.c
-	cp -f ${srcdir}/src/ocserv-args.h.bak ${srcdir}/src/ocserv-args.h
-	cp -f ${srcdir}/src/ocpasswd-args.c.bak ${srcdir}/src/ocpasswd-args.c
-	cp -f ${srcdir}/src/ocpasswd-args.h.bak ${srcdir}/src/ocpasswd-args.h
+	for i in ${srcdir}/src/*-args.c.bak ${srcdir}/src/*-args.h.bak; do
+		nam=`echo $i|sed 's/.bak//g'`
+		if [ test -f $i ];then
+			cp -f $i $nam
+		fi
+	done
 	AC_SUBST([AUTOGEN], [/bin/true])
 fi
 

@@ -34,5 +34,7 @@ dist-hook: ChangeLog
 	touch ChangeLog
 	cd $(distdir)/src/ && for i in *.def;do \
 		autogen $$i; \
-		touch $$i; \
+	done
+	cd $(distdir)/src/ && for i in *-args.c *-args.h;do \
+		mv $$i $$i.bak; \
 	done

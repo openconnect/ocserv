@@ -124,10 +124,13 @@ LIBS="$oldlibs"
 AM_CONDITIONAL(PCL, test "$pcl_enabled" = yes)
 
 LIBOPTS_CHECK([libopts])
-if [ test "$NEED_LIBOPTS_DIR" != "true" ];then
-	dnl delete libopts-generated files
-	rm -f ${srcdir}/src/ocserv-args.c ${srcdir}/src/ocserv-args.h
-	rm -f ${srcdir}/src/ocpasswd-args.c ${srcdir}/src/ocpasswd-args.h
+if [ test "$NEED_LIBOPTS_DIR" = "true" ];then
+	dnl create libopts-generated files
+	cp -f ${srcdir}/src/ocserv-args.c.bak ${srcdir}/src/ocserv-args.c
+	cp -f ${srcdir}/src/ocserv-args.h.bak ${srcdir}/src/ocserv-args.h
+	cp -f ${srcdir}/src/ocpasswd-args.c.bak ${srcdir}/src/ocpasswd-args.c
+	cp -f ${srcdir}/src/ocpasswd-args.h.bak ${srcdir}/src/ocpasswd-args.h
+	AC_SUBST([AUTOGEN], [/bin/true])
 fi
 
 AC_CONFIG_FILES([

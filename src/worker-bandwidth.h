@@ -21,6 +21,7 @@
 #ifndef WORKER_BANDWIDTH_H
 # define WORKER_BANDWIDTH_H
 
+#include <gettime.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -43,18 +44,18 @@ inline static void bandwidth_init(bandwidth_st* b, size_t kb_per_sec)
 	b->allowed_kb_per_count = (b->kb_per_sec*COUNT_UPDATE_MS)/1000;
 }
 
-int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu);
+int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu, struct timespec* now);
 
 /* returns true or false, depending on whether to send
  * the bytes */
 inline static
-int bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu)
+int bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu, struct timespec* now)
 {
 	/* if bandwidth control is disabled */
 	if (b->kb_per_sec == 0)
 		return 1;
 
-	return _bandwidth_update(b, bytes, mtu);
+	return _bandwidth_update(b, bytes, mtu, now);
 }
 
 

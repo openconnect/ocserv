@@ -27,22 +27,19 @@
 #include <stdio.h>
 
 
-int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu)
+int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu, struct timespec *now)
 {
 size_t sum;
-struct timespec now;
 ssize_t t, remain;
 unsigned int diff;
 size_t transferred_kb;
 
-	gettime(&now);
-
-	diff = timespec_sub_ms(&now, &b->count_start);
+	diff = timespec_sub_ms(now, &b->count_start);
 	if (diff >= COUNT_UPDATE_MS) {
 		transferred_kb = b->transferred_bytes / 1000;
 		transferred_kb = (transferred_kb*COUNT_UPDATE_MS)/diff;
 
-		memcpy(&b->count_start, &now, sizeof(now));
+		memcpy(&b->count_start, now, sizeof(*now));
 
 		remain = b->allowed_kb - transferred_kb;
 		t = b->allowed_kb_per_count + remain;

@@ -40,6 +40,7 @@
 #include <arpa/inet.h>
 #include <system.h>
 #include <time.h>
+#include <gettime.h>
 #include <common.h>
 #include <worker-bandwidth.h>
 
@@ -764,6 +765,7 @@ char *p;
 struct timeval tv;
 unsigned tls_pending, dtls_pending = 0, i;
 time_t udp_recv_time = 0, now;
+struct timespec tnow;
 unsigned mtu_overhead = 0;
 socklen_t sl;
 bandwidth_st b_tx;
@@ -1041,7 +1043,8 @@ bandwidth_st b_rx;
 	SEND_ERR(ret);
 
 	/* start dead peer detection */
-	ws->last_msg_tcp = ws->last_msg_udp = time(0);
+	gettime(&tnow);
+	ws->last_msg_tcp = ws->last_msg_udp = tnow.tv_sec;
 	
 	if (ws->rx_per_sec == 0)
 		ws->rx_per_sec = ws->config->rx_per_sec;
@@ -1097,7 +1100,9 @@ bandwidth_st b_rx;
 				goto exit;
 			}
 		}
-		now = time(0);
+		gettime(&tnow);
+		now = tnow.tv_sec;
+
 		if (periodic_check(ws, mtu_overhead, now) < 0)
 			goto exit;
 		
@@ -1119,7 +1124,7 @@ bandwidth_st b_rx;
 			}
 			
 			/* only transmit if allowed */
-			if (bandwidth_update(&b_tx, l-1, ws->conn_mtu) != 0) {
+			if (bandwidth_update(&b_tx, l-1, ws->conn_mtu, &tnow) != 0) {
 				tls_retry = 0;
 				oclog(ws, LOG_DEBUG, "sending %d byte(s)\n", l);
 				if (ws->udp_state == UP_ACTIVE) {
@@ -1169,7 +1174,7 @@ bandwidth_st b_rx;
 			if (ret > 0) {
 				l = ret;
 
-				if (bandwidth_update(&b_rx, l-8, ws->conn_mtu) != 0) {
+				if (bandwidth_update(&b_rx, l-8, ws->conn_mtu, &tnow) != 0) {
 					ret = parse_cstp_data(ws, ws->buffer, l, now);
 					if (ret < 0) {
 						oclog(ws, LOG_INFO, "error parsing CSTP data");
@@ -1199,7 +1204,7 @@ bandwidth_st b_rx;
 						l = ret;
 						ws->udp_state = UP_ACTIVE;
 
-						if (bandwidth_update(&b_rx, l-1, ws->conn_mtu) != 0) {
+						if (bandwidth_update(&b_rx, l-1, ws->conn_mtu, &tnow) != 0) {
 							ret = parse_dtls_data(ws, ws->buffer, l, now);
 							if (ret < 0) {
 								oclog(ws, LOG_INFO, "error parsing CSTP data");

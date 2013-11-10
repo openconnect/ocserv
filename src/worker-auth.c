@@ -41,7 +41,7 @@
 #include <common.h>
 #include <tlslib.h>
 
-#include <http-parser/http_parser.h>
+#include <http_parser.h>
 
 #define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
                         "<auth id=\"success\">\n" \

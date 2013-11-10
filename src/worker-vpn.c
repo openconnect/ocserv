@@ -50,7 +50,7 @@
 #include <worker.h>
 #include <tlslib.h>
 
-#include <http-parser/http_parser.h>
+#include <http_parser.h>
 
 /* after that time (secs) of inactivity in the UDP part, connection switches to 
  * TCP (if activity occurs there).

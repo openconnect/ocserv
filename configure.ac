@@ -94,6 +94,27 @@ if [ test "$anyconnect_enabled" = "yes" ];then
 	AC_DEFINE([ANYCONNECT_CLIENT_COMPAT], [], [Enable Anyconnect compatibility])
 fi
 
+dnl Test for http_parser library
+with_local_http_parser=yes
+LIBS="$oldlibs -lhttp_parser"
+AC_MSG_CHECKING([for http_parser library])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+		   #include <http_parser.h>],[
+		   http_parser_init(0, 0);])],
+		  [AC_MSG_RESULT(yes)
+		   AC_SUBST([HTTP_PARSER_LIBS], [-lhttp_parser])
+		   AC_SUBST([HTTP_PARSER_CFLAGS], [])
+		   with_local_http_parser=no],
+		  [AC_MSG_RESULT(no)
+  	           AC_MSG_WARN([[
+*** 
+*** libhttp-parser not found.
+*** An included version of the library will be used.
+*** ]])])
+LIBS="$oldlibs"
+AM_CONDITIONAL(LOCAL_HTTP_PARSER, test "x$with_local_http_parser" != xno)
+
+
 dnl needed in the included PCL
 AC_C_VOLATILE
 AC_C_CONST
@@ -103,7 +124,9 @@ AC_CHECK_FUNCS(sigaction)
 AC_CHECK_FUNCS(longjmp setjmp)
 AC_CHECK_FUNCS(sigaltstack)
 
-pcl_enabled=no
+
+dnl Test for PCL library
+with_local_pcl=yes
 LIBS="$oldlibs -lpcl"
 AC_MSG_CHECKING([for pcl library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -112,16 +135,16 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		  [AC_MSG_RESULT(yes)
 		   AC_SUBST([PCL_LIBS], [-lpcl])
 		   AC_SUBST([PCL_CFLAGS], [])
-		   pcl_enabled=yes],
+		   with_local_pcl=no],
 		  [AC_MSG_RESULT(no)
-   	           AC_MSG_WARN([[
+  	           AC_MSG_WARN([[
 *** 
 *** libpcl (portable co-routines) was not found.
 *** An included version of the library will be used.
 *** ]])])
 LIBS="$oldlibs"
+AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
-AM_CONDITIONAL(PCL, test "$pcl_enabled" = yes)
 
 LIBOPTS_CHECK([libopts])
 if [ test "$NEED_LIBOPTS_DIR" = "true" ];then
@@ -133,6 +156,9 @@ if [ test "$NEED_LIBOPTS_DIR" = "true" ];then
 		fi
 	done
 	AC_SUBST([AUTOGEN], [/bin/true])
+	with_local_libopts=yes
+else
+	with_local_libopts=no
 fi
 
 AC_CONFIG_FILES([
@@ -153,11 +179,12 @@ Summary of build options:
   Install prefix:       ${prefix}
   Compiler:             ${CC}
   CFlags:               ${CFLAGS}
-  libopts:              ${LIBOPTS_LDADD}
   
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
-  PCL library:          ${pcl_enabled}
+  local PCL library:    ${with_local_pcl}
+  local libopts:        ${with_local_libopts}
+  local http-parser:    ${with_local_http_parser}
 
 Experimental options:
   seccomp:              ${seccomp_enabled}

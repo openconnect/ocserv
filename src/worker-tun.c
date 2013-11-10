@@ -45,8 +45,6 @@
 #include <worker.h>
 #include <tlslib.h>
 
-#include <http-parser/http_parser.h>
-
 /* if local is non zero it returns the local, otherwise the remote */
 static
 int get_ip(struct worker_st* ws, int fd, int family, unsigned int local,

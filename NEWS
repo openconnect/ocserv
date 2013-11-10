@@ -1,3 +1,8 @@
+* Version 0.2.2 (unreleased)
+
+- http-parser library is used if present instead of the bundled.
+
+
 * Version 0.2.1 (released 2013-11-06)
 
 - Added configuration directives 'rx-data-per-sec' and 'tx-data-per-sec' to allow

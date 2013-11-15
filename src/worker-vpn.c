@@ -223,24 +223,31 @@ char * str;
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+ESTREAM-SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 				        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
+				        req->gnutls_version = GNUTLS_DTLS0_9;
 				        break;
 				} else if (strcmp(token, "X-SALSA20-UMAC96") == 0) {
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+SALSA20-256:+UMAC-96:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 				        req->selected_ciphersuite = "X-SALSA20-UMAC96";
 				        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
+				        req->gnutls_version = GNUTLS_DTLS0_9;
 				        break;
-	                        } else if (strcmp(token, "OC-AES128-GCM") == 0) {
+                                } else
+#endif
+#if GNUTLS_VERSION_NUMBER >= 0x030207
+	                        if (strcmp(token, "OC-AES128-GCM") == 0) {
 				        req->selected_ciphersuite = "OC-AES128-GCM";
-				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL";
 				        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM;
 				        req->gnutls_mac = GNUTLS_MAC_AEAD;
+				        req->gnutls_version = GNUTLS_DTLS1_2;
 				        break;
 	                        } else if (strcmp(token, "OC-AES256-GCM") == 0) {
 				        req->selected_ciphersuite = "OC-AES256-GCM";
-				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL";
 				        req->gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM;
 				        req->gnutls_mac = GNUTLS_MAC_AEAD;
+				        req->gnutls_version = GNUTLS_DTLS1_2;
 				        break;
 	                        } else
 #endif
@@ -249,12 +256,14 @@ char * str;
 				        req->selected_ciphersuite = "AES128-SHA";
 				        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC;
 				        req->gnutls_mac = GNUTLS_MAC_SHA1;
+				        req->gnutls_version = GNUTLS_DTLS0_9;
 				        break;
 				} else if (strcmp(token, "DES-CBC3-SHA") == 0) {
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 				        req->selected_ciphersuite = "DES-CBC3-SHA";
 				        req->gnutls_cipher = GNUTLS_CIPHER_3DES_CBC;
 				        req->gnutls_mac = GNUTLS_MAC_SHA1;
+				        req->gnutls_version = GNUTLS_DTLS0_9;
 				        break;
 	                        }
 				str = NULL;
@@ -438,7 +447,7 @@ gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
-		GNUTLS_DTLS0_9, GNUTLS_KX_RSA, ws->req.gnutls_cipher,
+		ws->req.gnutls_version, GNUTLS_KX_RSA, ws->req.gnutls_cipher,
 		ws->req.gnutls_mac, GNUTLS_COMP_NULL, &master, &sid);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s", gnutls_strerror(ret));

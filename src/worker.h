@@ -85,6 +85,7 @@ struct http_req_st {
 	char *selected_ciphersuite; /* static string */
 	int gnutls_cipher;
 	int gnutls_mac;
+	int gnutls_version;
 
 	unsigned int headers_complete;
 	unsigned int message_complete;

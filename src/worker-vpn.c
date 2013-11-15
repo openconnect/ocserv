@@ -230,6 +230,18 @@ char * str;
 				        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_UMAC_96;
 				        break;
+	                        } else if (strcmp(token, "OC-AES128-GCM") == 0) {
+				        req->selected_ciphersuite = "OC-AES128-GCM";
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM;
+				        req->gnutls_mac = GNUTLS_MAC_AEAD;
+				        break;
+	                        } else if (strcmp(token, "OC-AES256-GCM") == 0) {
+				        req->selected_ciphersuite = "OC-AES256-GCM";
+				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
+				        req->gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM;
+				        req->gnutls_mac = GNUTLS_MAC_AEAD;
+				        break;
 	                        } else
 #endif
 				if (strcmp(token, "AES128-SHA") == 0) {

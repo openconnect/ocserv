@@ -1,5 +1,20 @@
+Short term items:
+
 * IPv6 support is probably broken or non-optimal. See how it can be
   improved.
+
+* More elaborate checks on "make check". Currently we test whether a
+  cookie can be obtained, but not whether a TUN devices is created or
+  data can be transfered. Need more ideas on how that can be done.
+
+* When a user (IP) gets into the BAN list multiple times, disable it for
+  longer time.
+
+* Change into hashtables the lists that are used during a client
+  connection.
+
+
+Long term items:
 
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
   versions than the current openssl string approach (using PSK ciphersuites
@@ -15,8 +30,3 @@
   client signature verification at an early stage before data are hashed 
   (to verify that the set random value was present in the handshake).
 
-* When a user (IP) gets into the BAN list multiple times, disable it for
-  longer time.
-
-* Change into hashtables the lists that are used during a client
-  connection.

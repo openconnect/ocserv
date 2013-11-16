@@ -663,10 +663,9 @@ size_t tls_get_overhead(gnutls_protocol_t version, gnutls_cipher_algorithm_t cip
 #if GNUTLS_VERSION_NUMBER >= 0x030207
 	return gnutls_est_record_overhead_size(version, cipher, mac, GNUTLS_COMP_NULL, 0);
 #else
-unsigned iv_size, overhead = 0, t;
+unsigned overhead = 0, t;
 unsigned block_size;
 	block_size = gnutls_cipher_get_block_size(cipher);
-	iv_size = block_size;
 	
 	switch(version) {
 		case GNUTLS_DTLS0_9:
@@ -690,11 +689,11 @@ unsigned block_size;
 		case GNUTLS_CIPHER_AES_192_CBC:
 		case GNUTLS_CIPHER_CAMELLIA_192_CBC:
 			overhead += block_size; /* max pad */
-			overhead += iv_size; /* explicit IV */
+			overhead += block_size; /* IV */
 			break;
 		case GNUTLS_CIPHER_AES_128_GCM:
 		case GNUTLS_CIPHER_AES_256_GCM:
-			overhead += iv_size; /* explicit IV */
+			overhead += 4; /* explicit nonce */
 			overhead += block_size; /* tag size */
 			break;
 		default:

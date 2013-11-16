@@ -1019,7 +1019,7 @@ bandwidth_st b_rx;
 			oclog(ws, LOG_INFO, "reducing DTLS MTU to peer's DTLS MTU (%u)", req->dtls_mtu);
 		}
 
-		overhead = CSTP_DTLS_OVERHEAD + tls_get_overhead(GNUTLS_DTLS0_9, ws->req.gnutls_cipher, ws->req.gnutls_mac);
+		overhead = CSTP_DTLS_OVERHEAD + tls_get_overhead(ws->req.gnutls_version, ws->req.gnutls_cipher, ws->req.gnutls_mac);
 		dtls_mtu = ws->conn_mtu - overhead;
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);

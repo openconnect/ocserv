@@ -660,15 +660,13 @@ unsigned i;
 
 size_t tls_get_overhead(gnutls_protocol_t version, gnutls_cipher_algorithm_t cipher, gnutls_mac_algorithm_t mac)
 {
+#if GNUTLS_VERSION_NUMBER >= 0x030207
+	return gnutls_est_record_overhead_size(version, cipher, mac, GNUTLS_COMP_NULL, 0);
+#else
 unsigned iv_size, overhead = 0, t;
 unsigned block_size;
-
 	block_size = gnutls_cipher_get_block_size(cipher);
-#if GNUTLS_VERSION_NUMBER >= 0x030200
-	iv_size = gnutls_cipher_get_iv_size(cipher);
-#else
 	iv_size = block_size;
-#endif
 	
 	switch(version) {
 		case GNUTLS_DTLS0_9:
@@ -708,4 +706,5 @@ unsigned block_size;
 		overhead += t;
 		
 	return overhead;
+#endif
 }

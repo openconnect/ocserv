@@ -1269,6 +1269,12 @@ hsk_restart:
 
 					if (ret == 0) {
 						unsigned mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
+
+						/* openconnect doesn't like if we send more bytes
+						 * than the initially agreed MTU */
+						if (mtu > dtls_mtu) 
+							mtu = dtls_mtu;
+
 						ws->udp_state = UP_ACTIVE;
 						mtu_discovery_init(ws, mtu);
 						mtu_set(ws, mtu);

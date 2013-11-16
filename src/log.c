@@ -74,6 +74,13 @@ void __attribute__ ((format(printf, 3, 4)))
 	if (priority == LOG_DEBUG && ws->config->debug == 0)
 		return;
 
+	if (priority == LOG_HTTP_DEBUG) {
+	    if (ws->config->http_debug == 0)
+                return;
+            else
+                priority = LOG_INFO;
+        }
+
 	ip = human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
 			    ipbuf, sizeof(ipbuf));
 
@@ -102,6 +109,13 @@ void __attribute__ ((format(printf, 4, 5)))
 	
 	if (priority == LOG_DEBUG && s->config->debug == 0)
 		return;
+
+	if (priority == LOG_HTTP_DEBUG) {
+	    if (s->config->http_debug == 0)
+                return;
+            else
+                priority = LOG_DEBUG;
+        }
 
 	if (proc) {
 		ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,

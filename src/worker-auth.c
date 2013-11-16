@@ -638,7 +638,7 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 	char *p;
 	
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
-		oclog(ws, LOG_DEBUG, "POST body: '%.*s'", body_length, body);
+		oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", body_length, body);
 
 		if (username != NULL) {
 			/* body should contain <username>test</username><password>test</password> */

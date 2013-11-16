@@ -39,6 +39,12 @@ flag = {
 };
 
 flag = {
+    name      = http-debug;
+    descrip   = "Enable verbose HTTP debugging information";
+    doc      = "";
+};
+
+flag = {
     name      = debug;
     value     = d;
     descrip   = "Enable verbose network debugging information";

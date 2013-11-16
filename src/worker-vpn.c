@@ -188,7 +188,7 @@ char * str;
 	if (req->value.length <= 0)
 		return;
 
-	oclog(ws, LOG_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length, req->header.data,  
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length, req->header.data,  
 		(int)req->value.length, req->value.data);
 
 	switch (req->next_header) {
@@ -609,7 +609,7 @@ restart:
 	} while(ws->req.headers_complete == 0);
 
 	if (parser.method == HTTP_GET) {
-		oclog(ws, LOG_DEBUG, "HTTP GET %s", ws->req.url); 
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP GET %s", ws->req.url); 
 		fn = get_url_handler(ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_INFO, "unexpected URL %s", ws->req.url);
@@ -622,7 +622,7 @@ restart:
 
 	} else if (parser.method == HTTP_POST) {
 		/* continue reading */
-		oclog(ws, LOG_DEBUG, "HTTP POST %s", ws->req.url); 
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP POST %s", ws->req.url); 
 		while(ws->req.message_complete == 0) {
 			nrecvd = tls_recv(session, buf, sizeof(buf));
 			GNUTLS_FATAL_ERR(nrecvd);
@@ -646,7 +646,7 @@ restart:
 			goto restart;
 
 	} else if (parser.method == HTTP_CONNECT) {
-		oclog(ws, LOG_DEBUG, "HTTP CONNECT %s", ws->req.url); 
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP CONNECT %s", ws->req.url); 
 		ret = connect_handler(ws);
 		if (ret == 0 && (parser.http_major != 1 || parser.http_minor != 0))
 			goto restart;

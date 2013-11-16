@@ -475,6 +475,9 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 	if (HAVE_OPT(TLS_DEBUG))
 		config->tls_debug = 1;
 
+	if (HAVE_OPT(HTTP_DEBUG))
+		config->http_debug = 1;
+
 	if (HAVE_OPT(DEBUG))
 		config->debug = 1;
 	

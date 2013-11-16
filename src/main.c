@@ -691,7 +691,7 @@ int main(int argc, char** argv)
 
 	flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR
-	if (config.debug != 0)
+	if (config.debug != 0 || config.http_debug != 0 || config.tls_debug != 0)
 		flags |= LOG_PERROR;
 #endif
 	openlog("ocserv", flags, LOG_DAEMON);

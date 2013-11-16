@@ -47,7 +47,7 @@ int get_config_handler(worker_st *ws, unsigned http_ver)
 int ret;
 struct stat st;
 
-	oclog(ws, LOG_DEBUG, "requested config: %s", ws->req.url); 
+	oclog(ws, LOG_HTTP_DEBUG, "requested config: %s", ws->req.url); 
 	if (ws->config->xml_config_file == NULL) {
 		oclog(ws, LOG_INFO, "requested config but no config file is set");
 		tls_printf(ws->session, "HTTP/1.%u 404 Not found\r\n", http_ver);
@@ -108,7 +108,7 @@ int ret;
 const char *data;
 int len;
 
-	oclog(ws, LOG_DEBUG, "requested fixed string: %s", ws->req.url); 
+	oclog(ws, LOG_HTTP_DEBUG, "requested fixed string: %s", ws->req.url); 
 	if (!strcmp(ws->req.url, "/2/binaries/update.txt")) {
 		data = VPN_VERSION;
 		len = sizeof(VPN_VERSION)-1;
@@ -158,7 +158,7 @@ int ret;
 const char *data;
 int len;
 
-	oclog(ws, LOG_DEBUG, "requested downloader: %s", ws->req.url); 
+	oclog(ws, LOG_HTTP_DEBUG, "requested downloader: %s", ws->req.url); 
 
 	data = SH_SCRIPT;
 	len = sizeof(SH_SCRIPT)-1;

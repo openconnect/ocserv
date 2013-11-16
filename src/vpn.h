@@ -73,6 +73,8 @@ extern int syslog_open;
 #define ERR_EXEC -10
 #define ERR_WORKER_TERMINATED -11
 
+#define LOG_HTTP_DEBUG 2048
+
 typedef struct 
 {
 	struct htable ht;
@@ -151,6 +153,7 @@ struct cfg_st {
 	unsigned dpd;
 	unsigned foreground;
 	unsigned tls_debug;
+	unsigned http_debug;
 	unsigned debug;
 	unsigned max_clients;
 	unsigned max_same_clients;

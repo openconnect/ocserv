@@ -693,7 +693,7 @@ unsigned block_size;
 			break;
 		case GNUTLS_CIPHER_AES_128_GCM:
 		case GNUTLS_CIPHER_AES_256_GCM:
-			overhead += 4; /* explicit nonce */
+			overhead += 8; /* explicit nonce */
 			overhead += block_size; /* tag size */
 			break;
 		default:

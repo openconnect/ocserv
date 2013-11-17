@@ -177,6 +177,12 @@ int url_cb(http_parser* parser, const char *at, size_t length)
 #define STR_HDR_ATYPE "X-CSTP-Address-Type"
 #define STR_HDR_HOST "X-CSTP-Hostname"
 
+
+#define CS_ESALSA20 "OC-DTLS1_2-ESALSA20-SHA"
+#define CS_SALSA20 "OC-DTLS1_2-SALSA20-SHA"
+#define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
+#define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
+
 static void value_check(struct worker_st *ws, struct http_req_st *req)
 {
 unsigned length;
@@ -218,30 +224,30 @@ char * str;
 			str = (char*)req->value.data;
 			while ((token = strtok(str, ":")) != NULL) {
 #if GNUTLS_VERSION_NUMBER >= 0x030207
-				if (strcmp(token, "OC-DTLS1_2-ESALSA20-SHA") == 0) {
-				        req->selected_ciphersuite = "OC-DTLS1_2-ESALSA20-SHA";
+				if (strcmp(token, CS_ESALSA20) == 0) {
+				        req->selected_ciphersuite = CS_ESALSA20;
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+ESTREAM-SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
 				        req->gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_SHA1;
 				        req->gnutls_version = GNUTLS_DTLS1_2;
 				        break;
-				} else if (strcmp(token, "OC-DTLS1_2-SALSA20-SHA") == 0) {
+				} else if (strcmp(token, CS_SALSA20) == 0) {
+				        req->selected_ciphersuite = CS_SALSA20;
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-				        req->selected_ciphersuite = "OC-DTLS1_2-SALSA20-SHA";
 				        req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
 				        req->gnutls_mac = GNUTLS_MAC_SHA1;
 				        req->gnutls_version = GNUTLS_DTLS1_2;
 				        break;
                                 } else
-	                        if (strcmp(token, "OC-DTLS1_2-AES128-GCM") == 0) {
-				        req->selected_ciphersuite = "OC-AES128-GCM";
+	                        if (strcmp(token, CS_AES128_GCM) == 0) {
+				        req->selected_ciphersuite = CS_AES128_GCM;
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL";
 				        req->gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM;
 				        req->gnutls_mac = GNUTLS_MAC_AEAD;
 				        req->gnutls_version = GNUTLS_DTLS1_2;
 				        break;
-	                        } else if (strcmp(token, "OC-DTLS1_2-AES256-GCM") == 0) {
-				        req->selected_ciphersuite = "OC-AES256-GCM";
+	                        } else if (strcmp(token, CS_AES256_GCM) == 0) {
+				        req->selected_ciphersuite = CS_AES256_GCM;
 				        req->gnutls_ciphersuite = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL";
 				        req->gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM;
 				        req->gnutls_mac = GNUTLS_MAC_AEAD;

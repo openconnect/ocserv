@@ -1,5 +1,8 @@
 Short term items:
 
+* Think for ways for ocserv to co-exist on the same system with
+  an HTTPS server (while sharing the same port).
+
 * IPv6 support is probably broken or non-optimal. See how it can be
   improved.
 

@@ -19,6 +19,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 SERV="${SERV:-../src/ocserv}"
+PORT=4447
 
 . `dirname $0`/common.sh
 
@@ -28,7 +29,7 @@ launch_server -d -f -c test-iroute.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( openconnect -q localhost:4443 --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( openconnect -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok

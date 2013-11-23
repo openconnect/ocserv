@@ -1,8 +1,11 @@
-* Version 0.2.2 (unreleased)
+* Version 0.2.2 (released 2013-11-23)
 
-- http-parser library is used if present instead of the bundled.
+- The system http-parser library is used if present instead of the bundled.
+- The system libopts library is used if autogen is present.
 - Added --http-debug option to ocserv.
 - Added support for AES-GCM under DTLS 1.2 (requires GnuTLS 3.2.7).
+- More precise MTU calculation (needed in AES-GCM ciphersuites)
+- Do not use an MTU larger than the one initially proposed to openconnect.
 
 
 * Version 0.2.1 (released 2013-11-06)

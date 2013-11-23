@@ -1,6 +1,6 @@
 AutoGen Definitions options;
 prog-name     = ocserv;
-prog-title    = "OpenConnect server";
+prog-title    = "OpenConnect VPN server";
 prog-desc     = "OpenConnect VPN server.";
 disable-save;
 no-xlate = opt;

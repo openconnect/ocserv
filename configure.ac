@@ -25,7 +25,7 @@ if test x"$AUTOGEN" = "x/bin/true"; then
 ***
 *** autogen not found. Will not link against libopts.
 *** ]])
-NEED_LIBOPTS_DIR=true
+enable_local_libopts=yes
 fi
 
 AC_CHECK_SIZEOF([unsigned long])
@@ -147,7 +147,7 @@ AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
 
 LIBOPTS_CHECK([libopts])
-if [ test "$NEED_LIBOPTS_DIR" = "true" ];then
+if test "$NEED_LIBOPTS_DIR" == "true";then
 	dnl create libopts-generated files
 	for i in ${srcdir}/src/*-args.c.bak ${srcdir}/src/*-args.h.bak; do
 		nam=`echo $i|sed 's/.bak//g'`
@@ -156,10 +156,11 @@ if [ test "$NEED_LIBOPTS_DIR" = "true" ];then
 		fi
 	done
 	AC_SUBST([AUTOGEN], [/bin/true])
-	with_local_libopts=yes
+	enable_local_libopts=yes
 else
-	with_local_libopts=no
+	enable_local_libopts=no
 fi
+AM_CONDITIONAL(NEED_LIBOPTS, test "$enable_local_libopts" = "yes")
 
 AC_CONFIG_FILES([
 	Makefile
@@ -183,7 +184,7 @@ Summary of build options:
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
   local PCL library:    ${with_local_pcl}
-  local libopts:        ${with_local_libopts}
+  local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}
 
 Experimental options:

@@ -14,7 +14,10 @@ To build from a distributed release use:
 
 $ ./configure && make
 
-When cross compiling it may be useful to add the --with-local-libopts
+At the minimum this requires GnuTLS headers and libraries installed.  It
+will also link against libpam and libwrap, if present.
+
+When cross compiling it may be useful to add the --enable-local-libopts
 option to configure.
 
 
@@ -22,6 +25,9 @@ To build from the git repository use:
 
 $ autoreconf -fvi
 $ ./configure && make
+
+In addition to the prerequisites listed above, building from git requires
+the following packages: autoconf, automake, autogen, git2cl, lzip, and xz.
 
 
 === Installation instructions ===

@@ -18,6 +18,8 @@ Short term items:
 
 * Give each worker a limited number of accesses to the security module.
 
+* If only a single instance of a client is allowed, then (depending on
+  a configurable option) allow dropping previous instances on a reconnect.
 
 Long term items:
 

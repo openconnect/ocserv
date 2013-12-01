@@ -955,6 +955,7 @@ bandwidth_st b_rx;
 		"X-CSTP-Keep: true\r\n"
 		"X-CSTP-TCP-Keepalive: true\r\n"
 		"X-CSTP-Tunnel-All-DNS: false\r\n"
+		"X-CSTP-License: accept\r\n"
 		);
 	SEND_ERR(ret);
 

@@ -16,6 +16,8 @@ Short term items:
 * Change into hashtables the lists that are used during a client
   connection.
 
+* Give each worker a limited number of accesses to the security module.
+
 
 Long term items:
 

@@ -1,3 +1,9 @@
+* Version 0.2.3 (unreleased)
+
+- Added X-CSTP-License header to client reply for mobile client
+  compatibility. Patch by Kevin Cernekee.
+
+
 * Version 0.2.2 (released 2013-11-23)
 
 - The system http-parser library is used if present instead of the bundled.

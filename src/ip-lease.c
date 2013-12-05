@@ -151,12 +151,13 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
         	((struct sockaddr_in*)&network)->sin_family = AF_INET;
         	((struct sockaddr_in*)&network)->sin_port = 0;
 
-       		memcpy(&tmp, &network, sizeof(tmp));
+        	memcpy(&tmp, &network, sizeof(tmp));
        		((struct sockaddr_in*)&tmp)->sin_family = AF_INET;
        		((struct sockaddr_in*)&tmp)->sin_port = 0;
 
-       		((struct sockaddr_in*)&rnd)->sin_family = AF_INET;
-       		((struct sockaddr_in*)&rnd)->sin_port = 0;
+		memset(&rnd, 0, sizeof(rnd));
+		((struct sockaddr_in*)&rnd)->sin_family = AF_INET;
+		((struct sockaddr_in*)&rnd)->sin_port = 0;
 
 		do {
 			if (max_loops == 0) {

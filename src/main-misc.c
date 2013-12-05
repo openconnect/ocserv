@@ -282,6 +282,8 @@ int ret;
 	return 0;
 }
 
+/* k: whether to kill the process
+ */
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 {
 	if (k)

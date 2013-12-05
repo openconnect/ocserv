@@ -352,13 +352,17 @@ int get_ip_leases(main_server_st* s, struct proc_st* proc)
 {
 int ret;
 
-	ret = get_ipv4_lease(s, proc);
-	if (ret < 0)
-		return ret;
-		
-	ret = get_ipv6_lease(s, proc);
-	if (ret < 0)
-		return ret;
+	if (proc->ipv4 == NULL) {
+		ret = get_ipv4_lease(s, proc);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (proc->ipv6 == NULL) {
+		ret = get_ipv6_lease(s, proc);
+		if (ret < 0)
+			return ret;
+	}
 	
 	if (proc->ipv4) {
 		if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {

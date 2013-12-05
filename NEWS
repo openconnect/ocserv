@@ -2,6 +2,8 @@
 
 - Added X-CSTP-License header to client reply for mobile client
   compatibility. Patch by Kevin Cernekee.
+- When a new connection presents a cookie of an existing session
+  the previous session is disconnected.
 
 
 * Version 0.2.2 (released 2013-11-23)

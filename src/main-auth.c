@@ -33,6 +33,7 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
+#include <script-list.h>
 #include "ipc.h"
 #include "str.h"
 
@@ -444,18 +445,35 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
 	return module->auth_pass(proc->auth_ctx, req->pass, req->pass_size);
 }
 
+/* Checks for multiple users. 
+ * 
+ * It returns a negative error code if more than the maximum allowed
+ * users are found.
+ * 
+ * In addition this function will also check whether the cookie
+ * used had been re-used before, and then disconnect the old session
+ * (cookies are unique). 
+ */
 int check_multiple_users(main_server_st *s, struct proc_st* proc)
 {
-struct proc_st *ctmp;
+struct proc_st *ctmp, *cpos;
 unsigned int entries = 1; /* that one */
 
 	if (s->config->max_same_clients == 0)
 		return 0; /* ok */
 
-	list_for_each(&s->clist.head, ctmp, list) {
-
+	list_for_each_safe(&s->clist.head, ctmp, cpos, list) {
 		if (ctmp != proc) {
-			if (strcmp(proc->username, ctmp->username) == 0) {
+			if (memcmp(proc->cookie, ctmp->cookie, sizeof(proc->cookie)) == 0) {
+				mslog(s, ctmp, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", ctmp->username);
+
+				/* steal its leases */
+				proc->ipv4 = ctmp->ipv4;
+				proc->ipv6 = ctmp->ipv6;
+				ctmp->ipv4 = ctmp->ipv6 = NULL;
+
+				kill(ctmp->pid, SIGTERM);
+			} else if (strcmp(proc->username, ctmp->username) == 0) {
 				entries++;
 			}
 		}

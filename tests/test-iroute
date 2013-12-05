@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2013 Nikos Mavrogiannopoulos
 #
@@ -41,7 +41,7 @@ if [ ! -f test-iroute.tmp ];then
 fi
 
 CONTENTS=`cat ./test-iroute.tmp`
-if [ "$CONTENTS" != "192.168.1.0/24 vpns0" -a "$CONTENTS" != "192.168.1.0/24 tun0" ];then
+if [[ "$CONTENTS" =~ "192.168.1.0/24 [vpns|tun]$" ]];then
 	fail $PID "Temporary file contents are not correct"
 fi
 

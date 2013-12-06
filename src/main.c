@@ -296,7 +296,7 @@ static void cleanup_children(main_server_st *s)
 {
 int status, estatus, ret;
 pid_t pid;
-struct script_wait_st *stmp, *spos;
+struct script_wait_st *stmp = NULL, *spos;
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		estatus = WEXITSTATUS(status);
@@ -420,10 +420,10 @@ static void drop_privileges(main_server_st* s)
  */
 void clear_lists(main_server_st *s)
 {
-	struct listener_st *ltmp, *lpos;
-	struct proc_st *ctmp, *cpos;
-	struct script_wait_st *script_tmp, *script_pos;
-	struct banned_st *btmp, *bpos;
+	struct listener_st *ltmp = NULL, *lpos;
+	struct proc_st *ctmp = NULL, *cpos;
+	struct script_wait_st *script_tmp = NULL, *script_pos;
+	struct banned_st *btmp = NULL, *bpos;
 
 	list_for_each_safe(&s->llist.head, ltmp, lpos, list) {
 		close(ltmp->fd);
@@ -459,7 +459,7 @@ void clear_lists(main_server_st *s)
 
 static void kill_children(main_server_st* s)
 {
-	struct proc_st *ctmp;
+	struct proc_st *ctmp = NULL;
 
 	/* kill the security module server */
 	kill(s->sec_mod_pid, SIGTERM);
@@ -493,7 +493,7 @@ static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
 {
 int ret, e;
 struct sockaddr_storage cli_addr;
-struct proc_st *ctmp;
+struct proc_st *ctmp = NULL;
 socklen_t cli_addr_size;
 uint8_t buffer[1024];
 uint8_t  *session_id;
@@ -629,8 +629,8 @@ static int check_tcp_wrapper(int fd)
 int main(int argc, char** argv)
 {
 	int fd, pid, e;
-	struct listener_st *ltmp;
-	struct proc_st *ctmp, *cpos;
+	struct listener_st *ltmp = NULL;
+	struct proc_st *ctmp = NULL, *cpos;
 	fd_set rd;
 	int val, n = 0, ret, flags;
 	struct timeval tv;

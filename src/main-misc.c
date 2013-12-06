@@ -605,7 +605,7 @@ struct banned_st *btmp, *bpos;
 void expire_banned(main_server_st* s)
 {
 time_t now = time(0);
-struct banned_st *btmp, *bpos;
+struct banned_st *btmp = NULL, *bpos;
 
 	if (s->config->min_reauth_time == 0)
 		return;

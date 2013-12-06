@@ -456,7 +456,7 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
  */
 int check_multiple_users(main_server_st *s, struct proc_st* proc)
 {
-struct proc_st *ctmp, *cpos;
+struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
 
 	if (s->config->max_same_clients == 0)

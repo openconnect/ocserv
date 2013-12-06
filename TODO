@@ -11,7 +11,8 @@ Short term items:
   data can be transfered. Need more ideas on how that can be done.
 
 * When a user (IP) gets into the BAN list multiple times, disable it for
-  longer time.
+  longer time (or should we drop this functionality altogether and rely
+  on PAM handling that?)
 
 * Change into hashtables the lists that are used during a client
   connection.

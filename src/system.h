@@ -21,10 +21,22 @@
 #ifndef DIE_H
 # define DIE_H
 
+# include <config.h>
 # include <signal.h>
+
+#ifdef HAVE_SIGHANDLER_T
+# define SIGHANDLER_T sighandler_t
+#elif HAVE_SIG_T
+# define SIGHANDLER_T sig_t
+#elif HAVE___SIGHANDLER_T
+# define SIGHANDLER_T __sighandler_t
+#else
+typedef void (*sighandler_t)(int);
+# define SIGHANDLER_T sighandler_t
+#endif
 
 void kill_on_parent_kill(int sig);
 
-sighandler_t ocsignal(int signum, sighandler_t handler);
+SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler);
 
 #endif

@@ -28,6 +28,10 @@ if test x"$AUTOGEN" = "x/bin/true"; then
 enable_local_libopts=yes
 fi
 
+AC_CHECK_TYPES([sighandler_t, sig_t, __sighandler_t],,,
+[#include <sys/types.h>
+#include <signal.h> ])
+
 AC_CHECK_SIZEOF([unsigned long])
 AC_C_BIGENDIAN
 

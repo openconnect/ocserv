@@ -30,7 +30,7 @@ void kill_on_parent_kill(int sig)
 #endif
 }
 
-sighandler_t ocsignal(int signum, sighandler_t handler)
+SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 {
 	struct sigaction new_action, old_action;
 	

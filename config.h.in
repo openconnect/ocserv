@@ -718,6 +718,9 @@
 /* Define to 1 if you have the `sigaltstack' function. */
 #undef HAVE_SIGALTSTACK
 
+/* Define to 1 if the system has the type `sighandler_t'. */
+#undef HAVE_SIGHANDLER_T
+
 /* Define to 1 if 'sig_atomic_t' is a signed integer type. */
 #undef HAVE_SIGNED_SIG_ATOMIC_T
 
@@ -726,6 +729,9 @@
 
 /* Define to 1 if 'wint_t' is a signed integer type. */
 #undef HAVE_SIGNED_WINT_T
+
+/* Define to 1 if the system has the type `sig_t'. */
+#undef HAVE_SIG_T
 
 /* Define to 1 if the system has the type `size_t'. */
 #undef HAVE_SIZE_T
@@ -914,6 +920,9 @@
 
 /* Define to 1 if you have the `__fsetlocking' function. */
 #undef HAVE___FSETLOCKING
+
+/* Define to 1 if the system has the type `__sighandler_t'. */
+#undef HAVE___SIGHANDLER_T
 
 /* Define to 1 if lseek does not detect pipes. */
 #undef LSEEK_PIPE_BROKEN

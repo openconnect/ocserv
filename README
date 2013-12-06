@@ -29,6 +29,10 @@ $ ./configure && make
 In addition to the prerequisites listed above, building from git requires
 the following packages: autoconf, automake, autogen, git2cl, lzip, and xz.
 
+Note that the system's autogen version must match the included libopts
+version on the development system, if the included libopts library is to
+be used.
+
 
 === Installation instructions ===
 

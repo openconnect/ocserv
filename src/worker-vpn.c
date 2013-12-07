@@ -866,7 +866,7 @@ bandwidth_st b_rx;
         }
 
 	ws->udp_state = UP_DISABLED;
-	if (req->master_secret_set != 0) {
+	if (ws->config->udp_port != 0 && req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
 	} else {

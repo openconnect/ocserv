@@ -452,9 +452,6 @@ static void check_cfg( struct cfg_st *config)
 	if (config->dpd == 0)
 		config->keepalive = 60;
 
-	if (config->udp_port == 0)
-		config->udp_port = config->port;
-	
 	if (config->priorities == NULL)
 		config->priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT";
 }

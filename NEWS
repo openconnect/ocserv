@@ -4,6 +4,8 @@
   compatibility. Patch by Kevin Cernekee.
 - When a new connection presents a cookie of an existing session
   the previous session is disconnected (and its IP is hijacked).
+- If udp-port is unset or set to zero then the server will not listen
+  for UDP sessions.
 
 
 * Version 0.2.2 (released 2013-11-23)

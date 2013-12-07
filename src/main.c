@@ -209,29 +209,31 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 		exit(1);
 	}
 
-	snprintf(portname, sizeof(portname), "%d", config->udp_port);
+	if (config->udp_port) {
+		snprintf(portname, sizeof(portname), "%d", config->udp_port);
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = AI_PASSIVE
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_socktype = SOCK_DGRAM;
+		hints.ai_flags = AI_PASSIVE
 #ifdef AI_ADDRCONFIG
-	    | AI_ADDRCONFIG
+		    | AI_ADDRCONFIG
 #endif
-	    ;
+		    ;
 
-	ret = getaddrinfo(node, portname, &hints, &res);
-	if (ret != 0) {
-		fprintf(stderr, "getaddrinfo() failed: %s\n",
-			gai_strerror(ret));
-		return -1;
-	}
+		ret = getaddrinfo(node, portname, &hints, &res);
+		if (ret != 0) {
+			fprintf(stderr, "getaddrinfo() failed: %s\n",
+				gai_strerror(ret));
+			return -1;
+		}
 
-	ret = _listen_ports(config, res, list);
-	if (ret < 0) {
-		return -1;
-	}
+		ret = _listen_ports(config, res, list);
+		if (ret < 0) {
+			return -1;
+		}
 	
-	freeaddrinfo(res);
+		freeaddrinfo(res);
+	}
 
 	return 0;
 }

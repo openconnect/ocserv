@@ -453,7 +453,8 @@ doc-section = {
   ds-type = 'COMPATIBILITY';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-The server has been tested to be compatible with the openconnect VPN client. 
+The server has been tested to be compatible with the openconnect VPN client. However,
+it is also known to be compatible with certain CISCO AnyConnect clients.
 To enable compatibility with CISCO's AnyConnect the client's policy must
 set in a way that disables the downloader. An example policy file is shown below.
 @example

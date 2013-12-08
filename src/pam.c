@@ -284,10 +284,13 @@ int pret;
 		return -1;
 	}
 	
-	if (user != NULL)
+	if (user != NULL) {
 		snprintf(username, username_size, "%s", user);
 
-	return 0;
+		return 0;
+	}
+	
+	return -1;
 }
 
 static void pam_auth_deinit(void* ctx)

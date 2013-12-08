@@ -7,3 +7,6 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 
 TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie
+
+TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
+	top_builddir="$(top_builddir)"

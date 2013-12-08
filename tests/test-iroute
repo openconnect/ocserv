@@ -29,25 +29,25 @@ launch_server -d -f -c test-iroute.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( openconnect -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( openconnect -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Checking if routes have been applied... "
 
-if [ ! -f test-iroute.tmp ];then
+if [ ! -f ${srcdir}/test-iroute.tmp ];then
 	fail $PID "Temporary file cannot be found"
 fi
 
-CONTENTS=`cat ./test-iroute.tmp`
+CONTENTS=`cat ${srcdir}/test-iroute.tmp`
 if [[ "$CONTENTS" =~ "192.168.1.0/24 [vpns|tun]$" ]];then
 	fail $PID "Temporary file contents are not correct"
 fi
 
 echo ok
 
-rm -f test-iroute.tmp
+rm -f ${srcdir}/test-iroute.tmp
 
 kill $PID
 wait

@@ -2,14 +2,14 @@
 #
 # Copyright (C) 2013 Nikos Mavrogiannopoulos
 #
-# This file is part of GnuTLS.
+# This file is part of ocserv.
 #
-# GnuTLS is free software; you can redistribute it and/or modify it
+# ocserv is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation; either version 2 of the License, or (at
 # your option) any later version.
 #
-# GnuTLS is distributed in the hope that it will be useful, but
+# ocserv is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
@@ -19,13 +19,16 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 SERV="${SERV:-../src/ocserv}"
-PORT=4447
+srcdir=${srcdir:-.}
+PORT=4501
 
 . `dirname $0`/common.sh
 
 echo "Testing ocserv and user route application... "
 
-launch_server -d -f -c test-iroute.config & PID=$!
+rm -f ${srcdir}/test-iroute.tmp
+
+launch_server -d -f -c ${srcdir}/test-iroute.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
@@ -34,6 +37,7 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 
 echo ok
 
+sleep 1
 echo -n "Checking if routes have been applied... "
 
 if [ ! -f ${srcdir}/test-iroute.tmp ];then

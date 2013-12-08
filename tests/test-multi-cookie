@@ -2,14 +2,14 @@
 #
 # Copyright (C) 2013 Red Hat
 #
-# This file is part of GnuTLS.
+# This file is part of ocserv.
 #
-# GnuTLS is free software; you can redistribute it and/or modify it
+# ocserv is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation; either version 2 of the License, or (at
 # your option) any later version.
 #
-# GnuTLS is distributed in the hope that it will be useful, but
+# ocserv is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
@@ -19,13 +19,15 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 SERV="${SERV:-../src/ocserv}"
-PORT=4449
+srcdir=${srcdir:-.}
+PORT=4500
 
 . `dirname $0`/common.sh
 
 echo "Testing whether cookies are being re-used... "
+rm -f ${srcdir}/pid1 ${srcdir}/pid2
 
-launch_server -d -f -c test-multi-cookie.config & PID=$!
+launch_server -d -f -c ${srcdir}/test-multi-cookie.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
@@ -38,29 +40,33 @@ fi
 #echo "Cookie: $COOKIE"
 
 echo "Connecting with cookie... "
-echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true >/dev/null 2>&1 &
+echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1 &
 CPID=$!
 
 echo "Connecting again with same cookie... "
 #( echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 #	fail $PID "Could not connect to server"
-echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose >/dev/null 2>&1 &
+rm -f ${srcdir}/ok
+echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2 &
 C2PID=$!
 
 sleep 4
 
-kill $C2PID >/dev/null 2>&1
-if [ $? != 0 ];then
+if [ !-f ${srcdir}/pid2 ];then
 	fail $PID "It was not possible to establish session!"
 fi
 
 # checking whether server has already terminated $CPID
 sleep 1
-kill $CPID >/dev/null 2>&1
-if [ $? == 0 ];then
+
+if [ -f ${srcdir}/pid1 ];then
 	fail $PID "Initial connection was still running!"
 fi
 
+rm -f ${srcdir}/pid1 ${srcdir}/pid2
+
+kill $C2PID >/dev/null 2>&1
+kill $CPID >/dev/null 2>&1
 kill $PID
 wait
 

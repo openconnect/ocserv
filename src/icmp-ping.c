@@ -73,6 +73,9 @@
 #include <config.h>
 #include <main.h>
 #include <net/if.h>
+#ifdef HAVE_NETINIT_IN_SYSTM_H
+# include <netinet/in_systm.h>
+#endif
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 #include <sys/select.h>

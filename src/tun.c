@@ -33,9 +33,9 @@
 #include <cloexec.h>
 #include <ip-lease.h>
 
-#ifdef __linux__
+#if defined(HAVE_LINUX_IF_TUN_H)
 # include <linux/if_tun.h>
-#else
+#elif defined(HAVE_NET_IF_TUN_H)
 # include <net/if_tun.h>
 #endif
 

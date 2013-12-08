@@ -233,7 +233,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 	 */
 	ret = gnutls_certificate_verify_peers2(session, &status);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "error verifying client certificate");
+		oclog(ws, LOG_ERR, "error verifying client certificate: %s", gnutls_strerror(ret));
 		goto fail;
 	}
 

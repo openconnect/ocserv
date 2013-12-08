@@ -351,30 +351,31 @@ fail:
 int get_ip_leases(main_server_st* s, struct proc_st* proc)
 {
 int ret;
+char buf[128];
 
 	if (proc->ipv4 == NULL) {
 		ret = get_ipv4_lease(s, proc);
 		if (ret < 0)
 			return ret;
+
+		if (proc->ipv4) {
+			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {
+				mslog(s, proc, LOG_ERR, "Could not add IPv4 lease to hash table.\n");
+				return -1;
+			}
+		}
 	}
 
 	if (proc->ipv6 == NULL) {
 		ret = get_ipv6_lease(s, proc);
 		if (ret < 0)
 			return ret;
-	}
-	
-	if (proc->ipv4) {
-		if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {
-			mslog(s, proc, LOG_ERR, "Could not add IPv4 lease to hash table.\n");
-			return -1;
-		}
-	}
 
-	if (proc->ipv6) {
-		if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
-			mslog(s, proc, LOG_ERR, "Could not add IPv6 lease to hash table.\n");
-			return -1;
+		if (proc->ipv6) {
+			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
+				mslog(s, proc, LOG_ERR, "Could not add IPv6 lease to hash table.\n");
+				return -1;
+			}
 		}
 	}
 
@@ -382,6 +383,14 @@ int ret;
 		mslog(s, proc, LOG_ERR, "No IPv4 or IPv6 addresses are configured. Cannot obtain lease.\n");
 		return -1;
 	}
+	
+	if (proc->ipv4)
+		mslog(s, proc, LOG_INFO, "assigned IPv4: %s", 
+			human_addr((void*)&proc->ipv4->rip, proc->ipv4->rip_len, buf, sizeof(buf)));
+
+	if (proc->ipv6)
+		mslog(s, proc, LOG_INFO, "assigned IPv6: %s", 
+			human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));
 		
 	return 0;
 }

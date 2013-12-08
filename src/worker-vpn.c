@@ -1385,19 +1385,19 @@ static int parse_cstp_data(struct worker_st* ws,
 int pktlen, ret;
 
 	if (buf_size < 8) {
-		oclog(ws, LOG_INFO, "can't read CSTP header (only %d bytes are available)\n", (int)buf_size);
+		oclog(ws, LOG_INFO, "can't read CSTP header (only %d bytes are available)", (int)buf_size);
 		return -1;
 	}
 
 	if (buf[0] != 'S' || buf[1] != 'T' ||
 	    buf[2] != 'F' || buf[3] != 1 || buf[7]) {
-		oclog(ws, LOG_INFO, "can't recognise CSTP header\n");
+		oclog(ws, LOG_INFO, "can't recognise CSTP header");
 		return -1;
 	}
 
 	pktlen = (buf[4] << 8) + buf[5];
 	if (buf_size != 8 + pktlen) {
-		oclog(ws, LOG_INFO, "unexpected CSTP length\n");
+		oclog(ws, LOG_INFO, "unexpected CSTP length");
 		return -1;
 	}
 
@@ -1415,7 +1415,7 @@ static int parse_dtls_data(struct worker_st* ws,
 int ret;
 
 	if (buf_size < 1) {
-		oclog(ws, LOG_INFO, "can't read DTLS header (only %d bytes are available)\n", (int)buf_size);
+		oclog(ws, LOG_INFO, "can't read DTLS header (only %d bytes are available)", (int)buf_size);
 		return -1;
 	}
 

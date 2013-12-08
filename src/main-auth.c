@@ -47,7 +47,7 @@
 #include <common.h>
 #include <pam.h>
 
-static const struct auth_mod_st *module;
+static const struct auth_mod_st *module = NULL;
 
 void main_auth_init(main_server_st *s)
 {

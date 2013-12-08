@@ -270,6 +270,26 @@ struct pam_ctx_st * pctx = ctx;
 	return 0;
 }
 
+static int pam_auth_user(void* ctx, char *username, int username_size)
+{
+const char* user = NULL;
+struct pam_ctx_st * pctx = ctx;
+int pret;
+
+	username[0] = 0;
+
+	pret = pam_get_item(pctx->ph, PAM_USER, (const void **)&user);
+	if (pret != PAM_SUCCESS) {
+		/*syslog(LOG_AUTH, "Error in pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret));*/
+		return -1;
+	}
+	
+	if (user != NULL)
+		snprintf(username, username_size, "%s", user);
+
+	return 0;
+}
+
 static void pam_auth_deinit(void* ctx)
 {
 struct pam_ctx_st * pctx = ctx;
@@ -288,7 +308,8 @@ const struct auth_mod_st pam_auth_funcs = {
   .auth_deinit = pam_auth_deinit,
   .auth_msg = pam_auth_msg,
   .auth_pass = pam_auth_pass,
-  .auth_group = pam_auth_group
+  .auth_group = pam_auth_group,
+  .auth_user = pam_auth_user
 };
 
 #endif

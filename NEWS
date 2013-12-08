@@ -6,6 +6,7 @@
   the previous session is disconnected (and its IP is hijacked).
 - If udp-port is unset or set to zero then the server will not listen
   for UDP sessions.
+- When using PAM allow it to update the username.
 
 
 * Version 0.2.2 (released 2013-11-23)

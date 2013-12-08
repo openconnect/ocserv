@@ -31,6 +31,7 @@ struct auth_mod_st {
 	int (*auth_msg)(void* ctx, char* msg, size_t msg_size);
 	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
 	int (*auth_group)(void* ctx, char *groupname, int groupname_size);
+	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
 	void (*auth_deinit)(void* ctx);
 };
 

@@ -410,7 +410,10 @@ const char* ip;
 			return -1;
 		proc->groupname[sizeof(proc->groupname)-1] = 0;
 
-		memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
+		/* a module is allowed to change the name of the user */
+		ret = module->auth_user(proc->auth_ctx, proc->username, sizeof(proc->username));
+		if (ret != 0)
+			memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
 		proc->username[sizeof(proc->username)-1] = 0;
 	}
 

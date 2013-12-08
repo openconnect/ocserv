@@ -125,6 +125,12 @@ struct plain_ctx_st* pctx = ctx;
 	return 0;
 }
 
+static int plain_auth_user(void* ctx, char *username, int username_size)
+{
+	/* do not update username */
+	return -1;
+}
+
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
 static int plain_auth_pass(void* ctx, const char* pass, unsigned pass_len)
@@ -156,5 +162,6 @@ const struct auth_mod_st plain_auth_funcs = {
   .auth_deinit = plain_auth_deinit,
   .auth_msg = plain_auth_msg,
   .auth_pass = plain_auth_pass,
+  .auth_user = plain_auth_user,
   .auth_group = plain_auth_group
 };

@@ -27,6 +27,16 @@
 
 #ifdef HAVE_PAM
 
+/* A simple PAM authenticator based on coroutines (to achieve
+ * asynchronous operation). It does not use pam_open_session()
+ * as it is unclear to me whether this can have any benefit in our
+ * use cases (and it can actually degrate the server if one sets
+ * limits with it).
+ *
+ * As it is now it only provides authentication via PAM, but
+ * no session management.
+ */
+
 #include <security/pam_appl.h>
 #include <sys/types.h>
 #include <pwd.h>

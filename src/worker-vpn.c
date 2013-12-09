@@ -851,14 +851,6 @@ bandwidth_st b_rx;
 		alarm(0);
 	http_req_deinit(ws);
 
-	/* set defaults */
-	if (ws->rx_per_sec == 0)
-		ws->rx_per_sec = ws->config->rx_per_sec;
-	if (ws->tx_per_sec == 0)
-		ws->tx_per_sec = ws->config->tx_per_sec;
-	if (ws->net_priority == 0)
-		ws->net_priority = ws->config->net_priority;
-
 	tls_cork(ws->session);
 	ret = tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
 	SEND_ERR(ret);
@@ -999,8 +991,8 @@ bandwidth_st b_rx;
 			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_SNDBUF) to %u, failed.", sndbuf);
 	}
 
-	if (ws->net_priority != 0) {
-		l = ws->net_priority - 1;
+	if (ws->config->net_priority != 0) {
+		l = ws->config->net_priority - 1;
 		ret = setsockopt( ws->conn_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
 		if (ret == -1)
 			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_PRIORITY) to %d, failed.", l);
@@ -1058,8 +1050,8 @@ bandwidth_st b_rx;
 				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_SNDBUF) to %u, failed.", sndbuf);
 		}
 
-		if (ws->net_priority != 0) {
-			l = ws->net_priority - 1;
+		if (ws->config->net_priority != 0) {
+			l = ws->config->net_priority - 1;
 			ret = setsockopt( ws->udp_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
 			if (ret == -1)
 				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_PRIORITY) to %d, failed.", l);
@@ -1102,8 +1094,8 @@ bandwidth_st b_rx;
 	gettime(&tnow);
 	ws->last_msg_tcp = ws->last_msg_udp = tnow.tv_sec;
 	
-	bandwidth_init(&b_rx, ws->rx_per_sec);
-	bandwidth_init(&b_tx, ws->tx_per_sec);
+	bandwidth_init(&b_rx, ws->config->rx_per_sec);
+	bandwidth_init(&b_tx, ws->config->tx_per_sec);
 
 	/* main loop  */
 	for(;;) {

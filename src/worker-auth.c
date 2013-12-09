@@ -291,6 +291,7 @@ int ret;
 unsigned i;
 str_st b;
 uint32_t t;
+char *st;
 
 	str_init(&b);
 	
@@ -299,34 +300,58 @@ uint32_t t;
 		goto cleanup;
 	
 	/* IPV4 DNS */
-	ret = str_read_str_prefix1(&b, &ws->ipv4_dns, NULL);
+	ret = str_read_str_prefix1(&b, &st, NULL);
 	if (ret < 0)
 		goto cleanup;
+	if (st != NULL) {
+		free(ws->config->network.ipv4_dns);
+		ws->config->network.ipv4_dns = st;
+	}
 
 	/* IPV6 DNS */
-	ret = str_read_str_prefix1(&b, &ws->ipv6_dns, NULL);
+	ret = str_read_str_prefix1(&b, &st, NULL);
 	if (ret < 0)
 		goto cleanup;
+	if (st != NULL) {
+		free(ws->config->network.ipv6_dns);
+		ws->config->network.ipv6_dns = st;
+	}
 
 	/* IPV4 NBNS */
-	ret = str_read_str_prefix1(&b, &ws->ipv4_nbns, NULL);
+	ret = str_read_str_prefix1(&b, &st, NULL);
 	if (ret < 0)
 		goto cleanup;
+	if (st != NULL) {
+		free(ws->config->network.ipv4_nbns);
+		ws->config->network.ipv4_nbns = st;
+	}
 
 	/* IPV6 NBNS */
-	ret = str_read_str_prefix1(&b, &ws->ipv6_nbns, NULL);
+	ret = str_read_str_prefix1(&b, &st, NULL);
 	if (ret < 0)
 		goto cleanup;
+	if (st != NULL) {
+		free(ws->config->network.ipv6_nbns);
+		ws->config->network.ipv6_nbns = st;
+	}
 
 	/* IPV4 netmask */
-	ret = str_read_str_prefix1(&b, &ws->ipv4_netmask, NULL);
+	ret = str_read_str_prefix1(&b, &st, NULL);
 	if (ret < 0)
 		goto cleanup;
+	if (st != NULL) {
+		free(ws->config->network.ipv4_netmask);
+		ws->config->network.ipv4_netmask = st;
+	}
 
 	/* IPV6 netmask */
-	ret = str_read_str_prefix1(&b, &ws->ipv6_netmask, NULL);
+	ret = str_read_str_prefix1(&b, &st, NULL);
 	if (ret < 0)
 		goto cleanup;
+	if (st != NULL) {
+		free(ws->config->network.ipv6_netmask);
+		ws->config->network.ipv6_netmask = st;
+	}
 
 	/* number of routes */
 	if (b.length < 1) {
@@ -338,20 +363,23 @@ uint32_t t;
 	ret = str_read_data(&b, &t, sizeof(t));
 	if (ret < 0)
 		goto cleanup;
-		
-	ws->rx_per_sec = t;
+	
+	if (t != 0)
+		ws->config->rx_per_sec = t;
 
 	ret = str_read_data(&b, &t, sizeof(t));
 	if (ret < 0)
 		goto cleanup;
 		
-	ws->tx_per_sec = t;
+	if (t != 0)
+		ws->config->tx_per_sec = t;
 
 	ret = str_read_data(&b, &t, sizeof(t));
 	if (ret < 0)
 		goto cleanup;
 		
-	ws->net_priority = t;
+	if (t != 0)
+		ws->config->net_priority = t;
 
 	ws->routes_size = b.data[0];
 	b.length--;

@@ -140,18 +140,8 @@ typedef struct worker_st {
 	int tun_fd;
 	
 	/* additional data - received per user or per group */
-	char *ipv4_dns;
-	char *ipv6_dns;
-	char *ipv4_nbns;
-	char *ipv6_nbns;
-	char *ipv4_netmask;
-	char *ipv6_netmask;
 	unsigned routes_size;
 	char* routes[MAX_ROUTES];
-	
-	size_t rx_per_sec;
-	size_t tx_per_sec;
-	unsigned net_priority;
 	
 	struct http_req_st req;
 } worker_st;

@@ -250,8 +250,10 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		}
 
 		ret = serialize_additional_config(s, proc);
-		if (ret < 0)
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR, "auth_reply: error serializing config");
 			return ret;
+		}
 	}
 
 	return 0;

@@ -460,6 +460,7 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
 			}
 			break;
 		default:
+			oclog(ws, LOG_ERR, "recv_auth_reply: unexpected command");
 			return ERR_AUTH_FAIL;
 	}
 	
@@ -521,8 +522,10 @@ struct cmd_auth_cookie_req_st areq;
 
 	memset(&areq, 0, sizeof(areq));
 
-	if (cookie_size != sizeof(areq.cookie))
+	if (cookie_size != sizeof(areq.cookie)) {
+		oclog(ws, LOG_INFO, "unexpected cookie size (%d, expected %d)", (int)cookie_size, (int)sizeof(areq.cookie));
 		return -1;
+	}
 
 	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE) && ws->config->force_cert_auth != 0) {
 		if (ws->cert_auth_ok == 0) {
@@ -532,8 +535,10 @@ struct cmd_auth_cookie_req_st areq;
 
 		ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user),
 					areq.cert_group, sizeof(areq.cert_group));
-		if (ret < 0)
+		if (ret < 0) {
+			oclog(ws, LOG_INFO, "cannot obtain certificate info");
 			return -1;
+		}
 
 		areq.tls_auth_ok = 1;
 	}
@@ -542,10 +547,18 @@ struct cmd_auth_cookie_req_st areq;
 
 	oclog(ws, LOG_DEBUG, "sending cookie authentication request");
 	ret = send_auth_cookie_req(ws->cmd_fd, &areq);
-	if (ret < 0)
+	if (ret < 0) {
+		oclog(ws, LOG_INFO, "error sending cookie authentication request");
 		return ret;
+	}
 
-	return recv_auth_reply(ws, NULL);
+	ret = recv_auth_reply(ws, NULL);
+	if (ret < 0) {
+		oclog(ws, LOG_INFO, "error receiving cookie authentication reply");
+		return ret;
+	}
+	
+	return 0;
 }
 
 int post_common_handler(worker_st *ws, unsigned http_ver)

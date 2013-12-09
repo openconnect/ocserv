@@ -86,7 +86,7 @@ static int send_value_length(main_server_st* s, struct proc_st* proc, const void
 }
 
 static
-int serialize_additional_data(main_server_st* s, struct proc_st* proc)
+int serialize_additional_config(main_server_st* s, struct proc_st* proc)
 {
 int ret;
 unsigned i;
@@ -145,6 +145,11 @@ str_st buffer;
 		goto cleanup;
 
 	t = proc->config.tx_per_sec;
+	ret = str_append_data(&buffer, &t, sizeof(t));
+	if (ret < 0)
+		goto cleanup;
+
+	t = proc->config.net_priority;
 	ret = str_append_data(&buffer, &t, sizeof(t));
 	if (ret < 0)
 		goto cleanup;
@@ -244,7 +249,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			mslog(s, proc, LOG_ERR, "auth_reply: write: %s", strerror(e));
 		}
 
-		ret = serialize_additional_data(s, proc);
+		ret = serialize_additional_config(s, proc);
 		if (ret < 0)
 			return ret;
 	}

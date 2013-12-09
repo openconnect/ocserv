@@ -38,7 +38,7 @@ ocserv-args.h: ocserv-args.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	ipc.h cookies.c worker-tun.c main-misc.c \
-	main-config.c ip-lease.c ip-lease.h \
+	group-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
 	worker-extras.c main-auth.h html.c html.h \

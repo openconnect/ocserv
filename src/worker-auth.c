@@ -285,7 +285,7 @@ uint16_t len;
 }
 
 static
-int deserialize_additional_data(worker_st* ws)
+int deserialize_additional_config(worker_st* ws)
 {
 int ret;
 unsigned i;
@@ -346,6 +346,12 @@ uint32_t t;
 		goto cleanup;
 		
 	ws->tx_per_sec = t;
+
+	ret = str_read_data(&b, &t, sizeof(t));
+	if (ret < 0)
+		goto cleanup;
+		
+	ws->net_priority = t;
 
 	ws->routes_size = b.data[0];
 	b.length--;
@@ -443,7 +449,7 @@ static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
 
 				/* Read any additional data */
 
-				ret = deserialize_additional_data(ws);
+				ret = deserialize_additional_config(ws);
 				if (ret < 0) {
 					oclog(ws, LOG_ERR, "recv_auth_reply: deserialize failed");
 					return ERR_AUTH_FAIL;

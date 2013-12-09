@@ -101,6 +101,8 @@ struct group_cfg_st {
 
 	size_t rx_per_sec;
 	size_t tx_per_sec;
+	
+	unsigned net_priority;
 };
 
 struct vpn_st {
@@ -165,6 +167,7 @@ struct cfg_st {
 	
 	size_t rx_per_sec;
 	size_t tx_per_sec;
+	unsigned net_priority;
 
 	unsigned output_buffer;
 	unsigned default_mtu;

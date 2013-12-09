@@ -151,6 +151,7 @@ typedef struct worker_st {
 	
 	size_t rx_per_sec;
 	size_t tx_per_sec;
+	unsigned net_priority;
 	
 	struct http_req_st req;
 } worker_st;

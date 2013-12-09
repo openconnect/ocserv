@@ -247,6 +247,10 @@ unsigned i;
 			proc->config.tx_per_sec = cfg.tx_per_sec;
 		}
 
+		if (proc->config.net_priority == 0) {
+			proc->config.net_priority = cfg.net_priority;
+		}
+
 		del_additional_config(&cfg);
 
 	} else

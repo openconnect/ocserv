@@ -791,6 +791,7 @@ unsigned tls_pending, dtls_pending = 0, i;
 time_t udp_recv_time = 0, now;
 struct timespec tnow;
 unsigned mtu_overhead = 0;
+int sndbuf;
 socklen_t sl;
 bandwidth_st b_tx;
 bandwidth_st b_rx;
@@ -849,6 +850,14 @@ bandwidth_st b_rx;
 	if (ws->config->auth_timeout)
 		alarm(0);
 	http_req_deinit(ws);
+
+	/* set defaults */
+	if (ws->rx_per_sec == 0)
+		ws->rx_per_sec = ws->config->rx_per_sec;
+	if (ws->tx_per_sec == 0)
+		ws->tx_per_sec = ws->config->tx_per_sec;
+	if (ws->net_priority == 0)
+		ws->net_priority = ws->config->net_priority;
 
 	tls_cork(ws->session);
 	ret = tls_puts(ws->session, "HTTP/1.1 200 CONNECTED\r\n");
@@ -914,7 +923,6 @@ bandwidth_st b_rx;
 			SEND_ERR(ret);
 		}
 	}
-
 
 	for (i=0;i<vinfo.routes_size;i++) {
 		if (req->no_ipv6 != 0 && strchr(vinfo.routes[i], ':') != 0)
@@ -983,8 +991,22 @@ bandwidth_st b_rx;
 		ws->conn_mtu = MIN(ws->conn_mtu, max-mtu_overhead);
 	}
 
+	/* set TCP socket options */
+	if (ws->config->output_buffer > 0) {
+		sndbuf = ws->conn_mtu * ws->config->output_buffer;
+		ret = setsockopt( ws->conn_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+		if (ret == -1)
+			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_SNDBUF) to %u, failed.", sndbuf);
+	}
+
+	if (ws->net_priority != 0) {
+		l = ws->net_priority - 1;
+		ret = setsockopt( ws->conn_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
+		if (ret == -1)
+			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_PRIORITY) to %d, failed.", l);
+	}
+
 	if (ws->udp_state != UP_DISABLED) {
-		int sndbuf;
 
 		p = (char*)ws->buffer;
 		for (i=0;i<sizeof(ws->session_id);i++) {
@@ -1032,6 +1054,15 @@ bandwidth_st b_rx;
 		if (ws->config->output_buffer > 0) {
 			sndbuf = ws->conn_mtu * ws->config->output_buffer;
 			setsockopt( ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+			if (ret == -1)
+				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_SNDBUF) to %u, failed.", sndbuf);
+		}
+
+		if (ws->net_priority != 0) {
+			l = ws->net_priority - 1;
+			ret = setsockopt( ws->udp_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
+			if (ret == -1)
+				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_PRIORITY) to %d, failed.", l);
 		}
 	} else
 		dtls_mtu = 0;
@@ -1071,11 +1102,6 @@ bandwidth_st b_rx;
 	gettime(&tnow);
 	ws->last_msg_tcp = ws->last_msg_udp = tnow.tv_sec;
 	
-	if (ws->rx_per_sec == 0)
-		ws->rx_per_sec = ws->config->rx_per_sec;
-	if (ws->tx_per_sec == 0)
-		ws->tx_per_sec = ws->config->tx_per_sec;
-
 	bandwidth_init(&b_rx, ws->rx_per_sec);
 	bandwidth_init(&b_tx, ws->tx_per_sec);
 

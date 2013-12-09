@@ -53,6 +53,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-netmask", .type = OPTION_STRING },
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC, },
 	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC, },
+	{ .name = "net-priority", .type = OPTION_NUMERIC, },
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) \
@@ -148,6 +149,11 @@ unsigned prefix = 0;
 	READ_RAW_NUMERIC("tx-data-per-sec", config->tx_per_sec);
 	config->rx_per_sec /= 1000; /* in kb */
 	config->tx_per_sec /= 1000; /* in kb */
+	
+	/* net-priority will contain the actual priority + 1,
+	 * to allow having zero as uninitialized. */
+	READ_RAW_NUMERIC("net-priority", config->net_priority);
+	config->net_priority++;
 
 	optionUnloadNested(pov);
 	

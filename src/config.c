@@ -79,6 +79,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "chroot-dir", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "mtu", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "net-priority", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -317,6 +318,7 @@ unsigned prefix = 0;
 	READ_STRING("chroot-dir", config->chroot_dir);
 
 	READ_NUMERIC("mtu", config->default_mtu);
+	READ_NUMERIC("net-priority", config->net_priority);
 	READ_NUMERIC("output-buffer", config->output_buffer);
 
 	READ_NUMERIC("rx-data-per-sec", config->rx_per_sec);

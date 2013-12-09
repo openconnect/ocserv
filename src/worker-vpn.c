@@ -991,12 +991,14 @@ bandwidth_st b_rx;
 			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_SNDBUF) to %u, failed.", sndbuf);
 	}
 
+#ifdef SO_PRIORITY
 	if (ws->config->net_priority != 0) {
 		l = ws->config->net_priority - 1;
 		ret = setsockopt( ws->conn_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
 		if (ret == -1)
 			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_PRIORITY) to %d, failed.", l);
 	}
+#endif
 
 	if (ws->udp_state != UP_DISABLED) {
 
@@ -1050,12 +1052,14 @@ bandwidth_st b_rx;
 				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_SNDBUF) to %u, failed.", sndbuf);
 		}
 
+#ifdef SO_PRIORITY
 		if (ws->config->net_priority != 0) {
 			l = ws->config->net_priority - 1;
 			ret = setsockopt( ws->udp_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
 			if (ret == -1)
 				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_PRIORITY) to %d, failed.", l);
 		}
+#endif
 	} else
 		dtls_mtu = 0;
 	

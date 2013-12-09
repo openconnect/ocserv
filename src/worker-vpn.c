@@ -774,6 +774,36 @@ int max, e, ret;
 	return 0;
 }
 
+#define TOSCLASS(x) (IPTOS_CLASS_CS##x)
+
+static void set_net_priority(worker_st *ws, int fd, int priority)
+{
+int t;
+int ret;
+#if defined(IP_TOS)
+	if (priority != 0 && IS_TOS(priority)) {
+		t = TOS_UNPACK(priority);
+		ret = setsockopt( fd, IPPROTO_IP, IP_TOS, &t, sizeof(t));
+		if (ret == -1)
+			oclog(ws, LOG_DEBUG, "setsockopt(IP_TOS) to %x, failed.", (unsigned)t);
+
+		return;
+	}
+#endif
+
+#ifdef SO_PRIORITY
+	if (priority != 0 && priority <= 7) {
+		t = ws->config->net_priority - 1;
+		ret = setsockopt( fd, SOL_SOCKET, SO_PRIORITY, &t, sizeof(t));
+		if (ret == -1)
+			oclog(ws, LOG_DEBUG, "setsockopt(SO_PRIORITY) to %d, failed.", t);
+		
+		return;
+	}
+#endif
+	return;
+}
+
 #define CSTP_DTLS_OVERHEAD 1
 #define CSTP_OVERHEAD 8
 
@@ -991,14 +1021,7 @@ bandwidth_st b_rx;
 			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_SNDBUF) to %u, failed.", sndbuf);
 	}
 
-#ifdef SO_PRIORITY
-	if (ws->config->net_priority != 0) {
-		l = ws->config->net_priority - 1;
-		ret = setsockopt( ws->conn_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
-		if (ret == -1)
-			oclog(ws, LOG_DEBUG, "setsockopt(TCP, SO_PRIORITY) to %d, failed.", l);
-	}
-#endif
+	set_net_priority(ws, ws->conn_fd, ws->config->net_priority);
 
 	if (ws->udp_state != UP_DISABLED) {
 
@@ -1052,14 +1075,7 @@ bandwidth_st b_rx;
 				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_SNDBUF) to %u, failed.", sndbuf);
 		}
 
-#ifdef SO_PRIORITY
-		if (ws->config->net_priority != 0) {
-			l = ws->config->net_priority - 1;
-			ret = setsockopt( ws->udp_fd, SOL_SOCKET, SO_PRIORITY, &l, sizeof(l));
-			if (ret == -1)
-				oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_PRIORITY) to %d, failed.", l);
-		}
-#endif
+		set_net_priority(ws, ws->udp_fd, ws->config->net_priority);
 	} else
 		dtls_mtu = 0;
 	

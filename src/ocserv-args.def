@@ -273,7 +273,9 @@ output-buffer = 10
 
 # Set the protocol-defined priority (SO_PRIORITY) for packets to
 # be sent. That is a number from 0 to 6 with 0 being the lowest
-# priority. This can be set per user/group or globally.
+# priority. Alternatively this can be used to set the IP Type-
+# Of-Service, by setting it to a hexadecimal number (e.g., 0x20).
+# This can be set per user/group or globally.
 #net-priority = 3
 
 # Routes to be forwarded to the client. If you need the

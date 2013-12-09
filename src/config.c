@@ -178,6 +178,18 @@ unsigned j;
 		exit(1); \
 	}
 
+#define READ_NUMERIC_HEX(name, s_name) \
+	val = get_option(name, &mand); \
+	if (val != NULL) { \
+		if (val->valType == OPARG_TYPE_NUMERIC) \
+			s_name = val->v.longVal; \
+		else if (val->valType == OPARG_TYPE_STRING) \
+			s_name = strtol(val->v.strVal, NULL, 16); \
+	} else if (mand != 0) { \
+		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
+	}
+
 
 
 static int handle_option(const tOptionValue* val)
@@ -318,7 +330,15 @@ unsigned prefix = 0;
 	READ_STRING("chroot-dir", config->chroot_dir);
 
 	READ_NUMERIC("mtu", config->default_mtu);
+
 	READ_NUMERIC("net-priority", config->net_priority);
+	if (config->net_priority == 0) {
+		READ_NUMERIC_HEX("net-priority", config->net_priority);
+		config->net_priority = TOS_PACK(config->net_priority);
+	} else {
+		config->net_priority++;
+	}
+
 	READ_NUMERIC("output-buffer", config->output_buffer);
 
 	READ_NUMERIC("rx-data-per-sec", config->rx_per_sec);

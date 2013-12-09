@@ -228,6 +228,11 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 #define SA_IN_P_GENERIC(addr, size) ((size==sizeof(struct sockaddr_in))?SA_IN_U8_P(addr):SA_IN6_U8_P(addr))
 #define SA_IN_SIZE(size) ((size==sizeof(struct sockaddr_in))?sizeof(struct in_addr):sizeof(struct in6_addr))
 
+/* macros */
+#define TOS_PACK(x) (x<<4)
+#define TOS_UNPACK(x) (x>>4)
+#define IS_TOS(x) ((x&0x0f)==0)
+
 /* Helper structures */
 enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
 

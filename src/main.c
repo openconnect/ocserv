@@ -402,8 +402,16 @@ static void drop_privileges(main_server_st* s)
 		       strerror(e));
 	}
 
-#if 0
-#define MAX_WORKER_MEM (4*1024*1024)
+	rl.rlim_cur = 0;
+	rl.rlim_max = 0;
+	ret = setrlimit(RLIMIT_FSIZE, &rl);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot enforce FSIZE limit: %s\n",
+		       strerror(e));
+	}
+
+#define MAX_WORKER_MEM (16*1024*1024)
 	if (s->config->debug == 0) {
 		rl.rlim_cur = MAX_WORKER_MEM;
 		rl.rlim_max = MAX_WORKER_MEM;
@@ -414,7 +422,6 @@ static void drop_privileges(main_server_st* s)
 			       strerror(e));
 		}
 	}
-#endif
 }
 
 /* clears the server llist and clist. To be used after fork().

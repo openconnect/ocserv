@@ -77,6 +77,7 @@
 # include <netinet/in_systm.h>
 #endif
 #include <netinet/ip_icmp.h>
+#include <netinet/ip.h>
 #include <netinet/icmp6.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -225,9 +226,13 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 			    (SA_IN_P(&from), SA_IN_P(addr2),
 			     SA_IN_SIZE(sizeof(*addr2))) == 0) {
 
+#ifdef HAVE_STRUCT_IPHDR_IHL
 				struct iphdr *iphdr =
 				    (struct iphdr *) packet1;
 				pkt = (struct icmp *) (packet1 + (iphdr->ihl << 2));	/* skip ip hdr */
+#else
+				pkt = (struct icmp *) (packet1 + ((packet[0] & 0x0f) << 2));	/* skip ip hdr */
+#endif
 				if (pkt->icmp_id == id1 || pkt->icmp_id == id2) {
 					if (pkt->icmp_type == ICMP_ECHOREPLY)
 						gotreply++;

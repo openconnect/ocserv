@@ -32,6 +32,10 @@ AC_CHECK_TYPES([sighandler_t, sig_t, __sighandler_t],,,
 [#include <sys/types.h>
 #include <signal.h> ])
 
+AC_CHECK_MEMBERS([struct iphdr.ihl], [],
+             [],
+             [[#include <netinet/ip.h>]])
+
 AC_CHECK_SIZEOF([unsigned long])
 AC_C_BIGENDIAN
 

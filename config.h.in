@@ -787,6 +787,9 @@
 /* Define to 1 if you have the `strsignal' function. */
 #undef HAVE_STRSIGNAL
 
+/* Define to 1 if `ihl' is a member of `struct iphdr'. */
+#undef HAVE_STRUCT_IPHDR_IHL
+
 /* Define to 1 if you have the `swapcontext' function. */
 #undef HAVE_SWAPCONTEXT
 

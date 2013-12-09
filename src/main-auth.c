@@ -305,7 +305,7 @@ static int check_user_group_status(main_server_st *s, struct proc_st* proc,
 		     int tls_auth_ok, const char* cert_user, const char* cert_group)
 {
 	if (s->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (tls_auth_ok == 0 && config->force_cert_auth != 0) {
+		if (tls_auth_ok == 0 && s->config->force_cert_auth != 0) {
 			mslog(s, proc, LOG_INFO, "user '%s' presented no certificate", proc->username);
 			return -1;
 		}

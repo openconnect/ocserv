@@ -163,6 +163,10 @@ gnutls_datum_t data, out;
 uint16_t length;
 struct iovec iov[2];
 int sd;
+#if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
+struct ucred cr;
+socklen_t cr_len;
+#endif
 
 	ocsignal(SIGHUP, SIG_IGN);
 	ocsignal(SIGINT, SIG_DFL);
@@ -257,11 +261,26 @@ int sd;
 		cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
 		if (cfd == -1) {
 		 	e = errno;
-		 	syslog(LOG_ERR, "error accepting sec-mod connection: %s", strerror(e));
+		 	syslog(LOG_ERR, "sec-mod error accepting connection: %s", strerror(e));
 		 	continue;
 		}
-		 
-		 /* read request */
+
+#if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
+		cr_len = sizeof(cr);
+		ret = getsockopt(cfd, SOL_SOCKET, SO_PEERCRED, &cr, &cr_len);
+		if (ret == -1) {
+		 	e = errno;
+		 	syslog(LOG_ERR, "sec-mod error obtaining peer credentials: %s", strerror(e));
+		 	goto cont;
+		}
+
+	 	syslog(LOG_ERR, "sec-mod received request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
+		if (cr.uid != config->uid || cr.gid != config->gid) {
+		 	syslog(LOG_ERR, "sec-mod received unauthorized request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
+		 	goto cont;
+		}
+#endif
+		/* read request */
 		ret = recv(cfd, buffer, buffer_size, 0);
 		if (ret == 0)
 			goto cont;

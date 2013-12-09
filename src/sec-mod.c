@@ -274,7 +274,7 @@ socklen_t cr_len;
 		 	goto cont;
 		}
 
-	 	syslog(LOG_ERR, "sec-mod received request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
+	 	syslog(LOG_DEBUG, "sec-mod received request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
 		if (cr.uid != config->uid || cr.gid != config->gid) {
 		 	syslog(LOG_ERR, "sec-mod received unauthorized request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
 		 	goto cont;

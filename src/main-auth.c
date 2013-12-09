@@ -310,20 +310,22 @@ static int check_user_group_status(main_server_st *s, struct proc_st* proc,
 			return -1;
 		}
 		
-		if (proc->username[0] == 0) {
-			memcpy(proc->username, cert_user, sizeof(proc->username));
-			memcpy(proc->groupname, cert_group, sizeof(proc->groupname));
-			proc->username[sizeof(proc->username)-1] = 0;
-			proc->groupname[sizeof(proc->groupname)-1] = 0;
-		} else {
-			if (strcmp(proc->username, cert_user) != 0) {
-				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, cert_user);
-				return -1;
-			}
+		if (tls_auth_ok != 0) {
+			if (proc->username[0] == 0) {
+				memcpy(proc->username, cert_user, sizeof(proc->username));
+				memcpy(proc->groupname, cert_group, sizeof(proc->groupname));
+				proc->username[sizeof(proc->username)-1] = 0;
+				proc->groupname[sizeof(proc->groupname)-1] = 0;
+			} else {
+				if (strcmp(proc->username, cert_user) != 0) {
+					mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, cert_user);
+					return -1;
+				}
 
-			if (s->config->cert_group_oid != NULL && strcmp(proc->groupname, cert_group) != 0) {
-				mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, cert_group, proc->groupname);
-				return -1;
+				if (s->config->cert_group_oid != NULL && strcmp(proc->groupname, cert_group) != 0) {
+					mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from group '%s' but he is member of '%s'", proc->username, cert_group, proc->groupname);
+					return -1;
+				}
 			}
 		}
 	}

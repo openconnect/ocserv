@@ -12,6 +12,7 @@
 - Added the net-priority configuration option.
 - Corrected sending of DPD in the main TLS channel. Report and initial
   fix by Kevin Cernekee.
+- Added support for cgroups in Linux.
 
 
 * Version 0.2.2 (released 2013-11-23)

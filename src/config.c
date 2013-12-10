@@ -79,7 +79,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "chroot-dir", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "mtu", .type = OPTION_NUMERIC, .mandatory = 0 },
-	{ .name = "net-priority", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "net-priority", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -178,18 +178,22 @@ unsigned j;
 		exit(1); \
 	}
 
-#define READ_NUMERIC_HEX(name, s_name) \
+#define READ_PRIO_TOS(name, s_name) \
 	val = get_option(name, &mand); \
 	if (val != NULL) { \
-		if (val->valType == OPARG_TYPE_NUMERIC) \
-			s_name = val->v.longVal; \
-		else if (val->valType == OPARG_TYPE_STRING) \
-			s_name = strtol(val->v.strVal, NULL, 16); \
+		if (val->valType == OPARG_TYPE_STRING) { \
+			if (strncmp(val->v.strVal, "0x", 2) == 0) { \
+				s_name = strtol(val->v.strVal, NULL, 16); \
+				s_name = TOS_PACK(s_name); \
+			} else { \
+				s_name = atoi(val->v.strVal); \
+				s_name++; \
+			} \
+		} \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}
-
 
 
 static int handle_option(const tOptionValue* val)
@@ -331,13 +335,7 @@ unsigned prefix = 0;
 
 	READ_NUMERIC("mtu", config->default_mtu);
 
-	READ_NUMERIC("net-priority", config->net_priority);
-	if (config->net_priority == 0) {
-		READ_NUMERIC_HEX("net-priority", config->net_priority);
-		config->net_priority = TOS_PACK(config->net_priority);
-	} else {
-		config->net_priority++;
-	}
+	READ_PRIO_TOS("net-priority", config->net_priority);
 
 	READ_NUMERIC("output-buffer", config->output_buffer);
 

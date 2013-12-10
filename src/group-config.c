@@ -53,7 +53,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-netmask", .type = OPTION_STRING },
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC, },
 	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC, },
-	{ .name = "net-priority", .type = OPTION_NUMERIC, },
+	{ .name = "net-priority", .type = OPTION_STRING, },
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) \
@@ -89,13 +89,18 @@ static struct cfg_options available_options[] = {
 			s_name = atoi(val->v.strVal); \
 	}
 
-#define READ_RAW_NUMERIC_HEX(name, s_name) \
+#define READ_RAW_PRIO_TOS(name, s_name) \
 	val = optionGetValue(pov, name); \
 	if (val != NULL) { \
-		if (val->valType == OPARG_TYPE_NUMERIC) \
-			s_name = val->v.longVal; \
-		else if (val->valType == OPARG_TYPE_STRING) \
-			s_name = strtol(val->v.strVal, NULL, 16); \
+		if (val->valType == OPARG_TYPE_STRING) { \
+			if (strncmp(val->v.strVal, "0x", 2) == 0) { \
+				s_name = strtol(val->v.strVal, NULL, 16); \
+				s_name = TOS_PACK(s_name); \
+			} else { \
+				s_name = atoi(val->v.strVal); \
+				s_name++; \
+			} \
+		} \
 	}
 
 
@@ -161,13 +166,7 @@ unsigned prefix = 0;
 	
 	/* net-priority will contain the actual priority + 1,
 	 * to allow having zero as uninitialized. */
-	READ_RAW_NUMERIC("net-priority", config->net_priority);
-	if (config->net_priority == 0) {
-		READ_RAW_NUMERIC_HEX("net-priority", config->net_priority);
-		config->net_priority = TOS_PACK(config->net_priority);
-	} else {
-		config->net_priority++;
-	}
+	READ_RAW_PRIO_TOS("net-priority", config->net_priority);
 
 	optionUnloadNested(pov);
 	

@@ -745,8 +745,16 @@ int max, e, ret;
 	}
 	if (now-ws->last_msg_tcp > DPD_TRIES*ws->config->dpd) {
 		oclog(ws, LOG_ERR, "have not received TCP DPD for long (%d secs)", (int)(now-ws->last_msg_tcp));
-		ws->buffer[0] = AC_PKT_DPD_OUT;
-		tls_send(ws->session, ws->buffer, 1);
+		ws->buffer[0] = 'S';
+		ws->buffer[1] = 'T';
+		ws->buffer[2] = 'F';
+		ws->buffer[3] = 1;
+		ws->buffer[4] = 0;
+		ws->buffer[5] = 0;
+		ws->buffer[6] = AC_PKT_DPD_OUT;
+		ws->buffer[7] = 0;
+
+		tls_send(ws->session, ws->buffer, 8);
 
 		if (now-ws->last_msg_tcp > DPD_MAX_TRIES*ws->config->dpd) {
 			oclog(ws, LOG_ERR, "have not received TCP DPD for very long; tearing down connection");

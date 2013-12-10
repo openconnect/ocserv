@@ -129,7 +129,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET, c_network, SA_IN_P(&network));
 
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "Error reading IP: %s\n", c_network);
+			mslog(s, NULL, LOG_ERR, "error reading IP: %s\n", c_network);
 			return -1;
 		}
 
@@ -137,7 +137,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET, c_netmask, SA_IN_P(&mask));
 	
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "Error reading mask: %s\n", c_netmask);
+			mslog(s, NULL, LOG_ERR, "error reading mask: %s\n", c_netmask);
 			return -1;
 		}
 
@@ -161,7 +161,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
 		do {
 			if (max_loops == 0) {
-				mslog(s, proc, LOG_ERR, "Could not figure out a valid IPv4 IP.\n");
+				mslog(s, proc, LOG_ERR, "could not figure out a valid IPv4 IP.\n");
 				ret = ERR_NO_IP;
 				goto fail;
 			}
@@ -212,8 +212,8 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
         		if (memcmp(SA_IN_U8_P(&network), SA_IN_U8_P(&tmp), sizeof(struct in_addr)) != 0) {
         			continue;
         		}
-        		
-			mslog(s, proc, LOG_DEBUG, "Selected IP: %s\n", 
+
+			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s\n", proc->username,
 			      human_addr((void*)&proc->ipv4->lip, proc->ipv4->lip_len, buf, sizeof(buf)));
         		
         		if (icmp_ping4(s, (void*)&proc->ipv4->lip, (void*)&proc->ipv4->rip) == 0)
@@ -238,6 +238,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	unsigned i, max_loops = MAX_IP_TRIES;
 	int ret;
 	const char* c_network, *c_netmask;
+	char buf[64];
 
 	if (proc->config.ipv6_network && proc->config.ipv6_netmask) {
 		c_network = proc->config.ipv6_network;
@@ -252,7 +253,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET6, c_network, SA_IN6_P(&network));
 
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "Error reading IP: %s\n", c_network);
+			mslog(s, NULL, LOG_ERR, "error reading IP: %s\n", c_network);
 			return -1;
 		}
 
@@ -260,7 +261,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET6, c_netmask, SA_IN6_P(&mask));
 	
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "Error reading mask: %s\n", c_netmask);
+			mslog(s, NULL, LOG_ERR, "error reading mask: %s\n", c_netmask);
 			return -1;
 		}
 		
@@ -283,7 +284,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 		do {
 			if (max_loops == 0) {
-				mslog(s, NULL, LOG_ERR, "Could not figure out a valid IPv6 IP.\n");
+				mslog(s, NULL, LOG_ERR, "could not figure out a valid IPv6 IP.\n");
 				ret = ERR_NO_IP;
 				goto fail;
 			}
@@ -333,7 +334,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	        	if (memcmp(SA_IN6_U8_P(&network), SA_IN6_U8_P(&tmp), sizeof(struct in6_addr)) != 0) {
 		        	continue;
 	        	}
-	        	
+
+			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s\n", proc->username,
+			      human_addr((void*)&proc->ipv6->lip, proc->ipv6->lip_len, buf, sizeof(buf)));
+
 	        	if (icmp_ping6(s, (void*)&proc->ipv6->lip, (void*)&proc->ipv6->rip) == 0)
 	        		break;
                 } while(1);
@@ -360,7 +364,7 @@ char buf[128];
 
 		if (proc->ipv4) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {
-				mslog(s, proc, LOG_ERR, "Could not add IPv4 lease to hash table.\n");
+				mslog(s, proc, LOG_ERR, "could not add IPv4 lease to hash table.\n");
 				return -1;
 			}
 		}
@@ -373,23 +377,23 @@ char buf[128];
 
 		if (proc->ipv6) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
-				mslog(s, proc, LOG_ERR, "Could not add IPv6 lease to hash table.\n");
+				mslog(s, proc, LOG_ERR, "could not add IPv6 lease to hash table.\n");
 				return -1;
 			}
 		}
 	}
 
 	if (proc->ipv4 == 0 && proc->ipv6 == 0) {
-		mslog(s, proc, LOG_ERR, "No IPv4 or IPv6 addresses are configured. Cannot obtain lease.\n");
+		mslog(s, proc, LOG_ERR, "no IPv4 or IPv6 addresses are configured. Cannot obtain lease.\n");
 		return -1;
 	}
 	
 	if (proc->ipv4)
-		mslog(s, proc, LOG_INFO, "assigned IPv4: %s", 
+		mslog(s, proc, LOG_INFO, "assigned IPv4 to '%s': %s", proc->username,
 			human_addr((void*)&proc->ipv4->rip, proc->ipv4->rip_len, buf, sizeof(buf)));
 
 	if (proc->ipv6)
-		mslog(s, proc, LOG_INFO, "assigned IPv6: %s", 
+		mslog(s, proc, LOG_INFO, "assigned IPv6 to '%s': %s", proc->username,
 			human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));
 		
 	return 0;

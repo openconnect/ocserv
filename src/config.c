@@ -93,6 +93,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "run-as-user", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "run-as-group", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "device", .type = OPTION_STRING, .mandatory = 1 },
+	{ .name = "cgroup", .type = OPTION_STRING, .mandatory = 0 },
 
 	{ .name = "ipv4-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING, .mandatory = 0 },
@@ -371,6 +372,7 @@ unsigned prefix = 0;
 	}
 
 	READ_STRING("device", config->network.name);
+	READ_STRING("cgroup", config->cgroup);
 
 	READ_STRING("ipv4-network", config->network.ipv4);
 	READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
@@ -523,6 +525,7 @@ unsigned i;
 	DEL(config->xml_config_hash);
 	DEL(config->cert_hash);
 #endif
+	DEL(config->cgroup);
 	DEL(config->route_add_cmd);
 	DEL(config->route_del_cmd);
 	DEL(config->per_user_dir);

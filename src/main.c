@@ -822,6 +822,7 @@ int main(int argc, char** argv)
 
 					setproctitle(PACKAGE_NAME"-worker");
 					kill_on_parent_kill(SIGTERM);
+					
 
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];
@@ -853,6 +854,9 @@ fork_failed:
 					set_cloexec_flag (cmd_fd[0], 1);
 
 					list_add(&s.clist.head, &(ctmp->list));
+
+					put_into_cgroup(&s, s.config->cgroup, pid);
+
 					s.active_clients++;
 				}
 				close(cmd_fd[1]);

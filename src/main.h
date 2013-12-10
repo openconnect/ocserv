@@ -215,4 +215,6 @@ int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_s
 void del_additional_config(struct group_cfg_st* config);
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k);
 
+void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);
+
 #endif

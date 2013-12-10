@@ -158,7 +158,7 @@ fail:
 	return ret;
 }
 
-static int read_config_file(main_server_st* s, struct proc_st* proc, const char* file, const char* type)
+static int read_additional_config_file(main_server_st* s, struct proc_st* proc, const char* file, const char* type)
 {
 struct group_cfg_st cfg;
 int ret;
@@ -239,6 +239,11 @@ unsigned i;
 			cfg.ipv6_netmask = NULL;
 		}
 
+		if (proc->config.cgroup == NULL) {
+			proc->config.cgroup = cfg.cgroup;
+			cfg.cgroup = NULL;
+		}
+
 		if (proc->config.rx_per_sec == 0) {
 			proc->config.rx_per_sec = cfg.rx_per_sec;
 		}
@@ -270,7 +275,7 @@ int ret;
 	if (s->config->per_user_dir != NULL) {
 		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir, proc->username);
 
-		ret = read_config_file(s, proc, file, "user");
+		ret = read_additional_config_file(s, proc, file, "user");
 		if (ret < 0)
 			return ret;
 	}
@@ -278,9 +283,13 @@ int ret;
 	if (s->config->per_group_dir != NULL && proc->groupname[0] != 0) {
 		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir, proc->groupname);
 
-		ret = read_config_file(s, proc, file, "group");
+		ret = read_additional_config_file(s, proc, file, "group");
 		if (ret < 0)
 			return ret;
+	}
+	
+	if (proc->config.cgroup != NULL) {
+		put_into_cgroup(s, proc->config.cgroup, proc->pid);
 	}
 
 	return 0;
@@ -674,4 +683,52 @@ const char *p;
 		mslog(s, NULL, LOG_ERR, "error in fork(): %s", strerror(e));
 		exit(1);
 	}
+}
+
+/* Puts the provided PIN into the config's cgroup */
+void put_into_cgroup(main_server_st * s, const char* _cgroup, pid_t pid)
+{
+char* name, *p, *savep;
+char cgroup[128];
+char file[_POSIX_PATH_MAX];
+FILE* fd;
+
+	if (_cgroup == NULL)
+		return;
+
+#ifdef __linux__
+	 /* format: cpu,memory:cgroup-name */
+	 snprintf(cgroup, sizeof(cgroup), "%s", _cgroup);
+	 
+	 name = strchr(cgroup, ':');
+	 if (name == NULL) {
+		mslog(s, NULL, LOG_ERR, "error parsing cgroup name: %s", cgroup);
+		return;
+	 }
+	 name[0] = 0;
+	 name++;
+	 
+	 p = strtok_r(cgroup, ",", &savep);
+	 while (p != NULL) {
+		mslog(s, NULL, LOG_DEBUG, "putting process %u to cgroup '%s:%s'", (unsigned)pid, p, name);
+
+	 	snprintf(file, sizeof(file), "/sys/fs/cgroup/%s/%s/tasks", p, name);
+	
+	 	fd = fopen(file, "w");
+	 	if (fd == NULL) {
+			mslog(s, NULL, LOG_ERR, "cannot open: %s", file);
+			return;
+		}
+
+		if (fprintf(fd, "%u", (unsigned)pid) <= 0) {
+			mslog(s, NULL, LOG_ERR, "could not write to: %s", file);
+		}
+		fclose(fd);
+		p = strtok_r(NULL, ",", &savep);
+	 }
+	 
+	 return;
+#else
+	mslog(s, NULL, LOG_DEBUG, "Ignoring cgroup option as it is not supported on this system");
+#endif
 }

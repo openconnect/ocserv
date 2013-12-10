@@ -98,6 +98,8 @@ struct group_cfg_st {
 	char *ipv6_network;
 	char *ipv4_netmask;
 	char *ipv6_netmask;
+	
+	char *cgroup;
 
 	size_t rx_per_sec;
 	size_t tx_per_sec;
@@ -177,6 +179,8 @@ struct cfg_st {
 
 	char *connect_script;
 	char *disconnect_script;
+	
+	char *cgroup;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	char *xml_config_file;

@@ -224,6 +224,17 @@ socket-file = /var/run/ocserv-socket
 run-as-user = nobody
 run-as-group = nogroup
 
+# Set the protocol-defined priority (SO_PRIORITY) for packets to
+# be sent. That is a number from 0 to 6 with 0 being the lowest
+# priority. Alternatively this can be used to set the IP Type-
+# Of-Service, by setting it to a hexadecimal number (e.g., 0x20).
+# This can be set per user/group or globally.
+#net-priority = 3
+
+# Set the VPN worker process into a specific cgroup. This is Linux
+# specific and can be set per user/group or globally.
+cgroup = "cpuset,cpu:test"
+
 #
 # Network settings
 #
@@ -270,13 +281,6 @@ ping-leases = false
 # the output buffer. The default is low to improve latency.
 # Setting it higher will improve throughput.
 output-buffer = 10
-
-# Set the protocol-defined priority (SO_PRIORITY) for packets to
-# be sent. That is a number from 0 to 6 with 0 being the lowest
-# priority. Alternatively this can be used to set the IP Type-
-# Of-Service, by setting it to a hexadecimal number (e.g., 0x20).
-# This can be set per user/group or globally.
-#net-priority = 3
 
 # Routes to be forwarded to the client. If you need the
 # client to forward routes to the server, you may use the connect 

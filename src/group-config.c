@@ -54,6 +54,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC, },
 	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC, },
 	{ .name = "net-priority", .type = OPTION_STRING, },
+	{ .name = "cgroup", .type = OPTION_STRING, },
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) \
@@ -147,6 +148,7 @@ unsigned prefix = 0;
 	READ_RAW_MULTI_LINE("route", config->routes, config->routes_size);
 	READ_RAW_MULTI_LINE("iroute", config->iroutes, config->iroutes_size);
 
+	READ_RAW_STRING("cgroup", config->cgroup);
 	READ_RAW_STRING("ipv4-dns", config->ipv4_dns);
 	READ_RAW_STRING("ipv6-dns", config->ipv6_dns);
 	READ_RAW_STRING("ipv4-nbns", config->ipv4_nbns);
@@ -187,6 +189,7 @@ unsigned i;
 	}
 	free(config->iroutes);
 
+	free(config->cgroup);
 	free(config->ipv4_dns);
 	free(config->ipv6_dns);
 	free(config->ipv4_nbns);

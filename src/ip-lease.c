@@ -129,7 +129,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET, c_network, SA_IN_P(&network));
 
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "error reading IP: %s\n", c_network);
+			mslog(s, NULL, LOG_ERR, "error reading IP: %s", c_network);
 			return -1;
 		}
 
@@ -137,7 +137,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET, c_netmask, SA_IN_P(&mask));
 	
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "error reading mask: %s\n", c_netmask);
+			mslog(s, NULL, LOG_ERR, "error reading mask: %s", c_netmask);
 			return -1;
 		}
 
@@ -161,7 +161,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
 		do {
 			if (max_loops == 0) {
-				mslog(s, proc, LOG_ERR, "could not figure out a valid IPv4 IP.\n");
+				mslog(s, proc, LOG_ERR, "could not figure out a valid IPv4 IP.");
 				ret = ERR_NO_IP;
 				goto fail;
 			}
@@ -187,8 +187,12 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
         			SA_IN_U8_P(&rnd)[i] |= (SA_IN_U8_P(&network)[i]);
 
  			/* check if it exists in the hash table */
-			if (ip_lease_exists(s, &rnd, sizeof(struct sockaddr_in)) != 0)
+			if (ip_lease_exists(s, &rnd, sizeof(struct sockaddr_in)) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s to '%s'; it is in use.", 
+				      human_addr((void*)&rnd, sizeof(struct sockaddr_in), buf, sizeof(buf)), 
+				      proc->username);
 				continue;
+			}
 
 			memcpy(&proc->ipv4->lip, &rnd, sizeof(struct sockaddr_in));
         		proc->ipv4->lip_len = sizeof(struct sockaddr_in);
@@ -198,8 +202,12 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
         		bignum_add(SA_IN_U8_P(&tmp), sizeof(struct in_addr), 1);
 
  			/* check if it exists in the hash table */
-			if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in)) != 0)
+			if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in)) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s to '%s'; it is in use.", 
+				      human_addr((void*)&tmp, sizeof(struct sockaddr_in), buf, sizeof(buf)), 
+				      proc->username);
 				continue;
+			}
 
         		memcpy(&proc->ipv4->rip, &tmp, sizeof(struct sockaddr_in));
         		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
@@ -213,7 +221,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
         			continue;
         		}
 
-			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s\n", proc->username,
+			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s", proc->username,
 			      human_addr((void*)&proc->ipv4->lip, proc->ipv4->lip_len, buf, sizeof(buf)));
         		
         		if (icmp_ping4(s, (void*)&proc->ipv4->lip, (void*)&proc->ipv4->rip) == 0)
@@ -253,7 +261,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET6, c_network, SA_IN6_P(&network));
 
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "error reading IP: %s\n", c_network);
+			mslog(s, NULL, LOG_ERR, "error reading IP: %s", c_network);
 			return -1;
 		}
 
@@ -261,7 +269,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		    inet_pton(AF_INET6, c_netmask, SA_IN6_P(&mask));
 	
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "error reading mask: %s\n", c_netmask);
+			mslog(s, NULL, LOG_ERR, "error reading mask: %s", c_netmask);
 			return -1;
 		}
 		
@@ -284,7 +292,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 		do {
 			if (max_loops == 0) {
-				mslog(s, NULL, LOG_ERR, "could not figure out a valid IPv6 IP.\n");
+				mslog(s, NULL, LOG_ERR, "could not figure out a valid IPv6 IP.");
 				ret = ERR_NO_IP;
 				goto fail;
 			}
@@ -308,8 +316,12 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
         			SA_IN6_U8_P(&rnd)[i] |= (SA_IN6_U8_P(&network)[i]);
         			
  			/* check if it exists in the hash table */
-			if (ip_lease_exists(s, &rnd, sizeof(struct sockaddr_in6)) != 0)
+			if (ip_lease_exists(s, &rnd, sizeof(struct sockaddr_in6)) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot assign local IP %s to '%s'; it is in use.", 
+				      human_addr((void*)&rnd, sizeof(struct sockaddr_in6), buf, sizeof(buf)), 
+				      proc->username);
 				continue;
+			}
 
         		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
         		memcpy(&proc->ipv6->lip, &rnd, proc->ipv6->lip_len);
@@ -320,8 +332,12 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	        	bignum_add(SA_IN6_U8_P(&tmp), sizeof(struct in6_addr), 1);
 
  			/* check if it exists in the hash table */
-			if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in6)) != 0)
+			if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in6)) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s to '%s'; it is in use.", 
+				      human_addr((void*)&tmp, sizeof(struct sockaddr_in6), buf, sizeof(buf)), 
+				      proc->username);
 				continue;
+			}
 
         		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
         		memcpy(&proc->ipv6->rip, &tmp, proc->ipv6->rip_len);
@@ -335,7 +351,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		        	continue;
 	        	}
 
-			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s\n", proc->username,
+			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s", proc->username,
 			      human_addr((void*)&proc->ipv6->lip, proc->ipv6->lip_len, buf, sizeof(buf)));
 
 	        	if (icmp_ping6(s, (void*)&proc->ipv6->lip, (void*)&proc->ipv6->rip) == 0)
@@ -364,7 +380,7 @@ char buf[128];
 
 		if (proc->ipv4) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {
-				mslog(s, proc, LOG_ERR, "could not add IPv4 lease to hash table.\n");
+				mslog(s, proc, LOG_ERR, "could not add IPv4 lease to hash table.");
 				return -1;
 			}
 		}
@@ -377,14 +393,14 @@ char buf[128];
 
 		if (proc->ipv6) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
-				mslog(s, proc, LOG_ERR, "could not add IPv6 lease to hash table.\n");
+				mslog(s, proc, LOG_ERR, "could not add IPv6 lease to hash table.");
 				return -1;
 			}
 		}
 	}
 
 	if (proc->ipv4 == 0 && proc->ipv6 == 0) {
-		mslog(s, proc, LOG_ERR, "no IPv4 or IPv6 addresses are configured. Cannot obtain lease.\n");
+		mslog(s, proc, LOG_ERR, "no IPv4 or IPv6 addresses are configured. Cannot obtain lease.");
 		return -1;
 	}
 	

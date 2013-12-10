@@ -10,6 +10,8 @@
 - When always-require-cert is set to false do not require a certificate
   for cookie authentication.
 - Added the net-priority configuration option.
+- Corrected sending of DPD in the main TLS channel. Report and initial
+  fix by Kevin Cernekee.
 
 
 * Version 0.2.2 (released 2013-11-23)

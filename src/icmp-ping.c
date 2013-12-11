@@ -309,7 +309,7 @@ int icmp_ping6(main_server_st * s,
 	pkt->icmp6_type = ICMP6_ECHO_REQUEST;
 	pkt->icmp6_id = id2;
 
-#if define(SOL_RAW) && defined(IPV6_CHECKSUM)
+#if defined(SOL_RAW) && defined(IPV6_CHECKSUM)
 	sockopt = offsetof(struct icmp6_hdr, icmp6_cksum);
 	setsockopt(pingsock, SOL_RAW, IPV6_CHECKSUM,
 		   &sockopt, sizeof(sockopt));

@@ -19,8 +19,8 @@ Short term items:
 
 * Give each worker a limited number of accesses to the security module.
 
-* If only a single instance of a client is allowed, then (depending on
-  a configurable option) allow dropping previous instances on a reconnect.
+* Use nanopb, or another C-based protocolbuffer implementation to pack
+  messages exchanged from worker to main.
 
 Long term items:
 

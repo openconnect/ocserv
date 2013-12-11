@@ -239,7 +239,7 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 				    (struct iphdr *) packet1;
 				pkt = (struct icmp *) (packet1 + (iphdr->ihl << 2));	/* skip ip hdr */
 #else
-				pkt = (struct icmp *) (packet1 + ((packet[0] & 0x0f) << 2));	/* skip ip hdr */
+				pkt = (struct icmp *) (packet1 + ((packet1[0] & 0x0f) << 2));	/* skip ip hdr */
 #endif
 				if (pkt->icmp_id == id1 || pkt->icmp_id == id2) {
 					if (pkt->icmp_type == ICMP_ECHOREPLY)

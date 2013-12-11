@@ -143,7 +143,6 @@ struct stored_cookie_st sc;
 	sc.expiration = time(0) + s->config->cookie_validity;
 	
 	memcpy(sc.ipv4_seed, SA_IN_U8_P(&proc->ipv4->lip), 4);
-	memcpy(sc.ipv6_seed, SA_IN6_U8_P(&proc->ipv6->lip), 16);
 
 	ret = encrypt_cookie(s, &sc, proc->cookie, sizeof(proc->cookie));
 	if (ret < 0)

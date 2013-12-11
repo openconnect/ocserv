@@ -31,7 +31,6 @@ struct __attribute__ ((__packed__)) stored_cookie_st {
 	uint32_t expiration;
 	
 	uint8_t ipv4_seed[4];
-	uint8_t ipv6_seed[16];
 };
 
 #define COOKIE_IV_SIZE 12 /* AES-GCM */

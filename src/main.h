@@ -101,7 +101,6 @@ struct proc_st {
 	 */
 	uint8_t seeds_are_set; /* non zero if the following two elements are set */
 	uint8_t ipv4_seed[4];
-	uint8_t ipv6_seed[16];
 
 	void * auth_ctx; /* the context of authentication */
 	unsigned auth_status; /* PS_AUTH_ */

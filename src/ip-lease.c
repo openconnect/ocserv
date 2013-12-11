@@ -302,11 +302,11 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			}
 			
 			if (max_loops == MAX_IP_TRIES) {
+				memset(SA_IN6_U8_P(&rnd), 0, sizeof(struct in6_addr));
 				if (proc->seeds_are_set) {
-					memcpy(SA_IN6_U8_P(&rnd), proc->ipv6_seed, 16);
+					memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, proc->ipv4_seed, 4);
 				} else {
 					uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
-					memset(SA_IN6_U8_P(&rnd), 0, sizeof(struct in6_addr));
 					memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, &t, 4);
 				}
 			} else

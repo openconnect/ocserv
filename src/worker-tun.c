@@ -32,11 +32,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include <net/if.h>
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <arpa/inet.h>
 #include <signal.h>
 #include <time.h>

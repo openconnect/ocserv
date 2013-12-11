@@ -353,39 +353,18 @@ time_t now = time(0);
 	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
 	memcpy(proc->session_id, sc.session_id, sizeof(proc->session_id));
 	proc->session_id_size = sizeof(proc->session_id);
-
+	
 	proc->username[sizeof(proc->username)-1] = 0;
 	proc->groupname[sizeof(proc->groupname)-1] = 0;
 	proc->hostname[sizeof(proc->hostname)-1] = 0;
+	
+	memcpy(proc->ipv4_seed, sc.ipv4_seed, sizeof(proc->ipv4_seed));
+	memcpy(proc->ipv6_seed, sc.ipv6_seed, sizeof(proc->ipv6_seed));
+	proc->seeds_are_set = 1;
 
 	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user, req->cert_group);
 	if (ret < 0)
 		return ret;
-
-	return 0;
-}
-
-int generate_cookie(main_server_st *s, struct proc_st* proc)
-{
-int ret;
-struct stored_cookie_st sc;
-
-        ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
-        if (ret < 0)
-                return -1;
-        
-        proc->session_id_size = sizeof(proc->session_id);
-
-	memcpy(sc.username, proc->username, sizeof(proc->username));
-	memcpy(sc.groupname, proc->groupname, sizeof(proc->groupname));
-	memcpy(sc.hostname, proc->hostname, sizeof(proc->hostname));
-	memcpy(sc.session_id, proc->session_id, sizeof(proc->session_id));
-	
-	sc.expiration = time(0) + s->config->cookie_validity;
-	
-	ret = encrypt_cookie(s, &sc, proc->cookie, sizeof(proc->cookie));
-	if (ret < 0)
-		return -1;
 
 	return 0;
 }

@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 
+#include <ip-lease.h>
 #include <main.h>
 #include <cookies.h>
 
@@ -122,3 +123,32 @@ cleanup:
 	return ret;
 
 }
+
+int generate_cookie(main_server_st *s, struct proc_st* proc)
+{
+int ret;
+struct stored_cookie_st sc;
+
+        ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
+        if (ret < 0)
+                return -1;
+        
+        proc->session_id_size = sizeof(proc->session_id);
+
+	memcpy(sc.username, proc->username, sizeof(proc->username));
+	memcpy(sc.groupname, proc->groupname, sizeof(proc->groupname));
+	memcpy(sc.hostname, proc->hostname, sizeof(proc->hostname));
+	memcpy(sc.session_id, proc->session_id, sizeof(proc->session_id));
+	
+	sc.expiration = time(0) + s->config->cookie_validity;
+	
+	memcpy(sc.ipv4_seed, SA_IN_U8_P(&proc->ipv4->lip), 4);
+	memcpy(sc.ipv6_seed, SA_IN6_U8_P(&proc->ipv6->lip), 16);
+
+	ret = encrypt_cookie(s, &sc, proc->cookie, sizeof(proc->cookie));
+	if (ret < 0)
+		return -1;
+
+	return 0;
+}
+

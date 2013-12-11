@@ -96,6 +96,13 @@ struct proc_st {
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 
+	/* if the session is initiated by a cookie the following two are set
+	 * and are considered when generating an IP address.
+	 */
+	uint8_t seeds_are_set; /* non zero if the following two elements are set */
+	uint8_t ipv4_seed[4];
+	uint8_t ipv6_seed[16];
+
 	void * auth_ctx; /* the context of authentication */
 	unsigned auth_status; /* PS_AUTH_ */
 	unsigned auth_reqs; /* the number of requests received */

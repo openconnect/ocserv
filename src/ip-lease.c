@@ -166,8 +166,12 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 				goto fail;
 			}
 			if (max_loops == MAX_IP_TRIES) {
-				uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
-				memcpy(SA_IN_U8_P(&rnd), &t, 4);
+				if (proc->seeds_are_set) {
+					memcpy(SA_IN_U8_P(&rnd), proc->ipv4_seed, 4);
+				} else {
+					uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
+					memcpy(SA_IN_U8_P(&rnd), &t, 4);
+				}
 			} else
 				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in_addr));
 			max_loops--;
@@ -298,9 +302,13 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			}
 			
 			if (max_loops == MAX_IP_TRIES) {
-				uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
-				memset(SA_IN6_U8_P(&rnd), 0, sizeof(struct in6_addr));
-				memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, &t, 4);
+				if (proc->seeds_are_set) {
+					memcpy(SA_IN6_U8_P(&rnd), proc->ipv6_seed, 16);
+				} else {
+					uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
+					memset(SA_IN6_U8_P(&rnd), 0, sizeof(struct in6_addr));
+					memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, &t, 4);
+				}
 			} else
 				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
 			max_loops--;

@@ -29,6 +29,9 @@ struct __attribute__ ((__packed__)) stored_cookie_st {
 	char hostname[MAX_HOSTNAME_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	uint32_t expiration;
+	
+	uint8_t ipv4_seed[4];
+	uint8_t ipv6_seed[16];
 };
 
 #define COOKIE_IV_SIZE 12 /* AES-GCM */

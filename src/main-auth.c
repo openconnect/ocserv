@@ -472,9 +472,6 @@ int check_multiple_users(main_server_st *s, struct proc_st* proc)
 struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
 
-	if (s->config->max_same_clients == 0)
-		return 0; /* ok */
-
 	list_for_each_safe(&s->clist.head, ctmp, cpos, list) {
 		if (ctmp != proc) {
 			if (memcmp(proc->cookie, ctmp->cookie, sizeof(proc->cookie)) == 0) {
@@ -492,7 +489,7 @@ unsigned int entries = 1; /* that one */
 		}
 	}
 	
-	if (entries > s->config->max_same_clients)
+	if (s->config->max_same_clients && entries > s->config->max_same_clients)
 		return -1;
 	
 	return 0;

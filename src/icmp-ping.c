@@ -76,8 +76,8 @@
 #ifdef HAVE_NETINET_IN_SYSTM_H
 # include <netinet/in_systm.h>
 #endif
-#include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 #include <sys/select.h>
 #include <sys/time.h>

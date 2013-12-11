@@ -87,6 +87,14 @@
 #include <gnutls/crypto.h>
 #include <icmp-ping.h>
 
+#ifndef ICMP_DEST_UNREACH
+# ifdef ICMP_UNREACH
+#  define ICMP_DEST_UNREACH ICMP_UNREACH
+# else
+#  define ICMP_DEST_UNREACH 3
+# endif
+#endif
+
 /* I see RENUMBERED constants in bits/in.h - !!?
  * What a fuck is going on with libc? Is it a glibc joke? */
 #ifdef IPV6_2292HOPLIMIT

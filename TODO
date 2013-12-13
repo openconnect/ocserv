@@ -25,9 +25,9 @@ Short term items:
 Long term items:
 
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
-  versions than the current openssl string approach (using PSK ciphersuites
-  seem to be like a solution, but then we could not use the session ID to
-  forward the UDP connection to the proper worker).
+  is negotiated properly. Using PSK ciphersuites seem to be like a solution, 
+  but that would require a new protocol to be implemented in openconnect
+  client and ocserv. 
 
 * Certificate authentication to the main process. Possibly that is just
   wishful thinking. To verify the TLS client certificate verify signature 

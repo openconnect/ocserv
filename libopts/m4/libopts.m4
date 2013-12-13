@@ -584,8 +584,9 @@ AC_DEFUN([LIBOPTS_CHECK], [
   LIBOPTS_CHECK_COMMON(AO_Libopts_Dir)
   AM_COND_IF([NEED_LIBOPTS], [
     INVOKE_LIBOPTS_MACROS
-    AC_CONFIG_FILES(AO_Libopts_Dir/Makefile)
   ])dnl
+
+  AC_CONFIG_FILES(AO_Libopts_Dir/Makefile)
   m4_popdef([AO_Libopts_Dir])dnl
 # end of AC_DEFUN of LIBOPTS_CHECK
 ])

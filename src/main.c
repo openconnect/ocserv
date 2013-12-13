@@ -402,6 +402,7 @@ static void drop_privileges(main_server_st* s)
 		       strerror(e));
 	}
 
+#if 0
 	rl.rlim_cur = 0;
 	rl.rlim_max = 0;
 	ret = setrlimit(RLIMIT_FSIZE, &rl);
@@ -422,6 +423,7 @@ static void drop_privileges(main_server_st* s)
 			       strerror(e));
 		}
 	}
+#endif
 }
 
 /* clears the server llist and clist. To be used after fork().

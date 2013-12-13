@@ -33,7 +33,7 @@ noinst_LIBRARIES = libcmd-ocserv.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv-args.c: $(srcdir)/ocserv-args.def
-	@AUTOGEN@ $<
+	$(AUTOGEN) $<
 ocserv-args.h: ocserv-args.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
@@ -71,5 +71,5 @@ ocpasswd_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
 
 ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
-	@AUTOGEN@ $<
+	$(AUTOGEN) $<
 ocpasswd-args.h: ocpasswd-args.c

@@ -3,6 +3,9 @@ SUBDIRS =
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS)
 
+BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
+	ocserv-args.c ocserv-args.h
+
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/
 HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
@@ -66,7 +69,6 @@ libcmd_ocpasswd_a_SOURCES = ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
 
 
 ocpasswd_SOURCES = ocpasswd.c
-
 ocpasswd_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
 

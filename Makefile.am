@@ -32,8 +32,9 @@ ChangeLog:
 dist-hook: ChangeLog
 	mv ChangeLog $(distdir)
 	touch ChangeLog
+	$(AUTOGEN) --version
 	cd $(distdir)/src/ && for i in *.def;do \
-		autogen $$i; \
+		$(AUTOGEN) $$i; \
 	done
 	cd $(distdir)/src/ && for i in *-args.c *-args.h;do \
 		mv $$i $$i.bak; \

@@ -1,4 +1,4 @@
-* Version 0.2.3 (unreleased)
+* Version 0.2.3 (released 2013-12-15)
 
 - Added X-CSTP-License header to client reply for mobile client
   compatibility. Patch by Kevin Cernekee.

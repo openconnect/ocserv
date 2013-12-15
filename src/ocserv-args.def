@@ -419,6 +419,8 @@ $ certtool --generate-self-signed --load-privkey ca-key.pem \
 @end example
 
 @subheading Generating the client certificates
+Note that it is recommended to leave detailed personal information out of the
+certificate as it is sent in clear during TLS authentication.
 @example
 $ certtool --generate-privkey --outfile user-key.pem
 $ cat << _EOF_ >user.tmpl

@@ -456,7 +456,10 @@ doc-section = {
   ds-type = 'IMPLEMENTATION NOTES';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-Note that while this server utilizes privilege separation and password
+The support for PAM is limited to authentication only. That is, PAM is
+used for authentication but not for session control.
+
+Note also, that while this server utilizes privilege separation and password
 authentication occurs on the main server, this does not apply for TLS client 
 certificate authentication. That is because the worker has no way to 
 prove to the main server that it performed the certificate verification.

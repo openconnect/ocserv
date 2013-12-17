@@ -419,6 +419,51 @@ $ certtool --generate-self-signed --load-privkey ca-key.pem \
 	--template ca.tmpl --outfile ca-cert.pem
 @end example
 
+@subheading Generating a local server certificate
+The following example generates the server key and certificate
+pair. The key generated is an RSA one, but different types
+can be used by specifying the 'ecdsa' or 'dsa' options to
+certtool.
+@example
+$ certtool --generate-privkey --outfile server-key.pem
+$ cat << _EOF_ >server.tmpl
+cn = "www.example.com"
+o = "MyCompany"
+serial = 2
+expiration_days = 9999
+signing_key
+encryption_key #only if the generated key is an RSA one
+tls_www_server
+_EOF_
+$ certtool --generate-certificate --load-privkey server-key.pem \
+	--load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem \
+	--template server.tmpl --outfile server-cert.pem
+
+@end example
+
+From this point the clients need server-cert.pem to be able to securely
+connect to the server.
+
+@subheading Generating an external CA-signed server certificate
+@example
+$ certtool --generate-privkey --outfile server-key.pem
+$ cat << _EOF_ >server.tmpl
+cn = "www.example.com"
+o = "MyCompany"
+serial = 2
+expiration_days = 9999
+signing_key
+encryption_key #only if the generated key is an RSA one
+tls_www_server
+_EOF_
+$ certtool --generate-request --load-privkey server-key.pem \
+	--template server.tmpl --outfile server-cert.csr
+
+@end example
+
+At this point you need to provide the server-cert.csr to your CA,
+and they will send you the server certificate.
+
 @subheading Generating the client certificates
 Note that it is recommended to leave detailed personal information out of the
 certificate as it is sent in clear during TLS authentication.

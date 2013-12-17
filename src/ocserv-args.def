@@ -441,7 +441,7 @@ $ certtool --generate-certificate --load-privkey server-key.pem \
 
 @end example
 
-From this point the clients need server-cert.pem to be able to securely
+From this point the clients need ca-cert.pem to be able to securely
 connect to the server.
 
 Note that it is a better practice to use two separate RSA keys, one

@@ -34,7 +34,6 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include <script-list.h>
-#include "ipc.h"
 #include "str.h"
 
 #include <vpn.h>
@@ -62,198 +61,77 @@ void main_auth_init(main_server_st *s)
 	}
 }
 
-static int send_value_length(main_server_st* s, struct proc_st* proc, const void* data, size_t _len)
-{
-	uint16_t len = _len;
-	int ret;
-
-	if (len > 0) {
-		ret = force_write(proc->fd, &len, 2);
-		if (ret < 0)
-			return ret;
-
-		ret = force_write(proc->fd, data, len);
-		if (ret < 0)
-			return ret;
-	} else {
-		len = 0;
-		ret = force_write(proc->fd, &len, 2);
-		if (ret < 0)
-			return ret;
-	}
-	
-	return 0;
-}
-
-static
-int serialize_additional_config(main_server_st* s, struct proc_st* proc)
-{
-int ret;
-unsigned i;
-uint8_t len;
-uint32_t t;
-str_st buffer;
-
-	str_init(&buffer);
-
-	/* IPv4 DNS */
-	if (proc->config.ipv4_dns)
-		mslog(s, proc, LOG_DEBUG, "sending DNS '%s'", proc->config.ipv4_dns);
-
-	ret = str_append_str_prefix1(&buffer, proc->config.ipv4_dns);
-	if (ret < 0)
-		goto cleanup;
-
-	/* IPv6 DNS */
-	if (proc->config.ipv6_dns)
-		mslog(s, proc, LOG_DEBUG, "sending DNS '%s'", proc->config.ipv6_dns);
-	ret = str_append_str_prefix1(&buffer, proc->config.ipv6_dns);
-	if (ret < 0)
-		goto cleanup;
-
-	/* IPv4 NBNS */
-	if (proc->config.ipv4_nbns)
-		mslog(s, proc, LOG_DEBUG, "sending NBNS '%s'", proc->config.ipv4_nbns);
-	ret = str_append_str_prefix1(&buffer, proc->config.ipv4_nbns);
-	if (ret < 0)
-		goto cleanup;
-
-	/* IPv6 NBNS */
-	if (proc->config.ipv6_nbns)
-		mslog(s, proc, LOG_DEBUG, "sending NBNS '%s'", proc->config.ipv6_nbns);
-	ret = str_append_str_prefix1(&buffer, proc->config.ipv6_nbns);
-	if (ret < 0)
-		goto cleanup;
-
-	/* IPv4 netmask */
-	if (proc->config.ipv4_netmask)
-		mslog(s, proc, LOG_DEBUG, "sending netmask '%s'", proc->config.ipv4_netmask);
-	ret = str_append_str_prefix1(&buffer, proc->config.ipv4_netmask);
-	if (ret < 0)
-		goto cleanup;
-
-	/* IPv6 netmask */
-	if (proc->config.ipv6_netmask)
-		mslog(s, proc, LOG_DEBUG, "sending netmask '%s'", proc->config.ipv6_netmask);
-	ret = str_append_str_prefix1(&buffer, proc->config.ipv6_netmask);
-	if (ret < 0)
-		goto cleanup;
-
-	t = proc->config.rx_per_sec;
-	ret = str_append_data(&buffer, &t, sizeof(t));
-	if (ret < 0)
-		goto cleanup;
-
-	t = proc->config.tx_per_sec;
-	ret = str_append_data(&buffer, &t, sizeof(t));
-	if (ret < 0)
-		goto cleanup;
-
-	t = proc->config.net_priority;
-	ret = str_append_data(&buffer, &t, sizeof(t));
-	if (ret < 0)
-		goto cleanup;
-
-	/* routes */
-	len = proc->config.routes_size;
-	ret = str_append_data(&buffer, &len, 1);
-	if (ret < 0)
-		goto cleanup;
-
-	for (i=0;i<proc->config.routes_size;i++) {
-		mslog(s, proc, LOG_DEBUG, "sending route '%s'", proc->config.routes[i]);
-		ret = str_append_str_prefix1(&buffer, proc->config.routes[i]);
-		if (ret < 0)
-			return ret;
-	}
-
-	ret = send_value_length(s, proc, buffer.data, buffer.length);
-	if (ret < 0)
-		goto cleanup;
-
-	
-	ret = 0;
-
-cleanup:
-	str_clear(&buffer);
-	return ret;
-}
-
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r)
+			AuthReplyMsg__AUTHREP r)
 {
-	struct iovec iov[1];
-	uint8_t cmd[2];
-	struct msghdr hdr;
-	union {
-		struct cmsghdr    cm;
-		char control[CMSG_SPACE(sizeof(int))];
-	} control_un;
-	struct cmsghdr  *cmptr;
+	AuthReplyMsg msg = AUTH_REPLY_MSG__INIT;
+	unsigned i;
 	int ret;
 
 	if (proc->config.routes_size > MAX_ROUTES) {
-		mslog(s, proc, LOG_INFO, "Note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)proc->config.routes_size, (int)MAX_ROUTES);
+		mslog(s, proc, LOG_INFO, "note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)proc->config.routes_size, (int)MAX_ROUTES);
 		proc->config.routes_size = MAX_ROUTES;
 	}
 
-	memset(&control_un, 0, sizeof(control_un));
-	memset(&hdr, 0, sizeof(hdr));
-	
-	hdr.msg_iov = iov;
+	if (r == AUTH_REPLY_MSG__AUTH__REP__OK && proc->tun_lease.name[0] != 0) {
 
-	if (r == REP_AUTH_OK && proc->tun_lease.name[0] != 0) {
-		cmd[0] = AUTH_REP;
-		cmd[1] = REP_AUTH_OK;
+		/* fill message */
+		msg.reply = AUTH_REPLY_MSG__AUTH__REP__OK;
+		msg.has_cookie = 1;
+		msg.cookie.data = proc->cookie;
+		msg.cookie.len = COOKIE_SIZE;
 		
-		iov[0].iov_base = cmd;
-		iov[0].iov_len = 2;
-		hdr.msg_iovlen = 1;
+		msg.has_session_id = 1;
+		msg.session_id.data = proc->session_id;
+		msg.session_id.len = sizeof(proc->session_id);
+		
+		msg.vname = proc->tun_lease.name;
+		msg.user_name = proc->username;
+		
+		msg.ipv4_dns = proc->config.ipv4_dns;
+		msg.ipv6_dns = proc->config.ipv6_dns;
+		msg.ipv4_nbns = proc->config.ipv4_nbns;
+		msg.ipv6_nbns = proc->config.ipv6_nbns;
+		msg.ipv4_netmask = proc->config.ipv4_netmask;
+		msg.ipv6_netmask = proc->config.ipv6_netmask;
+		if (proc->config.rx_per_sec != 0) {
+			msg.has_rx_per_sec = 1;
+			msg.rx_per_sec = proc->config.rx_per_sec;
+		}
 
-		/* Send the tun fd */
-		hdr.msg_control = control_un.control;
-		hdr.msg_controllen = sizeof(control_un.control);
-	
-		cmptr = CMSG_FIRSTHDR(&hdr);
-		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
-		cmptr->cmsg_level = SOL_SOCKET;
-		cmptr->cmsg_type = SCM_RIGHTS;
-		memcpy(CMSG_DATA(cmptr), &proc->tun_lease.fd, sizeof(int));
+		if (proc->config.tx_per_sec != 0) {
+			msg.has_tx_per_sec = 1;
+			msg.tx_per_sec = proc->config.tx_per_sec;
+		}
+
+		if (proc->config.net_priority != 0) {
+			msg.has_net_priority = 1;
+			msg.net_priority = proc->config.net_priority;
+		}
+		
+		msg.n_routes = proc->config.routes_size;
+		for (i=0;i<proc->config.routes_size;i++) {
+			mslog(s, proc, LOG_DEBUG, "sending route '%s'", proc->config.routes[i]);
+			msg.routes = proc->config.routes;
+		}
+		
+		ret = send_socket_msg_to_worker(s, proc, AUTH_REP, proc->tun_lease.fd,
+			 &msg,
+			 (pack_size_func)auth_reply_msg__get_packed_size,
+			 (pack_func)auth_reply_msg__pack);
 	} else {
-		cmd[0] = AUTH_REP;
-		cmd[1] = REP_AUTH_FAILED;
-	
-		iov[0].iov_base = cmd;
-		iov[0].iov_len = 2;
-		hdr.msg_iovlen = 1;
+		msg.reply = AUTH_REPLY_MSG__AUTH__REP__FAILED;
+
+		ret = send_msg_to_worker(s, proc, AUTH_REP,
+			 &msg,
+			 (pack_size_func)auth_reply_msg__get_packed_size,
+			 (pack_func)auth_reply_msg__pack);
 	}
 	
-	ret = sendmsg(proc->fd, &hdr, 0);
 	if (ret < 0) {
 		int e = errno;
-		mslog(s, proc, LOG_ERR, "auth_reply: sendmsg: %s", strerror(e));
+		mslog(s, proc, LOG_ERR, "send_msg: %s", strerror(e));
 		return ret;
-	}
-
-	if (cmd[1] == REP_AUTH_OK) {
-		struct cmd_auth_reply_info_st resp;
-
-		memcpy(resp.cookie, proc->cookie, COOKIE_SIZE);
-		memcpy(resp.session_id, proc->session_id, sizeof(resp.session_id));
-		memcpy(resp.vname, proc->tun_lease.name, sizeof(resp.vname));
-		memcpy(resp.user, proc->username, sizeof(resp.user));
-
-		ret = force_write(proc->fd, &resp, sizeof(resp));
-		if (ret < 0) {
-			int e = errno;
-			mslog(s, proc, LOG_ERR, "auth_reply: write: %s", strerror(e));
-		}
-
-		ret = serialize_additional_config(s, proc);
-		if (ret < 0) {
-			mslog(s, proc, LOG_ERR, "auth_reply: error serializing config");
-			return ret;
-		}
 	}
 
 	return 0;
@@ -261,41 +139,26 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 {
-	struct iovec iov[2];
-	uint8_t cmd[2];
-	struct msghdr hdr;
-	struct cmd_auth_reply_msg_st resp;
+	AuthReplyMsg msg = AUTH_REPLY_MSG__INIT;
+	char tmp[MAX_MSG_SIZE] = "";
+	
 	int ret;
 
 	if (proc->auth_ctx == NULL)
 		return -1;
 
-	memset(&resp, 0, sizeof(resp));
-	ret = module->auth_msg(proc->auth_ctx, resp.msg, sizeof(resp.msg));
+	ret = module->auth_msg(proc->auth_ctx, tmp, sizeof(tmp));
 	if (ret < 0)
 		return ret;
 
-	memset(&hdr, 0, sizeof(hdr));
-	
-	hdr.msg_iov = iov;
+	msg.msg = tmp;
+	msg.reply = AUTH_REPLY_MSG__AUTH__REP__MSG;
 
-	cmd[0] = AUTH_REP;
-	cmd[1] = REP_AUTH_MSG;
-
-	iov[0].iov_base = cmd;
-	iov[0].iov_len = 2;
-	hdr.msg_iovlen++;
-
-	ret = sendmsg(proc->fd, &hdr, 0);
+	ret = send_msg_to_worker(s, proc, AUTH_REP, &msg, 
+		(pack_size_func)auth_reply_msg__get_packed_size,
+		(pack_func)auth_reply_msg__pack);
 	if (ret < 0) {
-		int e = errno;
-		mslog(s, proc, LOG_ERR, "auth_reply_msg: sendmsg: %s", strerror(e));
-	}
-
-	ret = force_write(proc->fd, &resp, sizeof(resp));
-	if (ret < 0) {
-		int e = errno;
-		mslog(s, proc, LOG_ERR, "auth_reply_msg: write: %s", strerror(e));
+		mslog(s, proc, LOG_ERR, "send_msg error");
 	}
 
 	return ret;
@@ -334,20 +197,23 @@ static int check_user_group_status(main_server_st *s, struct proc_st* proc,
 }
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
- 			   const struct cmd_auth_cookie_req_st * req)
+ 			   const AuthCookieRequestMsg * req)
 {
 int ret;
 struct stored_cookie_st sc;
 time_t now = time(0);
 
-	ret = decrypt_cookie(s, req->cookie, sizeof(req->cookie), &sc);
+	if (req->cookie.len == 0 || req->cookie.len > sizeof(proc->cookie))
+		return -1;
+
+	ret = decrypt_cookie(s, req->cookie.data, req->cookie.len, &sc);
 	if (ret < 0)
 		return -1;
 
 	if (sc.expiration < now)
 		return -1;
 	
-	memcpy(proc->cookie, req->cookie, sizeof(proc->cookie));
+	memcpy(proc->cookie, req->cookie.data, req->cookie.len);
 	memcpy(proc->username, sc.username, sizeof(proc->username));
 	memcpy(proc->groupname, sc.groupname, sizeof(proc->groupname));
 	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
@@ -361,7 +227,7 @@ time_t now = time(0);
 	memcpy(proc->ipv4_seed, sc.ipv4_seed, sizeof(proc->ipv4_seed));
 	proc->seeds_are_set = 1;
 
-	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user, req->cert_group);
+	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user_name, req->cert_group_name);
 	if (ret < 0)
 		return ret;
 
@@ -369,7 +235,7 @@ time_t now = time(0);
 }
 
 int handle_auth_init(main_server_st *s, struct proc_st* proc,
-		     const struct cmd_auth_init_st * req)
+		     const AuthInitMsg * req)
 {
 int ret = -1;
 char ipbuf[128];
@@ -378,18 +244,18 @@ const char* ip;
 	ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
 			ipbuf, sizeof(ipbuf));
 
-	if (req->user_present == 0 && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (req->user_name == NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
         	mslog(s, proc, LOG_DEBUG, "auth init from '%s' with no username present", ip);
 	        return -1;
         }
 
-	if (req->hostname[0] != 0) {
+	if (req->hostname == NULL) {
 		memcpy(proc->hostname, req->hostname, MAX_HOSTNAME_SIZE);
 		proc->hostname[sizeof(proc->hostname)-1] = 0;
 	}
 
-	if (req->user_present != 0 && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		ret = module->auth_init(&proc->auth_ctx, req->user, ip, s->auth_extra);
+	if (req->user_name != NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		ret = module->auth_init(&proc->auth_ctx, req->user_name, ip, s->auth_extra);
 		if (ret < 0)
 			return ret;
 
@@ -400,12 +266,12 @@ const char* ip;
 
 		/* a module is allowed to change the name of the user */
 		ret = module->auth_user(proc->auth_ctx, proc->username, sizeof(proc->username));
-		if (ret != 0)
-			memcpy(proc->username, req->user, MAX_USERNAME_SIZE);
-		proc->username[sizeof(proc->username)-1] = 0;
+		if (ret != 0 && req->user_name != NULL) {
+			snprintf(proc->username, MAX_USERNAME_SIZE, "%s", req->user_name);
+		}
 	}
 
-	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user, req->cert_group);
+	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user_name, req->cert_group_name);
 	if (ret < 0)
 		return ret;
 
@@ -420,7 +286,7 @@ const char* ip;
 }
 
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		    struct cmd_auth_req_st * req)
+		    const AuthRequestMsg * req)
 {
 	if (proc->auth_ctx == NULL) {
         	mslog(s, proc, LOG_ERR, "auth req but with no context!");
@@ -428,12 +294,10 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
         }
 	mslog(s, proc, LOG_DEBUG, "auth req for user '%s'", proc->username);
 	
-	if (req->pass_size >= sizeof(req->pass))
+	if (req->password == NULL)
 	        return -1;
 	        
-        req->pass[req->pass_size] = 0;
-
-	return module->auth_pass(proc->auth_ctx, req->pass, req->pass_size);
+	return module->auth_pass(proc->auth_ctx, req->password, strlen(req->password));
 }
 
 /* Checks for multiple users. 

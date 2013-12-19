@@ -32,9 +32,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
+#include <ipc.pb-c.h>
 
 #include <vpn.h>
-#include "ipc.h"
 #include "html.h"
 #include <worker.h>
 #include <cookies.h>
@@ -170,329 +170,111 @@ fail:
 	
 }
 
-static int send_auth_req(int fd, const struct cmd_auth_req_st* r)
+static int recv_auth_reply(worker_st *ws, char* txt, size_t max_txt_size)
 {
-	struct iovec iov[2];
-	uint8_t cmd;
-	struct msghdr hdr;
+	unsigned i;
 	int ret;
-
-	memset(&hdr, 0, sizeof(hdr));
+	int socketfd = -1;
+	AuthReplyMsg *msg = NULL;
 	
-	cmd = AUTH_REQ;
+	ret = recv_socket_msg(ws->cmd_fd, AUTH_REP, &socketfd,
+		(void*)&msg, 
+		(unpack_func)auth_reply_msg__unpack);
 
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = (void*)r;
-	iov[1].iov_len = sizeof(*r);
-	
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
-
-	ret = sendmsg(fd, &hdr, 0);
-	if (ret < 0) {
-		int e = errno;
-		syslog(LOG_ERR, "send_auth_req: sendmsg: %s", strerror(e));
-	}
-	return ret;
-}
-
-static int send_auth_init(int fd, const struct cmd_auth_init_st* r)
-{
-	struct iovec iov[2];
-	uint8_t cmd;
-	struct msghdr hdr;
-	int ret;
-
-	memset(&hdr, 0, sizeof(hdr));
-	
-	cmd = AUTH_INIT;
-
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = (void*)r;
-	iov[1].iov_len = sizeof(*r);
-	
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
-
-	ret = sendmsg(fd, &hdr, 0);
-	if (ret < 0) {
-		int e = errno;
-		syslog(LOG_ERR, "send_auth_req: sendmsg: %s", strerror(e));
-	}
-	return ret;
-}
-
-static int send_auth_cookie_req(int fd, const struct cmd_auth_cookie_req_st* r)
-{
-	struct iovec iov[2];
-	uint8_t cmd;
-	struct msghdr hdr;
-	int ret;
-
-	memset(&hdr, 0, sizeof(hdr));
-	
-	cmd = AUTH_COOKIE_REQ;
-
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = (void*)r;
-	iov[1].iov_len = sizeof(*r);
-	
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
-
-	ret = sendmsg(fd, &hdr, 0);
-	if (ret < 0) {
-		int e = errno;
-		syslog(LOG_ERR, "send_auth_req: sendmsg: %s", strerror(e));
-	}
-	return ret;
-}
-
-static int recv_value_length(worker_st *ws, str_st* b)
-{
-int ret;
-uint16_t len;
-
-	ret = force_read(ws->cmd_fd, &len, 2);
-	if (ret != 2) {
-		oclog(ws, LOG_ERR, "Error receiving length-value from main (%d)", ret);
-		return ERR_BAD_COMMAND;
-	}
-				
-	if (len > 0) {
-		ret = str_append_size(b, len);
-		if (ret < 0) {
-			oclog(ws, LOG_ERR, "Memory error in str_append_size()");
-			return ret;
-		}
-		
-		ret = force_read(ws->cmd_fd, b->data, len);
-		if (ret != len) {
-			oclog(ws, LOG_ERR, "Error receiving value from main (%d)", ret);
-			return ERR_BAD_COMMAND;
-		}
-		b->length += len;
-		b->data[len] = 0;
-	}
-	
-	return 0;
-}
-
-static
-int deserialize_additional_config(worker_st* ws)
-{
-int ret;
-unsigned i;
-str_st b;
-uint32_t t;
-char *st;
-
-	str_init(&b);
-	
-	ret = recv_value_length(ws, &b);
-	if (ret < 0)
-		goto cleanup;
-	
-	/* IPV4 DNS */
-	ret = str_read_str_prefix1(&b, &st, NULL);
-	if (ret < 0)
-		goto cleanup;
-	if (st != NULL) {
-		free(ws->config->network.ipv4_dns);
-		ws->config->network.ipv4_dns = st;
-	}
-
-	/* IPV6 DNS */
-	ret = str_read_str_prefix1(&b, &st, NULL);
-	if (ret < 0)
-		goto cleanup;
-	if (st != NULL) {
-		free(ws->config->network.ipv6_dns);
-		ws->config->network.ipv6_dns = st;
-	}
-
-	/* IPV4 NBNS */
-	ret = str_read_str_prefix1(&b, &st, NULL);
-	if (ret < 0)
-		goto cleanup;
-	if (st != NULL) {
-		free(ws->config->network.ipv4_nbns);
-		ws->config->network.ipv4_nbns = st;
-	}
-
-	/* IPV6 NBNS */
-	ret = str_read_str_prefix1(&b, &st, NULL);
-	if (ret < 0)
-		goto cleanup;
-	if (st != NULL) {
-		free(ws->config->network.ipv6_nbns);
-		ws->config->network.ipv6_nbns = st;
-	}
-
-	/* IPV4 netmask */
-	ret = str_read_str_prefix1(&b, &st, NULL);
-	if (ret < 0)
-		goto cleanup;
-	if (st != NULL) {
-		free(ws->config->network.ipv4_netmask);
-		ws->config->network.ipv4_netmask = st;
-	}
-
-	/* IPV6 netmask */
-	ret = str_read_str_prefix1(&b, &st, NULL);
-	if (ret < 0)
-		goto cleanup;
-	if (st != NULL) {
-		free(ws->config->network.ipv6_netmask);
-		ws->config->network.ipv6_netmask = st;
-	}
-
-	ret = str_read_data(&b, &t, sizeof(t));
-	if (ret < 0)
-		goto cleanup;
-	
-	if (t != 0)
-		ws->config->rx_per_sec = t;
-
-	ret = str_read_data(&b, &t, sizeof(t));
-	if (ret < 0)
-		goto cleanup;
-		
-	if (t != 0)
-		ws->config->tx_per_sec = t;
-
-	ret = str_read_data(&b, &t, sizeof(t));
-	if (ret < 0)
-		goto cleanup;
-		
-	if (t != 0)
-		ws->config->net_priority = t;
-
-	/* number of routes */
-	if (b.length < 1) {
-		oclog(ws, LOG_ERR, "Error in received length-value from main");
-		ret = ERR_BAD_COMMAND;
-		goto cleanup;
-	}
-
-	ws->routes_size = b.data[0];
-	b.length--;
-	b.data++;
-
-	/* routes */
-	for (i=0;i<ws->routes_size;i++) {
-		ret = str_read_str_prefix1(&b, &ws->routes[i], NULL);
-		if (ret < 0) {
-			oclog(ws, LOG_ERR, "Error receiving private routes from main");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-	}
-	
-	ret = 0;
-cleanup:
-	str_clear(&b);
-	return ret;
-}
-
-static int recv_auth_reply(worker_st *ws, struct cmd_auth_reply_msg_st* mresp)
-{
-	struct iovec iov[1];
-	uint8_t cmd[2] = {0};
-	struct msghdr hdr;
-	int ret;
-	union {
-		struct cmsghdr    cm;
-		char              control[CMSG_SPACE(sizeof(int))];
-	} control_un;
-	struct cmsghdr  *cmptr;
-	struct cmd_auth_reply_info_st resp;
-	
-	iov[0].iov_base = cmd;
-	iov[0].iov_len = 2;
-
-	memset(&hdr, 0, sizeof(hdr));
-	memset(&control_un, 0, sizeof(control_un));
-
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 1;
-
-	hdr.msg_control = control_un.control;
-	hdr.msg_controllen = sizeof(control_un.control);
-
-	ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	if (ret != 2) {
-		int e = errno;
-		oclog(ws, LOG_ERR, "auth_reply: incorrect data (%d, expected %d) from main: %s", ret, (int)2, strerror(e));
-		return ERR_AUTH_FAIL;
-	}
-
-	if (cmd[0] != AUTH_REP) {
-		oclog(ws, LOG_ERR, "auth_reply: received unexpected message (%d)", (int)cmd[0]);
-		return ERR_AUTH_FAIL;
-	}
-		
-	switch(cmd[1]) {
-		case REP_AUTH_MSG:
-			if (mresp == NULL) {
-				oclog(ws, LOG_ERR, "recv_auth_reply: received unexpected msg");
+	switch(msg->reply) {
+		case AUTH_REPLY_MSG__AUTH__REP__MSG:
+			if (txt == NULL || msg->msg == NULL) {
+				oclog(ws, LOG_ERR, "received unexpected msg");
 				return ERR_AUTH_FAIL;
 			}
 			
-			ret = force_read(ws->cmd_fd, mresp, sizeof(*mresp));
-			if (ret < sizeof(*mresp)) {
-				int e = errno;
-				oclog(ws, LOG_ERR, "recv_auth_reply_msg: read(%d): %s", ret, strerror(e));
-				return ERR_AUTH_FAIL;
-			}
+			snprintf(txt, max_txt_size, "%s", msg->msg);
+			
+			ret = ERR_AUTH_CONTINUE;
+			goto cleanup;
+		case AUTH_REPLY_MSG__AUTH__REP__OK:
+			if (socketfd != -1) {
+				ws->tun_fd = socketfd;
 
-			return ERR_AUTH_CONTINUE;
-		case REP_AUTH_OK:
-			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-
-				if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
-					oclog(ws, LOG_ERR, "recv_auth_reply: incorrect message type");
-					return ERR_AUTH_FAIL;
+				if (msg->vname == NULL || msg->user_name == NULL) {
+					ret = ERR_AUTH_FAIL;
+					goto cleanup;
 				}
 
-				memcpy(&ws->tun_fd, CMSG_DATA(cmptr), sizeof(int));
+				snprintf(ws->tun_name, sizeof(ws->tun_name), "%s", msg->vname);
+				snprintf(ws->username, sizeof(ws->username), "%s", msg->user_name);
 
-				ret = force_read(ws->cmd_fd, &resp, sizeof(resp));
-				if (ret < sizeof(resp)) {
-					int e = errno;
-					oclog(ws, LOG_ERR, "recv_auth_reply: read(%d): %s", ret, strerror(e));
-					return ERR_AUTH_FAIL;
+				if (msg->cookie.len != sizeof(ws->cookie) ||
+					msg->session_id.len != sizeof(ws->session_id)) {
+					ret = ERR_AUTH_FAIL;
+					goto cleanup;
 				}
-				
-				memcpy(ws->tun_name, resp.vname, sizeof(ws->tun_name));
-				memcpy(ws->username, resp.user, sizeof(ws->username));
-				memcpy(ws->cookie, resp.cookie, sizeof(ws->cookie));
-				memcpy(ws->session_id, resp.session_id, sizeof(ws->session_id));
+				memcpy(ws->cookie, msg->cookie.data, msg->cookie.len);
+				memcpy(ws->session_id, msg->session_id.data, msg->session_id.len);
 
 				/* Read any additional data */
+				if (msg->ipv4_dns != NULL) {
+					free(ws->config->network.ipv4_dns);
+					ws->config->network.ipv4_dns = strdup(msg->ipv4_dns);
+				}
 
-				ret = deserialize_additional_config(ws);
-				if (ret < 0) {
-					oclog(ws, LOG_ERR, "recv_auth_reply: deserialize failed");
-					return ERR_AUTH_FAIL;
+				if (msg->ipv6_dns != NULL) {
+					free(ws->config->network.ipv6_dns);
+					ws->config->network.ipv4_dns = strdup(msg->ipv6_dns);
+				}
+
+				if (msg->ipv4_nbns != NULL) {
+					free(ws->config->network.ipv4_nbns);
+					ws->config->network.ipv4_nbns = strdup(msg->ipv4_nbns);
+				}
+
+				if (msg->ipv6_nbns != NULL) {
+					free(ws->config->network.ipv6_nbns);
+					ws->config->network.ipv4_nbns = strdup(msg->ipv6_nbns);
+				}
+
+				if (msg->ipv4_netmask != NULL) {
+					free(ws->config->network.ipv4_netmask);
+					ws->config->network.ipv4_netmask = strdup(msg->ipv4_netmask);
+				}
+
+				if (msg->ipv6_netmask != NULL) {
+					free(ws->config->network.ipv6_netmask);
+					ws->config->network.ipv4_netmask = strdup(msg->ipv6_netmask);
+				}
+				
+				if (msg->has_rx_per_sec)
+					ws->config->rx_per_sec = msg->rx_per_sec;
+
+				if (msg->has_tx_per_sec)
+					ws->config->tx_per_sec = msg->tx_per_sec;
+
+				if (msg->has_net_priority)
+					ws->config->net_priority = msg->net_priority;
+
+				/* routes */
+				ws->routes_size = msg->n_routes;
+
+				for (i=0;i<ws->routes_size;i++) {
+					ws->routes[i] = strdup(msg->routes[i]);
 				}
 			} else {
-				oclog(ws, LOG_ERR, "recv_auth_reply: error in received message");
-				return ERR_AUTH_FAIL;
+				oclog(ws, LOG_ERR, "error in received message");
+				ret = ERR_AUTH_FAIL;
+				goto cleanup;
 			}
 			break;
 		default:
-			oclog(ws, LOG_ERR, "recv_auth_reply: unexpected command");
-			return ERR_AUTH_FAIL;
+			oclog(ws, LOG_ERR, "unexpected command");
+			ret = ERR_AUTH_FAIL;
+			goto cleanup;
 	}
-	
-	return 0;
+
+	ret = 0;
+cleanup:
+	if (msg != NULL)
+		auth_reply_msg__free_unpacked(msg, NULL);
+	return ret;
 }
 
 /* grabs the username from the session certificate */
@@ -514,28 +296,10 @@ int ret;
 		
 	ret = get_cert_names(ws, cert, user, user_size, group, group_size);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Cannot get username (%s) from certificate", ws->config->cert_user_oid);
+		oclog(ws, LOG_ERR, "cannot get username (%s) from certificate", ws->config->cert_user_oid);
 		return -1;
 	}
 
-	return 0;
-}
-
-/* sends an authentication request to main thread and waits for
- * a reply. 
- * Returns 0 on success, AUTH_ERR_CONTINUE on partial success (must
- * be called again in that case) and a negative error code on other errors.
- */
-static int auth_user_pass(worker_st *ws, struct cmd_auth_req_st* areq)
-{
-int ret;
-	
-	oclog(ws, LOG_DEBUG, "sending auth request");
-
-	ret = send_auth_req(ws->cmd_fd, areq);
-	if (ret < 0)
-		return ret;
-	
 	return 0;
 }
 
@@ -546,14 +310,9 @@ int ret;
 int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size)
 {
 int ret;
-struct cmd_auth_cookie_req_st areq;
-
-	memset(&areq, 0, sizeof(areq));
-
-	if (cookie_size != sizeof(areq.cookie)) {
-		oclog(ws, LOG_INFO, "unexpected cookie size (%d, expected %d)", (int)cookie_size, (int)sizeof(areq.cookie));
-		return -1;
-	}
+AuthCookieRequestMsg msg = AUTH_COOKIE_REQUEST_MSG__INIT;
+char tmp_user[MAX_USERNAME_SIZE];
+char tmp_group[MAX_USERNAME_SIZE];
 
 	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE) && ws->config->force_cert_auth != 0) {
 		if (ws->cert_auth_ok == 0) {
@@ -561,26 +320,32 @@ struct cmd_auth_cookie_req_st areq;
 			return -1;
 		}
 
-		ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user),
-					areq.cert_group, sizeof(areq.cert_group));
+		ret = get_cert_info(ws, tmp_user, sizeof(tmp_user),
+					tmp_group, sizeof(tmp_group));
 		if (ret < 0) {
 			oclog(ws, LOG_INFO, "cannot obtain certificate info");
 			return -1;
 		}
 
-		areq.tls_auth_ok = 1;
+		msg.tls_auth_ok = 1;
+		msg.cert_user_name = tmp_user;
+		msg.cert_group_name = tmp_group;
 	}
 
-	memcpy(areq.cookie, cookie, sizeof(areq.cookie));
+	msg.cookie.data = cookie;
+	msg.cookie.len = cookie_size;
 
 	oclog(ws, LOG_DEBUG, "sending cookie authentication request");
-	ret = send_auth_cookie_req(ws->cmd_fd, &areq);
+
+	ret = send_msg_to_main(ws, AUTH_COOKIE_REQ, &msg, 
+			(pack_size_func)auth_cookie_request_msg__get_packed_size, 
+			(pack_func)auth_cookie_request_msg__pack);
 	if (ret < 0) {
 		oclog(ws, LOG_INFO, "error sending cookie authentication request");
 		return ret;
 	}
 
-	ret = recv_auth_reply(ws, NULL);
+	ret = recv_auth_reply(ws, NULL, 0);
 	if (ret < 0) {
 		oclog(ws, LOG_INFO, "error receiving cookie authentication reply");
 		return ret;
@@ -794,21 +559,21 @@ struct http_req_st *req = &ws->req;
 const char* reason = "Authentication failed";
 char * username = NULL;
 char * password = NULL;
-struct cmd_auth_reply_msg_st resp;
+char tmp_user[MAX_USERNAME_SIZE];
+char tmp_group[MAX_USERNAME_SIZE];
+char msg[MAX_MSG_SIZE];
 
 	if (ws->auth_state == S_AUTH_INACTIVE) {
-		struct cmd_auth_init_st areq;
-
-		memset(&areq, 0, sizeof(areq));
+		AuthInitMsg msg = AUTH_INIT_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret = read_user_pass(ws, req->body, req->body_length, &username, NULL);
 			if (ret < 0)
 				goto ask_auth;
 
-			snprintf(areq.user, sizeof(areq.user), "%s", username);
+			snprintf(tmp_user, sizeof(tmp_user), "%s", username);
 			free(username);
-			areq.user_present = 1;
+			msg.user_name = tmp_user;
 		}
 
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
@@ -817,37 +582,42 @@ struct cmd_auth_reply_msg_st resp;
 				return -1;
 			}
 
-			ret = get_cert_info(ws, areq.cert_user, sizeof(areq.cert_user),
-						areq.cert_group, sizeof(areq.cert_group));
+			ret = get_cert_info(ws, tmp_user, sizeof(tmp_user),
+						tmp_group, sizeof(tmp_group));
 			if (ret < 0)
 				return -1;
 
-			areq.tls_auth_ok = 1;
+			msg.tls_auth_ok = 1;
+			msg.cert_user_name = tmp_user;
+			msg.cert_group_name = tmp_group;
 		}
 
-		if (req->hostname[0] != 0) {
-			memcpy(areq.hostname, req->hostname, sizeof(areq.hostname));
-		}
+		msg.hostname = req->hostname;
 
-		ret = send_auth_init(ws->cmd_fd, &areq);
+		ret = send_msg_to_main(ws, AUTH_INIT, 
+			&msg,
+			(pack_size_func)auth_init_msg__get_packed_size, 
+			(pack_func)auth_init_msg__pack);
 		if (ret < 0)
 			goto auth_fail;
 		
 		ws->auth_state = S_AUTH_INIT;
 	} else {
-		struct cmd_auth_req_st areq;
+		AuthRequestMsg areq = AUTH_REQUEST_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-			memset(&areq, 0, sizeof(areq));
-
 			ret = read_user_pass(ws, req->body, req->body_length, NULL, &password);
 			if (ret < 0)
 				goto ask_auth;
 
-			areq.pass_size = snprintf(areq.pass, sizeof(areq.pass), "%s", password);
-			free(password);
+			areq.password = password;
 
-			ret = auth_user_pass(ws, &areq);
+			ret = send_msg_to_main(ws, AUTH_REQ, &areq,
+				(pack_size_func)auth_request_msg__get_packed_size, 
+				(pack_func)auth_request_msg__pack);
+
+			free(password);
+			
 			if (ret < 0)
 				goto auth_fail;
 		
@@ -856,14 +626,14 @@ struct cmd_auth_reply_msg_st resp;
 			goto auth_fail;
 	}
 
-	ret = recv_auth_reply(ws, &resp);
+	ret = recv_auth_reply(ws, msg, sizeof(msg));
 	if (ret == ERR_AUTH_CONTINUE) {
 		ws->auth_state = S_AUTH_REQ;
-		return get_auth_handler2(ws, http_ver, resp.msg);
+		return get_auth_handler2(ws, http_ver, msg);
         } else if (ret < 0)
 		goto auth_fail;
 
-	oclog(ws, LOG_INFO, "User '%s' logged in", ws->username);
+	oclog(ws, LOG_INFO, "user '%s' logged in", ws->username);
 	ws->auth_state = S_AUTH_COMPLETE;
 
 	return post_common_handler(ws, http_ver);

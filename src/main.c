@@ -37,7 +37,6 @@
 #include <gnutls/x509.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
-#include "ipc.h"
 #include "setproctitle.h"
 #ifdef HAVE_LIBWRAP
 # include <tcpd.h>
@@ -551,6 +550,7 @@ time_t now;
 		if (session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0 &&
 			(now - ctmp->udp_fd_receive_time > UDP_FD_RESEND_TIME)) {
+			UdpFdMsg msg = UDP_FD_MSG__INIT;
 
 			ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
 			if (ret == -1) {
@@ -559,7 +559,11 @@ time_t now;
 				return -1;
 			}
 
-			ret = send_udp_fd(s, ctmp, listener->fd);
+			ret = send_socket_msg_to_worker(s, ctmp, CMD_UDP_FD,
+				listener->fd,
+				&msg, 
+				(pack_size_func)udp_fd_msg__get_packed_size,
+				(pack_func)udp_fd_msg__pack);
 			if (ret < 0) {
 				mslog(s, ctmp, LOG_ERR, "error passing UDP socket");
 				return -1;

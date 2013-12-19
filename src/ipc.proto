@@ -1,0 +1,89 @@
+/* AUTH_INIT */
+message auth_init_msg
+{
+	required bool user_present = 1;
+	required bool tls_auth_ok = 2 [default = false];
+	required string user_name = 3;
+	optional string cert_user_name = 4;
+	optional string cert_group_name = 5;
+	optional string hostname = 6;
+}
+
+/* AUTH_COOKIE_REQ */
+message auth_cookie_request_msg
+{
+	required bytes cookie = 1;
+	required bool tls_auth_ok = 2 [default = false];
+	optional string cert_user_name = 3;
+	optional string cert_group_name = 4;
+}
+
+/* AUTH_REQ */
+message auth_request_msg
+{
+	required string password = 1;
+}
+
+/* AUTH_REP */
+message auth_reply_msg
+{
+	enum AUTH_REP {
+		OK = 1;
+		MSG = 2;
+		FAILED = 3;
+	}
+	required AUTH_REP reply = 1;
+	optional bytes cookie = 2;
+	optional bytes session_id = 3;
+	optional string vname = 4;
+	optional string user_name = 5;
+	optional string msg = 6;
+
+	/* additional config */
+	optional string ipv4_dns = 7;
+	optional string ipv6_dns = 8;
+	optional string ipv4_nbns = 9;
+	optional string ipv6_nbns = 10;
+	optional string ipv4_netmask = 11;
+	optional string ipv6_netmask = 12;
+	optional uint32 rx_per_sec = 13;
+	optional uint32 tx_per_sec = 14;
+	optional uint32 net_priority = 15;
+	repeated string routes = 16;
+}
+
+/* RESUME_FETCH_REQ + RESUME_DELETE_REQ */
+message session_resume_fetch_msg
+{
+	required bytes session_id = 1;
+}
+
+/* RESUME_STORE_REQ */
+message session_resume_store_req_msg
+{
+	required bytes session_id = 1;
+	required bytes session_data = 2;
+}
+
+/* RESUME_FETCH_REP */
+message session_resume_reply_msg
+{
+	enum RESUME_REP {
+		OK = 1;
+		FAILED = 2;
+	}
+	required RESUME_REP reply = 1;
+	optional bytes session_data = 2;
+}
+
+/* TUN_MTU */
+message tun_mtu_msg
+{
+	required uint32 mtu = 1;
+}
+
+/* UDP_FD */
+message udp_fd_msg
+{
+
+}

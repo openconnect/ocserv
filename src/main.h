@@ -27,8 +27,9 @@
 #include <net/if.h>
 #include <vpn.h>
 #include <tlslib.h>
-#include "ipc.h"
+#include "ipc.pb-c.h"
 #include <cookies.h>
+#include <common.h>
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
@@ -168,25 +169,31 @@ void user_disconnected(main_server_st *s, struct proc_st* cur);
 
 void expire_tls_sessions(main_server_st *s);
 
-int send_resume_fetch_reply(main_server_st* s, struct proc_st* proc,
-		cmd_resume_reply_t r, struct cmd_resume_fetch_reply_st * reply);
-
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 
-int handle_resume_delete_req(main_server_st* s, struct proc_st* proc,
-  			   const struct cmd_resume_fetch_req_st * req);
+int handle_resume_delete_req(main_server_st* s, struct proc_st * proc,
+  			   const SessionResumeFetchMsg * req);
 
-int handle_resume_fetch_req(main_server_st* s, struct proc_st* proc,
-  			   const struct cmd_resume_fetch_req_st * req, 
-  			   struct cmd_resume_fetch_reply_st * rep);
+int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
+  			   const SessionResumeFetchMsg * req, 
+  			   SessionResumeReplyMsg* rep);
 
 int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
-  			   const struct cmd_resume_store_req_st * req);
+  			   const SessionResumeStoreReqMsg *);
 
 void 
 __attribute__ ((format(printf, 4, 5)))
-    mslog(const main_server_st * s, const struct proc_st* proc,
+    _mslog(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *fmt, ...);
+
+#ifdef __GNUC__
+# define mslog(s, proc, prio, fmt, ...) \
+	(prio==LOG_ERR)?_mslog(s, proc, prio, "%s:%d: "fmt, __func__, __LINE__, ##__VA_ARGS__): \
+	_mslog(s, proc, prio, fmt, ##__VA_ARGS__)
+#else
+# define mslog _mslog
+#endif
+
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *prefix, uint8_t* bin, unsigned bin_size);
 
@@ -196,15 +203,15 @@ int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			cmd_auth_reply_t r);
+			AuthReplyMsg__AUTHREP r);
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
- 			   const struct cmd_auth_cookie_req_st * req);
+ 			   const AuthCookieRequestMsg * req);
 int generate_cookie(main_server_st *s, struct proc_st* proc);
 int handle_auth_init(main_server_st *s, struct proc_st* proc,
-		     const struct cmd_auth_init_st * req);
+		     const AuthInitMsg * req);
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		     struct cmd_auth_req_st * req);
+		     const AuthRequestMsg * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 
@@ -222,5 +229,21 @@ void del_additional_config(struct group_cfg_st* config);
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k);
 
 void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);
+
+inline static
+int send_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd, 
+	    const void* msg, pack_size_func get_size, pack_func pack)
+{
+	mslog(s, proc, LOG_DEBUG, "sending message %u to worker", (unsigned)cmd);
+	return send_msg(proc->fd, cmd, msg, get_size, pack);
+}
+
+inline static
+int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd, 
+		int socketfd, const void* msg, pack_size_func get_size, pack_func pack)
+{
+	mslog(s, proc, LOG_DEBUG, "sending (socket) message %u to worker", (unsigned)cmd);
+	return send_socket_msg(proc->fd, cmd, socketfd, msg, get_size, pack);
+}
 
 #endif

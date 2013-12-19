@@ -44,7 +44,7 @@
 #include <worker-bandwidth.h>
 
 #include <vpn.h>
-#include "ipc.h"
+#include "ipc.pb-c.h"
 #include <cookies.h>
 #include <worker.h>
 #include <tlslib.h>
@@ -664,14 +664,27 @@ finish:
 }
 
 static
+void mtu_send(worker_st* ws, unsigned mtu)
+{
+	TunMtuMsg msg = TUN_MTU_MSG__INIT;
+
+	msg.mtu = mtu-1; /* account DTLS CSTP header */
+	send_msg_to_main(ws, CMD_TUN_MTU, &msg,
+		(pack_size_func)tun_mtu_msg__get_packed_size,
+		(pack_func)tun_mtu_msg__pack);
+
+	oclog(ws, LOG_INFO, "setting MTU to %u", msg.mtu);
+}
+
+static
 void mtu_set(worker_st* ws, unsigned mtu)
 {
 	ws->conn_mtu = mtu;
 	
 	if (ws->dtls_session)
 		gnutls_dtls_set_data_mtu (ws->dtls_session, mtu);
-	send_tun_mtu(ws, mtu - 1); /* for DTLS header */
-	oclog(ws, LOG_INFO, "setting MTU to %u", ws->conn_mtu);
+
+	mtu_send(ws, mtu);
 }
 
 /* sets the current value of mtu as bad,
@@ -883,7 +896,7 @@ bandwidth_st b_rx;
 		tls_puts(ws->session, "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
-	
+
 	/* Connected. Turn of the alarm */
 	if (ws->config->auth_timeout)
 		alarm(0);
@@ -1105,7 +1118,8 @@ bandwidth_st b_rx;
 	oclog(ws, LOG_DEBUG, "suggesting CSTP MTU %u", cstp_mtu);
 
 	oclog(ws, LOG_DEBUG, "plaintext MTU is %u", ws->conn_mtu-1);
-	send_tun_mtu(ws, ws->conn_mtu);
+
+	mtu_send(ws, ws->conn_mtu);
 
 	if (ws->config->banner) {
 		ret = tls_printf(ws->session, "X-CSTP-Banner: %s\r\n", ws->config->banner);

@@ -31,7 +31,6 @@
 #include <sys/ioctl.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
-#include "ipc.h"
 #include <ccan/hash/hash.h>
 
 #include <vpn.h>
@@ -39,47 +38,19 @@
 #include <common.h>
 #include <tlslib.h>
 
-int send_resume_fetch_reply(main_server_st* s, struct proc_st * proc,
-		cmd_resume_reply_t r, struct cmd_resume_fetch_reply_st * reply)
-{
-	struct iovec iov[3];
-	uint8_t cmd = RESUME_FETCH_REP;
-	struct msghdr hdr;
-	int ret;
-
-	memset(&hdr, 0, sizeof(hdr));
-	
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-	hdr.msg_iovlen++;
-
-	iov[1].iov_base = reply;
-	iov[1].iov_len = sizeof(*reply);
-	hdr.msg_iovlen++;
-
-	hdr.msg_iov = iov;
-
-	ret = sendmsg(proc->fd, &hdr, 0);
-	if (ret < 0) {
-		int e = errno;
-		mslog(s, proc, LOG_ERR, "send_resume_fetch_reply: sendmsg: %s", strerror(e));
-	}
-	return ret;
-}
-
 int handle_resume_delete_req(main_server_st* s, struct proc_st * proc,
-  			   const struct cmd_resume_fetch_req_st * req)
+  			   const SessionResumeFetchMsg * req)
 {
 tls_cache_st* cache;
 struct htable_iter iter;
 size_t key;
 
-	key = hash_any(req->session_id, req->session_id_size, 0);
+	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
 	cache = htable_firstval(&s->tls_db->ht, &iter, key);
 	while(cache != NULL) {
-		if (req->session_id_size == cache->session_id_size &&
-	          memcmp (req->session_id, cache->session_id, req->session_id_size) == 0) {
+		if (req->session_id.len == cache->session_id_size &&
+	          memcmp (req->session_id.data, cache->session_id, req->session_id.len) == 0) {
 
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
@@ -97,29 +68,30 @@ size_t key;
 }
 
 int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
-  			   const struct cmd_resume_fetch_req_st * req, 
-  			   struct cmd_resume_fetch_reply_st * rep)
+  			   const SessionResumeFetchMsg * req, 
+  			   SessionResumeReplyMsg* rep)
 {
 tls_cache_st* cache;
 struct htable_iter iter;
 size_t key;
 
-	rep->reply = REP_RESUME_FAILED;
+	rep->reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__FAILED;
 
-	key = hash_any(req->session_id, req->session_id_size, 0);
+	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
 	cache = htable_firstval(&s->tls_db->ht, &iter, key);
 	while(cache != NULL) {
-		if (req->session_id_size == cache->session_id_size &&
-	          memcmp (req->session_id, cache->session_id, req->session_id_size) == 0) {
+		if (req->session_id.len == cache->session_id_size &&
+	          memcmp (req->session_id.data, cache->session_id, req->session_id.len) == 0) {
 
 	          	if (proc->remote_addr_len == cache->remote_addr_len &&
 		          	ip_cmp(&proc->remote_addr, &cache->remote_addr, proc->remote_addr_len) == 0) {
 
-		          	rep->reply = REP_RESUME_OK;
+		          	rep->reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
 	          	
-		          	memcpy(rep->session_data, cache->session_data, cache->session_data_size);
-	        	  	rep->session_data_size = cache->session_data_size;
+		          	rep->has_session_data = 1;
+		          	rep->session_data.data = (void*)cache->session_data;
+		          	rep->session_data.len = cache->session_data_size;
 
 		          	return 0;
 			}
@@ -133,15 +105,15 @@ size_t key;
 }
 
 int handle_resume_store_req(main_server_st* s, struct proc_st * proc,
-  			   const struct cmd_resume_store_req_st * req)
+  			   const SessionResumeStoreReqMsg * req)
 {
 tls_cache_st* cache;
 size_t key;
 unsigned int max;
 
-	if (req->session_id_size > GNUTLS_MAX_SESSION_ID)
+	if (req->session_id.len > GNUTLS_MAX_SESSION_ID)
 		return -1;
-	if (req->session_data_size > MAX_SESSION_DATA_SIZE)
+	if (req->session_data.len > MAX_SESSION_DATA_SIZE)
 		return -1;
 
 	max = MAX(2*s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
@@ -151,18 +123,18 @@ unsigned int max;
 		return -1;
 	}
 
-	key = hash_any(req->session_id, req->session_id_size, 0);
+	key = hash_any(req->session_id.data, req->session_id.len, 0);
 	
 	cache = malloc(sizeof(*cache));
 	if (cache == NULL)
 		return -1;
 		
-	cache->session_id_size = req->session_id_size;
-	cache->session_data_size = req->session_data_size;
+	cache->session_id_size = req->session_id.len;
+	cache->session_data_size = req->session_data.len;
 	cache->remote_addr_len = proc->remote_addr_len;
 
-	memcpy(cache->session_id, req->session_id, req->session_id_size);
-	memcpy(cache->session_data, req->session_data, req->session_data_size);
+	memcpy(cache->session_id, req->session_id.data, req->session_id.len);
+	memcpy(cache->session_data, req->session_data.data, req->session_data.len);
 	memcpy(&cache->remote_addr, &proc->remote_addr, proc->remote_addr_len);
 	
 	htable_add(&s->tls_db->ht, key, cache);

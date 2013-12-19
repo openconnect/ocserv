@@ -64,7 +64,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 }
 
 void __attribute__ ((format(printf, 3, 4)))
-    oclog(const worker_st * ws, int priority, const char *fmt, ...)
+    _oclog(const worker_st * ws, int priority, const char *fmt, ...)
 {
 	char buf[512];
 	char ipbuf[128];
@@ -99,7 +99,7 @@ void __attribute__ ((format(printf, 3, 4)))
 
 /* proc is optional */
 void __attribute__ ((format(printf, 4, 5)))
-    mslog(const main_server_st * s, const struct proc_st* proc,
+    _mslog(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *fmt, ...)
 {
 	char buf[512];
@@ -151,7 +151,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	if (ret < 0)
 		return;
 	
-	mslog(s, proc, priority, "%s %s", prefix, buf);
+	_mslog(s, proc, priority, "%s %s", prefix, buf);
 
 	return;
 }

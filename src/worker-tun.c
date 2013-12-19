@@ -77,7 +77,7 @@ int ret, e;
 	} else if (family == AF_INET6) {
 		ptr = SA_IN6_P(&ifr.ifr_addr);
 	} else {
-		oclog(ws, LOG_DEBUG, "Unknown family!");
+		oclog(ws, LOG_DEBUG, "unknown family!");
 		return -1;
 	}
 
@@ -188,7 +188,7 @@ struct ifreq ifr;
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 	ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Cannot obtain MTU for %s. Assuming 1500", vinfo->name);
+		oclog(ws, LOG_ERR, "cannot obtain MTU for %s. Assuming 1500", vinfo->name);
 		vinfo->mtu = 1500;
 	} else {
 		vinfo->mtu = ifr.ifr_mtu;

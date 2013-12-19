@@ -1,10 +1,11 @@
 SUBDIRS =
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
-	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS)
+	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
+	$(LIBPROTOBUF_C_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
-	ocserv-args.c ocserv-args.h
+	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
 
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/
@@ -40,7 +41,7 @@ ocserv-args.c: $(srcdir)/ocserv-args.def
 ocserv-args.h: ocserv-args.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	ipc.h cookies.c worker-tun.c main-misc.c \
+	cookies.c worker-tun.c main-misc.c \
 	group-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
@@ -51,10 +52,12 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	worker-bandwidth.c worker-bandwidth.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES)
 
+ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
 
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS)
+	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
+	$(LIBPROTOBUF_C_LIBS)
 
 if PCL
 ocserv_LDADD += $(PCL_LIBS)
@@ -75,3 +78,8 @@ ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
 ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 	$(AUTOGEN) $<
 ocpasswd-args.h: ocpasswd-args.c
+
+ipc.pb-c.c: ipc.proto
+	protoc-c --c_out=. $<
+
+ipc.pb-c.h: ipc.pb-c.c

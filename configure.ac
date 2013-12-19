@@ -48,6 +48,8 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
+PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c])
+
 pam_enabled=no
 LIBS="$oldlibs -lpam"
 AC_MSG_CHECKING([for pam library])

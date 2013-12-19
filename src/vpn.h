@@ -75,6 +75,23 @@ extern int syslog_open;
 
 #define LOG_HTTP_DEBUG 2048
 
+#define MAX_MSG_SIZE 256
+
+typedef enum {
+	AUTH_INIT = 1,
+	AUTH_REP = 2,
+	AUTH_REQ = 3,
+	AUTH_COOKIE_REQ = 4,
+	AUTH_MSG = 5,
+	RESUME_STORE_REQ = 6,
+	RESUME_DELETE_REQ = 7,
+	RESUME_FETCH_REQ = 8,
+	RESUME_FETCH_REP = 9,
+	CMD_UDP_FD = 10,
+	CMD_TUN_MTU = 11,
+	CMD_TERMINATE = 12,
+} cmd_request_t;
+
 typedef struct 
 {
 	struct htable ht;

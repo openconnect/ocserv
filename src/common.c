@@ -22,6 +22,7 @@
 #include <string.h>
 #include <vpn.h>
 #include <sys/socket.h>
+#include "common.h"
 
 ssize_t force_write(int sockfd, const void *buf, size_t len)
 {
@@ -52,6 +53,44 @@ int ret;
 uint8_t * p = buf;
 
 	while(left > 0) {
+		ret = read(sockfd, p, left);
+		if (ret == -1) {
+			if (errno != EAGAIN && errno != EINTR)
+				return ret;
+		}
+		
+		if (ret > 0) {
+			left -= ret;
+			p += ret;
+		}
+	}
+	
+	return len;
+}
+
+ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec)
+{
+int left = len;
+int ret;
+uint8_t * p = buf;
+struct timeval tv;
+fd_set set;
+
+	tv.tv_sec = sec;
+	tv.tv_usec = 0;
+	
+	FD_ZERO(&set);
+	FD_SET(sockfd, &set);
+
+	while(left > 0) {
+		ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+		if (ret == -1 && errno == EINTR)
+			continue;
+		if (ret == -1 || ret == 0) {
+			errno = ETIMEDOUT;
+			return -1;
+		}
+
 		ret = read(sockfd, p, left);
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
@@ -100,4 +139,178 @@ char* ipv6_prefix_to_mask(unsigned prefix)
 		default:
 			return NULL;
 	}
+}
+
+/* Sends message + socketfd */
+int send_socket_msg(int fd, uint8_t cmd, 
+		    int socketfd,
+		    const void* msg, pack_size_func get_size, pack_func pack)
+{
+	struct iovec iov[3];
+	struct msghdr hdr;
+	union {
+		struct cmsghdr    cm;
+		char control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;
+	void* packed = NULL;
+	uint16_t length;
+	int ret;
+
+	memset(&hdr, 0, sizeof(hdr));
+	
+	iov[0].iov_base = &cmd;
+	iov[0].iov_len = 1;
+
+	length = get_size(msg);
+
+	iov[1].iov_base = &length;
+	iov[1].iov_len = 2;
+
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	if (length > 0) {
+		packed = malloc(length);
+		if (packed == NULL) {
+			syslog(LOG_ERR, "%s:%u: memory error", __func__, __LINE__);
+			return -1;
+		}
+
+		iov[2].iov_base = packed;
+		iov[2].iov_len = length;
+
+		ret = pack(msg, packed);
+		if (ret == 0) {
+			syslog(LOG_ERR, "%s:%u: packing error", __func__, __LINE__);
+			ret = -1;
+			goto cleanup;
+		}
+
+		hdr.msg_iovlen++;
+	}
+
+	if (socketfd != -1) {
+		hdr.msg_control = control_un.control;
+		hdr.msg_controllen = sizeof(control_un.control);
+	
+		cmptr = CMSG_FIRSTHDR(&hdr);
+		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+		cmptr->cmsg_level = SOL_SOCKET;
+		cmptr->cmsg_type = SCM_RIGHTS;
+		memcpy(CMSG_DATA(cmptr), &socketfd, sizeof(int));
+	}
+
+	ret = sendmsg(fd, &hdr, 0);
+	if (ret < 0) {
+		int e = errno;
+		syslog(LOG_ERR, "%s:%u: %s", __func__, __LINE__, strerror(e));
+	}
+
+cleanup:
+	free(packed);
+	return ret;
+
+}
+
+int send_msg(int fd, uint8_t cmd, 
+	    const void* msg, pack_size_func get_size, pack_func pack)
+{
+	return send_socket_msg(fd, cmd, -1, msg, get_size, pack);
+}
+
+int recv_socket_msg(int fd, uint8_t cmd, 
+		     int* socketfd, void** msg, unpack_func unpack)
+{
+	struct iovec iov[3];
+	uint16_t length;
+	uint8_t rcmd;
+	struct msghdr hdr;
+	uint8_t* data = NULL;
+	union {
+		struct cmsghdr    cm;
+		char              control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr  *cmptr;
+	int ret;
+
+	iov[0].iov_base = &rcmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = &length;
+	iov[1].iov_len = 2;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	hdr.msg_control = control_un.control;
+	hdr.msg_controllen = sizeof(control_un.control);
+
+	ret = recvmsg( fd, &hdr, 0);
+	if (ret == -1) {
+		int e = errno;
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __func__, __LINE__, strerror(e));
+		return ERR_BAD_COMMAND;
+	}
+
+	if (ret == 0) {
+		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __func__, __LINE__);
+		return ERR_WORKER_TERMINATED;
+	}
+	
+	if (rcmd != cmd) {
+		return ERR_BAD_COMMAND;
+	}
+	
+	/* try to receive socket (if any) */
+	if (socketfd != NULL) {
+		if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+			if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
+				syslog(LOG_ERR, "%s:%u: recvmsg returned invalid msg type", __func__, __LINE__);
+				return ERR_BAD_COMMAND;
+			}
+
+			memcpy(socketfd, CMSG_DATA(cmptr), sizeof(int));
+		} else {
+			*socketfd = -1;
+		}
+	}
+
+	if (length > 0) {
+		data = malloc(length);
+		if (data == NULL) {
+			ret = ERR_MEM;
+			goto cleanup;
+		}
+
+		ret = force_read(fd, data, length);
+		if (ret < length) {
+			int e = errno;
+			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __func__, __LINE__, strerror(e));
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		*msg = unpack(NULL, length, data);
+		if (*msg == NULL) {
+			syslog(LOG_ERR, "%s:%u: unpacking error", __func__, __LINE__);
+			ret = ERR_MEM;
+			goto cleanup;
+		}
+	}
+	
+	ret = 0;
+
+cleanup:
+	free(data);
+	if (ret < 0 && socketfd != NULL && *socketfd != -1)
+		close(*socketfd);
+	return ret;
+}
+
+int recv_msg(int fd, uint8_t cmd, 
+		void** msg, unpack_func unpack)
+{
+	return recv_socket_msg(fd, cmd, NULL, msg, unpack);
 }

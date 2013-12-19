@@ -34,39 +34,15 @@
 #include <limits.h>
 
 #include <vpn.h>
-#include "ipc.h"
 #include <worker.h>
 #include <cookies.h>
 #include <tlslib.h>
 
-int send_tun_mtu(worker_st *ws, unsigned int mtu)
-{
-	struct iovec iov[2];
-	uint8_t cmd;
-	struct msghdr hdr;
-	struct cmd_tun_mtu_st data;
-
-	memset(&hdr, 0, sizeof(hdr));
-	
-	cmd = CMD_TUN_MTU;
-	data.mtu = mtu;
-
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = (void*)&data;
-	iov[1].iov_len = sizeof(data);
-	
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
-
-	return(sendmsg(ws->cmd_fd, &hdr, 0));
-}
-
 int handle_worker_commands(struct worker_st *ws)
 {
-	struct iovec iov[2];
+	struct iovec iov[3];
 	uint8_t cmd;
+	uint16_t length;
 	int e;
 	struct msghdr hdr;
 	union {
@@ -86,12 +62,15 @@ int handle_worker_commands(struct worker_st *ws)
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
-	iov[1].iov_base = &cmd_data;
-	iov[1].iov_len = sizeof(cmd_data);
+	iov[1].iov_base = &length;
+	iov[1].iov_len = 2;
+
+	iov[2].iov_base = &cmd_data;
+	iov[2].iov_len = sizeof(cmd_data);
 	
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
+	hdr.msg_iovlen = 3;
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
@@ -107,6 +86,8 @@ int handle_worker_commands(struct worker_st *ws)
 		oclog(ws, LOG_ERR, "parent terminated");
 		exit(0);
 	}
+
+	oclog(ws, LOG_DEBUG, "worker received message %u of %u bytes\n", (unsigned)cmd, (unsigned)length);
 
 	/*cmd_data_len = ret - 1;*/
 	
@@ -134,7 +115,7 @@ int handle_worker_commands(struct worker_st *ws)
 				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
 				return 0;
 			} else {
-				oclog(ws, LOG_ERR, "Could not receive peer's UDP fd");
+				oclog(ws, LOG_ERR, "could not receive peer's UDP fd");
 				return -1;
 			}
 			break;

@@ -30,6 +30,7 @@
 #include <vpn.h>
 #include <cookies.h>
 #include <tlslib.h>
+#include <common.h>
 #include <str.h>
 
 typedef enum {
@@ -163,7 +164,15 @@ void set_resume_db_funcs(gnutls_session_t);
 
 
 void __attribute__ ((format(printf, 3, 4)))
-    oclog(const worker_st * server, int priority, const char *fmt, ...);
+    _oclog(const worker_st * server, int priority, const char *fmt, ...);
+
+#ifdef __GNUC__
+# define oclog(server, prio, fmt, ...) \
+	(prio==LOG_ERR)?_oclog(server, prio, "%s:%d: "fmt, __func__, __LINE__, ##__VA_ARGS__): \
+	_oclog(server, prio, fmt, ##__VA_ARGS__)
+#else
+# define oclog _oclog
+#endif
 
 int get_rt_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo, char* buffer, size_t buffer_size);
@@ -171,5 +180,13 @@ int get_rt_vpn_info(worker_st * ws,
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);
 int disable_system_calls(struct worker_st *ws);
+
+inline static
+int send_msg_to_main(worker_st *ws, uint8_t cmd, 
+	    const void* msg, pack_size_func get_size, pack_func pack)
+{
+	oclog(ws, LOG_DEBUG, "sending message %u to main", (unsigned)cmd);
+	return send_msg(ws->cmd_fd, cmd, msg, get_size, pack);
+}
 
 #endif

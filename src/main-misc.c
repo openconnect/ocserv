@@ -35,12 +35,13 @@
 #include <tlslib.h>
 #include <sys/un.h>
 #include <cloexec.h>
-#include "ipc.h"
+#include "common.h"
 #include "str.h"
 #include "setproctitle.h"
 #include <sec-mod.h>
 #include <route-add.h>
 #include <ip-lease.h>
+#include <ipc.pb-c.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -83,42 +84,6 @@ fail:
 	return ret;
 }
 
-int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd)
-{
-	struct iovec iov[1];
-	uint8_t cmd = CMD_UDP_FD;
-	struct msghdr hdr;
-	union {
-		struct cmsghdr    cm;
-		char control[CMSG_SPACE(sizeof(int))];
-	} control_un;
-	struct cmsghdr  *cmptr;	
-	int ret;
-
-	memset(&hdr, 0, sizeof(hdr));
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	hdr.msg_iovlen = 1;
-	hdr.msg_iov = iov;
-
-	hdr.msg_control = control_un.control;
-	hdr.msg_controllen = sizeof(control_un.control);
-	
-	cmptr = CMSG_FIRSTHDR(&hdr);
-	cmptr->cmsg_len = CMSG_LEN(sizeof(int));
-	cmptr->cmsg_level = SOL_SOCKET;
-	cmptr->cmsg_type = SCM_RIGHTS;
-	memcpy(CMSG_DATA(cmptr), &fd, sizeof(int));
-	
-	ret = sendmsg(proc->fd, &hdr, 0);
-	if (ret < 0) {
-		int e = errno;
-		mslog(s, proc, LOG_ERR, "sendmsg: %s", strerror(e));
-	}
-	return ret;
-}
-
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code)
 {
 int ret;
@@ -126,7 +91,7 @@ int ret;
 	if (code == 0) {
 		proc->auth_status = PS_AUTH_COMPLETED;
 
-		ret = send_auth_reply(s, proc, REP_AUTH_OK);
+		ret = send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__OK);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send auth reply cmd.");
 			ret = ERR_BAD_COMMAND;
@@ -136,7 +101,7 @@ int ret;
 		apply_iroutes(s, proc);
 	} else {
 		mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
-		ret = send_auth_reply( s, proc, REP_AUTH_FAILED);
+		ret = send_auth_reply( s, proc, AUTH_REPLY_MSG__AUTH__REP__FAILED);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
 			ret = ERR_BAD_COMMAND;
@@ -379,113 +344,167 @@ const char* group;
 
 int handle_commands(main_server_st *s, struct proc_st* proc)
 {
-	struct iovec iov[2];
+	struct iovec iov[3];
 	uint8_t cmd;
 	struct msghdr hdr;
-	/* FIXME: do not write directly to the union */
-	union {
-		struct cmd_auth_req_st auth;
-		struct cmd_auth_cookie_req_st cauth;
-		struct cmd_resume_store_req_st sresume;
-		struct cmd_resume_fetch_req_st fresume;
-		struct cmd_tun_mtu_st tmtu;
-		struct cmd_auth_init_st auth_init;
-	} cmd_data;
-	int ret, cmd_data_len, e;
+	AuthInitMsg * auth_init;
+	AuthCookieRequestMsg * auth_cookie_req;
+	AuthRequestMsg * auth_req;
+	uint16_t length;
+	uint8_t *raw;
+	int ret, raw_len, e;
 
-	memset(&cmd_data, 0, sizeof(cmd_data));
-	
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
-	iov[1].iov_base = &cmd_data;
-	iov[1].iov_len = sizeof(cmd_data);
-	
+	iov[1].iov_base = &length;
+	iov[1].iov_len = 2;
+
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
-	
+
 	ret = recvmsg( proc->fd, &hdr, 0);
 	if (ret == -1) {
+		e = errno;
+		mslog(s, proc, LOG_ERR, "cannot obtain metadata from command socket: %s", strerror(e));
+		return -1;
+	}
+
+	if (ret == 0) {
+		mslog(s, proc, LOG_ERR, "command socket closed");
+		return ERR_WORKER_TERMINATED;
+	}
+
+	if (ret < 3) {
+		mslog(s, proc, LOG_ERR, "command error");
+		return -1;
+	}
+
+	mslog(s, proc, LOG_DEBUG, "main received message %u of %u bytes\n", (unsigned)cmd, (unsigned)length);
+
+	raw = malloc(length);
+	if (raw == NULL) {
+		mslog(s, proc, LOG_ERR, "memory error");
+		return ERR_MEM;
+	}
+
+	raw_len = force_read_timeout( proc->fd, raw, length, 2);
+	if (raw_len != length) {
 		e = errno;
 		mslog(s, proc, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
 		return -1;
 	}
 
-	if (ret == 0) {
-		e = errno;
-		mslog(s, proc, LOG_ERR, "command socket closed");
-		return ERR_WORKER_TERMINATED;
-	}
-
-	cmd_data_len = ret - 1;
-
 	switch(cmd) {
-		case CMD_TUN_MTU:
-			if (cmd_data_len != sizeof(cmd_data.tmtu)) {
-				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
+		case CMD_TUN_MTU: {
+			TunMtuMsg *tmsg;
+			
+			tmsg = tun_mtu_msg__unpack(NULL, raw_len, raw);
+			if (tmsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
 			}
 			
-			set_tun_mtu(s, proc, cmd_data.tmtu.mtu);
-			break;
-		case RESUME_STORE_REQ:
-			if (cmd_data_len <= sizeof(cmd_data.sresume)-MAX_SESSION_DATA_SIZE) {
-				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
+			set_tun_mtu(s, proc, tmsg->mtu);
+			
+			tun_mtu_msg__free_unpacked(tmsg, NULL);
+			
 			}
-			ret = handle_resume_store_req(s, proc, &cmd_data.sresume);
+			
+			break;
+		case RESUME_STORE_REQ: {
+			SessionResumeStoreReqMsg* smsg;
+			
+			smsg = session_resume_store_req_msg__unpack(NULL, raw_len, raw);
+			if (smsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
+			}
+			
+			ret = handle_resume_store_req(s, proc, smsg);
+			
+			session_resume_store_req_msg__free_unpacked(smsg, NULL);
+			
 			if (ret < 0) {
-				mslog(s, proc, LOG_DEBUG, "could not store resumption data.");
+				mslog(s, proc, LOG_DEBUG, "could not store resumption data");
 			}
 			
+			}
+
 			break;
 			
-		case RESUME_DELETE_REQ:
-			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "error in received message (cmd %u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
+		case RESUME_DELETE_REQ: {
+			SessionResumeFetchMsg* fmsg;
+
+			fmsg = session_resume_fetch_msg__unpack(NULL, raw_len, raw);
+			if (fmsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
 			}
-			ret = handle_resume_delete_req(s, proc, &cmd_data.fresume);
+
+			ret = handle_resume_delete_req(s, proc, fmsg);
+			
+			session_resume_fetch_msg__free_unpacked(fmsg, NULL);
+
 			if (ret < 0) {
 				mslog(s, proc, LOG_DEBUG, "could not delete resumption data.");
+			}
+			
 			}
 
 			break;
 		case RESUME_FETCH_REQ: {
-			struct cmd_resume_fetch_reply_st reply;
+			SessionResumeReplyMsg msg = SESSION_RESUME_REPLY_MSG__INIT;
+			SessionResumeFetchMsg* fmsg;
 
-			if (cmd_data_len != sizeof(cmd_data.fresume)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
+			fmsg = session_resume_fetch_msg__unpack(NULL, raw_len, raw);
+			if (fmsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
 			}
-			ret = handle_resume_fetch_req(s, proc, &cmd_data.fresume, &reply);
+
+			ret = handle_resume_fetch_req(s, proc, fmsg, &msg);
+
+			session_resume_fetch_msg__free_unpacked(fmsg, NULL);
+
 			if (ret < 0) {
+				msg.reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__FAILED;
 				mslog(s, proc, LOG_DEBUG, "could not fetch resumption data.");
-				ret = send_resume_fetch_reply(s, proc, REP_RESUME_FAILED, NULL);
-			} else
-				ret = send_resume_fetch_reply(s, proc, REP_RESUME_OK, &reply);
+			} else {
+				msg.reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
 			}
+			
+			ret = send_msg_to_worker(s, proc, RESUME_FETCH_REP, &msg,
+				(pack_size_func)session_resume_reply_msg__get_packed_size,
+				(pack_func)session_resume_reply_msg__pack);
 			
 			if (ret < 0) {
 				mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned) cmd);
 				return ERR_BAD_COMMAND;
 			}
 			
+			}
+			
 			break;
 
 		case AUTH_INIT:
-			if (cmd_data_len != sizeof(cmd_data.auth_init)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
-			}
-
+			
 			if (proc->auth_status != PS_AUTH_INACTIVE) {
 				mslog(s, proc, LOG_ERR, "received authentication init when complete.");
 				return ERR_BAD_COMMAND;
 			}
+			
+			auth_init = auth_init_msg__unpack(NULL, raw_len, raw);
+			if (auth_init == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
+			}
 
-			ret = handle_auth_init(s, proc, &cmd_data.auth_init);
+			ret = handle_auth_init(s, proc, auth_init);
+			
+			auth_init_msg__free_unpacked(auth_init, NULL);
+
 			if (ret == ERR_AUTH_CONTINUE) {
 				proc->auth_status = PS_AUTH_INIT;
 
@@ -516,18 +535,22 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				return ERR_BAD_COMMAND;
 			}
 
-			if (cmd_data_len != sizeof(cmd_data.auth)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
-			}
-			
 			proc->auth_reqs++;
 			if (proc->auth_reqs > MAX_AUTH_REQS) {
 				mslog(s, proc, LOG_ERR, "received too many authentication requests.");
 				return ERR_BAD_COMMAND;
 			}
 
-			ret = handle_auth_req(s, proc, &cmd_data.auth);
+			auth_req = auth_request_msg__unpack(NULL, raw_len, raw);
+			if (auth_req == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
+			}
+
+			ret = handle_auth_req(s, proc, auth_req);
+
+			auth_request_msg__free_unpacked(auth_req, NULL);
+
 			if (ret == ERR_AUTH_CONTINUE) {
 				ret = send_auth_reply_msg(s, proc);
 				if (ret < 0) {
@@ -549,17 +572,21 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 		case AUTH_COOKIE_REQ:
 			
-			if (cmd_data_len != sizeof(cmd_data.cauth)) {
-				mslog(s, proc, LOG_ERR, "error in received message (%u) length.", (unsigned)cmd);
-				return ERR_BAD_COMMAND;
-			}
-
 			if (proc->auth_status != PS_AUTH_INACTIVE) {
 				mslog(s, proc, LOG_ERR, "received unexpected cookie authentication.");
 				return ERR_BAD_COMMAND;
 			}
 
-			ret = handle_auth_cookie_req(s, proc, &cmd_data.cauth);
+			auth_cookie_req = auth_cookie_request_msg__unpack(NULL, raw_len, raw);
+			if (auth_cookie_req == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				return -1;
+			}
+
+			ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
+			
+			auth_cookie_request_msg__free_unpacked(auth_cookie_req, NULL);
+
 			if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
 				goto cleanup;

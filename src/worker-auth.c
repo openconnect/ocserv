@@ -353,13 +353,6 @@ char *st;
 		ws->config->network.ipv6_netmask = st;
 	}
 
-	/* number of routes */
-	if (b.length < 1) {
-		oclog(ws, LOG_ERR, "Error in received length-value from main");
-		ret = ERR_BAD_COMMAND;
-		goto cleanup;
-	}
-	
 	ret = str_read_data(&b, &t, sizeof(t));
 	if (ret < 0)
 		goto cleanup;
@@ -380,6 +373,13 @@ char *st;
 		
 	if (t != 0)
 		ws->config->net_priority = t;
+
+	/* number of routes */
+	if (b.length < 1) {
+		oclog(ws, LOG_ERR, "Error in received length-value from main");
+		ret = ERR_BAD_COMMAND;
+		goto cleanup;
+	}
 
 	ws->routes_size = b.data[0];
 	b.length--;

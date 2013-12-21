@@ -1,3 +1,9 @@
+* Version 0.3.0 (unreleased)
+
+- Added dependency on protocolbuffer-c, allowing a simpler handling
+  of the internal IPC protocol.
+
+
 * Version 0.2.3 (released 2013-12-15)
 
 - Added X-CSTP-License header to client reply for mobile client

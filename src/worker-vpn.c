@@ -515,6 +515,20 @@ void exit_worker(worker_st *ws)
 	exit(1);
 }
 
+/* vpn_server:
+ * @ws: an initialized worker structure
+ *
+ * This is the main worker process. It is executed
+ * by the main server after fork and drop of privileges.
+ *
+ * It handles the client connection including:
+ *  - HTTPS authentication using XML forms that are parsed and
+ *    forwarded to main.
+ *  - TLS authentication (using certificate)
+ *  - TCP VPN tunnel establishment (after HTTP CONNECT)
+ *  - UDP VPN tunnel establishment (once an FD is forwarded by main)
+ *
+ */
 void vpn_server(struct worker_st* ws)
 {
 	unsigned char buf[2048];
@@ -829,6 +843,19 @@ int ret;
 #define CSTP_OVERHEAD 8
 
 #define SEND_ERR(x) if (x<0) goto send_error
+
+/* connect_handler:
+ * @ws: an initialized worker structure
+ *
+ * This function handles the HTTPS session after a CONNECT
+ * command has been issued by the peer. The @ws->auth_state
+ * should be set to %S_AUTH_COMPLETE or the client will be
+ * disconnected.
+ *
+ * If the user is authenticate it handles the TCP and UDP VPN 
+ * tunnels.
+ *
+ */
 static int connect_handler(worker_st *ws)
 {
 struct http_req_st *req = &ws->req;

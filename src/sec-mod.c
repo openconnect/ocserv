@@ -148,6 +148,38 @@ int fd, ret;
 	return 0;
 }
 
+/* sec_mod_server:
+ * @config: server configuration
+ * @socket_file: the name of the socket
+ *
+ * This is the main part of the security module.
+ * It creates the unix domain socket identified by @socket_file
+ * and then accepts connections from the workers to it. Then 
+ * it serves commands requested on the server's private key.
+ *
+ * The format of the command is:
+ * byte[0]: key index
+ * byte[1]: operation ('D': decrypt, 'S' sign)
+ * byte[2-total]: data
+ *
+ * When the operation is decrypt the provided data are
+ * decrypted and sent back to worker. The sign operation
+ * signs the provided data.
+ *
+ * The security module's reply to the worker has the
+ * following format:
+ * byte[0-1]: length (uint16_t)
+ * byte[2-total]: data (signature or decrypted data)
+ *
+ * The reason for having this as a separate process
+ * is to avoid any bug on the workers to leak the key.
+ * It is not part of main because workers are spawned
+ * from main, and thus should be prevented from accessing
+ * parts the key in stack or heap that was not zeroized.
+ * Other than that it allows the main server to spawn
+ * clients fast without becoming a bottleneck due to private 
+ * key operations.
+ */
 void
 sec_mod_server(struct cfg_st* config, const char* socket_file)
 {
@@ -266,6 +298,9 @@ socklen_t cr_len;
 		}
 
 #if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
+		/* This check is superfluous and mostly for debugging
+		 * purposes. The socket permissions set with umask should
+		 * be sufficient already for access control. */
 		cr_len = sizeof(cr);
 		ret = getsockopt(cfd, SOL_SOCKET, SO_PEERCRED, &cr, &cr_len);
 		if (ret == -1) {

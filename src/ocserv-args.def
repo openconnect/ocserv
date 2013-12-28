@@ -157,8 +157,8 @@ server-key = /path/to/key.pem
 #pin-file = /path/to/pin.txt
 #srk-pin-file = /path/to/srkpin.txt
 
-# The Certificate Authority that will be used
-# to verify clients if certificate authentication
+# The Certificate Authority that will be used to verify
+# client certificates (public keys) if certificate authentication
 # is set.
 #ca-cert = /path/to/ca.pem
 
@@ -388,16 +388,26 @@ In that case the 'ocpasswd' tool can be used for its management.
 Note that password authentication can be used in conjunction with certificate 
 authentication.
 
-@subheading Certificate authentication
-In order to support certificate authentication you will need in addition to 
-the server certificate and key for TLS, a certificate authority (CA) to sign
-the client certificates. That authority should also provide a CRL to
-allow the server to reject the revoked clients (see @var{ca-cert, crl}).
+@subheading Public key (certificate) authentication
+Public key authentication allows the user to be authenticated
+by the possession of the private key that corresponds to a known
+to the server public key. That allows the usage of common smart
+cards for user authentication.
 
-In certificate authentication each client holds a key and certificate that 
-identifies him. The user ID of the client must be embedded in the certificate's Distinguished
-Name (DN), e.g. in the Common Name, or UID fields. For the server to
-read the name, the @var{cert-user-oid} configuration option must be set.
+In ocserv, a certificate authority (CA) is used to sign the client 
+certificates. That certificate authority can be local, used only by the 
+server to sign its user's known public keys which are then given to 
+users in a form of certificates. That authority need also provide a CRL 
+to allow the server to reject the revoked clients (see @var{ca-cert, crl}).
+
+In certificate authentication each client presents a certificate and signs
+data provided by the server, as part of TLS authentication, to prove his 
+possession of the corresponding private key. 
+The certificate need also contain user identifying information,
+for example, the user ID of the client must be embedded in the certificate's 
+Distinguished Name (DN), i.e., in the Common Name, or UID fields. For the 
+server to read the name, the @var{cert-user-oid} configuration option 
+must be set.
 
 The following examples demonstrate how to use certtool from GnuTLS to
 generate such CA.

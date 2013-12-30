@@ -42,6 +42,9 @@
 # include <tcpd.h>
 #endif
 
+#ifdef HAVE_LIBSYSTEMD_DAEMON
+# include <systemd/sd-daemon.h>
+#endif
 #include <main.h>
 #include <route-add.h>
 #include <main-auth.h>
@@ -73,6 +76,34 @@ static void ms_sleep(unsigned ms)
   nanosleep(&tv, NULL);
 }
 
+static void add_listener(struct listen_list_st *list,
+	int fd, int family, int socktype, int protocol,
+	struct sockaddr* addr, socklen_t addr_len)
+{
+	struct listener_st *tmp;
+	int ret;
+
+	tmp = calloc(1, sizeof(struct listener_st));
+	tmp->fd = fd;
+	tmp->family = family;
+	tmp->socktype = socktype;
+	tmp->protocol = protocol;
+	
+	if (addr == NULL) {
+		ret = getsockname(fd, (struct sockaddr*)&tmp->addr, &tmp->addr_len);
+		if (ret == -1) {
+			perror("getsockname failed");
+			tmp->addr_len = 0;
+		}
+	} else {
+		tmp->addr_len = addr_len;
+		memcpy(&tmp->addr, addr, addr_len);
+	}
+
+	list_add(&list->head, &(tmp->list));
+	list->total++;
+}
+
 static 
 int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_list_st *list)
 {
@@ -80,7 +111,6 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 	int s, y;
 	const char* type = NULL;
 	char buf[512];
-	struct listener_st *tmp;
 
 	for (ptr = res; ptr != NULL; ptr = ptr->ai_next) {
 		if (ptr->ai_family != AF_INET && ptr->ai_family != AF_INET6)
@@ -92,7 +122,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			type = "UDP";
 		else
 			continue;
-			
+
 		if (config->foreground != 0)
 			fprintf(stderr, "listening (%s) on %s...\n",
 				type, human_addr(ptr->ai_addr, ptr->ai_addrlen,
@@ -149,17 +179,10 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 				return -1;
 			}
 		}
+		
+		add_listener(list, s, ptr->ai_family, ptr->ai_socktype,
+			ptr->ai_protocol, ptr->ai_addr, ptr->ai_addrlen);
 
-		tmp = calloc(1, sizeof(struct listener_st));
-		tmp->fd = s;
-		tmp->family = ptr->ai_family;
-		tmp->socktype = ptr->ai_socktype;
-		tmp->protocol = ptr->ai_protocol;
-		tmp->addr_len = ptr->ai_addrlen;
-		memcpy(&tmp->addr, ptr->ai_addr, tmp->addr_len);
-
-		list_add(&list->head, &(tmp->list));
-		list->total++;
 	}
 	
 	fflush(stderr);
@@ -178,6 +201,48 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 
 	list_head_init(&list->head);
 	list->total = 0;
+
+#ifdef HAVE_LIBSYSTEMD_DAEMON
+	/* Support for systemd socket-activatable service */
+	if ((ret=sd_listen_fds(0)) > 0) {
+		/* if we get our fds from systemd */
+		unsigned i;
+		int family, type, fd;
+
+		for (i=0;i<ret;i++) {
+			fd = SD_LISTEN_FDS_START+i;
+			if (sd_is_socket(fd, 0, 0, 0))
+				continue;
+
+			if (sd_is_socket(fd, AF_INET, 0, -1))
+				family = AF_INET;
+			else if (sd_is_socket(fd, AF_INET6, 0, -1))
+				family = AF_INET6;
+			else
+				continue;
+
+			if (sd_is_socket(fd, 0, SOCK_STREAM, -1))
+				type = SOCK_STREAM;
+			else if (sd_is_socket(fd, 0, SOCK_DGRAM, -1))
+				type = SOCK_DGRAM;
+			else 
+				continue;
+
+			set_cloexec_flag (fd, 1);
+			add_listener(list, fd, family, type, 0, NULL, 0);
+		}
+
+		if (list->total == 0) {
+			fprintf(stderr, "no useful sockets were provided by systemd\n");
+			exit(1);
+		}
+
+		if (config->foreground != 0)
+			fprintf(stderr, "listening on %d systemd sockets...\n", list->total);
+		
+		return 0;
+	}
+#endif
 
 	snprintf(portname, sizeof(portname), "%d", config->port);
 

@@ -244,6 +244,9 @@
 /* Define if you have the libseccomp library. */
 #undef HAVE_LIBSECCOMP
 
+/* Define if you have the libsystemd-daemon library. */
+#undef HAVE_LIBSYSTEMD_DAEMON
+
 /* Define if you have the libutil library. */
 #undef HAVE_LIBUTIL
 

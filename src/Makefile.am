@@ -57,7 +57,7 @@ ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
-	$(LIBPROTOBUF_C_LIBS)
+	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON)
 
 if PCL
 ocserv_LDADD += $(PCL_LIBS)

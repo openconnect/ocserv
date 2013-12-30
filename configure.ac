@@ -96,11 +96,24 @@ AC_ARG_ENABLE(seccomp,
 
 if [ test "$seccomp_enabled" = "yes" ];then
 AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <seccomp.h>], [seccomp_init(0);])
-if [ test -z "$LIBSECCOMP" ];then
+ if [ test -z "$LIBSECCOMP" ];then
 	seccomp_enabled="no"
-else
+ else
 	seccomp_enabled="yes"
+ fi
 fi
+
+AC_ARG_ENABLE(systemd,
+  AS_HELP_STRING([--disable-systemd], [disable systemd support]),
+    systemd_enabled=$enableval, systemd_enabled=yes)
+
+if [ test "$systemd_enabled" = "yes" ];then
+AC_LIB_HAVE_LINKFLAGS(systemd-daemon,, [#include <systemd/sd-daemon.h>], [sd_listen_fds(0);])
+ if [ test -z "$LIBSYSTEMD_DAEMON" ];then
+	systemd_enabled="no"
+ else
+	systemd_enabled="yes"
+ fi
 fi
 
 AC_ARG_ENABLE(anyconnect-compat,
@@ -199,6 +212,7 @@ Summary of build options:
   
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
+  systemd:              ${systemd_enabled}
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}

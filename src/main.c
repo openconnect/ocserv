@@ -104,6 +104,27 @@ static void add_listener(struct listen_list_st *list,
 	list->total++;
 }
 
+static void set_udp_socket_options(int fd)
+{
+int y;
+#if defined(IP_DONTFRAG)
+	y = 1;
+	if (setsockopt(fd, SOL_IP, IP_DONTFRAG,
+		       (const void *) &y, sizeof(y)) < 0)
+		perror("setsockopt(IP_DF) failed");
+#elif defined(IP_MTU_DISCOVER)
+	y = IP_PMTUDISC_DO;
+	if (setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
+		       (const void *) &y, sizeof(y)) < 0)
+		perror("setsockopt(IP_DF) failed");
+#endif
+}
+
+static void set_common_socket_options(int fd)
+{
+	set_cloexec_flag (fd, 1);
+}
+
 static 
 int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_list_st *list)
 {
@@ -134,7 +155,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			perror("socket() failed");
 			continue;
 		}
-		
+
 #if defined(IPV6_V6ONLY)
 		if (ptr->ai_family == AF_INET6) {
 			y = 1;
@@ -151,21 +172,12 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			perror("setsockopt(SO_REUSEADDR) failed");
 		}
 
+		set_common_socket_options(s);
+
 		if (ptr->ai_socktype == SOCK_DGRAM) {
-#if defined(IP_DONTFRAG)
-			y = 1;
-			if (setsockopt(s, SOL_IP, IP_DONTFRAG,
-				       (const void *) &y, sizeof(y)) < 0)
-				perror("setsockopt(IP_DF) failed");
-#elif defined(IP_MTU_DISCOVER)
-			y = IP_PMTUDISC_DO;
-			if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER,
-				       (const void *) &y, sizeof(y)) < 0)
-				perror("setsockopt(IP_DF) failed");
-#endif
+			set_udp_socket_options(s);
 		}
 
-		set_cloexec_flag (s, 1);
 
 		if (bind(s, ptr->ai_addr, ptr->ai_addrlen) < 0) {
 			perror("bind() failed");
@@ -228,7 +240,10 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 			else 
 				continue;
 
-			set_cloexec_flag (fd, 1);
+			set_common_socket_options(fd);
+			if (type == SOCK_DGRAM)
+				set_udp_socket_options(fd);
+
 			add_listener(list, fd, family, type, 0, NULL, 0);
 		}
 

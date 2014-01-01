@@ -109,7 +109,7 @@ const char *data;
 int len;
 
 	oclog(ws, LOG_HTTP_DEBUG, "requested fixed string: %s", ws->req.url); 
-	if (!strcmp(ws->req.url, "/2/binaries/update.txt")) {
+	if (!strcmp(ws->req.url, "/1/binaries/update.txt")) {
 		data = VPN_VERSION;
 		len = sizeof(VPN_VERSION)-1;
 	} else {

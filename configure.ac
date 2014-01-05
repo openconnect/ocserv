@@ -48,7 +48,13 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
-PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c])
+PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
+ AC_CHECK_LIB(protobuf-c, [protobuf_c_message_pack], 
+  AC_SUBST(LIBPROTOBUF_C_LIBS, [-lprotobuf-c]),
+  AC_MSG_ERROR([***
+libprotobuf-c was not found.])
+ )
+)
 
 pam_enabled=no
 LIBS="$oldlibs -lpam"

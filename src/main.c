@@ -936,6 +936,7 @@ fork_failed:
 					ctmp->remote_addr_len = ws.remote_addr_len;
 
 					ctmp->pid = pid;
+					ctmp->conn_time = time(0);
 					ctmp->fd = cmd_fd[0];
 					set_cloexec_flag (cmd_fd[0], 1);
 

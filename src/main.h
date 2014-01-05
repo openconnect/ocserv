@@ -77,6 +77,8 @@ struct proc_st {
 	pid_t pid;
 	time_t udp_fd_receive_time; /* when the corresponding process has received a UDP fd */
 	
+	time_t conn_time; /* the time the user connected */
+
 	/* the tun lease this process has */
 	struct tun_lease_st tun_lease;
 	struct ip_lease_st *ipv4;

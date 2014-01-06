@@ -562,9 +562,8 @@ void clear_lists(main_server_st *s)
 	}
 
 	tls_cache_deinit(s->tls_db);
-	
 	ip_lease_deinit(&s->ip_leases);
-
+	ctl_handler_deinit(s);
 }
 
 static void kill_children(main_server_st* s)
@@ -746,7 +745,8 @@ int main(int argc, char** argv)
 	int fd, pid, e;
 	struct listener_st *ltmp = NULL;
 	struct proc_st *ctmp = NULL, *cpos;
-	fd_set rd;
+	struct ctl_handler_st* ctl_tmp = NULL, *ctl_pos;
+	fd_set rd_set, wr_set;
 	int val, n = 0, ret, flags;
 	struct timeval tv;
 	int cmd_fd[2];
@@ -760,6 +760,7 @@ int main(int argc, char** argv)
 	list_head_init(&s.clist.head);
 	list_head_init(&s.ban_list.head);
 	list_head_init(&s.script_list.head);
+	list_head_init(&s.ctl_list.head);
 	tls_cache_init(&s.tls_db);
 	ip_lease_init(&s.ip_leases);
 	
@@ -815,6 +816,7 @@ int main(int argc, char** argv)
 	allow_severity = LOG_DAEMON|LOG_INFO;
 	deny_severity = LOG_DAEMON|LOG_WARNING;
 #endif	
+
 	memset(&ws, 0, sizeof(ws));
 
 	if (config.foreground == 0) {
@@ -833,13 +835,21 @@ int main(int argc, char** argv)
 	tls_global_init_certs(&s);
 
 	mslog(&s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
+
+	ret = ctl_handler_init(&s);
+	if (ret < 0) {
+		fprintf(stderr, "Cannot create command handler\n");
+		exit(1);
+	}
+
 	alarm(MAINTAINANCE_TIME(&s));
 
 	for (;;) {
 		check_other_work(&s);
 
 		/* initialize select */
-		FD_ZERO(&rd);
+		FD_ZERO(&rd_set);
+		FD_ZERO(&wr_set);
 
 		list_for_each(&s.llist.head, ltmp, list) {
 			if (ltmp->fd == -1) continue;
@@ -853,18 +863,28 @@ int main(int argc, char** argv)
 				exit(1);
 			}
 
-			FD_SET(ltmp->fd, &rd);
+			FD_SET(ltmp->fd, &rd_set);
 			n = MAX(n, ltmp->fd);
 		}
 
 		list_for_each(&s.clist.head, ctmp, list) {
-			FD_SET(ctmp->fd, &rd);
+			FD_SET(ctmp->fd, &rd_set);
 			n = MAX(n, ctmp->fd);
 		}
 
+		list_for_each(&s.ctl_list.head, ctl_tmp, list) {
+			if (ctl_tmp->enabled) {
+				if (ctl_tmp->type == CTL_READ)
+					FD_SET(ctl_tmp->fd, &rd_set);
+				else
+					FD_SET(ctl_tmp->fd, &wr_set);
+				n = MAX(n, ctl_tmp->fd);
+			}
+		}
+
 		tv.tv_usec = 0;
-		tv.tv_sec = 30;
-		ret = select(n + 1, &rd, NULL, NULL, &tv);
+		tv.tv_sec = 1;
+		ret = select(n + 1, &rd_set, &wr_set, NULL, &tv);
 		if (ret == -1 && errno == EINTR)
 			continue;
 
@@ -877,7 +897,7 @@ int main(int argc, char** argv)
 
 		/* Check for new connections to accept */
 		list_for_each(&s.llist.head, ltmp, list) {
-			set = FD_ISSET(ltmp->fd, &rd);
+			set = FD_ISSET(ltmp->fd, &rd_set);
 			if (set && ltmp->socktype == SOCK_STREAM) {
 				/* connection on TCP port */
 				ws.remote_addr_len = sizeof(ws.remote_addr);
@@ -985,7 +1005,7 @@ fork_failed:
 
 		/* Check for any pending commands */
 		list_for_each_safe(&s.clist.head, ctmp, cpos, list) {
-			if (FD_ISSET(ctmp->fd, &rd)) {
+			if (FD_ISSET(ctmp->fd, &rd_set)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {
 					remove_from_script_list(&s, ctmp);
@@ -994,6 +1014,19 @@ fork_failed:
 			}
 		}
 
+		/* Check for pending control commands */
+		list_for_each_safe(&s.ctl_list.head, ctl_tmp, ctl_pos, list) {
+			if (ctl_tmp->enabled == 0)
+				continue;
+
+			if (ctl_tmp->type == CTL_READ) {
+				if (FD_ISSET(ctl_tmp->fd, &rd_set))
+					ctl_handle_commands(&s, ctl_tmp);
+			} else {
+				if (FD_ISSET(ctl_tmp->fd, &wr_set))
+					ctl_handle_commands(&s, ctl_tmp);
+			}
+		}
 	}
 
 	return 0;

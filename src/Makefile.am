@@ -2,7 +2,7 @@ SUBDIRS =
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
-	$(LIBPROTOBUF_C_CFLAGS)
+	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
@@ -41,7 +41,7 @@ ocserv-args.c: $(srcdir)/ocserv-args.def
 ocserv-args.h: ocserv-args.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	cookies.c worker-tun.c main-misc.c \
+	cookies.c worker-tun.c main-misc.c main-ctl-handler.c \
 	group-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
@@ -57,7 +57,7 @@ ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
-	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON)
+	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON) $(LIBDBUS_LIBS)
 
 if PCL
 ocserv_LDADD += $(PCL_LIBS)

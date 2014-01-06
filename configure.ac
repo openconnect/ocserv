@@ -48,6 +48,11 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
+PKG_CHECK_MODULES([LIBDBUS], [dbus-1 >= 1.1.1],
+dbus_enabled=yes
+AC_DEFINE([HAVE_DBUS], [], [dbus detected]),
+[dbus_enabled=no])
+
 PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
  AC_CHECK_LIB(protobuf-c, [protobuf_c_message_pack], 
   AC_SUBST(LIBPROTOBUF_C_LIBS, [-lprotobuf-c]),
@@ -219,6 +224,7 @@ Summary of build options:
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}
+  dbus:                 ${dbus_enabled}
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}

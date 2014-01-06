@@ -72,6 +72,7 @@ extern int syslog_open;
 #define ERR_PARSING -9
 #define ERR_EXEC -10
 #define ERR_WORKER_TERMINATED -11
+#define ERR_CTL -12
 
 #define LOG_HTTP_DEBUG 2048
 

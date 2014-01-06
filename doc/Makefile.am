@@ -1,4 +1,5 @@
-EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd
+EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd \
+	systemd/ocserv.service systemd/ocserv.socket
 
 dist_man_MANS = ocserv.8 ocpasswd.8
 

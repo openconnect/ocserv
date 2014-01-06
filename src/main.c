@@ -81,7 +81,6 @@ static void add_listener(struct listen_list_st *list,
 	struct sockaddr* addr, socklen_t addr_len)
 {
 	struct listener_st *tmp;
-	int ret;
 
 	tmp = calloc(1, sizeof(struct listener_st));
 	tmp->fd = fd;
@@ -89,16 +88,8 @@ static void add_listener(struct listen_list_st *list,
 	tmp->socktype = socktype;
 	tmp->protocol = protocol;
 	
-	if (addr == NULL) {
-		ret = getsockname(fd, (struct sockaddr*)&tmp->addr, &tmp->addr_len);
-		if (ret == -1) {
-			perror("getsockname failed");
-			tmp->addr_len = 0;
-		}
-	} else {
-		tmp->addr_len = addr_len;
-		memcpy(&tmp->addr, addr, addr_len);
-	}
+	tmp->addr_len = addr_len;
+	memcpy(&tmp->addr, addr, addr_len);
 
 	list_add(&list->head, &(tmp->list));
 	list->total++;
@@ -209,42 +200,66 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 {
 	struct addrinfo hints, *res;
 	char portname[6];
-	int ret;
+	int ret, fds;
 
 	list_head_init(&list->head);
 	list->total = 0;
 
 #ifdef HAVE_LIBSYSTEMD_DAEMON
 	/* Support for systemd socket-activatable service */
-	if ((ret=sd_listen_fds(0)) > 0) {
+	if ((fds=sd_listen_fds(0)) > 0) {
 		/* if we get our fds from systemd */
 		unsigned i;
 		int family, type, fd;
+		struct sockaddr_storage tmp_sock;
+		socklen_t tmp_sock_len;
 
-		for (i=0;i<ret;i++) {
+		for (i=0;i<fds;i++) {
 			fd = SD_LISTEN_FDS_START+i;
-			if (sd_is_socket(fd, 0, 0, 0))
-				continue;
 
 			if (sd_is_socket(fd, AF_INET, 0, -1))
 				family = AF_INET;
 			else if (sd_is_socket(fd, AF_INET6, 0, -1))
 				family = AF_INET6;
-			else
+			else {
+				fprintf(stderr, "Non-internet socket fd received!\n");
 				continue;
+			}
 
 			if (sd_is_socket(fd, 0, SOCK_STREAM, -1))
 				type = SOCK_STREAM;
 			else if (sd_is_socket(fd, 0, SOCK_DGRAM, -1))
 				type = SOCK_DGRAM;
-			else 
+			else {
+				fprintf(stderr, "Non-TCP or UDP socket fd received!\n");
 				continue;
+			}
 
 			set_common_socket_options(fd);
 			if (type == SOCK_DGRAM)
 				set_udp_socket_options(fd);
 
-			add_listener(list, fd, family, type, 0, NULL, 0);
+			/* obtain socket params */
+			tmp_sock_len = sizeof(tmp_sock);
+			ret = getsockname(fd, (struct sockaddr*)&tmp_sock, &tmp_sock_len);
+			if (ret == -1) {
+				perror("getsockname failed");
+				continue;
+			}
+
+			if (type == SOCK_STREAM) {
+				if (family == AF_INET)
+					config->port = ntohs(((struct sockaddr_in*)&tmp_sock)->sin_port);
+				else
+					config->port = ntohs(((struct sockaddr_in6*)&tmp_sock)->sin6_port);
+			} else if (type == SOCK_DGRAM) {
+				if (family == AF_INET)
+					config->udp_port = ntohs(((struct sockaddr_in*)&tmp_sock)->sin_port);
+				else
+					config->udp_port = ntohs(((struct sockaddr_in6*)&tmp_sock)->sin6_port);
+			}
+
+			add_listener(list, fd, family, type, 0, (struct sockaddr*)&tmp_sock, tmp_sock_len);
 		}
 
 		if (list->total == 0) {
@@ -258,6 +273,11 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 		return 0;
 	}
 #endif
+
+	if (config->port == 0) {
+		fprintf(stderr, "tcp-port option is mandatory!\n");
+		return -1;
+	}
 
 	snprintf(portname, sizeof(portname), "%d", config->port);
 

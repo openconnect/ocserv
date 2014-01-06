@@ -50,7 +50,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 1 },
+	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },

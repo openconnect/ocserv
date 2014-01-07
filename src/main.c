@@ -748,12 +748,13 @@ int main(int argc, char** argv)
 	struct ctl_handler_st* ctl_tmp = NULL, *ctl_pos;
 	fd_set rd_set, wr_set;
 	int val, n = 0, ret, flags;
-	struct timeval tv;
+	struct timespec ts;
 	int cmd_fd[2];
 	struct worker_st ws;
 	struct cfg_st config;
 	unsigned set;
 	main_server_st s;
+	sigset_t emptyset, blockset;
 
 	memset(&s, 0, sizeof(s));
 
@@ -763,13 +764,23 @@ int main(int argc, char** argv)
 	list_head_init(&s.ctl_list.head);
 	tls_cache_init(&s.tls_db);
 	ip_lease_init(&s.ip_leases);
-	
+
+	sigemptyset(&blockset);
+	sigemptyset(&emptyset);
+	sigaddset(&blockset, SIGALRM);
+	sigaddset(&blockset, SIGTERM);
+	sigaddset(&blockset, SIGINT);
+	sigaddset(&blockset, SIGCHLD);
+	sigaddset(&blockset, SIGHUP);
+	sigprocmask(SIG_BLOCK, &blockset, NULL);
+
 	ocsignal(SIGINT, handle_term);
 	ocsignal(SIGTERM, handle_term);
 	ocsignal(SIGPIPE, SIG_IGN);
 	ocsignal(SIGHUP, handle_reload);
 	ocsignal(SIGCHLD, handle_children);
 	ocsignal(SIGALRM, handle_alarm);
+	
 
 	/* Initialize GnuTLS */
 	tls_global_init(&s);
@@ -882,15 +893,15 @@ int main(int argc, char** argv)
 			}
 		}
 
-		tv.tv_usec = 0;
-		tv.tv_sec = 1;
-		ret = select(n + 1, &rd_set, &wr_set, NULL, &tv);
+		ts.tv_nsec = 0;
+		ts.tv_sec = 30;
+		ret = pselect(n + 1, &rd_set, &wr_set, NULL, &ts, &emptyset);
 		if (ret == -1 && errno == EINTR)
 			continue;
 
 		if (ret < 0) {
 			e = errno;
-			mslog(&s, NULL, LOG_ERR, "Error in select(): %s",
+			mslog(&s, NULL, LOG_ERR, "Error in pselect(): %s",
 			       strerror(e));
 			exit(1);
 		}

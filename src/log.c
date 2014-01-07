@@ -60,6 +60,11 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	if (getnameinfo(sa, salen, NULL, 0, buf, buflen, NI_NUMERICSERV) != 0)
 		return NULL;
 
+	if (buf[0] == '0' && buf[1] == 0) {
+		buf--;
+		buf[0] = 0;
+	}
+
 	return save_buf;
 }
 
@@ -70,7 +75,7 @@ void __attribute__ ((format(printf, 3, 4)))
 	char ipbuf[128];
 	const char* ip;
 	va_list args;
-	
+
 	if (priority == LOG_DEBUG && ws->config->debug == 0)
 		return;
 
@@ -93,7 +98,7 @@ void __attribute__ ((format(printf, 3, 4)))
 	} else {
 		syslog(priority, "[unknown] %s", buf);
 	}
-	
+
 	return;
 }
 
@@ -106,7 +111,7 @@ void __attribute__ ((format(printf, 4, 5)))
 	char ipbuf[128];
 	const char* ip = NULL;
 	va_list args;
-	
+
 	if (priority == LOG_DEBUG && s->config->debug == 0)
 		return;
 
@@ -131,7 +136,7 @@ void __attribute__ ((format(printf, 4, 5)))
 	} else {
 		syslog(priority, "[main] %s", buf);
 	}
-	
+
 	return;
 }
 
@@ -142,7 +147,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	int ret;
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
-	
+
 	if (priority == LOG_DEBUG && s->config->debug == 0)
 		return;
 
@@ -150,7 +155,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	ret = gnutls_hex_encode(&data, buf, &buf_size);
 	if (ret < 0)
 		return;
-	
+
 	_mslog(s, proc, priority, "%s %s", prefix, buf);
 
 	return;

@@ -264,6 +264,9 @@ int ret;
  */
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 {
+	list_del(&proc->list);
+	s->active_clients--;
+
 	if (k)
 		kill(proc->pid, SIGTERM);
 
@@ -284,9 +287,7 @@ void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 	if (proc->ipv4 || proc->ipv6)
 		remove_ip_leases(s, proc);
 
-	list_del(&proc->list);
 	free(proc);
-	s->active_clients--;
 }
 
 

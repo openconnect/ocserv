@@ -52,3 +52,4 @@ src/libcmd-ocpasswd.a
 src/libcmd-ocserv.a
 src/ipc.pb-c.c
 src/ipc.pb-c.h
+src/occtl

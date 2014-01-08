@@ -6,6 +6,12 @@
 - Added occtl a control tool for ocserv.
 
 
+* Version 0.2.4 (released 2014-01-08)
+
+- Better AnyConnect client support for Mac and other systems. Patch by
+  Kevin Cernekee.
+
+
 * Version 0.2.3 (released 2013-12-15)
 
 - Added X-CSTP-License header to client reply for mobile client

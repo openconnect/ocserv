@@ -42,6 +42,7 @@
 #include <route-add.h>
 #include <ip-lease.h>
 #include <ipc.pb-c.h>
+#include <script-list.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -270,6 +271,7 @@ void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 	if (k)
 		kill(proc->pid, SIGTERM);
 
+	remove_from_script_list(s, proc);
 	user_disconnected(s, proc);
 
 	/* close the intercomm fd */

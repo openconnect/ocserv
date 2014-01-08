@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [0.2.3], [nmav@gnutls.org])
+AC_INIT([ocserv], [0.3.0], [nmav@gnutls.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([gl/m4])
@@ -53,6 +53,8 @@ dbus_enabled=yes
 AC_DEFINE([HAVE_DBUS], [], [dbus detected]),
 [dbus_enabled=no])
 
+AM_CONDITIONAL(HAVE_DBUS, test "x$dbus_enabled" != xno)
+
 PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
  AC_CHECK_LIB(protobuf-c, [protobuf_c_message_pack], 
   AC_SUBST(LIBPROTOBUF_C_LIBS, [-lprotobuf-c]),
@@ -60,6 +62,18 @@ PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
 libprotobuf-c was not found.])
  )
 )
+
+if test "$dbus_enabled" = yes;then
+occtl_enabled=yes
+AC_CHECK_LIB(readline, [readline], 
+  AC_SUBST(LIBREADLINE_LIBS, [-lreadline]),
+  occtl_enabled=no
+  AC_MSG_WARN([***
+libreadline was not found. occtl will not be built.])
+)
+else
+occtl_enabled=no
+fi
 
 pam_enabled=no
 LIBS="$oldlibs -lpam"
@@ -187,7 +201,7 @@ AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
 
 LIBOPTS_CHECK([libopts])
-if test "$NEED_LIBOPTS_DIR" == "true";then
+if test "$NEED_LIBOPTS_DIR" = "true";then
 	dnl create libopts-generated files
 	for i in ${srcdir}/src/*-args.c.bak ${srcdir}/src/*-args.h.bak; do
 		nam=`echo $i|sed 's/.bak//g'`
@@ -228,6 +242,9 @@ Summary of build options:
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}
+
+Optional programs:
+  occtl:                ${occtl_enabled}
 
 Experimental options:
   seccomp:              ${seccomp_enabled}

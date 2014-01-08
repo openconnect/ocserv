@@ -25,6 +25,10 @@ EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc
 
 bin_PROGRAMS = ocpasswd
+if HAVE_DBUS
+bin_PROGRAMS += occtl
+endif
+
 sbin_PROGRAMS = ocserv
 
 
@@ -78,6 +82,9 @@ ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
 ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 	$(AUTOGEN) $<
 ocpasswd-args.h: ocpasswd-args.c
+
+occtl_SOURCES = occtl.c
+occtl_LDADD = ../gl/libgnu.a $(LIBDBUS_LIBS) $(LIBREADLINE_LIBS)
 
 ipc.pb-c.c: ipc.proto
 	protoc-c --c_out=. $<

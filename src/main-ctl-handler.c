@@ -369,15 +369,15 @@ static void method_disconnect_user_name(main_server_st* s, DBusConnection* conn,
 	struct proc_st *ctmp = NULL;
 	char* name = "";
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect-name");
+	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_name");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
-		mslog(s, NULL, LOG_ERR, "no arguments provided in disconnect-name");
+		mslog(s, NULL, LOG_ERR, "no arguments provided in disconnect_name");
 		return;
 	}
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_STRING) {
-		mslog(s, NULL, LOG_ERR, "wrong argument provided in disconnect-name");
+		mslog(s, NULL, LOG_ERR, "wrong argument provided in disconnect_name");
 		return;
 	}
 
@@ -424,21 +424,21 @@ static void method_disconnect_user_id(main_server_st* s, DBusConnection* conn, D
 	struct proc_st *ctmp = NULL;
 	dbus_uint32_t id = 0;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect-id");
+	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_id");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
-		mslog(s, NULL, LOG_ERR, "no arguments provided in disconnect-id");
+		mslog(s, NULL, LOG_ERR, "no arguments provided in disconnect_id");
 		return;
 	}
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_UINT32) {
-		mslog(s, NULL, LOG_ERR, "wrong argument provided in disconnect-id");
+		mslog(s, NULL, LOG_ERR, "wrong argument provided in disconnect_id");
 		return;
 	}
 
 	dbus_message_iter_get_basic(&args, &id);
 
-	/* got the name. Try to disconnect */
+	/* got the ID. Try to disconnect */
 	list_for_each(&s->clist.head, ctmp, list) {
 		if (ctmp->pid == id) {
 			remove_proc(s, ctmp, 1);
@@ -486,17 +486,17 @@ static void method_introspect(main_server_st* s, DBusConnection* conn, DBusMessa
 		"      <arg name=\"pid\" direction=\"out\" type=\"u\"/>\n"
 		"      <arg name=\"sec-mod-pid\" direction=\"out\" type=\"u\"/>\n"
 		"      <arg name=\"clients\" direction=\"out\" type=\"u\"/>\n"
-		"      </method>\n"
+		"    </method>\n"
 		"</interface>"
 		"<interface name=\"org.infradead.ocserv.users\">\n"
 		"    <method name=\"list\">\n"
 		"      <arg name=\"user-info\" direction=\"out\" type=\"a"LIST_USERS_SIG"\"/>\n"
 		"    </method>\n"
-		"    <method name=\"disconnect-name\">\n"
+		"    <method name=\"disconnect_name\">\n"
 		"      <arg name=\"user-name\" direction=\"in\" type=\"s\"/>\n"
 		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n"
         	"    </method>\n"
-		"    <method name=\"disconnect-id\">\n"
+		"    <method name=\"disconnect_id\">\n"
 		"      <arg name=\"user-id\" direction=\"in\" type=\"u\"/>\n"
 		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n"
 		"    </method>\n"
@@ -566,9 +566,9 @@ unsigned flags;
 			method_status(s, conn, msg);
 		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "list"))
 			method_list_users(s, conn, msg);
-		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "disconnect-name"))
+		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "disconnect_name"))
 			method_disconnect_user_name(s, conn, msg);
-		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "disconnect-id"))
+		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "disconnect_id"))
 			method_disconnect_user_id(s, conn, msg);
 
 		dbus_message_unref(msg);

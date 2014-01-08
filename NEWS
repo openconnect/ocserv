@@ -5,6 +5,7 @@
 - Added support for systemd socket-activatable service.
 - Added occtl a control tool for ocserv.
 
+
 * Version 0.2.3 (released 2013-12-15)
 
 - Added X-CSTP-License header to client reply for mobile client

@@ -36,6 +36,7 @@ static void handle_status_cmd(DBusConnection * conn, const char *arg);
 static void handle_list_users_cmd(DBusConnection * conn, const char *arg);
 static void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg);
 static void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
+static void handle_reset_cmd(DBusConnection * conn, const char *arg);
 
 typedef struct {
 	char *name;
@@ -58,6 +59,7 @@ static const commands_st commands[] = {
 	      "Disconnect the specified user", 1),
 	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
 	      "Disconnect the specified ID", 1),
+	ENTRY("reset", NULL, handle_reset_cmd, "Resets the screen and terminal", 0),
 	ENTRY("help", "or ?", handle_help_cmd, "Prints this help", 0),
 	ENTRY("exit", NULL, handle_exit_cmd, "Exits this application", 0),
 	ENTRY("?", NULL, handle_help_cmd, "Prints this help", -1),
@@ -521,6 +523,12 @@ static void handle_help_cmd(DBusConnection * conn, const char *arg)
 	print_commands(1);
 }
 
+static void handle_reset_cmd(DBusConnection * conn, const char *arg)
+{
+	rl_reset_terminal(NULL);
+	rl_reset_screen_size();
+}
+
 static void handle_exit_cmd(DBusConnection * conn, const char *arg)
 {
 	exit(0);
@@ -700,10 +708,14 @@ static char *command_generator(const char *text, int state)
 		if (cmd_start > 0 && name[cmd_start - 1] != ' ')
 			continue;
 
+		if (rl_line_buffer != NULL && strncmp(rl_line_buffer, name, cmd_start) != 0)
+			continue;
+
 		name += cmd_start;
 
-		if (strncmp(name, text, len) == 0)
+		if (strncmp(name, text, len) == 0) {
 			return (strdup(name));
+		}
 	}
 
 	return NULL;

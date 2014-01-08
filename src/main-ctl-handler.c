@@ -238,7 +238,7 @@ static void method_list_users(main_server_st* s, DBusConnection* conn, DBusMessa
 		goto error;
 	}
 
-	list_for_each(&s->clist.head, ctmp, list) {
+	list_for_each(&s->proc_list.head, ctmp, list) {
 
 		if (dbus_message_iter_open_container(&suba, DBUS_TYPE_STRUCT, NULL, &subs) == 0) {
 			mslog(s, NULL, LOG_ERR, "error appending container to dbus reply");
@@ -384,7 +384,7 @@ static void method_disconnect_user_name(main_server_st* s, DBusConnection* conn,
 	dbus_message_iter_get_basic(&args, &name);
 
 	/* got the name. Try to disconnect */
-	list_for_each(&s->clist.head, ctmp, list) {
+	list_for_each(&s->proc_list.head, ctmp, list) {
 		if (strcmp(ctmp->username, name) == 0) {
 			remove_proc(s, ctmp, 1);
 			status = 1;
@@ -439,7 +439,7 @@ static void method_disconnect_user_id(main_server_st* s, DBusConnection* conn, D
 	dbus_message_iter_get_basic(&args, &id);
 
 	/* got the ID. Try to disconnect */
-	list_for_each(&s->clist.head, ctmp, list) {
+	list_for_each(&s->proc_list.head, ctmp, list) {
 		if (ctmp->pid == id) {
 			remove_proc(s, ctmp, 1);
 			status = 1;

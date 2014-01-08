@@ -314,7 +314,7 @@ int check_multiple_users(main_server_st *s, struct proc_st* proc)
 struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
 
-	list_for_each_safe(&s->clist.head, ctmp, cpos, list) {
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp != proc) {
 			if (memcmp(proc->cookie, ctmp->cookie, sizeof(proc->cookie)) == 0) {
 				mslog(s, ctmp, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", ctmp->username);

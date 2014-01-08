@@ -164,8 +164,8 @@ typedef struct main_server_st {
 	/* tls credentials */
 	struct tls_st creds;
 
-	struct listen_list_st llist;
-	struct proc_list_st clist;
+	struct listen_list_st listen_list;
+	struct proc_list_st proc_list;
 	struct script_list_st script_list;
 	struct ban_list_st ban_list;
 	

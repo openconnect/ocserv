@@ -525,7 +525,7 @@ static void drop_privileges(main_server_st* s)
 #endif
 }
 
-/* clears the server llist and clist. To be used after fork().
+/* clears the server listen_list and proc_list. To be used after fork().
  * It frees unused memory and descriptors.
  */
 void clear_lists(main_server_st *s)
@@ -535,20 +535,20 @@ void clear_lists(main_server_st *s)
 	struct script_wait_st *script_tmp = NULL, *script_pos;
 	struct banned_st *btmp = NULL, *bpos;
 
-	list_for_each_safe(&s->llist.head, ltmp, lpos, list) {
+	list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
 		close(ltmp->fd);
 		list_del(&ltmp->list);
 		free(ltmp);
-		s->llist.total--;
+		s->listen_list.total--;
 	}
 
-	list_for_each_safe(&s->clist.head, ctmp, cpos, list) {
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
 		list_del(&ctmp->list);
 		memset(ctmp, 0, sizeof(*ctmp));
 		free(ctmp);
-		s->clist.total--;
+		s->proc_list.total--;
 	}
 
 	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
@@ -572,7 +572,7 @@ static void kill_children(main_server_st* s)
 
 	/* kill the security module server */
 	kill(s->sec_mod_pid, SIGTERM);
-	list_for_each(&s->clist.head, ctmp, list) {
+	list_for_each(&s->proc_list.head, ctmp, list) {
 		if (ctmp->pid != -1) {
 			kill(ctmp->pid, SIGTERM);
 			user_disconnected(s, ctmp);
@@ -645,7 +645,7 @@ time_t now;
 	/* search for the IP and the session ID in all procs */
 	now = time(0);
 
-	list_for_each(&s->clist.head, ctmp, list) {
+	list_for_each(&s->proc_list.head, ctmp, list) {
 		if (session_id_size == ctmp->session_id_size &&
 			memcmp(session_id, ctmp->session_id, session_id_size) == 0 &&
 			(now - ctmp->udp_fd_receive_time > UDP_FD_RESEND_TIME)) {
@@ -758,7 +758,7 @@ int main(int argc, char** argv)
 
 	memset(&s, 0, sizeof(s));
 
-	list_head_init(&s.clist.head);
+	list_head_init(&s.proc_list.head);
 	list_head_init(&s.ban_list.head);
 	list_head_init(&s.script_list.head);
 	list_head_init(&s.ctl_list.head);
@@ -810,7 +810,7 @@ int main(int argc, char** argv)
 	main_auth_init(&s);
 
 	/* Listen to network ports */
-	ret = listen_ports(&config, &s.llist, config.name);
+	ret = listen_ports(&config, &s.listen_list, config.name);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -862,7 +862,7 @@ int main(int argc, char** argv)
 		FD_ZERO(&rd_set);
 		FD_ZERO(&wr_set);
 
-		list_for_each(&s.llist.head, ltmp, list) {
+		list_for_each(&s.listen_list.head, ltmp, list) {
 			if (ltmp->fd == -1) continue;
 
 			val = fcntl(ltmp->fd, F_GETFL, 0);
@@ -878,7 +878,7 @@ int main(int argc, char** argv)
 			n = MAX(n, ltmp->fd);
 		}
 
-		list_for_each(&s.clist.head, ctmp, list) {
+		list_for_each(&s.proc_list.head, ctmp, list) {
 			FD_SET(ctmp->fd, &rd_set);
 			n = MAX(n, ctmp->fd);
 		}
@@ -907,7 +907,7 @@ int main(int argc, char** argv)
 		}
 
 		/* Check for new connections to accept */
-		list_for_each(&s.llist.head, ltmp, list) {
+		list_for_each(&s.listen_list.head, ltmp, list) {
 			set = FD_ISSET(ltmp->fd, &rd_set);
 			if (set && ltmp->socktype == SOCK_STREAM) {
 				/* connection on TCP port */
@@ -991,7 +991,7 @@ fork_failed:
 					ctmp->fd = cmd_fd[0];
 					set_cloexec_flag (cmd_fd[0], 1);
 
-					list_add(&s.clist.head, &(ctmp->list));
+					list_add(&s.proc_list.head, &(ctmp->list));
 
 					put_into_cgroup(&s, s.config->cgroup, pid);
 
@@ -1015,7 +1015,7 @@ fork_failed:
 		}
 
 		/* Check for any pending commands */
-		list_for_each_safe(&s.clist.head, ctmp, cpos, list) {
+		list_for_each_safe(&s.proc_list.head, ctmp, cpos, list) {
 			if (FD_ISSET(ctmp->fd, &rd_set)) {
 				ret = handle_commands(&s, ctmp);
 				if (ret < 0) {

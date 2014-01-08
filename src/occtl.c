@@ -39,26 +39,30 @@ static void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
 
 typedef struct {
 	char *name;
+	unsigned name_size;
 	char *arg;
 	cmd_func func;
 	char *doc;
 	int always_show;
 } commands_st;
 
+#define ENTRY(name, arg, func, doc, show) \
+	{name, sizeof(name)-1, arg, func, doc, show}
+
 static const commands_st commands[] = {
-	{"status", NULL, handle_status_cmd,
-	 "Print the status of the server", 1},
-	{"list users", NULL, handle_list_users_cmd,
-	 "Print the connected users", 1},
-	{"disconnect user", "[NAME]", handle_disconnect_user_cmd,
-	 "Disconnect the specified user", 1},
-	{"disconnect id", "[ID]", handle_disconnect_id_cmd,
-	 "Disconnect the specified ID", 1},
-	{"help", "or ?", handle_help_cmd, "Prints this help", 0},
-	{"exit", NULL, handle_exit_cmd, "Exits this application", 0},
-	{"?", NULL, handle_help_cmd, "Prints this help", -1},
-	{"quit", NULL, handle_exit_cmd, "Exits this application", -1},
-	{NULL, NULL, NULL}
+	ENTRY("status", NULL, handle_status_cmd,
+	      "Print the status of the server", 1),
+	ENTRY("list users", NULL, handle_list_users_cmd,
+	      "Print the connected users", 1),
+	ENTRY("disconnect user", "[NAME]", handle_disconnect_user_cmd,
+	      "Disconnect the specified user", 1),
+	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
+	      "Disconnect the specified ID", 1),
+	ENTRY("help", "or ?", handle_help_cmd, "Prints this help", 0),
+	ENTRY("exit", NULL, handle_exit_cmd, "Exits this application", 0),
+	ENTRY("?", NULL, handle_help_cmd, "Prints this help", -1),
+	ENTRY("quit", NULL, handle_exit_cmd, "Exits this application", -1),
+	{NULL, 0, NULL, NULL}
 };
 
 static void print_commands(unsigned interactive)
@@ -83,6 +87,36 @@ static void print_commands(unsigned interactive)
 			printf(" %16s\t%16s\n", commands[i].name,
 			       commands[i].doc);
 	}
+}
+
+unsigned check_cmd_help(const char *line)
+{
+	unsigned int i;
+	unsigned len = strlen(line);
+	unsigned status = 0;
+
+	if (line[len - 1] == '?')
+		len--;
+
+	for (i = 0;; i++) {
+		if (commands[i].name == NULL)
+			break;
+
+		if (len > commands[i].name_size)
+			continue;
+
+		if (strncasecmp(commands[i].name, line, len) == 0) {
+			status = 1;
+			if (commands[i].arg)
+				printf(" %12s %s\t%16s\n", commands[i].name,
+				       commands[i].arg, commands[i].doc);
+			else
+				printf(" %16s\t%16s\n", commands[i].name,
+				       commands[i].doc);
+		}
+	}
+
+	return status;
 }
 
 static
@@ -119,8 +153,7 @@ char *rl_gets(char *line_read)
 DBusMessage *send_dbus_cmd(DBusConnection * conn,
 			   const char *bus_name, const char *path,
 			   const char *interface, const char *method,
-			   unsigned type,
-			   const void *arg)
+			   unsigned type, const void *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -132,8 +165,7 @@ DBusMessage *send_dbus_cmd(DBusConnection * conn,
 	}
 	dbus_message_iter_init_append(msg, &args);
 	if (arg != NULL) {
-		if (!dbus_message_iter_append_basic
-		    (&args, type, arg)) {
+		if (!dbus_message_iter_append_basic(&args, type, arg)) {
 			goto error;
 		}
 	}
@@ -178,8 +210,7 @@ void handle_status_cmd(DBusConnection * conn, const char *arg)
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
-			    "org.infradead.ocserv", "status", 
-			    0, NULL);
+			    "org.infradead.ocserv", "status", 0, NULL);
 	if (msg == NULL) {
 		goto error_send;
 	}
@@ -256,8 +287,7 @@ void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv/users",
 			    "org.infradead.ocserv.users",
-			    "disconnect_name",
-			    DBUS_TYPE_STRING, &arg);
+			    "disconnect_name", DBUS_TYPE_STRING, &arg);
 	if (msg == NULL) {
 		goto error;
 	}
@@ -304,8 +334,7 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv/users",
 			    "org.infradead.ocserv.users",
-			    "disconnect_id",
-			    DBUS_TYPE_UINT32, &id);
+			    "disconnect_id", DBUS_TYPE_UINT32, &id);
 	if (msg == NULL) {
 		goto error;
 	}
@@ -351,8 +380,7 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv/users",
-			    "org.infradead.ocserv.users", "list",
-			    0, NULL);
+			    "org.infradead.ocserv.users", "list", 0, NULL);
 	if (msg == NULL) {
 		goto error_send;
 	}
@@ -574,6 +602,9 @@ void handle_cmd(DBusConnection * conn, char *line)
 
 	cline = stripwhite(line);
 
+	if (strlen(cline) == 0)
+		return;
+
 	for (i = 0;; i++) {
 		if (commands[i].name == NULL)
 			goto error;
@@ -586,9 +617,11 @@ void handle_cmd(DBusConnection * conn, char *line)
 	return;
 
  error:
-	fprintf(stderr, "Unknown command: %s\n", line);
-	fprintf(stderr,
-		"use help or '?' to get a list of the available commands\n");
+	if (check_cmd_help(line) == 0) {
+		fprintf(stderr, "unknown command: %s\n", line);
+		fprintf(stderr,
+			"use help or '?' to get a list of the available commands\n");
+	}
 	return;
 }
 
@@ -641,9 +674,11 @@ char *merge_args(int argc, char **argv)
 	return data;
 }
 
+static unsigned int cmd_start = 0;
 static char *command_generator(const char *text, int state)
 {
 	static int list_index, len;
+	unsigned name_size;
 	char *name;
 
 	/* If this is a new word to complete, initialize now.  This includes
@@ -656,24 +691,36 @@ static char *command_generator(const char *text, int state)
 
 	/* Return the next name which partially matches from the command list. */
 	while ((name = commands[list_index].name)) {
+		name_size = commands[list_index].name_size;
 		list_index++;
+
+		if (name_size < cmd_start)
+			continue;
+
+		if (cmd_start > 0 && name[cmd_start - 1] != ' ')
+			continue;
+
+		name += cmd_start;
 
 		if (strncmp(name, text, len) == 0)
 			return (strdup(name));
 	}
 
-	/* If no names matched, then return NULL. */
-	return ((char *)NULL);
+	return NULL;
 }
 
-static char **occtl_completion(char *text, int start, int end)
+static char *occtl_completion(char *text, int start, int end)
 {
-	return rl_completion_matches(text, command_generator);
+	cmd_start = start;
+	return (void *)rl_completion_matches(text, command_generator);
 }
 
 void initialize_readline(void)
 {
+	rl_readline_name = "occtl";
 	rl_attempted_completion_function = (CPPFunction *) occtl_completion;
+	rl_completion_entry_function = command_generator;
+	rl_completion_query_items = 20;
 }
 
 int main(int argc, char **argv)

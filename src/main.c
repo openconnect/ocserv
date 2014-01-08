@@ -113,6 +113,16 @@ int y;
 
 static void set_common_socket_options(int fd)
 {
+int val;
+
+	val = fcntl(fd, F_GETFL, 0);
+	if ((val == -1)
+	    || (fcntl(fd, F_SETFL, val | O_NONBLOCK) < 0)) {
+		int e = errno;
+		fprintf(stderr, "fcntl() error: %s", strerror(e));
+		exit(1);
+	}
+
 	set_cloexec_flag (fd, 1);
 }
 
@@ -163,8 +173,6 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 			perror("setsockopt(SO_REUSEADDR) failed");
 		}
 
-		set_common_socket_options(s);
-
 		if (ptr->ai_socktype == SOCK_DGRAM) {
 			set_udp_socket_options(s);
 		}
@@ -182,6 +190,8 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 				return -1;
 			}
 		}
+
+		set_common_socket_options(s);
 		
 		add_listener(list, s, ptr->ai_family, ptr->ai_socktype,
 			ptr->ai_protocol, ptr->ai_addr, ptr->ai_addrlen);
@@ -235,7 +245,6 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 				continue;
 			}
 
-			set_common_socket_options(fd);
 			if (type == SOCK_DGRAM)
 				set_udp_socket_options(fd);
 
@@ -246,6 +255,8 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 				perror("getsockname failed");
 				continue;
 			}
+
+			set_common_socket_options(fd);
 
 			if (type == SOCK_STREAM) {
 				if (family == AF_INET)
@@ -747,7 +758,7 @@ int main(int argc, char** argv)
 	struct proc_st *ctmp = NULL, *cpos;
 	struct ctl_handler_st* ctl_tmp = NULL, *ctl_pos;
 	fd_set rd_set, wr_set;
-	int val, n = 0, ret, flags;
+	int n = 0, ret, flags;
 	struct timespec ts;
 	int cmd_fd[2];
 	struct worker_st ws;
@@ -864,15 +875,6 @@ int main(int argc, char** argv)
 
 		list_for_each(&s.listen_list.head, ltmp, list) {
 			if (ltmp->fd == -1) continue;
-
-			val = fcntl(ltmp->fd, F_GETFL, 0);
-			if ((val == -1)
-			    || (fcntl(ltmp->fd, F_SETFL, val | O_NONBLOCK) <
-				0)) {
-				e = errno;
-				mslog(&s, NULL, LOG_ERR, "fcntl() error: %s", strerror(e));
-				exit(1);
-			}
 
 			FD_SET(ltmp->fd, &rd_set);
 			n = MAX(n, ltmp->fd);

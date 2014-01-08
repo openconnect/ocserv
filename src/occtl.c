@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <dbus/dbus.h>
@@ -727,12 +728,23 @@ static char *occtl_completion(char *text, int start, int end)
 	return (void *)rl_completion_matches(text, command_generator);
 }
 
+void handle_sigint(int signo)
+{
+	rl_reset_line_state();
+	rl_replace_line("", 0);
+	rl_crlf();
+	rl_redisplay();
+	return;
+}
+
 void initialize_readline(void)
 {
 	rl_readline_name = "occtl";
 	rl_attempted_completion_function = (CPPFunction *) occtl_completion;
 	rl_completion_entry_function = command_generator;
 	rl_completion_query_items = 20;
+	rl_clear_signals();
+	signal(SIGINT, handle_sigint);
 }
 
 int main(int argc, char **argv)

@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.infradead.ocserv.service
+Exec=/bin/false
+User=root
+SystemdService=ocserv-org.infradead.ocserv.service

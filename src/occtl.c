@@ -750,6 +750,8 @@ int main(int argc, char **argv)
 
 	for (;;) {
 		line = rl_gets(line);
+		if (line == NULL)
+			return 0;
 
 		handle_cmd(conn, line);
 	}

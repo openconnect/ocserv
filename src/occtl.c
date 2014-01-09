@@ -98,7 +98,7 @@ unsigned check_cmd_help(const char *line)
 	unsigned len = strlen(line);
 	unsigned status = 0;
 
-	if (line[len - 1] == '?')
+	while(len > 0 && (line[len - 1] == '?' || whitespace(line[len - 1])))
 		len--;
 
 	for (i = 0;; i++) {
@@ -275,6 +275,17 @@ void handle_status_cmd(DBusConnection * conn, const char *arg)
 		dbus_message_unref(msg);
 }
 
+unsigned need_help(const char* arg)
+{
+	while(whitespace(*arg))
+		arg++;
+
+	if (arg[0] == 0 || (arg[0] == '?' && arg[1] == 0))
+		return 1;
+
+	return 0;
+}
+
 static
 void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 {
@@ -282,8 +293,8 @@ void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 	DBusMessageIter args;
 	dbus_bool_t status;
 
-	if (arg == NULL || arg[0] == 0) {
-		fprintf(stderr, "no username provided!\n");
+	if (arg == NULL || need_help(arg)) {
+		check_cmd_help(rl_line_buffer);
 		return;
 	}
 
@@ -329,8 +340,8 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	if (arg != NULL)
 		id = atoi(arg);
 
-	if (arg == NULL || arg[0] == 0 || id == 0) {
-		fprintf(stderr, "no ID provided!\n");
+	if (arg == NULL || need_help(arg) || id == 0) {
+		check_cmd_help(rl_line_buffer);
 		return;
 	}
 

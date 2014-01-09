@@ -793,7 +793,6 @@ int main(int argc, char** argv)
 	sigaddset(&blockset, SIGINT);
 	sigaddset(&blockset, SIGCHLD);
 	sigaddset(&blockset, SIGHUP);
-	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
 	ocsignal(SIGINT, request_stop);
 	ocsignal(SIGTERM, request_stop);
@@ -874,6 +873,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
+	sigprocmask(SIG_BLOCK, &blockset, NULL);
 	alarm(MAINTAINANCE_TIME(&s));
 
 	for (;;) {

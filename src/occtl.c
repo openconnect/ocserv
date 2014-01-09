@@ -607,17 +607,20 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		/* add header */
 		if (iteration++ == 0) {
-			fprintf(out, "%6s %8s %8s %15s %15s %6s %16s %10s\n",
+			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %10s\n",
 			       "id", "user", "group", "ip", "vpn-ip", "device", "since",
-			       "auth");
+			       "status");
 		}
 
 		t = since;
 		tm = localtime(&t);
 		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
-		fprintf(out, "%6u %8s %8s %15s %15s %6s %16s %10s\n",
+		fprintf(out, "%6u %8s %8s %15s %15s %6s ",
 		       (unsigned)id, username, groupname, ip, vpn_ip,
-		       device, str_since, auth);
+		       device);
+
+		print_time_ival7(t, out);
+		fprintf(out, " %10s\n", auth);
 
 		if (!dbus_message_iter_next(&suba))
 			goto cleanup;
@@ -671,6 +674,8 @@ void common_info_cmd(DBusMessageIter *args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &id);
 
+		if (at_least_one > 0)
+			fprintf(out, "\n");
 		fprintf(out, "ID: %u\n", (unsigned)id);
 
 		if (!dbus_message_iter_next(&subs))
@@ -785,7 +790,9 @@ void common_info_cmd(DBusMessageIter *args)
 		else
 			fprintf(out, "\n");
 
-		fprintf(out, "\tConnected since: %s\n", str_since);
+		fprintf(out, "\tConnected at: %s (", str_since);
+		print_time_ival7(t, out);
+		fprintf(out, ")\n");
 
 		at_least_one = 1;
 

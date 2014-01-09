@@ -4,6 +4,8 @@
   of the internal IPC protocol.
 - Added support for systemd socket-activatable service.
 - Added occtl a control tool for ocserv.
+- Added the use-dbus configuration option. It can be used to disable
+  the D-BUS service (and thus the usage of the occtl utility).
 
 
 * Version 0.2.4 (released 2014-01-08)

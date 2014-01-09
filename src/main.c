@@ -703,6 +703,8 @@ fail:
 
 static void check_other_work(main_server_st *s)
 {
+unsigned total = 10;
+
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
 		reload_cfg_file(s->config);
@@ -715,11 +717,19 @@ static void check_other_work(main_server_st *s)
 
 	if (terminate != 0) {
 		mslog(s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
+		ctl_handler_deinit(s);
 		kill_children(s);
 		closelog();
 		remove(s->socket_file);
 		remove_pid_file();
-		while (waitpid(-1, NULL, 0) > 0);
+		while (waitpid(-1, NULL, WNOHANG) > 0) {
+			if (total == 0) {
+				mslog(s, NULL, LOG_DEBUG, "not everyone died; forcing kill");
+				kill(0, SIGKILL);
+			}
+			ms_sleep(500);
+			total--;
+		}
 		exit(0);
 	}
 

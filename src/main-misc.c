@@ -371,7 +371,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	if (ret == -1) {
 		e = errno;
 		mslog(s, proc, LOG_ERR, "cannot obtain metadata from command socket: %s", strerror(e));
-		return -1;
+		return ERR_BAD_COMMAND;
 	}
 
 	if (ret == 0) {
@@ -381,7 +381,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 	if (ret < 3) {
 		mslog(s, proc, LOG_ERR, "command error");
-		return -1;
+		return ERR_BAD_COMMAND;
 	}
 
 	mslog(s, proc, LOG_DEBUG, "main received message %u of %u bytes\n", (unsigned)cmd, (unsigned)length);
@@ -396,7 +396,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	if (raw_len != length) {
 		e = errno;
 		mslog(s, proc, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
-		return -1;
+		ret = ERR_BAD_COMMAND;
+		goto cleanup;
 	}
 
 	switch(cmd) {
@@ -406,7 +407,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			tmsg = tun_mtu_msg__unpack(NULL, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 			
 			set_tun_mtu(s, proc, tmsg->mtu);
@@ -422,7 +424,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			smsg = session_resume_store_req_msg__unpack(NULL, raw_len, raw);
 			if (smsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 			
 			ret = handle_resume_store_req(s, proc, smsg);
@@ -443,7 +446,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			fmsg = session_resume_fetch_msg__unpack(NULL, raw_len, raw);
 			if (fmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 
 			ret = handle_resume_delete_req(s, proc, fmsg);
@@ -464,7 +468,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			fmsg = session_resume_fetch_msg__unpack(NULL, raw_len, raw);
 			if (fmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 
 			ret = handle_resume_fetch_req(s, proc, fmsg, &msg);
@@ -484,7 +489,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			
 			if (ret < 0) {
 				mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned) cmd);
-				return ERR_BAD_COMMAND;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 			
 			}
@@ -495,13 +501,15 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			
 			if (proc->auth_status != PS_AUTH_INACTIVE) {
 				mslog(s, proc, LOG_ERR, "received authentication init when complete.");
-				return ERR_BAD_COMMAND;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 			
 			auth_init = auth_init_msg__unpack(NULL, raw_len, raw);
 			if (auth_init == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
 			}
 
 			ret = handle_auth_init(s, proc, auth_init);
@@ -514,7 +522,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				ret = send_auth_reply_msg(s, proc);
 				if (ret < 0) {
 					mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
-					return ret;
+					goto cleanup;
 				}
 				break; /* wait for another command */
 			} else if (ret == 0) {
@@ -532,22 +540,24 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			break;
 
 		case AUTH_REQ:
-
 			if (proc->auth_status != PS_AUTH_INIT) {
 				mslog(s, proc, LOG_ERR, "received authentication request when not initialized.");
-				return ERR_BAD_COMMAND;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup_auth;
 			}
 
 			proc->auth_reqs++;
 			if (proc->auth_reqs > MAX_AUTH_REQS) {
 				mslog(s, proc, LOG_ERR, "received too many authentication requests.");
-				return ERR_BAD_COMMAND;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup_auth;
 			}
 
 			auth_req = auth_request_msg__unpack(NULL, raw_len, raw);
 			if (auth_req == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup_auth;
 			}
 
 			ret = handle_auth_req(s, proc, auth_req);
@@ -558,32 +568,34 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				ret = send_auth_reply_msg(s, proc);
 				if (ret < 0) {
 					mslog(s, proc, LOG_ERR, "could not send reply auth cmd.");
-					return ret;
+					goto cleanup_auth;
 				}
 				break; /* wait for another command */
 			} else if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
-				goto cleanup;
+				goto cleanup_auth;
 			}
 
 			ret = accept_user(s, proc, cmd);
 			if (ret < 0) {
-				goto cleanup;
+				goto cleanup_auth;
 			}
 			proc->auth_status = PS_AUTH_COMPLETED;
-			goto cleanup;
+			goto cleanup_auth;
 
 		case AUTH_COOKIE_REQ:
 			
 			if (proc->auth_status != PS_AUTH_INACTIVE) {
 				mslog(s, proc, LOG_ERR, "received unexpected cookie authentication.");
-				return ERR_BAD_COMMAND;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup_auth;
 			}
 
 			auth_cookie_req = auth_cookie_request_msg__unpack(NULL, raw_len, raw);
 			if (auth_cookie_req == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
-				return -1;
+				ret = ERR_BAD_COMMAND;
+				goto cleanup_auth;
 			}
 
 			ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
@@ -592,30 +604,36 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 
 			if (ret < 0) {
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
-				goto cleanup;
+				goto cleanup_auth;
 			}
 
 			ret = accept_user(s, proc, cmd);
 			if (ret < 0) {
-				goto cleanup;
+				goto cleanup_auth;
 			}
 
 			proc->auth_status = PS_AUTH_COMPLETED;
 
-cleanup:
+cleanup_auth:
 			if (ret == ERR_WAIT_FOR_SCRIPT)
-				return 0;
+				ret = 0;
 			else {
 				/* no script was called. Handle it as a successful script call. */
-				return handle_script_exit(s, proc, ret);
+				ret = handle_script_exit(s, proc, ret);
 			}
+			goto cleanup;
 
 		default:
 			mslog(s, proc, LOG_ERR, "unknown CMD 0x%x.", (unsigned)cmd);
-			return ERR_BAD_COMMAND;
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
 	}
 	
-	return 0;
+	ret = 0;
+cleanup:
+	free(raw);
+
+	return ret;
 }
 
 int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len)

@@ -165,6 +165,7 @@ unsigned j;
 			else \
 				s_name = 0; \
 		} \
+		free(tmp_tf); \
 	}
 
 #define READ_NUMERIC(name, s_name) \

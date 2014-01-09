@@ -33,6 +33,7 @@
 
 int cmd_parser (int argc, char **argv, struct cfg_st* config);
 void reload_cfg_file(struct cfg_st* config);
+void clear_cfg_file(struct cfg_st* config);
 void write_pid_file(void);
 void remove_pid_file(void);
 

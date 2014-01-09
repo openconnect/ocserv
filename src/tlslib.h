@@ -41,6 +41,7 @@ void tls_cork(gnutls_session_t session);
 int tls_uncork(gnutls_session_t session);
 
 void tls_global_init(struct main_server_st* s);
+void tls_global_deinit(struct main_server_st* s);
 void tls_global_init_certs(struct main_server_st* s);
 
 ssize_t tls_send_file(gnutls_session_t session, const char *file);

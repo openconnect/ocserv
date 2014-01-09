@@ -54,13 +54,13 @@ ssize_t tls_send(gnutls_session_t session, const void *data,
 		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
 			return ret;
 		}
-	
+
 		if (ret > 0) {
 			left -= ret;
 			p += ret;
 		}
 	}
-	
+
 	return data_size;
 }
 
@@ -79,13 +79,13 @@ ssize_t tls_send_nowait(gnutls_session_t session, const void *data,
 			  return data_size;
 			return ret;
 		}
-	
+
 		if (ret > 0) {
 			left -= ret;
 			p += ret;
 		}
 	}
-	
+
 	return data_size;
 }
 
@@ -97,16 +97,16 @@ ssize_t len, total = 0;
 int ret;
 
 	fp = fopen(file, "r");
-	
+
 	while (	(len = fread( buf, 1, sizeof(buf), fp)) > 0) {
 		ret = tls_send(session, buf, len);
 		GNUTLS_FATAL_ERR(ret);
-		
+
 		total += ret;
 	}
-	
+
 	fclose(fp);
-	
+
 	return total;
 }
 
@@ -117,7 +117,7 @@ ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size)
 	do {
 		ret = gnutls_record_recv(session, data, data_size);
 	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-	
+
 	return ret;
 }
 
@@ -184,11 +184,12 @@ struct htable_iter iter;
 	          	cache->session_id_size = 0;
 		}
           	free(cache);
-          	
+
           	cache = htable_next(&db->ht, &iter);
         }
         htable_clear(&db->ht);
 	db->entries = 0;
+	free(db);
 
         return;
 }
@@ -206,7 +207,7 @@ worker_st * ws;
 		syslog(LOG_AUTH, "warning: %s", str);
 	else {
 		ws = gnutls_session_get_ptr(session);
-		
+
 		oclog(ws, LOG_ERR, "warning: %s", str);
 	}
 }
@@ -222,7 +223,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 		syslog(LOG_ERR, "%s:%d: could not obtain worker state", __func__, __LINE__);
 		return -1;
 	}
-	
+
 	if (session == ws->dtls_session) /* no certificate is verified in DTLS */
 		return 0;
 
@@ -275,7 +276,19 @@ int ret;
 
 	ret = gnutls_global_init();
 	GNUTLS_FATAL_ERR(ret);
-	
+
+	return;
+}
+
+void tls_global_deinit(main_server_st* s)
+{
+	if (s->creds.xcred != NULL)
+		gnutls_certificate_free_credentials(s->creds.xcred);
+	if (s->creds.cprio != NULL)
+		gnutls_priority_deinit(s->creds.cprio);
+
+	gnutls_global_deinit();
+
 	return;
 }
 
@@ -296,17 +309,17 @@ unsigned usage;
 		ret = gnutls_load_file(s->config->cert[0], &data);
 		if (ret < 0)
 			return;
-		
+
 		ret = gnutls_x509_crt_init(&crt);
 		GNUTLS_FATAL_ERR(ret);
 
 		ret = gnutls_x509_crt_import(crt, &data, GNUTLS_X509_FMT_PEM);
 		GNUTLS_FATAL_ERR(ret);
-		
+
 		ret = gnutls_x509_crt_get_pk_algorithm(crt, NULL);
 		if (ret != GNUTLS_PK_RSA)
 			goto cleanup;
-		
+
 		ret = gnutls_x509_crt_get_key_usage(crt, &usage, NULL);
 		if (ret >= 0) {
 			if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
@@ -360,16 +373,16 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 	uint8_t header[2];
 	struct iovec iov[2];
 	uint16_t length;
-	
+
 	output->data = NULL;
-	
+
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
 		syslog(LOG_ERR, "error opening socket: %s", strerror(e));
 		return GNUTLS_E_INTERNAL_ERROR;
 	}
-	
+
 	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
 	if (ret == -1) {
 		e = errno;
@@ -377,22 +390,22 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 			cdata->sa.sun_path, strerror(e));
 		return GNUTLS_E_INTERNAL_ERROR;
 	}
-	
+
 	header[0] = cdata->idx;
 	header[1] = type;
-	
+
 	iov[0].iov_base = header;
 	iov[0].iov_len = 2;
 	iov[1].iov_base = raw_data->data;
 	iov[1].iov_len = raw_data->size;
-	
+
 	ret = writev(sd, iov, 2);
 	if (ret == -1) {
 		e = errno;
 		syslog(LOG_ERR, "error writing to sec-mod: %s", strerror(e));
 		goto error;
 	}
-	
+
 	ret = recv(sd, &length, 2, 0);
 	if (ret < 2) {
 		e = errno;
@@ -406,16 +419,16 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		syslog(LOG_ERR, "error allocating memory");
 		goto error;
 	}
-	
+
 	ret = recv(sd, output->data, output->size, 0);
 	if (ret <= 0) {
 		e = errno;
 		syslog(LOG_ERR, "error reading from sec-mod: %s", strerror(e));
 		goto error;
 	}
-	
+
 	output->size = ret;
-	
+
 	close(sd);
 	return 0;
 
@@ -465,7 +478,7 @@ struct key_cb_data * cdata;
 				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->config->cert[i]);
 				return -1;
 			}
-		
+
 			pcert_list_size = 8;
 			pcert_list = gnutls_malloc(sizeof(pcert_list[0])*pcert_list_size);
 			if (pcert_list == NULL) {
@@ -476,7 +489,7 @@ struct key_cb_data * cdata;
 			ret = gnutls_pcert_list_import_x509_raw(pcert_list, &pcert_list_size,
 				&data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
 			GNUTLS_FATAL_ERR(ret);
-			
+
 			gnutls_free(data.data);
 		}
 
@@ -488,7 +501,7 @@ struct key_cb_data * cdata;
 			mslog(s, NULL, LOG_ERR, "error allocating memory");
 			return -1;
 		}
-		
+
 		cdata->idx = i;
 
 		memset(&cdata->sa, 0, sizeof(cdata->sa));
@@ -528,14 +541,14 @@ const char* perr;
 	GNUTLS_FATAL_ERR(ret);
 
 	set_dh_params(s, s->creds.xcred);
-	
+
 	if (s->config->key_size == 0 || s->config->cert_size == 0) {
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified"); 
 		exit(1);
 	}
 
 	certificate_check(s);
-	
+
 	ret = load_key_files(s);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file");
@@ -577,13 +590,13 @@ const char* perr;
 	if (ret == GNUTLS_E_PARSING_ERROR)
 		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
-	
+
 	if (s->config->ocsp_response != NULL) {
 		ret = gnutls_certificate_set_ocsp_status_request_file(s->creds.xcred,
 			s->config->ocsp_response, 0);
 		GNUTLS_FATAL_ERR(ret);
 	}
-	
+
 	return;
 }
 
@@ -610,7 +623,7 @@ unsigned i;
 	if (ret < 0) {
 		return NULL;
 	}
-	
+
 	if (cert != 0) {
 		ret = gnutls_x509_crt_init(&crt);
 		GNUTLS_FATAL_ERR(ret);
@@ -621,12 +634,12 @@ unsigned i;
 		GNUTLS_FATAL_ERR(ret);
 
 		gnutls_free(data.data);
-	
+
 		ret = gnutls_x509_crt_export2(crt, GNUTLS_X509_FMT_DER, &data);
 		GNUTLS_FATAL_ERR(ret);
 		gnutls_x509_crt_deinit(crt);
 	}
-	
+
 	ret = gnutls_hash_fast(GNUTLS_DIG_SHA1, data.data, data.size, digest);
 	gnutls_free(data.data);
 
@@ -634,14 +647,14 @@ unsigned i;
 		fprintf(stderr, "error calculating hash of '%s': %s", file, gnutls_strerror(ret));
 		exit(1);
 	}
-	
+
 	size_t ret_size = sizeof(digest)*2+1;
 	retval = malloc(ret_size);
 	if (retval == NULL) {
 		fprintf(stderr, "memory error");
 		exit(1);
 	}
-	
+
 	data.data = digest;
 	data.size = sizeof(digest);
 	ret = gnutls_hex_encode(&data, retval, &ret_size);
@@ -650,11 +663,11 @@ unsigned i;
 		exit(1);
 	}
 	if (retval[ret_size-1] == 0) ret_size--; /* remove the null terminator */
-	
+
 	/* convert to all caps */
 	for (i=0;i<ret_size;i++)
 	        retval[i] = c_toupper(retval[i]);
-	
+
 	return retval;
 }
 
@@ -666,7 +679,7 @@ size_t tls_get_overhead(gnutls_protocol_t version, gnutls_cipher_algorithm_t cip
 unsigned overhead = 0, t;
 unsigned block_size;
 	block_size = gnutls_cipher_get_block_size(cipher);
-	
+
 	switch(version) {
 		case GNUTLS_DTLS0_9:
 		case GNUTLS_DTLS1_0:
@@ -679,7 +692,7 @@ unsigned block_size;
 			overhead += 5;
 			break;
 	}
-	
+
 	switch(cipher) {
 		case GNUTLS_CIPHER_3DES_CBC:
 		case GNUTLS_CIPHER_AES_128_CBC:
@@ -703,7 +716,7 @@ unsigned block_size;
 	t = gnutls_hmac_get_len(mac);
 	if (t > 0)
 		overhead += t;
-		
+
 	return overhead;
 #endif
 }

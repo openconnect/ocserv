@@ -517,7 +517,7 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 }
 
 #define DEL(x) free(x);x=NULL
-void reload_cfg_file(struct cfg_st* config)
+void clear_cfg_file(struct cfg_st* config)
 {
 unsigned i;
 
@@ -565,6 +565,13 @@ unsigned i;
 		DEL(config->cert[i]);
 	DEL(config->cert);
 	DEL(config->network.routes);
+
+	return;
+}
+
+void reload_cfg_file(struct cfg_st* config)
+{
+	clear_cfg_file(config);
 
 	memset(config, 0, sizeof(*config));
 

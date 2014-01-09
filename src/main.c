@@ -717,7 +717,6 @@ unsigned total = 10;
 
 	if (terminate != 0) {
 		mslog(s, NULL, LOG_DEBUG, "termination request received; waiting for children to die");
-		ctl_handler_deinit(s);
 		kill_children(s);
 		while (waitpid(-1, NULL, WNOHANG) == 0) {
 			if (total == 0) {
@@ -729,6 +728,13 @@ unsigned total = 10;
 		}
 		remove(s->socket_file);
 		remove_pid_file();
+
+		/* try to clean-up everything allocated to ease checks 
+		 * for memory leaks.
+		 */
+		clear_lists(s);
+		tls_global_deinit(s);
+		clear_cfg_file(s->config);
 		closelog();
 		exit(0);
 	}

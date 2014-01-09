@@ -216,11 +216,14 @@ static void toggle_watch(DBusWatch * watch, void *data)
 	}
 }
 
+#define OCSERV_DBUS_NAME "org.infradead.ocserv"
+
 void ctl_handler_deinit(main_server_st * s)
 {
 	if (s->ctl_ctx != NULL) {
 		mslog(s, NULL, LOG_DEBUG, "closing DBUS connection");
 		dbus_connection_close(s->ctl_ctx);
+		dbus_bus_release_name(s->ctl_ctx, OCSERV_DBUS_NAME, NULL);
 		dbus_connection_unref(s->ctl_ctx);
 	}
 }
@@ -239,7 +242,7 @@ int ctl_handler_init(main_server_st * s)
 	if (conn == NULL)
 		goto error;
 
-	ret = dbus_bus_request_name(conn, "org.infradead.ocserv",
+	ret = dbus_bus_request_name(conn, OCSERV_DBUS_NAME,
 				    DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
 	if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
 		goto error;

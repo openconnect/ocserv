@@ -33,10 +33,78 @@
 #ifdef HAVE_DBUS
 
 #include <dbus/dbus.h>
+#include <str.h>
 
-static void add_ctl_fd(main_server_st* s, int fd, void* watch, unsigned type)
+static void method_status(main_server_st * s, DBusConnection * conn,
+			  DBusMessage * msg);
+static void method_list_users(main_server_st * s, DBusConnection * conn,
+			      DBusMessage * msg);
+static void method_disconnect_user_name(main_server_st * s,
+					DBusConnection * conn,
+					DBusMessage * msg);
+static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
+				      DBusMessage * msg);
+static void method_introspect(main_server_st * s, DBusConnection * conn,
+			      DBusMessage * msg);
+
+typedef void (*method_func) (main_server_st * s, DBusConnection * conn,
+			     DBusMessage * msg);
+
+typedef struct {
+	char *name;
+	unsigned name_size;
+	char *iface;
+	unsigned iface_size;
+	char *desc;
+	unsigned desc_size;
+	method_func func;
+} ctl_method_st;
+
+#define ENTRY(name, iface, desc, func) \
+	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
+
+#define LIST_USERS_SIG "(ussssssssuss)"
+
+#define DESC_LIST \
+		"    <method name=\"list\">\n" \
+		"      <arg name=\"user-info\" direction=\"out\" type=\"a"LIST_USERS_SIG"\"/>\n" \
+		"    </method>\n"
+
+#define DESC_DISC_NAME \
+		"    <method name=\"disconnect_name\">\n" \
+		"      <arg name=\"user-name\" direction=\"in\" type=\"s\"/>\n" \
+		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n" \
+        	"    </method>\n"
+
+#define DESC_DISC_ID \
+		"    <method name=\"disconnect_id\">\n" \
+		"      <arg name=\"user-id\" direction=\"in\" type=\"u\"/>\n" \
+		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n" \
+		"    </method>\n"
+
+#define DESC_STATUS \
+		"    <method name=\"status\">\n" \
+		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n" \
+		"      <arg name=\"pid\" direction=\"out\" type=\"u\"/>\n" \
+		"      <arg name=\"sec-mod-pid\" direction=\"out\" type=\"u\"/>\n" \
+		"      <arg name=\"clients\" direction=\"out\" type=\"u\"/>\n" \
+		"    </method>\n"
+
+static const ctl_method_st methods[] = {
+	ENTRY("Introspect", "org.freedesktop.DBus.Introspectable", NULL,
+	      method_introspect),
+	ENTRY("status", "org.infradead.ocserv", DESC_STATUS, method_status),
+	ENTRY("list", "org.infradead.ocserv", DESC_LIST, method_list_users),
+	ENTRY("disconnect_name", "org.infradead.ocserv", DESC_DISC_NAME,
+	      method_disconnect_user_name),
+	ENTRY("disconnect_id", "org.infradead.ocserv", DESC_DISC_ID,
+	      method_disconnect_user_id),
+	{NULL, 0, NULL, 0, NULL}
+};
+
+static void add_ctl_fd(main_server_st * s, int fd, void *watch, unsigned type)
 {
-struct ctl_handler_st * tmp;
+	struct ctl_handler_st *tmp;
 
 	tmp = malloc(sizeof(*tmp));
 	if (tmp == NULL)
@@ -50,17 +118,18 @@ struct ctl_handler_st * tmp;
 	tmp->watch = watch;
 	tmp->type = type;
 
-	mslog(s, NULL, LOG_DEBUG, "dbus: adding %s %swatch for fd: %d", 
-		(type==CTL_READ)?"read":"write", (tmp->enabled)?"":"(disabled) ", fd);
+	mslog(s, NULL, LOG_DEBUG, "dbus: adding %s %swatch for fd: %d",
+	      (type == CTL_READ) ? "read" : "write",
+	      (tmp->enabled) ? "" : "(disabled) ", fd);
 
 	list_add(&s->ctl_list.head, &(tmp->list));
 }
 
-static dbus_bool_t add_watch(DBusWatch *watch, void *data)
+static dbus_bool_t add_watch(DBusWatch * watch, void *data)
 {
-int fd = dbus_watch_get_unix_fd(watch);
-main_server_st* s = data;
-unsigned flags;
+	int fd = dbus_watch_get_unix_fd(watch);
+	main_server_st *s = data;
+	unsigned flags;
 
 	flags = dbus_watch_get_flags(watch);
 
@@ -73,16 +142,17 @@ unsigned flags;
 	return 1;
 }
 
-static void remove_watch(DBusWatch *watch, void *data)
+static void remove_watch(DBusWatch * watch, void *data)
 {
-main_server_st* s = data;
-struct ctl_handler_st * btmp = NULL, *bpos;
-
+	main_server_st *s = data;
+	struct ctl_handler_st *btmp = NULL, *bpos;
 
 	list_for_each_safe(&s->ctl_list.head, btmp, bpos, list) {
 		if (btmp->watch == watch) {
-			mslog(s, NULL, LOG_DEBUG, "dbus: removing %s watch for fd: %d", 
-				(btmp->type==CTL_READ)?"read":"write", btmp->fd);
+			mslog(s, NULL, LOG_DEBUG,
+			      "dbus: removing %s watch for fd: %d",
+			      (btmp->type == CTL_READ) ? "read" : "write",
+			      btmp->fd);
 
 			list_del(&btmp->list);
 			free(btmp);
@@ -91,11 +161,10 @@ struct ctl_handler_st * btmp = NULL, *bpos;
 	}
 }
 
-static void toggle_watch(DBusWatch *watch, void *data)
+static void toggle_watch(DBusWatch * watch, void *data)
 {
-main_server_st* s = data;
-struct ctl_handler_st * btmp = NULL;
-
+	main_server_st *s = data;
+	struct ctl_handler_st *btmp = NULL;
 
 	list_for_each(&s->ctl_list.head, btmp, list) {
 		if (btmp->watch == watch) {
@@ -104,15 +173,17 @@ struct ctl_handler_st * btmp = NULL;
 			} else
 				btmp->enabled = 0;
 
-			mslog(s, NULL, LOG_DEBUG, "dbus: %s %s watch for fd: %d", 
-				(btmp->enabled)?"enabling":"disabling", 
-				(btmp->type==CTL_READ)?"read":"write", btmp->fd);
+			mslog(s, NULL, LOG_DEBUG,
+			      "dbus: %s %s watch for fd: %d",
+			      (btmp->enabled) ? "enabling" : "disabling",
+			      (btmp->type == CTL_READ) ? "read" : "write",
+			      btmp->fd);
 			return;
 		}
 	}
 }
 
-void ctl_handler_deinit(main_server_st* s)
+void ctl_handler_deinit(main_server_st * s)
 {
 	if (s->ctl_ctx != NULL) {
 		mslog(s, NULL, LOG_DEBUG, "closing DBUS connection");
@@ -123,11 +194,11 @@ void ctl_handler_deinit(main_server_st* s)
 
 /* Initializes unix socket and stores the fd.
  */
-int ctl_handler_init(main_server_st* s)
+int ctl_handler_init(main_server_st * s)
 {
-int ret;
-DBusError err;
-DBusConnection* conn;
+	int ret;
+	DBusError err;
+	DBusConnection *conn;
 
 	dbus_error_init(&err);
 
@@ -136,20 +207,21 @@ DBusConnection* conn;
 		goto error;
 
 	ret = dbus_bus_request_name(conn, "org.infradead.ocserv",
-		DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+				    DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
 	if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
 		goto error;
 
 	s->ctl_ctx = conn;
 
 	if (!dbus_connection_set_watch_functions(conn,
-		add_watch, remove_watch, toggle_watch, s, NULL)) {
+						 add_watch, remove_watch,
+						 toggle_watch, s, NULL)) {
 		goto error;
 	}
 
 	return 0;
 
-error:
+ error:
 	if (dbus_error_is_set(&err)) {
 		fprintf(stderr, "DBUS connection error (%s)", err.message);
 		dbus_error_free(&err);
@@ -159,9 +231,10 @@ error:
 	return ERR_CTL;
 }
 
-static void method_status(main_server_st* s, DBusConnection* conn, DBusMessage* msg)
+static void method_status(main_server_st * s, DBusConnection * conn,
+			  DBusMessage * msg)
 {
-	DBusMessage* reply;
+	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_bool_t status = true;
 	dbus_uint32_t tmp;
@@ -177,7 +250,8 @@ static void method_status(main_server_st* s, DBusConnection* conn, DBusMessage* 
 
 	dbus_message_iter_init_append(reply, &args);
 
-	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) == 0) {
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) ==
+	    0) {
 		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
 		goto error;
 	}
@@ -205,22 +279,23 @@ static void method_status(main_server_st* s, DBusConnection* conn, DBusMessage* 
 		goto error;
 	}
 
-error:
+ error:
 	dbus_message_unref(reply);
 
 	return;
 }
 
-static void method_list_users(main_server_st* s, DBusConnection* conn, DBusMessage* msg)
+static void method_list_users(main_server_st * s, DBusConnection * conn,
+			      DBusMessage * msg)
 {
-	DBusMessage* reply;
+	DBusMessage *reply;
 	DBusMessageIter args;
 	DBusMessageIter suba;
 	DBusMessageIter subs;
 	dbus_uint32_t tmp;
 	struct proc_st *ctmp = NULL;
 	char ipbuf[128];
-	const char* strtmp;
+	const char *strtmp;
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: list-users");
 
@@ -232,99 +307,138 @@ static void method_list_users(main_server_st* s, DBusConnection* conn, DBusMessa
 	}
 
 	dbus_message_iter_init_append(reply, &args);
-#define LIST_USERS_SIG "(ussssssssuss)"
-	if (dbus_message_iter_open_container(&args, DBUS_TYPE_ARRAY, LIST_USERS_SIG, &suba) == 0) {
-		mslog(s, NULL, LOG_ERR, "error appending container to dbus reply");
+	if (dbus_message_iter_open_container
+	    (&args, DBUS_TYPE_ARRAY, LIST_USERS_SIG, &suba) == 0) {
+		mslog(s, NULL, LOG_ERR,
+		      "error appending container to dbus reply");
 		goto error;
 	}
 
 	list_for_each(&s->proc_list.head, ctmp, list) {
 
-		if (dbus_message_iter_open_container(&suba, DBUS_TYPE_STRUCT, NULL, &subs) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending container to dbus reply");
+		if (dbus_message_iter_open_container
+		    (&suba, DBUS_TYPE_STRUCT, NULL, &subs) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending container to dbus reply");
 			goto error;
 		}
 
 		/* ID: pid */
 		tmp = ctmp->pid;
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = ctmp->username;
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = ctmp->groupname;
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
-		strtmp = human_addr((struct sockaddr*)&ctmp->remote_addr, ctmp->remote_addr_len, ipbuf, sizeof(ipbuf));
+		strtmp =
+		    human_addr((struct sockaddr *)&ctmp->remote_addr,
+			       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf));
 		if (strtmp == NULL)
 			strtmp = "";
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 		strtmp = ctmp->tun_lease.name;
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = NULL;
 		if (ctmp->ipv4 != NULL)
-			strtmp = human_addr((struct sockaddr*)&ctmp->ipv4->rip, ctmp->ipv4->rip_len, ipbuf, sizeof(ipbuf));
+			strtmp =
+			    human_addr((struct sockaddr *)&ctmp->ipv4->rip,
+				       ctmp->ipv4->rip_len, ipbuf,
+				       sizeof(ipbuf));
 		if (strtmp == NULL)
 			strtmp = "";
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = NULL;
 		if (ctmp->ipv4 != NULL)
-			strtmp = human_addr((struct sockaddr*)&ctmp->ipv4->lip, ctmp->ipv4->lip_len, ipbuf, sizeof(ipbuf));
+			strtmp =
+			    human_addr((struct sockaddr *)&ctmp->ipv4->lip,
+				       ctmp->ipv4->lip_len, ipbuf,
+				       sizeof(ipbuf));
 		if (strtmp == NULL)
 			strtmp = "";
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = NULL;
 		if (ctmp->ipv6 != NULL)
-			strtmp = human_addr((struct sockaddr*)&ctmp->ipv6->rip, ctmp->ipv6->rip_len, ipbuf, sizeof(ipbuf));
+			strtmp =
+			    human_addr((struct sockaddr *)&ctmp->ipv6->rip,
+				       ctmp->ipv6->rip_len, ipbuf,
+				       sizeof(ipbuf));
 		if (strtmp == NULL)
 			strtmp = "";
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = NULL;
 		if (ctmp->ipv6 != NULL)
-			strtmp = human_addr((struct sockaddr*)&ctmp->ipv6->lip, ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf));
+			strtmp =
+			    human_addr((struct sockaddr *)&ctmp->ipv6->lip,
+				       ctmp->ipv6->lip_len, ipbuf,
+				       sizeof(ipbuf));
 		if (strtmp == NULL)
 			strtmp = "";
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 		tmp = ctmp->conn_time;
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		strtmp = ctmp->hostname;
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
@@ -334,19 +448,23 @@ static void method_list_users(main_server_st* s, DBusConnection* conn, DBusMessa
 			strtmp = "authenticating";
 		else
 			strtmp = "pre-auth";
-		if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		if (dbus_message_iter_append_basic
+		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			mslog(s, NULL, LOG_ERR,
+			      "error appending to dbus reply");
 			goto error;
 		}
 
 		if (dbus_message_iter_close_container(&suba, &subs) == 0) {
-			mslog(s, NULL, LOG_ERR, "error closing container in dbus reply");
+			mslog(s, NULL, LOG_ERR,
+			      "error closing container in dbus reply");
 			goto error;
 		}
 	}
 
 	if (dbus_message_iter_close_container(&args, &suba) == 0) {
-		mslog(s, NULL, LOG_ERR, "error closing container in dbus reply");
+		mslog(s, NULL, LOG_ERR,
+		      "error closing container in dbus reply");
 		goto error;
 	}
 
@@ -355,29 +473,33 @@ static void method_list_users(main_server_st* s, DBusConnection* conn, DBusMessa
 		goto error;
 	}
 
-error:
+ error:
 	dbus_message_unref(reply);
 
 	return;
 }
 
-static void method_disconnect_user_name(main_server_st* s, DBusConnection* conn, DBusMessage* msg)
+static void method_disconnect_user_name(main_server_st * s,
+					DBusConnection * conn,
+					DBusMessage * msg)
 {
-	DBusMessage* reply;
+	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_bool_t status = 0;
 	struct proc_st *ctmp = NULL;
-	char* name = "";
+	char *name = "";
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_name");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
-		mslog(s, NULL, LOG_ERR, "no arguments provided in disconnect_name");
+		mslog(s, NULL, LOG_ERR,
+		      "no arguments provided in disconnect_name");
 		return;
 	}
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_STRING) {
-		mslog(s, NULL, LOG_ERR, "wrong argument provided in disconnect_name");
+		mslog(s, NULL, LOG_ERR,
+		      "wrong argument provided in disconnect_name");
 		return;
 	}
 
@@ -400,7 +522,8 @@ static void method_disconnect_user_name(main_server_st* s, DBusConnection* conn,
 
 	dbus_message_iter_init_append(reply, &args);
 
-	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) == 0) { 
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) ==
+	    0) {
 		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
 		goto error;
 	}
@@ -410,15 +533,16 @@ static void method_disconnect_user_name(main_server_st* s, DBusConnection* conn,
 		goto error;
 	}
 
-error:
+ error:
 	dbus_message_unref(reply);
 
 	return;
 }
 
-static void method_disconnect_user_id(main_server_st* s, DBusConnection* conn, DBusMessage* msg)
+static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
+				      DBusMessage * msg)
 {
-	DBusMessage* reply;
+	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_bool_t status = 0;
 	struct proc_st *ctmp = NULL;
@@ -427,12 +551,14 @@ static void method_disconnect_user_id(main_server_st* s, DBusConnection* conn, D
 	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_id");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
-		mslog(s, NULL, LOG_ERR, "no arguments provided in disconnect_id");
+		mslog(s, NULL, LOG_ERR,
+		      "no arguments provided in disconnect_id");
 		return;
 	}
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_UINT32) {
-		mslog(s, NULL, LOG_ERR, "wrong argument provided in disconnect_id");
+		mslog(s, NULL, LOG_ERR,
+		      "wrong argument provided in disconnect_id");
 		return;
 	}
 
@@ -456,7 +582,8 @@ static void method_disconnect_user_id(main_server_st* s, DBusConnection* conn, D
 
 	dbus_message_iter_init_append(reply, &args);
 
-	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) == 0) { 
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) ==
+	    0) {
 		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
 		goto error;
 	}
@@ -466,53 +593,67 @@ static void method_disconnect_user_id(main_server_st* s, DBusConnection* conn, D
 		goto error;
 	}
 
-error:
+ error:
 	dbus_message_unref(reply);
 
 	return;
 }
 
+#define XML_HEAD \
+	"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n" \
+	"\"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n" \
+        "<node name=\"/org/infradead/ocserv\">\n" \
+	"<interface name=\"org.infradead.ocserv\">\n"
 
-static void method_introspect(main_server_st* s, DBusConnection* conn, DBusMessage* msg)
+#define XML_FOOT \
+	"</interface>" \
+	"</node>\n"
+
+static void method_introspect(main_server_st * s, DBusConnection * conn,
+			      DBusMessage * msg)
 {
-	DBusMessage* reply;
-	static const char* xml =
-		"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-		"\"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">\n"
-	        "<node name=\"/org/infradead/ocserv\">\n"
-		"<interface name=\"org.infradead.ocserv\">\n"
-		"    <method name=\"status\">\n"
-		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n"
-		"      <arg name=\"pid\" direction=\"out\" type=\"u\"/>\n"
-		"      <arg name=\"sec-mod-pid\" direction=\"out\" type=\"u\"/>\n"
-		"      <arg name=\"clients\" direction=\"out\" type=\"u\"/>\n"
-		"    </method>\n"
-		"</interface>"
-		"<interface name=\"org.infradead.ocserv.users\">\n"
-		"    <method name=\"list\">\n"
-		"      <arg name=\"user-info\" direction=\"out\" type=\"a"LIST_USERS_SIG"\"/>\n"
-		"    </method>\n"
-		"    <method name=\"disconnect_name\">\n"
-		"      <arg name=\"user-name\" direction=\"in\" type=\"s\"/>\n"
-		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n"
-        	"    </method>\n"
-		"    <method name=\"disconnect_id\">\n"
-		"      <arg name=\"user-id\" direction=\"in\" type=\"u\"/>\n"
-		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n"
-		"    </method>\n"
-		"</interface>"
-		"</node>\n";
+	DBusMessage *reply = NULL;
+	const char *xml;
+	str_st buf;
+	int ret;
+	unsigned i;
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: introspect");
+
+	str_init(&buf);
+
+	ret = str_append_data(&buf, XML_HEAD, sizeof(XML_HEAD) - 1);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error generating dbus reply");
+		goto error;
+	}
+
+	for (i = 0; methods[i].name != NULL; i++) {
+		ret =
+		    str_append_data(&buf, methods[i].desc,
+				    methods[i].desc_size);
+		if (ret < 0) {
+			mslog(s, NULL, LOG_ERR, "error generating dbus reply");
+			goto error;
+		}
+	}
+
+	ret = str_append_data(&buf, XML_FOOT, sizeof(XML_FOOT) - 1);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error generating dbus reply");
+		goto error;
+	}
 
 	/* no arguments needed */
 	reply = dbus_message_new_method_return(msg);
 	if (reply == NULL) {
 		mslog(s, NULL, LOG_ERR, "error generating dbus reply");
-		return;
+		goto error;
 	}
 
-	if (dbus_message_append_args(reply, DBUS_TYPE_STRING, &xml, DBUS_TYPE_INVALID) == 0) {
+	xml = (char *)buf.data;
+	if (dbus_message_append_args
+	    (reply, DBUS_TYPE_STRING, &xml, DBUS_TYPE_INVALID) == 0) {
 		mslog(s, NULL, LOG_ERR, "error in introspect to dbus reply");
 		goto error;
 	}
@@ -522,19 +663,21 @@ static void method_introspect(main_server_st* s, DBusConnection* conn, DBusMessa
 		goto error;
 	}
 
-error:
-	dbus_message_unref(reply);
+ error:
+	str_clear(&buf);
+	if (reply)
+		dbus_message_unref(reply);
 
 	return;
 
 }
 
-void ctl_handle_commands(main_server_st* s, struct ctl_handler_st* ctl)
+void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 {
-DBusConnection* conn = s->ctl_ctx;
-DBusMessage* msg;
-int ret;
-unsigned flags;
+	DBusConnection *conn = s->ctl_ctx;
+	DBusMessage *msg;
+	int ret;
+	unsigned flags, i;
 
 	if (ctl->type == CTL_READ)
 		flags = DBUS_WATCH_READABLE;
@@ -552,7 +695,8 @@ unsigned flags;
 
 	do {
 		if (dbus_connection_read_write(conn, 0) == 0) {
-			mslog(s, NULL, LOG_ERR, "error handling dbus_connection_read_write");
+			mslog(s, NULL, LOG_ERR,
+			      "error handling dbus_connection_read_write");
 			return;
 		}
 
@@ -560,35 +704,39 @@ unsigned flags;
 		if (msg == NULL)
 			return;
 
-		if (dbus_message_is_method_call(msg, "org.freedesktop.DBus.Introspectable", "Introspect"))
-			method_introspect(s, conn, msg);
-		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv", "status"))
-			method_status(s, conn, msg);
-		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "list"))
-			method_list_users(s, conn, msg);
-		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "disconnect_name"))
-			method_disconnect_user_name(s, conn, msg);
-		else if (dbus_message_is_method_call(msg, "org.infradead.ocserv.users", "disconnect_id"))
-			method_disconnect_user_id(s, conn, msg);
+		for (i = 0;; i++) {
+			if (methods[i].name == NULL) {
+				mslog(s, NULL, LOG_INFO,
+				      "unknown D-BUS message: %s: %s",
+				      dbus_message_get_interface(msg),
+				      dbus_message_get_path(msg));
+				break;
+			}
+			if (dbus_message_is_method_call
+			    (msg, methods[i].iface, methods[i].name)) {
+				methods[i].func(s, conn, msg);
+				break;
+			}
+		}
 
 		dbus_message_unref(msg);
 	} while (msg != NULL);
 }
 #else
 
-void ctl_handler_deinit(main_server_st* s)
+void ctl_handler_deinit(main_server_st * s)
 {
 	return;
 }
 
 /* Initializes unix socket and stores the fd.
  */
-int ctl_handler_init(main_server_st* s)
+int ctl_handler_init(main_server_st * s)
 {
 	return 0;
 }
 
-void ctl_handle_commands(main_server_st* s, struct ctl_handler_st* ctl)
+void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 {
 	return;
 }

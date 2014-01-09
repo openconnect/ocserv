@@ -288,8 +288,8 @@ void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
-			    "/org/infradead/ocserv/users",
-			    "org.infradead.ocserv.users",
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv",
 			    "disconnect_name", DBUS_TYPE_STRING, &arg);
 	if (msg == NULL) {
 		goto error;
@@ -335,8 +335,8 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
-			    "/org/infradead/ocserv/users",
-			    "org.infradead.ocserv.users",
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv",
 			    "disconnect_id", DBUS_TYPE_UINT32, &id);
 	if (msg == NULL) {
 		goto error;
@@ -382,8 +382,8 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	time_t t;
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
-			    "/org/infradead/ocserv/users",
-			    "org.infradead.ocserv.users", "list", 0, NULL);
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv", "list", 0, NULL);
 	if (msg == NULL) {
 		goto error_send;
 	}

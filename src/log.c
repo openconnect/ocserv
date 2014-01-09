@@ -38,9 +38,12 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	if (!buf || !buflen)
 		return NULL;
 
-	*buf = '[';
-	buf++;
-	buflen--;
+	if (salen == sizeof(struct sockaddr_in6) &&
+		((struct sockaddr_in6*)sa)->sin6_port != 0) {
+		*buf = '[';
+		buf++;
+		buflen--;
+	}
 
 	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) != 0)
 		return NULL;
@@ -49,9 +52,12 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	buf += l;
 	buflen -= l;
 
-	*buf = ']';
-	buf++;
-	buflen--;
+	if (salen == sizeof(struct sockaddr_in6) &&
+		((struct sockaddr_in6*)sa)->sin6_port != 0) {
+		*buf = ']';
+		buf++;
+		buflen--;
+	}
 
 	*buf = ':';
 	buf++;

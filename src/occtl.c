@@ -29,6 +29,7 @@
 #include <readline/history.h>
 #include <dbus/dbus.h>
 #include <occtl.h>
+#include <c-strcase.h>
 
 #define DEFAULT_TIMEOUT (10*1000)
 
@@ -135,7 +136,7 @@ unsigned check_cmd_help(const char *line)
 		if (len > commands[i].name_size)
 			continue;
 
-		if (strncasecmp(commands[i].name, line, len) == 0) {
+		if (c_strncasecmp(commands[i].name, line, len) == 0) {
 			status = 1;
 			if (commands[i].arg)
 				printf(" %12s %s\t%16s\n", commands[i].name,
@@ -350,7 +351,7 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
 	DBusMessageIter args;
 	dbus_bool_t status;
 
-	if (arg == NULL || need_help(arg) || strncasecmp(arg, "now", 3) != 0) {
+	if (arg == NULL || need_help(arg) || c_strncasecmp(arg, "now", 3) != 0) {
 		check_cmd_help(rl_line_buffer);
 		return;
 	}
@@ -936,7 +937,7 @@ unsigned check_cmd(const char *cmd, const char *input,
 	if (len == 0)
 		goto cleanup;
 
-	if (tlen >= len && strncasecmp(cmd, t, len) == 0 && cmd[len] == 0) {	/* match */
+	if (tlen >= len && c_strncasecmp(cmd, t, len) == 0 && cmd[len] == 0) {	/* match */
 		p = t + len;
 		while (whitespace(*p))
 			p++;
@@ -1075,12 +1076,12 @@ static char *command_generator(const char *text, int state)
 			continue;
 
 		if (rl_line_buffer != NULL
-		    && strncmp(rl_line_buffer, name, cmd_start) != 0)
+		    && c_strncasecmp(rl_line_buffer, name, cmd_start) != 0)
 			continue;
 
 		name += cmd_start;
 
-		if (strncmp(name, text, len) == 0) {
+		if (c_strncasecmp(name, text, len) == 0) {
 			return (strdup(name));
 		}
 	}

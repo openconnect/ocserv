@@ -46,6 +46,10 @@ static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
 				      DBusMessage * msg);
 static void method_introspect(main_server_st * s, DBusConnection * conn,
 			      DBusMessage * msg);
+static void method_stop(main_server_st * s, DBusConnection * conn,
+			DBusMessage * msg);
+static void method_reload(main_server_st * s, DBusConnection * conn,
+			  DBusMessage * msg);
 
 typedef void (*method_func) (main_server_st * s, DBusConnection * conn,
 			     DBusMessage * msg);
@@ -76,6 +80,16 @@ typedef struct {
 		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n" \
         	"    </method>\n"
 
+#define DESC_RELOAD \
+		"    <method name=\"reload\">\n" \
+		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n" \
+        	"    </method>\n"
+
+#define DESC_STOP \
+		"    <method name=\"stop\">\n" \
+		"      <arg name=\"status\" direction=\"out\" type=\"b\"/>\n" \
+        	"    </method>\n"
+
 #define DESC_DISC_ID \
 		"    <method name=\"disconnect_id\">\n" \
 		"      <arg name=\"user-id\" direction=\"in\" type=\"u\"/>\n" \
@@ -94,6 +108,8 @@ static const ctl_method_st methods[] = {
 	ENTRY("Introspect", "org.freedesktop.DBus.Introspectable", NULL,
 	      method_introspect),
 	ENTRY("status", "org.infradead.ocserv", DESC_STATUS, method_status),
+	ENTRY("reload", "org.infradead.ocserv", DESC_RELOAD, method_reload),
+	ENTRY("stop", "org.infradead.ocserv", DESC_RELOAD, method_stop),
 	ENTRY("list", "org.infradead.ocserv", DESC_LIST, method_list_users),
 	ENTRY("disconnect_name", "org.infradead.ocserv", DESC_DISC_NAME,
 	      method_disconnect_user_name),
@@ -273,6 +289,80 @@ static void method_status(main_server_st * s, DBusConnection * conn,
 		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
 		goto error;
 	}
+
+	if (!dbus_connection_send(conn, reply, NULL)) {
+		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
+		goto error;
+	}
+
+ error:
+	dbus_message_unref(reply);
+
+	return;
+}
+
+static void method_reload(main_server_st * s, DBusConnection * conn,
+			  DBusMessage * msg)
+{
+	DBusMessage *reply;
+	DBusMessageIter args;
+	dbus_bool_t status = true;
+
+	mslog(s, NULL, LOG_DEBUG, "ctl: reload");
+
+	/* no arguments needed */
+	reply = dbus_message_new_method_return(msg);
+	if (reply == NULL) {
+		mslog(s, NULL, LOG_ERR, "error generating dbus reply");
+		return;
+	}
+
+	dbus_message_iter_init_append(reply, &args);
+
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) ==
+	    0) {
+		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		goto error;
+	}
+
+	request_reload(0);
+
+	if (!dbus_connection_send(conn, reply, NULL)) {
+		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
+		goto error;
+	}
+
+ error:
+	dbus_message_unref(reply);
+
+	return;
+}
+
+static void method_stop(main_server_st * s, DBusConnection * conn,
+			DBusMessage * msg)
+{
+	DBusMessage *reply;
+	DBusMessageIter args;
+	dbus_bool_t status = true;
+
+	mslog(s, NULL, LOG_DEBUG, "ctl: stop");
+
+	/* no arguments needed */
+	reply = dbus_message_new_method_return(msg);
+	if (reply == NULL) {
+		mslog(s, NULL, LOG_ERR, "error generating dbus reply");
+		return;
+	}
+
+	dbus_message_iter_init_append(reply, &args);
+
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_BOOLEAN, &status) ==
+	    0) {
+		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		goto error;
+	}
+
+	request_stop(0);
 
 	if (!dbus_connection_send(conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
@@ -707,8 +797,9 @@ void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 		for (i = 0;; i++) {
 			if (methods[i].name == NULL) {
 				mslog(s, NULL, LOG_INFO,
-				      "unknown D-BUS message: %s: %s",
+				      "unknown D-BUS message: %s.%s: %s",
 				      dbus_message_get_interface(msg),
+				      dbus_message_get_member(msg),
 				      dbus_message_get_path(msg));
 				break;
 			}

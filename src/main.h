@@ -269,5 +269,7 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 void ctl_handle_commands(main_server_st* s, struct ctl_handler_st* ctl);
 int ctl_handler_init(main_server_st* s);
 void ctl_handler_deinit(main_server_st* s);
+void request_reload(int signo);
+void request_stop(int signo);
 
 #endif

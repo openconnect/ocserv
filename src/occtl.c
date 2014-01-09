@@ -38,6 +38,8 @@ static void handle_list_users_cmd(DBusConnection * conn, const char *arg);
 static void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg);
 static void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
 static void handle_reset_cmd(DBusConnection * conn, const char *arg);
+static void handle_reload_cmd(DBusConnection * conn, const char *arg);
+static void handle_stop_cmd(DBusConnection * conn, const char *arg);
 
 typedef struct {
 	char *name;
@@ -54,13 +56,18 @@ typedef struct {
 static const commands_st commands[] = {
 	ENTRY("status", NULL, handle_status_cmd,
 	      "Print the status of the server", 1),
+	ENTRY("stop", "now", handle_stop_cmd,
+	      "Terminates the server", 1),
+	ENTRY("reload", NULL, handle_reload_cmd,
+	      "Reloads the server configuration", 1),
 	ENTRY("list users", NULL, handle_list_users_cmd,
 	      "Print the connected users", 1),
 	ENTRY("disconnect user", "[NAME]", handle_disconnect_user_cmd,
 	      "Disconnect the specified user", 1),
 	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
 	      "Disconnect the specified ID", 1),
-	ENTRY("reset", NULL, handle_reset_cmd, "Resets the screen and terminal", 0),
+	ENTRY("reset", NULL, handle_reset_cmd, "Resets the screen and terminal",
+	      0),
 	ENTRY("help", "or ?", handle_help_cmd, "Prints this help", 0),
 	ENTRY("exit", NULL, handle_exit_cmd, "Exits this application", 0),
 	ENTRY("?", NULL, handle_help_cmd, "Prints this help", -1),
@@ -92,13 +99,24 @@ static void print_commands(unsigned interactive)
 	}
 }
 
+static unsigned need_help(const char *arg)
+{
+	while (whitespace(*arg))
+		arg++;
+
+	if (arg[0] == 0 || (arg[0] == '?' && arg[1] == 0))
+		return 1;
+
+	return 0;
+}
+
 unsigned check_cmd_help(const char *line)
 {
 	unsigned int i;
 	unsigned len = strlen(line);
 	unsigned status = 0;
 
-	while(len > 0 && (line[len - 1] == '?' || whitespace(line[len - 1])))
+	while (len > 0 && (line[len - 1] == '?' || whitespace(line[len - 1])))
 		len--;
 
 	for (i = 0;; i++) {
@@ -263,27 +281,103 @@ void handle_status_cmd(DBusConnection * conn, const char *arg)
 	goto error;
 
  error_parse:
-	fprintf(stderr, "dbus message parsing error\n");
+	fprintf(stderr, "D-BUS message parsing error\n");
 	goto error;
  error_send:
-	fprintf(stderr, "dbus message creation error\n");
+	fprintf(stderr, "D-BUS message creation error\n");
 	goto error;
  error_recv:
-	fprintf(stderr, "dbus message receiving error\n");
+	fprintf(stderr, "D-BUS message receiving error\n");
  error:
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }
 
-unsigned need_help(const char* arg)
+static
+void handle_reload_cmd(DBusConnection * conn, const char *arg)
 {
-	while(whitespace(*arg))
-		arg++;
+	DBusMessage *msg;
+	DBusMessageIter args;
+	dbus_bool_t status;
 
-	if (arg[0] == 0 || (arg[0] == '?' && arg[1] == 0))
-		return 1;
+	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv", "reload", 0, NULL);
+	if (msg == NULL) {
+		goto error_send;
+	}
 
-	return 0;
+	if (!dbus_message_iter_init(msg, &args))
+		goto error;
+
+	if (DBUS_TYPE_BOOLEAN != dbus_message_iter_get_arg_type(&args))
+		goto error_status;
+	dbus_message_iter_get_basic(&args, &status);
+
+	if (status != 0)
+		printf("Server scheduled to reload\n");
+	else
+		goto error_status;
+
+	dbus_message_unref(msg);
+
+	return;
+
+ error_status:
+	printf("Error scheduling reload\n");
+	goto error;
+ error_send:
+	fprintf(stderr, "D-BUS message creation error\n");
+	goto error;
+ error:
+	if (msg != NULL)
+		dbus_message_unref(msg);
+}
+
+static
+void handle_stop_cmd(DBusConnection * conn, const char *arg)
+{
+	DBusMessage *msg;
+	DBusMessageIter args;
+	dbus_bool_t status;
+
+	if (arg == NULL || need_help(arg) || strncasecmp(arg, "now", 3) != 0) {
+		check_cmd_help(rl_line_buffer);
+		return;
+	}
+
+	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv", "stop", 0, NULL);
+	if (msg == NULL) {
+		goto error_send;
+	}
+
+	if (!dbus_message_iter_init(msg, &args))
+		goto error;
+
+	if (DBUS_TYPE_BOOLEAN != dbus_message_iter_get_arg_type(&args))
+		goto error_status;
+	dbus_message_iter_get_basic(&args, &status);
+
+	if (status != 0)
+		printf("Server scheduled to stop\n");
+	else
+		goto error_status;
+
+	dbus_message_unref(msg);
+
+	return;
+
+ error_status:
+	printf("Error scheduling server stop\n");
+	goto error;
+ error_send:
+	fprintf(stderr, "D-BUS message creation error\n");
+	goto error;
+ error:
+	if (msg != NULL)
+		dbus_message_unref(msg);
 }
 
 static
@@ -518,13 +612,13 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	return;
 
  error_parse:
-	fprintf(stderr, "dbus message parsing error\n");
+	fprintf(stderr, "D-BUS message parsing error\n");
 	goto error;
  error_send:
-	fprintf(stderr, "dbus message creation error\n");
+	fprintf(stderr, "D-BUS message creation error\n");
 	goto error;
  error_recv:
-	fprintf(stderr, "dbus message receiving error\n");
+	fprintf(stderr, "D-BUS message receiving error\n");
  error:
 	if (msg != NULL)
 		dbus_message_unref(msg);
@@ -654,7 +748,7 @@ static DBusConnection *init_dbus(void)
 
 	conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
 	if (dbus_error_is_set(&err)) {
-		fprintf(stderr, "Connection Error (%s)\n", err.message);
+		fprintf(stderr, "D-BUS connection error (%s)\n", err.message);
 		dbus_error_free(&err);
 	}
 
@@ -720,7 +814,8 @@ static char *command_generator(const char *text, int state)
 		if (cmd_start > 0 && name[cmd_start - 1] != ' ')
 			continue;
 
-		if (rl_line_buffer != NULL && strncmp(rl_line_buffer, name, cmd_start) != 0)
+		if (rl_line_buffer != NULL
+		    && strncmp(rl_line_buffer, name, cmd_start) != 0)
 			continue;
 
 		name += cmd_start;

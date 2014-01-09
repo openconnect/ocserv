@@ -591,13 +591,13 @@ static void kill_children(main_server_st* s)
 	}
 }
 
-static void handle_term(int signo)
+void request_stop(int signo)
 {
 	/* kill all children */
 	terminate = 1;
 }
 
-static void handle_reload(int signo)
+void request_reload(int signo)
 {
 	reload_conf = 1;
 }
@@ -706,7 +706,7 @@ static void check_other_work(main_server_st *s)
 unsigned total = 10;
 
 	if (reload_conf != 0) {
-		mslog(s, NULL, LOG_INFO, "HUP signal was received; reloading configuration");
+		mslog(s, NULL, LOG_INFO, "reloading configuration");
 		reload_cfg_file(s->config);
 		reload_conf = 0;
 	}
@@ -716,7 +716,7 @@ unsigned total = 10;
 	}
 
 	if (terminate != 0) {
-		mslog(s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
+		mslog(s, NULL, LOG_DEBUG, "termination request received; waiting for children to die");
 		ctl_handler_deinit(s);
 		kill_children(s);
 		while (waitpid(-1, NULL, WNOHANG) == 0) {
@@ -795,10 +795,10 @@ int main(int argc, char** argv)
 	sigaddset(&blockset, SIGHUP);
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
-	ocsignal(SIGINT, handle_term);
-	ocsignal(SIGTERM, handle_term);
+	ocsignal(SIGINT, request_stop);
+	ocsignal(SIGTERM, request_stop);
 	ocsignal(SIGPIPE, SIG_IGN);
-	ocsignal(SIGHUP, handle_reload);
+	ocsignal(SIGHUP, request_reload);
 	ocsignal(SIGCHLD, handle_children);
 	ocsignal(SIGALRM, handle_alarm);
 	

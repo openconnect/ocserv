@@ -155,9 +155,23 @@ void usage(void)
 {
 	printf("occtl: [OPTIONS...] {COMMAND}\n\n");
 	printf("  -h --help              Show this help\n");
+	printf("  -v --version           Show the program's version\n");
 	printf("\n");
 	print_commands(0);
 	printf("\n");
+}
+
+static
+void version(void)
+{
+	fprintf(stderr,
+		"OpenConnect server control (occtl) version %s\n", VERSION);
+	fprintf(stderr,	"Copyright (C) 2013 Red Hat and others.\n");
+	fprintf(stderr, "ocserv comes with ABSOLUTELY NO WARRANTY. This is free\n");
+	fprintf(stderr, "software, and you are welcome to redistribute it under the\n");
+	fprintf(stderr, "conditions of the GNU General Public License version 2.\n");
+	fprintf(stderr, "\nFor help type ? or 'help'\n");
+	fprintf(stderr, "==========================================================\n");
 }
 
 /* Read a string, and return a pointer to it.  Returns NULL on EOF. */
@@ -1123,7 +1137,11 @@ int main(int argc, char **argv)
 
 	if (argc > 1) {
 		if (argv[1][0] == '-') {
-			usage();
+			if (argv[1][1] == 'v' || (argv[1][1] == '-' && argv[1][2] == 'v')) {
+				version();
+			} else {
+				usage();
+			}
 			exit(0);
 		}
 
@@ -1136,9 +1154,7 @@ int main(int argc, char **argv)
 
 	initialize_readline();
 
-	fprintf(stderr,
-		"OpenConnect server control (occtl) version %s\n\n", VERSION);
-
+	version();
 	for (;;) {
 		line = rl_gets(line);
 		if (line == NULL)

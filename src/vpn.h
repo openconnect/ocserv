@@ -180,6 +180,7 @@ struct cfg_st {
 	unsigned max_clients;
 	unsigned max_same_clients;
 	unsigned use_utmp;
+	unsigned use_dbus; /* whether the D-BUS service is registered */
 	unsigned try_mtu; /* MTU discovery enabled */
 	unsigned force_cert_auth; /* always require client certificate */
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */

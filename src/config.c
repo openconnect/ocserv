@@ -74,6 +74,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 1 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
@@ -329,6 +330,7 @@ unsigned prefix = 0;
 	READ_STRING("banner", config->banner);
 	READ_TF("always-require-cert", config->force_cert_auth, 1);
 	READ_TF("use-utmp", config->use_utmp, 1);
+	READ_TF("use-dbus", config->use_dbus, 0);
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);
 	READ_TF("ping-leases", config->ping_leases, 0);
 

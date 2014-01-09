@@ -220,7 +220,7 @@ static void toggle_watch(DBusWatch * watch, void *data)
 
 void ctl_handler_deinit(main_server_st * s)
 {
-	if (s->ctl_ctx != NULL) {
+	if (s->config->use_dbus != 0 && s->ctl_ctx != NULL) {
 		mslog(s, NULL, LOG_DEBUG, "closing DBUS connection");
 		dbus_connection_close(s->ctl_ctx);
 		dbus_bus_release_name(s->ctl_ctx, OCSERV_DBUS_NAME, NULL);
@@ -235,6 +235,9 @@ int ctl_handler_init(main_server_st * s)
 	int ret;
 	DBusError err;
 	DBusConnection *conn;
+
+	if (s->config->use_dbus == 0)
+		return 0;
 
 	dbus_error_init(&err);
 
@@ -1048,6 +1051,11 @@ void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 	DBusMessage *msg;
 	int ret;
 	unsigned flags, i;
+
+	if (s->config->use_dbus == 0) {
+		mslog(s, NULL, LOG_ERR, "%s called when D-BUS is disabled!", __func__);
+		return;
+	}
 
 	if (ctl->type == CTL_READ)
 		flags = DBUS_WATCH_READABLE;

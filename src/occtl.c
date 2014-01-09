@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2013 Red Hat
  *
+ * Author: Nikos Mavrogiannopoulos
+ *
  * This file is part of ocserv.
  *
  * ocserv is free software: you can redistribute it and/or modify it
@@ -26,6 +28,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <dbus/dbus.h>
+#include <occtl.h>
 
 #define DEFAULT_TIMEOUT (10*1000)
 
@@ -485,6 +488,10 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	const char *vpn_ip;
 	struct tm *tm;
 	time_t t;
+	FILE * out;
+	unsigned iteration = 0;
+
+	out = pager_start();
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
@@ -494,20 +501,16 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	if (!dbus_message_iter_init(msg, &args))
-		goto error;
+		goto cleanup;
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_ARRAY)
-		goto error;
+		goto cleanup;
 
 	dbus_message_iter_recurse(&args, &suba);
 
-	printf("%6s %8s %8s %15s %15s %6s %16s %10s\n",
-	       "id", "user", "group", "ip", "vpn-ip", "device", "since",
-	       "auth");
-
 	for (;;) {
 		if (dbus_message_iter_get_arg_type(&suba) != DBUS_TYPE_STRUCT)
-			goto error;
+			goto cleanup;
 		dbus_message_iter_recurse(&suba, &subs);
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
@@ -596,30 +599,36 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		else
 			vpn_ip = vpn_ipv6;
 
+		/* add header */
+		if (iteration++ == 0) {
+			fprintf(out, "%6s %8s %8s %15s %15s %6s %16s %10s\n",
+			       "id", "user", "group", "ip", "vpn-ip", "device", "since",
+			       "auth");
+		}
+
 		t = since;
 		tm = localtime(&t);
 		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
-		printf("%6u %8s %8s %15s %15s %6s %16s %10s\n",
+		fprintf(out, "%6u %8s %8s %15s %15s %6s %16s %10s\n",
 		       (unsigned)id, username, groupname, ip, vpn_ip,
 		       device, str_since, auth);
 
 		if (!dbus_message_iter_next(&suba))
-			goto error;
+			goto cleanup;
 	}
 
-	dbus_message_unref(msg);
-
-	return;
+	goto cleanup;
 
  error_parse:
 	fprintf(stderr, "D-BUS message parsing error\n");
-	goto error;
+	goto cleanup;
  error_send:
 	fprintf(stderr, "D-BUS message creation error\n");
-	goto error;
+	goto cleanup;
  error_recv:
 	fprintf(stderr, "D-BUS message receiving error\n");
- error:
+ cleanup:
+	pager_stop(out);
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }

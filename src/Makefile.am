@@ -83,7 +83,7 @@ ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 	$(AUTOGEN) $<
 ocpasswd-args.h: ocpasswd-args.c
 
-occtl_SOURCES = occtl.c
+occtl_SOURCES = occtl.c occtl-pager.c occtl.h
 occtl_LDADD = ../gl/libgnu.a $(LIBDBUS_LIBS) $(LIBREADLINE_LIBS)
 
 ipc.pb-c.c: ipc.proto

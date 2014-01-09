@@ -38,6 +38,8 @@ static void handle_help_cmd(DBusConnection * conn, const char *arg);
 static void handle_exit_cmd(DBusConnection * conn, const char *arg);
 static void handle_status_cmd(DBusConnection * conn, const char *arg);
 static void handle_list_users_cmd(DBusConnection * conn, const char *arg);
+static void handle_user_info_cmd(DBusConnection * conn, const char *arg);
+static void handle_id_info_cmd(DBusConnection * conn, const char *arg);
 static void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg);
 static void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
 static void handle_reset_cmd(DBusConnection * conn, const char *arg);
@@ -65,6 +67,10 @@ static const commands_st commands[] = {
 	      "Reloads the server configuration", 1),
 	ENTRY("list users", NULL, handle_list_users_cmd,
 	      "Print the connected users", 1),
+	ENTRY("info user", "[NAME]", handle_user_info_cmd,
+	      "Print information on the specified user", 1),
+	ENTRY("info id", "[NAME]", handle_id_info_cmd,
+	      "Print information on the specified ID", 1),
 	ENTRY("disconnect user", "[NAME]", handle_disconnect_user_cmd,
 	      "Disconnect the specified user", 1),
 	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
@@ -284,13 +290,13 @@ void handle_status_cmd(DBusConnection * conn, const char *arg)
 	goto error;
 
  error_parse:
-	fprintf(stderr, "D-BUS message parsing error\n");
+	fprintf(stderr, "%s: D-BUS message parsing error\n", __func__);
 	goto error;
  error_send:
-	fprintf(stderr, "D-BUS message creation error\n");
+	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto error;
  error_recv:
-	fprintf(stderr, "D-BUS message receiving error\n");
+	fprintf(stderr, "%s: D-BUS message receiving error\n", __func__);
  error:
 	if (msg != NULL)
 		dbus_message_unref(msg);
@@ -330,7 +336,7 @@ void handle_reload_cmd(DBusConnection * conn, const char *arg)
 	printf("Error scheduling reload\n");
 	goto error;
  error_send:
-	fprintf(stderr, "D-BUS message creation error\n");
+	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto error;
  error:
 	if (msg != NULL)
@@ -376,7 +382,7 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
 	printf("Error scheduling server stop\n");
 	goto error;
  error_send:
-	fprintf(stderr, "D-BUS message creation error\n");
+	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto error;
  error:
 	if (msg != NULL)
@@ -620,15 +626,253 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	goto cleanup;
 
  error_parse:
-	fprintf(stderr, "D-BUS message parsing error\n");
+	fprintf(stderr, "%s: D-BUS message parsing error\n", __func__);
 	goto cleanup;
  error_send:
-	fprintf(stderr, "D-BUS message creation error\n");
+	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto cleanup;
  error_recv:
-	fprintf(stderr, "D-BUS message receiving error\n");
+	fprintf(stderr, "%s: D-BUS message receiving error\n", __func__);
  cleanup:
 	pager_stop(out);
+	if (msg != NULL)
+		dbus_message_unref(msg);
+}
+
+void common_info_cmd(DBusMessageIter *args)
+{
+	DBusMessageIter suba, subs;
+	dbus_uint32_t id = 0;
+	char *username = "";
+	dbus_uint32_t since = 0;
+	char *groupname = "", *ip = "";
+	char *vpn_ipv4 = "", *vpn_ptp_ipv4 = "";
+	char *vpn_ipv6 = "", *vpn_ptp_ipv6 = "";
+	char *hostname = "", *auth = "", *device = "";
+	char str_since[64];
+	struct tm *tm;
+	time_t t;
+	FILE * out;
+	unsigned at_least_one = 0;
+
+	out = pager_start();
+
+	if (dbus_message_iter_get_arg_type(args) != DBUS_TYPE_ARRAY)
+		goto cleanup;
+
+	dbus_message_iter_recurse(args, &suba);
+
+	for (;;) {
+		if (dbus_message_iter_get_arg_type(&suba) != DBUS_TYPE_STRUCT)
+			goto cleanup;
+		dbus_message_iter_recurse(&suba, &subs);
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &id);
+
+		fprintf(out, "ID: %u\n", (unsigned)id);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &username);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &groupname);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &ip);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &device);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv4);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv6);
+
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &since);
+
+		t = since;
+		tm = localtime(&t);
+		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &hostname);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &auth);
+
+		fprintf(out, "\tUsername: %s  ", username);
+		fprintf(out, "Groupname: %s\n", groupname);
+		fprintf(out, "\tAuth state: %s  ", auth);
+		fprintf(out, "IP: %s\n", ip);
+
+		if (vpn_ipv4 != NULL && vpn_ipv4[0] != 0 && 
+			vpn_ptp_ipv4 != NULL && vpn_ptp_ipv4[0] != 0) {
+			fprintf(out, "\tIPv4: %s  ", vpn_ipv4);
+			fprintf(out, "P-t-P IPv4: %s\n", vpn_ptp_ipv4);
+		}
+		if (vpn_ipv6 != NULL && vpn_ipv6[0] != 0 &&
+			vpn_ptp_ipv6 != NULL && vpn_ptp_ipv6[0] != 0) {
+			fprintf(out, "\tIPv6: %s  ", vpn_ipv6);
+			fprintf(out, "P-t-P IPv6: %s\n", vpn_ptp_ipv6);
+		}
+		fprintf(out, "\tDevice: %s  ", device);
+
+		if (hostname != NULL && hostname[0] != 0)
+			fprintf(out, "Hostname: %s\n", hostname);
+		else
+			fprintf(out, "\n");
+
+		fprintf(out, "\tConnected since: %s\n", str_since);
+
+		at_least_one = 1;
+
+		if (!dbus_message_iter_next(&suba))
+			goto cleanup;
+	}
+
+	goto cleanup;
+
+ error_parse:
+	fprintf(stderr, "%s: D-BUS message parsing error\n", __func__);
+	goto cleanup;
+ error_recv:
+	fprintf(stderr, "%s: D-BUS message receiving error\n", __func__);
+ cleanup:
+ 	if (at_least_one == 0)
+ 		fprintf(out, "user or ID not found\n");
+	pager_stop(out);
+}
+
+
+void handle_user_info_cmd(DBusConnection * conn, const char *arg)
+{
+	DBusMessage *msg;
+	DBusMessageIter args;
+
+	if (arg == NULL || need_help(arg)) {
+		check_cmd_help(rl_line_buffer);
+		return;
+	}
+
+	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv", "user_info",
+			    DBUS_TYPE_STRING, &arg);
+	if (msg == NULL) {
+		goto error_send;
+	}
+
+	if (!dbus_message_iter_init(msg, &args))
+		goto cleanup;
+
+	common_info_cmd(&args);
+	
+	goto cleanup;
+
+ error_send:
+	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
+	goto cleanup;
+ cleanup:
+	if (msg != NULL)
+		dbus_message_unref(msg);
+}
+
+void handle_id_info_cmd(DBusConnection * conn, const char *arg)
+{
+	DBusMessage *msg;
+	DBusMessageIter args;
+	dbus_uint32_t id = 0;
+
+	if (arg != NULL)
+		id = atoi(arg);
+
+	if (arg == NULL || need_help(arg) || id == 0) {
+		check_cmd_help(rl_line_buffer);
+		return;
+	}
+
+	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+			    "/org/infradead/ocserv",
+			    "org.infradead.ocserv", "id_info",
+			    DBUS_TYPE_UINT32, &id);
+	if (msg == NULL) {
+		goto error_send;
+	}
+
+	if (!dbus_message_iter_init(msg, &args))
+		goto cleanup;
+
+	common_info_cmd(&args);
+
+	goto cleanup;
+
+ error_send:
+	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
+	goto cleanup;
+ cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }

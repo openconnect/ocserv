@@ -719,10 +719,7 @@ unsigned total = 10;
 		mslog(s, NULL, LOG_DEBUG, "termination signal received; waiting for children to die");
 		ctl_handler_deinit(s);
 		kill_children(s);
-		closelog();
-		remove(s->socket_file);
-		remove_pid_file();
-		while (waitpid(-1, NULL, WNOHANG) > 0) {
+		while (waitpid(-1, NULL, WNOHANG) == 0) {
 			if (total == 0) {
 				mslog(s, NULL, LOG_DEBUG, "not everyone died; forcing kill");
 				kill(0, SIGKILL);
@@ -730,6 +727,9 @@ unsigned total = 10;
 			ms_sleep(500);
 			total--;
 		}
+		remove(s->socket_file);
+		remove_pid_file();
+		closelog();
 		exit(0);
 	}
 

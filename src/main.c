@@ -806,7 +806,6 @@ int main(int argc, char** argv)
 	ocsignal(SIGHUP, request_reload);
 	ocsignal(SIGCHLD, handle_children);
 	ocsignal(SIGALRM, handle_alarm);
-	
 
 	/* Initialize GnuTLS */
 	tls_global_init(&s);
@@ -987,6 +986,7 @@ int main(int argc, char** argv)
 					ws.creds = &s.creds;
 
 					/* Drop privileges after this point */
+					sigprocmask(SIG_UNBLOCK, &blockset, NULL);
 					drop_privileges(&s);
 
 					vpn_server(&ws);

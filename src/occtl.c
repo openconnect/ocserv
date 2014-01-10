@@ -514,6 +514,8 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	unsigned iteration = 0;
 	const char* dtls_ciphersuite, *tls_ciphersuite;
 
+	entries_clear();
+
 	out = pager_start();
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
@@ -655,6 +657,8 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 			fprintf(out, " %9s %9s\n", dtls_ciphersuite, auth);
 		else
 			fprintf(out, " %9s %9s\n", "(no dtls)", auth);
+
+		entries_add(username, strlen(username), id);
 
 		if (!dbus_message_iter_next(&suba))
 			goto cleanup;
@@ -1107,24 +1111,50 @@ static unsigned int cmd_start = 0;
 static char *command_generator(const char *text, int state)
 {
 	static int list_index, len;
+	static int entries_idx;
 	unsigned name_size;
-	char *name;
+	char *name, *arg;
+	char *ret;
 
 	/* If this is a new word to complete, initialize now.  This includes
 	   saving the length of TEXT for efficiency, and initializing the index
 	   variable to 0. */
 	if (!state) {
 		list_index = 0;
+		entries_idx = 0;
 		len = strlen(text);
 	}
 
 	/* Return the next name which partially matches from the command list. */
 	while ((name = commands[list_index].name)) {
 		name_size = commands[list_index].name_size;
+		arg = commands[list_index].arg;
 		list_index++;
 
-		if (name_size < cmd_start)
+		if (cmd_start > name_size) {
+			/* check for user or ID options */
+			if (rl_line_buffer != NULL &&
+				c_strncasecmp(rl_line_buffer, name, name_size) == 0 &&
+				/* make sure only one argument is appended */
+				rl_line_buffer[name_size] != 0 &&
+				strchr(&rl_line_buffer[name_size+1], ' ') == NULL) {
+
+				if (arg != NULL) {
+					ret = NULL;
+					if (strcmp(arg, "[NAME]") == 0)
+						ret = search_for_user(entries_idx, text, len);
+					else if (strcmp(arg, "[ID]") == 0)
+						ret = search_for_id(entries_idx, text, len);
+					if (ret != NULL) {
+						entries_idx++;
+					}
+					list_index--; /* restart at the same cmd */
+					return ret;
+				}
+			}
+
 			continue;
+		}
 
 		if (cmd_start > 0 && name[cmd_start - 1] != ' ')
 			continue;
@@ -1134,7 +1164,6 @@ static char *command_generator(const char *text, int state)
 			continue;
 
 		name += cmd_start;
-
 		if (c_strncasecmp(name, text, len) == 0) {
 			return (strdup(name));
 		}

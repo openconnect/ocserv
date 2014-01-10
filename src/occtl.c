@@ -33,6 +33,8 @@
 
 #define DEFAULT_TIMEOUT (10*1000)
 
+#define ERR_SERVER_UNREACHABLE "could not send message; is server online?\n"
+
 typedef void (*cmd_func) (DBusConnection * conn, const char *arg);
 
 static void handle_help_cmd(DBusConnection * conn, const char *arg);
@@ -125,7 +127,7 @@ unsigned check_cmd_help(const char *line)
 {
 	unsigned int i;
 	unsigned len = strlen(line);
-	unsigned status = 0;
+	unsigned status = 0, tlen;
 
 	while (len > 0 && (line[len - 1] == '?' || whitespace(line[len - 1])))
 		len--;
@@ -134,10 +136,12 @@ unsigned check_cmd_help(const char *line)
 		if (commands[i].name == NULL)
 			break;
 
-		if (len > commands[i].name_size)
-			continue;
+		tlen = len;
+		if (tlen > commands[i].name_size) {
+			tlen = commands[i].name_size;
+		}
 
-		if (c_strncasecmp(commands[i].name, line, len) == 0) {
+		if (c_strncasecmp(commands[i].name, line, tlen) == 0) {
 			status = 1;
 			if (commands[i].arg)
 				printf(" %12s %s\t%16s\n", commands[i].name,
@@ -333,10 +337,10 @@ void handle_reload_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	if (!dbus_message_iter_init(msg, &args))
-		goto error;
+		goto error_server;
 
 	if (DBUS_TYPE_BOOLEAN != dbus_message_iter_get_arg_type(&args))
-		goto error_status;
+		goto error_server;
 	dbus_message_iter_get_basic(&args, &status);
 
 	if (status != 0)
@@ -348,13 +352,16 @@ void handle_reload_cmd(DBusConnection * conn, const char *arg)
 
 	return;
 
+ error_server:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	goto cleanup;
  error_status:
 	printf("Error scheduling reload\n");
-	goto error;
+	goto cleanup;
  error_send:
 	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
-	goto error;
- error:
+	goto cleanup;
+ cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }
@@ -379,10 +386,10 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	if (!dbus_message_iter_init(msg, &args))
-		goto error;
+		goto error_server;
 
 	if (DBUS_TYPE_BOOLEAN != dbus_message_iter_get_arg_type(&args))
-		goto error_status;
+		goto error_server;
 	dbus_message_iter_get_basic(&args, &status);
 
 	if (status != 0)
@@ -394,13 +401,16 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
 
 	return;
 
+ error_server:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	goto cleanup;
  error_status:
 	printf("Error scheduling server stop\n");
-	goto error;
+	goto cleanup;
  error_send:
 	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
-	goto error;
- error:
+	goto cleanup;
+ cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }
@@ -443,10 +453,11 @@ void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 	return;
 
  error:
-	fprintf(stderr, "could not send message; is server online?\n");
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }
+
 
 static
 void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
@@ -454,7 +465,7 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	DBusMessage *msg;
 	DBusMessageIter args;
 	dbus_bool_t status;
-	dbus_uint32_t id;
+	dbus_uint32_t id = 0;
 
 	if (arg != NULL)
 		id = atoi(arg);
@@ -482,7 +493,7 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	if (status != 0) {
 		printf("connection ID '%s' was disconnected\n", arg);
 	} else {
-		printf("could not disconnect connection ID '%s'\n", arg);
+		printf("could not disconnect ID '%s'\n", arg);
 	}
 
 	dbus_message_unref(msg);
@@ -490,7 +501,7 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	return;
 
  error:
-	fprintf(stderr, "could not send message; is server online?\n");
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
 	if (msg != NULL)
 		dbus_message_unref(msg);
 }
@@ -522,14 +533,14 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "list", 0, NULL);
 	if (msg == NULL) {
-		goto error_send;
+		goto error_server;
 	}
 
 	if (!dbus_message_iter_init(msg, &args))
-		goto cleanup;
+		goto error_server;
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_ARRAY)
-		goto cleanup;
+		goto error_server;
 
 	dbus_message_iter_recurse(&args, &suba);
 
@@ -666,11 +677,11 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 	goto cleanup;
 
+ error_server:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	goto cleanup;
  error_parse:
 	fprintf(stderr, "%s: D-BUS message parsing error\n", __func__);
-	goto cleanup;
- error_send:
-	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto cleanup;
  error_recv:
 	fprintf(stderr, "%s: D-BUS message receiving error\n", __func__);
@@ -892,12 +903,18 @@ void handle_user_info_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	if (!dbus_message_iter_init(msg, &args))
-		goto cleanup;
+		goto error_server;
+
+	if (!dbus_message_iter_has_next(&args))
+		goto error_server;
 
 	common_info_cmd(&args);
 	
 	goto cleanup;
 
+ error_server:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	goto cleanup;
  error_send:
 	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto cleanup;
@@ -929,12 +946,18 @@ void handle_id_info_cmd(DBusConnection * conn, const char *arg)
 	}
 
 	if (!dbus_message_iter_init(msg, &args))
-		goto cleanup;
+		goto error_server;
+
+	if (!dbus_message_iter_has_next(&args))
+		goto error_server;
 
 	common_info_cmd(&args);
 
 	goto cleanup;
 
+ error_server:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	goto cleanup;
  error_send:
 	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
 	goto cleanup;

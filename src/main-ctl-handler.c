@@ -71,7 +71,7 @@ typedef struct {
 #define ENTRY(name, iface, desc, func) \
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
-#define LIST_USERS_SIG "(ussssssssuss)"
+#define LIST_USERS_SIG "(ussssssssussss)"
 
 #define DESC_LIST \
 		"    <method name=\"list\">\n" \
@@ -126,7 +126,8 @@ static const ctl_method_st methods[] = {
 	ENTRY("reload", "org.infradead.ocserv", DESC_RELOAD, method_reload),
 	ENTRY("stop", "org.infradead.ocserv", DESC_RELOAD, method_stop),
 	ENTRY("list", "org.infradead.ocserv", DESC_LIST, method_list_users),
-	ENTRY("user_info", "org.infradead.ocserv", DESC_USER_INFO, method_user_info),
+	ENTRY("user_info", "org.infradead.ocserv", DESC_USER_INFO,
+	      method_user_info),
 	ENTRY("id_info", "org.infradead.ocserv", DESC_ID_INFO, method_id_info),
 	ENTRY("disconnect_name", "org.infradead.ocserv", DESC_DISC_NAME,
 	      method_disconnect_user_name),
@@ -398,6 +399,129 @@ static void method_stop(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
+static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
+{
+	dbus_uint32_t tmp;
+	char ipbuf[128];
+	const char *strtmp;
+
+	/* ID: pid */
+	tmp = ctmp->pid;
+	if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+		return -1;
+	}
+
+	strtmp = ctmp->username;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = ctmp->groupname;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp =
+	    human_addr((struct sockaddr *)&ctmp->remote_addr,
+		       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf));
+	if (strtmp == NULL)
+		strtmp = "";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+	strtmp = ctmp->tun_lease.name;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = NULL;
+	if (ctmp->ipv4 != NULL)
+		strtmp =
+		    human_addr((struct sockaddr *)&ctmp->ipv4->rip,
+			       ctmp->ipv4->rip_len, ipbuf, sizeof(ipbuf));
+	if (strtmp == NULL)
+		strtmp = "";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = NULL;
+	if (ctmp->ipv4 != NULL)
+		strtmp =
+		    human_addr((struct sockaddr *)&ctmp->ipv4->lip,
+			       ctmp->ipv4->lip_len, ipbuf, sizeof(ipbuf));
+	if (strtmp == NULL)
+		strtmp = "";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = NULL;
+	if (ctmp->ipv6 != NULL)
+		strtmp =
+		    human_addr((struct sockaddr *)&ctmp->ipv6->rip,
+			       ctmp->ipv6->rip_len, ipbuf, sizeof(ipbuf));
+	if (strtmp == NULL)
+		strtmp = "";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = NULL;
+	if (ctmp->ipv6 != NULL)
+		strtmp =
+		    human_addr((struct sockaddr *)&ctmp->ipv6->lip,
+			       ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf));
+	if (strtmp == NULL)
+		strtmp = "";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+	tmp = ctmp->conn_time;
+	if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+		return -1;
+	}
+
+	strtmp = ctmp->hostname;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	if (ctmp->auth_status == PS_AUTH_COMPLETED)
+		strtmp = "authenticated";
+	else if (ctmp->auth_status == PS_AUTH_INIT)
+		strtmp = "authenticating";
+	else
+		strtmp = "pre-auth";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = ctmp->tls_ciphersuite;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = ctmp->dtls_ciphersuite;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
 static void method_list_users(main_server_st * s, DBusConnection * conn,
 			      DBusMessage * msg)
 {
@@ -405,10 +529,8 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 	DBusMessageIter args;
 	DBusMessageIter suba;
 	DBusMessageIter subs;
-	dbus_uint32_t tmp;
 	struct proc_st *ctmp = NULL;
-	char ipbuf[128];
-	const char *strtmp;
+	int ret;
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: list-users");
 
@@ -436,135 +558,10 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 			goto error;
 		}
 
-		/* ID: pid */
-		tmp = ctmp->pid;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+		ret = append_user_info(&subs, ctmp);
+		if (ret < 0) {
 			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = ctmp->username;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = ctmp->groupname;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp =
-		    human_addr((struct sockaddr *)&ctmp->remote_addr,
-			       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-		strtmp = ctmp->tun_lease.name;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv4 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv4->rip,
-				       ctmp->ipv4->rip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv4 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv4->lip,
-				       ctmp->ipv4->lip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv6 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv6->rip,
-				       ctmp->ipv6->rip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv6 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv6->lip,
-				       ctmp->ipv6->lip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-		tmp = ctmp->conn_time;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = ctmp->hostname;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		if (ctmp->auth_status == PS_AUTH_COMPLETED)
-			strtmp = "authenticated";
-		else if (ctmp->auth_status == PS_AUTH_INIT)
-			strtmp = "authenticating";
-		else
-			strtmp = "pre-auth";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
+			      "error appending container to dbus reply");
 			goto error;
 		}
 
@@ -593,17 +590,14 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 }
 
 static void info_common(main_server_st * s, DBusConnection * conn,
-			     DBusMessage * msg, const char* user,
-			     unsigned id)
+			DBusMessage * msg, const char *user, unsigned id)
 {
 	DBusMessage *reply;
 	DBusMessageIter args;
 	DBusMessageIter suba;
 	DBusMessageIter subs;
-	dbus_uint32_t tmp;
+	int ret;
 	struct proc_st *ctmp = NULL;
-	char ipbuf[128];
-	const char *strtmp;
 
 	/* no arguments needed */
 	reply = dbus_message_new_method_return(msg);
@@ -621,11 +615,11 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 	}
 
 	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (id != 0) { /* id */
+		if (id != 0) {	/* id */
 			if (id != ctmp->pid) {
 				continue;
 			}
-		} else { /* username */
+		} else {	/* username */
 			if (strcmp(ctmp->username, user) != 0) {
 				continue;
 			}
@@ -638,133 +632,8 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 			goto error;
 		}
 
-		/* ID: pid */
-		tmp = ctmp->pid;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = ctmp->username;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = ctmp->groupname;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp =
-		    human_addr((struct sockaddr *)&ctmp->remote_addr,
-			       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-		strtmp = ctmp->tun_lease.name;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv4 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv4->rip,
-				       ctmp->ipv4->rip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv4 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv4->lip,
-				       ctmp->ipv4->lip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv6 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv6->rip,
-				       ctmp->ipv6->rip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = NULL;
-		if (ctmp->ipv6 != NULL)
-			strtmp =
-			    human_addr((struct sockaddr *)&ctmp->ipv6->lip,
-				       ctmp->ipv6->lip_len, ipbuf,
-				       sizeof(ipbuf));
-		if (strtmp == NULL)
-			strtmp = "";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-		tmp = ctmp->conn_time;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_UINT32, &tmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		strtmp = ctmp->hostname;
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
-			mslog(s, NULL, LOG_ERR,
-			      "error appending to dbus reply");
-			goto error;
-		}
-
-		if (ctmp->auth_status == PS_AUTH_COMPLETED)
-			strtmp = "authenticated";
-		else if (ctmp->auth_status == PS_AUTH_INIT)
-			strtmp = "authenticating";
-		else
-			strtmp = "pre-auth";
-		if (dbus_message_iter_append_basic
-		    (&subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		ret = append_user_info(&subs, ctmp);
+		if (ret < 0) {
 			mslog(s, NULL, LOG_ERR,
 			      "error appending to dbus reply");
 			goto error;
@@ -776,7 +645,7 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 			goto error;
 		}
 
-		if (id != 0) /* id -> one a single element */
+		if (id != 0)	/* id -> one a single element */
 			break;
 	}
 
@@ -806,26 +675,24 @@ static void method_user_info(main_server_st * s, DBusConnection * conn,
 	mslog(s, NULL, LOG_DEBUG, "ctl: user_info");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
-		mslog(s, NULL, LOG_ERR,
-		      "no arguments provided in user_info");
+		mslog(s, NULL, LOG_ERR, "no arguments provided in user_info");
 		return;
 	}
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_STRING) {
-		mslog(s, NULL, LOG_ERR,
-		      "wrong argument provided in user_info");
+		mslog(s, NULL, LOG_ERR, "wrong argument provided in user_info");
 		return;
 	}
 
 	dbus_message_iter_get_basic(&args, &name);
-	
+
 	info_common(s, conn, msg, name, 0);
 
 	return;
 }
 
 static void method_id_info(main_server_st * s, DBusConnection * conn,
-			     DBusMessage * msg)
+			   DBusMessage * msg)
 {
 	DBusMessageIter args;
 	dbus_uint32_t id;
@@ -833,24 +700,21 @@ static void method_id_info(main_server_st * s, DBusConnection * conn,
 	mslog(s, NULL, LOG_DEBUG, "ctl: user_info");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
-		mslog(s, NULL, LOG_ERR,
-		      "no arguments provided in user_info");
+		mslog(s, NULL, LOG_ERR, "no arguments provided in user_info");
 		return;
 	}
 
 	if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_UINT32) {
-		mslog(s, NULL, LOG_ERR,
-		      "wrong argument provided in user_info");
+		mslog(s, NULL, LOG_ERR, "wrong argument provided in user_info");
 		return;
 	}
 
 	dbus_message_iter_get_basic(&args, &id);
-	
+
 	info_common(s, conn, msg, NULL, id);
 
 	return;
 }
-
 
 static void method_disconnect_user_name(main_server_st * s,
 					DBusConnection * conn,
@@ -1053,7 +917,8 @@ void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 	unsigned flags, i;
 
 	if (s->config->use_dbus == 0) {
-		mslog(s, NULL, LOG_ERR, "%s called when D-BUS is disabled!", __func__);
+		mslog(s, NULL, LOG_ERR, "%s called when D-BUS is disabled!",
+		      __func__);
 		return;
 	}
 

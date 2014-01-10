@@ -512,6 +512,7 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	time_t t;
 	FILE * out;
 	unsigned iteration = 0;
+	const char* dtls_ciphersuite, *tls_ciphersuite;
 
 	out = pager_start();
 
@@ -616,6 +617,20 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &auth);
 
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &tls_ciphersuite);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &dtls_ciphersuite);
+
 		if (vpn_ipv4 != NULL && vpn_ipv4[0] != 0)
 			vpn_ip = vpn_ipv4;
 		else
@@ -623,9 +638,9 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		/* add header */
 		if (iteration++ == 0) {
-			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %10s\n",
+			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %9s %10s\n",
 			       "id", "user", "group", "ip", "vpn-ip", "device", "since",
-			       "status");
+			       "cipher", "status");
 		}
 
 		t = since;
@@ -636,7 +651,10 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		       device);
 
 		print_time_ival7(t, out);
-		fprintf(out, " %10s\n", auth);
+		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
+			fprintf(out, " %9s %10s\n", dtls_ciphersuite, auth);
+		else
+			fprintf(out, " %9s %10s\n", "(no dtls)", auth);
 
 		if (!dbus_message_iter_next(&suba))
 			goto cleanup;
@@ -673,6 +691,7 @@ void common_info_cmd(DBusMessageIter *args)
 	time_t t;
 	FILE * out;
 	unsigned at_least_one = 0;
+	const char* dtls_ciphersuite, *tls_ciphersuite;
 
 	out = pager_start();
 
@@ -784,6 +803,20 @@ void common_info_cmd(DBusMessageIter *args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &auth);
 
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &tls_ciphersuite);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &dtls_ciphersuite);
+
 		fprintf(out, "\tUsername: %s  ", username);
 		fprintf(out, "Groupname: %s\n", groupname);
 		fprintf(out, "\tAuth state: %s  ", auth);
@@ -809,6 +842,12 @@ void common_info_cmd(DBusMessageIter *args)
 		fprintf(out, "\tConnected at: %s (", str_since);
 		print_time_ival7(t, out);
 		fprintf(out, ")\n");
+
+		fprintf(out, "\tTLS ciphersuite: %s  ", tls_ciphersuite);
+		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
+			fprintf(out, "DTLS: %s\n", dtls_ciphersuite);
+		else
+			fprintf(out, "\n");
 
 		at_least_one = 1;
 

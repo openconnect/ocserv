@@ -697,7 +697,7 @@ void session_info_send(worker_st* ws)
 		msg.dtls_ciphersuite = ws->req.selected_ciphersuite;
 	}
 
-	send_msg_to_main(ws, CMD_TUN_MTU, &msg,
+	send_msg_to_main(ws, CMD_SESSION_INFO, &msg,
 		(pack_size_func)session_info_msg__get_packed_size,
 		(pack_func)session_info_msg__pack);
 }

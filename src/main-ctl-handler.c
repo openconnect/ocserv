@@ -497,9 +497,9 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	}
 
 	if (ctmp->auth_status == PS_AUTH_COMPLETED)
-		strtmp = "authenticated";
+		strtmp = "connected";
 	else if (ctmp->auth_status == PS_AUTH_INIT)
-		strtmp = "authenticating";
+		strtmp = "auth";
 	else
 		strtmp = "pre-auth";
 	if (dbus_message_iter_append_basic

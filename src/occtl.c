@@ -638,7 +638,7 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		/* add header */
 		if (iteration++ == 0) {
-			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %9s %10s\n",
+			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %9s %9s\n",
 			       "id", "user", "group", "ip", "vpn-ip", "device", "since",
 			       "cipher", "status");
 		}
@@ -652,9 +652,9 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		print_time_ival7(t, out);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
-			fprintf(out, " %9s %10s\n", dtls_ciphersuite, auth);
+			fprintf(out, " %9s %9s\n", dtls_ciphersuite, auth);
 		else
-			fprintf(out, " %9s %10s\n", "(no dtls)", auth);
+			fprintf(out, " %9s %9s\n", "(no dtls)", auth);
 
 		if (!dbus_message_iter_next(&suba))
 			goto cleanup;

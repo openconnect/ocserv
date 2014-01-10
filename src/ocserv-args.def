@@ -178,7 +178,7 @@ server-key = /path/to/key.pem
 #crl = /path/to/crl.pem
 
 # GnuTLS priority string
-tls-priorities = "PERFORMANCE:%SERVER_PRECEDENCE:%COMPAT"
+tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT"
 
 # To enforce perfect forward secrecy (PFS) on the main channel.
 #tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA"

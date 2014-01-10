@@ -114,7 +114,7 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 
 AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h], [], [], [])
 
-AC_CHECK_FUNCS([setproctitle clock_gettime])
+AC_CHECK_FUNCS([setproctitle clock_gettime isatty])
 
 if [ test -z "$LIBWRAP" ];then
 	libwrap_enabled="no"

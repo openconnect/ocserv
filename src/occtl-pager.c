@@ -45,6 +45,11 @@ FILE* pager_start(void)
 {
 FILE *fp;
 
+#ifdef HAVE_ISATTY
+	if (isatty(STDOUT_FILENO) == 0)
+		return stdout;
+#endif
+
 	if (!getenv("LESS")) {
 		setenv("LESS", "FRSX", 1);
 	}

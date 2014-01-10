@@ -70,7 +70,7 @@ const char* name;
 	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", name);
 	ifr.ifr_mtu = mtu;
-	
+
 	ret = ioctl(fd, SIOCSIFMTU, &ifr);
 	if (ret != 0) {
 		e = errno;
@@ -78,7 +78,7 @@ const char* name;
 		ret = -1;
 		goto fail;
 	}
-	
+
 	ret = 0;
 fail:
 	close(fd);
@@ -98,7 +98,7 @@ int ret;
 			ret = ERR_BAD_COMMAND;
 			goto fail;
 		}
-		
+
 		apply_iroutes(s, proc);
 	} else {
 		mslog(s, proc, LOG_INFO, "failed authentication attempt for user '%s'", proc->username);
@@ -111,7 +111,7 @@ int ret;
 	}
 	ret = 0;
 
-fail:	
+fail:
 	/* we close the lease tun fd both on success and failure.
 	 * The parent doesn't need to keep the tunfd.
 	 */
@@ -136,19 +136,19 @@ unsigned i;
 		ret = parse_group_cfg_file(s, file, &cfg);
 		if (ret < 0)
 			return ERR_READ_CONFIG;
-		
+
 		if (cfg.routes_size > 0) {
 			if (proc->config.routes == NULL) {
 				proc->config.routes = cfg.routes;
 				proc->config.routes_size = cfg.routes_size;
-				
+
 				cfg.routes = NULL;
 				cfg.routes_size = 0;
 			} else {
 				proc->config.routes = safe_realloc(proc->config.routes, (proc->config.routes_size + cfg.routes_size) * sizeof(proc->config.routes[0]));
 				if (proc->config.routes == NULL)
 					return ERR_MEM;
-				
+
 				for (i=0;i<cfg.routes_size;i++) {
 					proc->config.routes[proc->config.routes_size] = cfg.routes[i];
 					cfg.routes[i] = NULL;
@@ -160,7 +160,7 @@ unsigned i;
 		if (proc->config.iroutes == NULL) {
 			proc->config.iroutes = cfg.iroutes;
 			proc->config.iroutes_size = cfg.iroutes_size;
-				
+
 			cfg.iroutes = NULL;
 			cfg.iroutes_size = 0;
 		}
@@ -226,7 +226,7 @@ unsigned i;
 
 	} else
 		mslog(s, proc, LOG_DEBUG, "No %s configuration for '%s'", type, proc->username);
-	
+
 	return 0;
 }
 
@@ -253,7 +253,7 @@ int ret;
 		if (ret < 0)
 			return ret;
 	}
-	
+
 	if (proc->config.cgroup != NULL) {
 		put_into_cgroup(s, proc->config.cgroup, proc->pid);
 	}
@@ -279,10 +279,10 @@ void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k)
 		close(proc->fd);
 	proc->fd = -1;
 	proc->pid = -1;
-	
+
 	remove_iroutes(s, proc);
 	del_additional_config(&proc->config);
-	
+
 	if (proc->auth_ctx != NULL)
 		proc_auth_deinit(s, proc);
 
@@ -341,7 +341,7 @@ const char* group;
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 	}
-	
+
 	return ret;
 }
 
@@ -403,43 +403,63 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 	switch(cmd) {
 		case CMD_TUN_MTU: {
 			TunMtuMsg *tmsg;
-			
+
 			tmsg = tun_mtu_msg__unpack(NULL, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
-			
+
 			set_tun_mtu(s, proc, tmsg->mtu);
-			
+
 			tun_mtu_msg__free_unpacked(tmsg, NULL);
-			
+
 			}
-			
+
+			break;
+		case CMD_SESSION_INFO: {
+			SessionInfoMsg *tmsg;
+
+			tmsg = session_info_msg__unpack(NULL, raw_len, raw);
+			if (tmsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
+			if (tmsg->tls_ciphersuite)
+				snprintf(proc->tls_ciphersuite, sizeof(proc->tls_ciphersuite), "%s", tmsg->tls_ciphersuite);
+			if (tmsg->dtls_ciphersuite)
+				snprintf(proc->dtls_ciphersuite, sizeof(proc->dtls_ciphersuite), "%s", tmsg->dtls_ciphersuite);
+
+			session_info_msg__free_unpacked(tmsg, NULL);
+
+			}
+
 			break;
 		case RESUME_STORE_REQ: {
 			SessionResumeStoreReqMsg* smsg;
-			
+
 			smsg = session_resume_store_req_msg__unpack(NULL, raw_len, raw);
 			if (smsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
-			
+
 			ret = handle_resume_store_req(s, proc, smsg);
-			
+
 			session_resume_store_req_msg__free_unpacked(smsg, NULL);
-			
+
 			if (ret < 0) {
 				mslog(s, proc, LOG_DEBUG, "could not store resumption data");
 			}
-			
+
 			}
 
 			break;
-			
+
 		case RESUME_DELETE_REQ: {
 			SessionResumeFetchMsg* fmsg;
 
@@ -451,13 +471,13 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			}
 
 			ret = handle_resume_delete_req(s, proc, fmsg);
-			
+
 			session_resume_fetch_msg__free_unpacked(fmsg, NULL);
 
 			if (ret < 0) {
 				mslog(s, proc, LOG_DEBUG, "could not delete resumption data.");
 			}
-			
+
 			}
 
 			break;
@@ -482,29 +502,29 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			} else {
 				msg.reply = SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
 			}
-			
+
 			ret = send_msg_to_worker(s, proc, RESUME_FETCH_REP, &msg,
 				(pack_size_func)session_resume_reply_msg__get_packed_size,
 				(pack_func)session_resume_reply_msg__pack);
-			
+
 			if (ret < 0) {
 				mslog(s, proc, LOG_ERR, "could not send reply cmd %d.", (unsigned) cmd);
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
-			
+
 			}
-			
+
 			break;
 
 		case AUTH_INIT:
-			
+
 			if (proc->auth_status != PS_AUTH_INACTIVE) {
 				mslog(s, proc, LOG_ERR, "received authentication init when complete.");
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
-			
+
 			auth_init = auth_init_msg__unpack(NULL, raw_len, raw);
 			if (auth_init == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
@@ -513,7 +533,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			}
 
 			ret = handle_auth_init(s, proc, auth_init);
-			
+
 			auth_init_msg__free_unpacked(auth_init, NULL);
 
 			if (ret == ERR_AUTH_CONTINUE) {
@@ -536,7 +556,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				add_to_ip_ban_list(s, &proc->remote_addr, proc->remote_addr_len);
 				goto cleanup;
 			}
-			
+
 			break;
 
 		case AUTH_REQ:
@@ -584,7 +604,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			goto cleanup_auth;
 
 		case AUTH_COOKIE_REQ:
-			
+
 			if (proc->auth_status != PS_AUTH_INACTIVE) {
 				mslog(s, proc, LOG_ERR, "received unexpected cookie authentication.");
 				ret = ERR_BAD_COMMAND;
@@ -599,7 +619,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			}
 
 			ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
-			
+
 			auth_cookie_request_msg__free_unpacked(auth_cookie_req, NULL);
 
 			if (ret < 0) {
@@ -628,7 +648,7 @@ cleanup_auth:
 			ret = ERR_BAD_COMMAND;
 			goto cleanup;
 	}
-	
+
 	ret = 0;
 cleanup:
 	free(raw);
@@ -658,7 +678,7 @@ struct banned_st *btmp, *bpos;
 			}
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -692,11 +712,11 @@ struct banned_st *btmp;
 	btmp = malloc(sizeof(*btmp));
 	if (btmp == NULL)
 		return;
-	
+
 	btmp->failed_time = time(0);
 	memcpy(&btmp->addr, addr, addr_len);
 	btmp->addr_len = addr_len;
-	
+
 	list_add(&s->ban_list.head, &(btmp->list));
 }
 
@@ -761,7 +781,7 @@ FILE* fd;
 		mslog(s, NULL, LOG_DEBUG, "putting process %u to cgroup '%s:%s'", (unsigned)pid, p, name);
 
 	 	snprintf(file, sizeof(file), "/sys/fs/cgroup/%s/%s/tasks", p, name);
-	
+
 	 	fd = fopen(file, "w");
 	 	if (fd == NULL) {
 			mslog(s, NULL, LOG_ERR, "cannot open: %s", file);

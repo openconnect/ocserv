@@ -87,3 +87,10 @@ message udp_fd_msg
 {
 
 }
+
+/* SESSION_INFO */
+message session_info_msg
+{
+	required string tls_ciphersuite = 1;
+	required string dtls_ciphersuite = 2;
+}

@@ -685,6 +685,24 @@ void mtu_send(worker_st* ws, unsigned mtu)
 }
 
 static
+void session_info_send(worker_st* ws)
+{
+	SessionInfoMsg msg = SESSION_INFO_MSG__INIT;
+
+	if (ws->session) {
+		msg.tls_ciphersuite = gnutls_session_get_desc(ws->session);
+	}
+
+	if (ws->udp_state != UP_DISABLED) {
+		msg.dtls_ciphersuite = ws->req.selected_ciphersuite;
+	}
+
+	send_msg_to_main(ws, CMD_TUN_MTU, &msg,
+		(pack_size_func)session_info_msg__get_packed_size,
+		(pack_func)session_info_msg__pack);
+}
+
+static
 void mtu_set(worker_st* ws, unsigned mtu)
 {
 	ws->conn_mtu = mtu;
@@ -1120,7 +1138,7 @@ bandwidth_st b_rx;
 		set_net_priority(ws, ws->udp_fd, ws->config->net_priority);
 	} else
 		dtls_mtu = 0;
-	
+
 	if (ws->buffer_size <= ws->conn_mtu+mtu_overhead) {
 		oclog(ws, LOG_WARNING, "buffer size is smaller than MTU (%u < %u); adjusting", ws->buffer_size, ws->conn_mtu);
 		ws->buffer_size = ws->conn_mtu+mtu_overhead;
@@ -1159,6 +1177,8 @@ bandwidth_st b_rx;
 	
 	bandwidth_init(&b_rx, ws->config->rx_per_sec);
 	bandwidth_init(&b_tx, ws->config->tx_per_sec);
+
+	session_info_send(ws);
 
 	/* main loop  */
 	for(;;) {

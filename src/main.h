@@ -100,6 +100,9 @@ struct proc_st {
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 
+	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
+	char dtls_ciphersuite[MAX_CIPHERSUITE_NAME];
+
 	/* if the session is initiated by a cookie the following two are set
 	 * and are considered when generating an IP address.
 	 */

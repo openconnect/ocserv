@@ -76,6 +76,7 @@ extern int syslog_open;
 
 #define LOG_HTTP_DEBUG 2048
 
+#define MAX_CIPHERSUITE_NAME 48
 #define MAX_MSG_SIZE 256
 
 typedef enum {
@@ -91,6 +92,7 @@ typedef enum {
 	CMD_UDP_FD = 10,
 	CMD_TUN_MTU = 11,
 	CMD_TERMINATE = 12,
+	CMD_SESSION_INFO = 13,
 } cmd_request_t;
 
 typedef struct 

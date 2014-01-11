@@ -185,6 +185,8 @@ static int recv_auth_reply(worker_st *ws, char* txt, size_t max_txt_size)
 		return ret;
 	}
 
+	oclog(ws, LOG_DEBUG, "received auth reply message %u", (unsigned)msg->reply);
+
 	switch(msg->reply) {
 		case AUTH_REPLY_MSG__AUTH__REP__MSG:
 			if (txt == NULL || msg->msg == NULL) {
@@ -268,8 +270,10 @@ static int recv_auth_reply(worker_st *ws, char* txt, size_t max_txt_size)
 				goto cleanup;
 			}
 			break;
+		case AUTH_REPLY_MSG__AUTH__REP__FAILED:
 		default:
-			oclog(ws, LOG_ERR, "unexpected command");
+			if (msg->reply != AUTH_REPLY_MSG__AUTH__REP__FAILED)
+				oclog(ws, LOG_ERR, "unexpected auth reply %u", (unsigned)msg->reply);
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
 	}
@@ -580,8 +584,10 @@ char msg[MAX_MSG_SIZE];
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret = read_user_pass(ws, req->body, req->body_length, &username, NULL);
-			if (ret < 0)
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "failed reading username");
 				goto ask_auth;
+			}
 
 			snprintf(tmp_user, sizeof(tmp_user), "%s", username);
 			free(username);
@@ -591,13 +597,15 @@ char msg[MAX_MSG_SIZE];
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 			if (ws->cert_auth_ok == 0) {
 				oclog(ws, LOG_INFO, "no certificate provided for authentication");
-				return -1;
+				goto auth_fail;
 			}
 
 			ret = get_cert_info(ws, tmp_user, sizeof(tmp_user),
 						tmp_group, sizeof(tmp_group));
-			if (ret < 0)
-				return -1;
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "failed reading certificate info");
+				goto auth_fail;
+			}
 
 			msg.tls_auth_ok = 1;
 			msg.cert_user_name = tmp_user;
@@ -610,8 +618,10 @@ char msg[MAX_MSG_SIZE];
 			&msg,
 			(pack_size_func)auth_init_msg__get_packed_size, 
 			(pack_func)auth_init_msg__pack);
-		if (ret < 0)
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "failed sending auth init message to main");
 			goto auth_fail;
+		}
 		
 		ws->auth_state = S_AUTH_INIT;
 	} else {
@@ -619,8 +629,10 @@ char msg[MAX_MSG_SIZE];
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret = read_user_pass(ws, req->body, req->body_length, NULL, &password);
-			if (ret < 0)
-				goto ask_auth;
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "failed reading password");
+				goto auth_fail;
+			}
 
 			areq.password = password;
 
@@ -630,8 +642,10 @@ char msg[MAX_MSG_SIZE];
 
 			free(password);
 			
-			if (ret < 0)
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "failed sending auth req message to main");
 				goto auth_fail;
+			}
 		
 			ws->auth_state = S_AUTH_REQ;
 		} else
@@ -640,10 +654,13 @@ char msg[MAX_MSG_SIZE];
 
 	ret = recv_auth_reply(ws, msg, sizeof(msg));
 	if (ret == ERR_AUTH_CONTINUE) {
+		oclog(ws, LOG_DEBUG, "continuing authentication for '%s'", ws->username);
 		ws->auth_state = S_AUTH_REQ;
 		return get_auth_handler2(ws, http_ver, msg);
-        } else if (ret < 0)
+        } else if (ret < 0) {
+		oclog(ws, LOG_ERR, "failed authentication for '%s'", ws->username);
 		goto auth_fail;
+	}
 
 	oclog(ws, LOG_INFO, "user '%s' logged in", ws->username);
 	ws->auth_state = S_AUTH_COMPLETE;

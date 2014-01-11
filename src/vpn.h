@@ -77,7 +77,7 @@ extern int syslog_open;
 #define LOG_HTTP_DEBUG 2048
 
 #define MAX_CIPHERSUITE_NAME 64
-#define MAX_DTLS_CIPHERSUITE_NAME 16
+#define MAX_DTLS_CIPHERSUITE_NAME 24
 #define MAX_MSG_SIZE 256
 
 typedef enum {

@@ -75,7 +75,7 @@ static const commands_st commands[] = {
 	      "Prints the status of the server", 1),
 	ENTRY("show user", "[NAME]", handle_show_user_cmd,
 	      "Prints information on the specified user", 1),
-	ENTRY("show id", "[NAME]", handle_show_id_cmd,
+	ENTRY("show id", "[ID]", handle_show_id_cmd,
 	      "Prints information on the specified ID", 1),
 	ENTRY("stop", "now", handle_stop_cmd,
 	      "Terminates the server", 1),
@@ -669,7 +669,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		/* add header */
 		if (iteration++ == 0) {
-			fprintf(out, "%6s %8s %8s %14s %14s %6s %7s %9s %9s\n",
+			fprintf(out, "%6s %8s %8s %14s %14s %6s %7s %14s %9s\n",
 				"id", "user", "group", "ip", "vpn-ip", "device",
 				"since", "cipher", "status");
 		}
@@ -686,9 +686,9 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		print_time_ival7(t, out);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
-			fprintf(out, " %9s %9s\n", dtls_ciphersuite, auth);
+			fprintf(out, " %14s %9s\n", dtls_ciphersuite, auth);
 		else
-			fprintf(out, " %9s %9s\n", "(no dtls)", auth);
+			fprintf(out, " %14s %9s\n", "(no dtls)", auth);
 
 		entries_add(username, strlen(username), id);
 

@@ -247,7 +247,9 @@ int recv_socket_msg(int fd, uint8_t cmd,
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 
-	ret = recvmsg( fd, &hdr, 0);
+	do {
+		ret = recvmsg( fd, &hdr, 0);
+	} while (ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __func__, __LINE__, strerror(e));

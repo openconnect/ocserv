@@ -18,7 +18,7 @@ is used by several CISCO routers.
 ";
 
 copyright = {
-    date  = "2013";
+    date  = "2013, 2014";
     owner = "Nikos Mavrogiannopoulos";
     author = "Nikos Mavrogiannopoulos";
     eaddr  = "openconnect-devel@lists.infradead.org";

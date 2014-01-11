@@ -33,7 +33,7 @@ dist-hook: ChangeLog
 	mv ChangeLog $(distdir)
 	touch ChangeLog
 	$(AUTOGEN) --version
-	cd $(distdir)/src/ && for i in *.def;do \
+	cd $(distdir)/src/ && for i in ocserv-args.def ocpasswd-args.def;do \
 		$(AUTOGEN) $$i; \
 	done
 	cd $(distdir)/src/ && for i in *-args.c *-args.h;do \

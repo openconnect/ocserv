@@ -239,8 +239,10 @@ struct main_server_st;
 
 #include <tun.h>
 
-const char *human_addr(const struct sockaddr *sa, socklen_t salen,
-		       void *buf, size_t buflen);
+const char *human_addr2(const struct sockaddr *sa, socklen_t salen,
+		       void *buf, size_t buflen, unsigned full);
+
+#define human_addr(x, y, z, w) human_addr2(x, y, z, w, 1)
 
 /* Helper casts */
 #define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)

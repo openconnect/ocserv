@@ -424,8 +424,8 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	}
 
 	strtmp =
-	    human_addr((struct sockaddr *)&ctmp->remote_addr,
-		       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf));
+	    human_addr2((struct sockaddr *)&ctmp->remote_addr,
+		       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -441,8 +441,8 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	strtmp = NULL;
 	if (ctmp->ipv4 != NULL)
 		strtmp =
-		    human_addr((struct sockaddr *)&ctmp->ipv4->rip,
-			       ctmp->ipv4->rip_len, ipbuf, sizeof(ipbuf));
+		    human_addr2((struct sockaddr *)&ctmp->ipv4->rip,
+			       ctmp->ipv4->rip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -453,8 +453,8 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	strtmp = NULL;
 	if (ctmp->ipv4 != NULL)
 		strtmp =
-		    human_addr((struct sockaddr *)&ctmp->ipv4->lip,
-			       ctmp->ipv4->lip_len, ipbuf, sizeof(ipbuf));
+		    human_addr2((struct sockaddr *)&ctmp->ipv4->lip,
+			       ctmp->ipv4->lip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -465,8 +465,8 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	strtmp = NULL;
 	if (ctmp->ipv6 != NULL)
 		strtmp =
-		    human_addr((struct sockaddr *)&ctmp->ipv6->rip,
-			       ctmp->ipv6->rip_len, ipbuf, sizeof(ipbuf));
+		    human_addr2((struct sockaddr *)&ctmp->ipv6->rip,
+			       ctmp->ipv6->rip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -477,8 +477,8 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	strtmp = NULL;
 	if (ctmp->ipv6 != NULL)
 		strtmp =
-		    human_addr((struct sockaddr *)&ctmp->ipv6->lip,
-			       ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf));
+		    human_addr2((struct sockaddr *)&ctmp->ipv6->lip,
+			       ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic

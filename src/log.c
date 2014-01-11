@@ -28,8 +28,8 @@
 #include <worker.h>
 #include <main.h>
 
-const char *human_addr(const struct sockaddr *sa, socklen_t salen,
-		       void *_buf, size_t buflen)
+const char *human_addr2(const struct sockaddr *sa, socklen_t salen,
+		       void *_buf, size_t buflen, unsigned full)
 {
 	const char *save_buf = _buf;
 	char *buf = _buf;
@@ -38,7 +38,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 	if (!buf || !buflen)
 		return NULL;
 
-	if (salen == sizeof(struct sockaddr_in6) &&
+	if (full != 0 && salen == sizeof(struct sockaddr_in6) &&
 		((struct sockaddr_in6*)sa)->sin6_port != 0) {
 		*buf = '[';
 		buf++;
@@ -47,6 +47,9 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 
 	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) != 0)
 		return NULL;
+
+	if (full == 0)
+		goto finish;
 
 	l = strlen(buf);
 	buf += l;
@@ -71,6 +74,7 @@ const char *human_addr(const struct sockaddr *sa, socklen_t salen,
 		buf[0] = 0;
 	}
 
+finish:
 	return save_buf;
 }
 

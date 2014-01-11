@@ -35,19 +35,19 @@
 
 #define ERR_SERVER_UNREACHABLE "could not send message; is server online?\n"
 
-typedef void (*cmd_func) (DBusConnection * conn, const char *arg);
+typedef int (*cmd_func) (DBusConnection * conn, const char *arg);
 
-static void handle_help_cmd(DBusConnection * conn, const char *arg);
-static void handle_exit_cmd(DBusConnection * conn, const char *arg);
-static void handle_status_cmd(DBusConnection * conn, const char *arg);
-static void handle_list_users_cmd(DBusConnection * conn, const char *arg);
-static void handle_user_info_cmd(DBusConnection * conn, const char *arg);
-static void handle_id_info_cmd(DBusConnection * conn, const char *arg);
-static void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg);
-static void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
-static void handle_reset_cmd(DBusConnection * conn, const char *arg);
-static void handle_reload_cmd(DBusConnection * conn, const char *arg);
-static void handle_stop_cmd(DBusConnection * conn, const char *arg);
+static int handle_help_cmd(DBusConnection * conn, const char *arg);
+static int handle_exit_cmd(DBusConnection * conn, const char *arg);
+static int handle_status_cmd(DBusConnection * conn, const char *arg);
+static int handle_list_users_cmd(DBusConnection * conn, const char *arg);
+static int handle_user_info_cmd(DBusConnection * conn, const char *arg);
+static int handle_id_info_cmd(DBusConnection * conn, const char *arg);
+static int handle_disconnect_user_cmd(DBusConnection * conn, const char *arg);
+static int handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
+static int handle_reset_cmd(DBusConnection * conn, const char *arg);
+static int handle_reload_cmd(DBusConnection * conn, const char *arg);
+static int handle_stop_cmd(DBusConnection * conn, const char *arg);
 
 typedef struct {
 	char *name;
@@ -171,12 +171,16 @@ void version(void)
 {
 	fprintf(stderr,
 		"OpenConnect server control (occtl) version %s\n", VERSION);
-	fprintf(stderr,	"Copyright (C) 2013 Red Hat and others.\n");
-	fprintf(stderr, "ocserv comes with ABSOLUTELY NO WARRANTY. This is free\n");
-	fprintf(stderr, "software, and you are welcome to redistribute it under the\n");
-	fprintf(stderr, "conditions of the GNU General Public License version 2.\n");
+	fprintf(stderr, "Copyright (C) 2013 Red Hat and others.\n");
+	fprintf(stderr,
+		"ocserv comes with ABSOLUTELY NO WARRANTY. This is free\n");
+	fprintf(stderr,
+		"software, and you are welcome to redistribute it under the\n");
+	fprintf(stderr,
+		"conditions of the GNU General Public License version 2.\n");
 	fprintf(stderr, "\nFor help type ? or 'help'\n");
-	fprintf(stderr, "==========================================================\n");
+	fprintf(stderr,
+		"==========================================================\n");
 }
 
 /* Read a string, and return a pointer to it.  Returns NULL on EOF. */
@@ -249,7 +253,7 @@ DBusMessage *send_dbus_cmd(DBusConnection * conn,
 }
 
 static
-void handle_status_cmd(DBusConnection * conn, const char *arg)
+int handle_status_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -302,7 +306,7 @@ void handle_status_cmd(DBusConnection * conn, const char *arg)
 
 	dbus_message_unref(msg);
 
-	return;
+	return 0;
 
  error_status:
 	printf("OpenConnect SSL VPN server\n");
@@ -320,10 +324,12 @@ void handle_status_cmd(DBusConnection * conn, const char *arg)
  error:
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return 1;
 }
 
 static
-void handle_reload_cmd(DBusConnection * conn, const char *arg)
+int handle_reload_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -350,7 +356,7 @@ void handle_reload_cmd(DBusConnection * conn, const char *arg)
 
 	dbus_message_unref(msg);
 
-	return;
+	return 0;
 
  error_server:
 	fprintf(stderr, ERR_SERVER_UNREACHABLE);
@@ -364,10 +370,12 @@ void handle_reload_cmd(DBusConnection * conn, const char *arg)
  cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return 1;
 }
 
 static
-void handle_stop_cmd(DBusConnection * conn, const char *arg)
+int handle_stop_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -375,7 +383,7 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
 
 	if (arg == NULL || need_help(arg) || c_strncasecmp(arg, "now", 3) != 0) {
 		check_cmd_help(rl_line_buffer);
-		return;
+		return 1;
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
@@ -399,7 +407,7 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
 
 	dbus_message_unref(msg);
 
-	return;
+	return 0;
 
  error_server:
 	fprintf(stderr, ERR_SERVER_UNREACHABLE);
@@ -413,10 +421,12 @@ void handle_stop_cmd(DBusConnection * conn, const char *arg)
  cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return 1;
 }
 
 static
-void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
+int handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -424,7 +434,7 @@ void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 
 	if (arg == NULL || need_help(arg)) {
 		check_cmd_help(rl_line_buffer);
-		return;
+		return 1;
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
@@ -450,29 +460,31 @@ void handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 
 	dbus_message_unref(msg);
 
-	return;
+	return 0;
 
  error:
 	fprintf(stderr, ERR_SERVER_UNREACHABLE);
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return 1;
 }
 
-
 static
-void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
+int handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
 	dbus_bool_t status;
 	dbus_uint32_t id = 0;
+	int ret;
 
 	if (arg != NULL)
 		id = atoi(arg);
 
 	if (arg == NULL || need_help(arg) || id == 0) {
 		check_cmd_help(rl_line_buffer);
-		return;
+		return 1;
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
@@ -492,21 +504,25 @@ void handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 
 	if (status != 0) {
 		printf("connection ID '%s' was disconnected\n", arg);
+		ret = 0;
 	} else {
 		printf("could not disconnect ID '%s'\n", arg);
+		ret = 1;
 	}
 
 	dbus_message_unref(msg);
 
-	return;
+	return ret;
 
  error:
 	fprintf(stderr, ERR_SERVER_UNREACHABLE);
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return 1;
 }
 
-void handle_list_users_cmd(DBusConnection * conn, const char *arg)
+int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args, suba, subs;
@@ -521,9 +537,10 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	const char *vpn_ip;
 	struct tm *tm;
 	time_t t;
-	FILE * out;
+	FILE *out;
 	unsigned iteration = 0;
-	const char* dtls_ciphersuite, *tls_ciphersuite;
+	const char *dtls_ciphersuite, *tls_ciphersuite;
+	int ret = 1;
 
 	entries_clear();
 
@@ -652,16 +669,15 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		/* add header */
 		if (iteration++ == 0) {
 			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %9s %9s\n",
-			       "id", "user", "group", "ip", "vpn-ip", "device", "since",
-			       "cipher", "status");
+				"id", "user", "group", "ip", "vpn-ip", "device",
+				"since", "cipher", "status");
 		}
 
 		t = since;
 		tm = localtime(&t);
 		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
 		fprintf(out, "%6u %8s %8s %15s %15s %6s ",
-		       (unsigned)id, username, groupname, ip, vpn_ip,
-		       device);
+			(unsigned)id, username, groupname, ip, vpn_ip, device);
 
 		print_time_ival7(t, out);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
@@ -672,9 +688,10 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		entries_add(username, strlen(username), id);
 
 		if (!dbus_message_iter_next(&suba))
-			goto cleanup;
+			break;
 	}
 
+	ret = 0;
 	goto cleanup;
 
  error_server:
@@ -689,9 +706,10 @@ void handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	pager_stop(out);
 	if (msg != NULL)
 		dbus_message_unref(msg);
+	return ret;
 }
 
-void common_info_cmd(DBusMessageIter *args)
+int common_info_cmd(DBusMessageIter * args)
 {
 	DBusMessageIter suba, subs;
 	dbus_uint32_t id = 0;
@@ -704,9 +722,10 @@ void common_info_cmd(DBusMessageIter *args)
 	char str_since[64];
 	struct tm *tm;
 	time_t t;
-	FILE * out;
+	FILE *out;
 	unsigned at_least_one = 0;
-	const char* dtls_ciphersuite, *tls_ciphersuite;
+	const char *dtls_ciphersuite, *tls_ciphersuite;
+	int ret = 1;
 
 	out = pager_start();
 
@@ -735,14 +754,12 @@ void common_info_cmd(DBusMessageIter *args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &username);
 
-
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &groupname);
-
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -751,14 +768,12 @@ void common_info_cmd(DBusMessageIter *args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &ip);
 
-
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &device);
-
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -767,14 +782,12 @@ void common_info_cmd(DBusMessageIter *args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
 
-
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv4);
-
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -783,14 +796,12 @@ void common_info_cmd(DBusMessageIter *args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
 
-
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv6);
-
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -812,7 +823,6 @@ void common_info_cmd(DBusMessageIter *args)
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
-
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
@@ -837,13 +847,13 @@ void common_info_cmd(DBusMessageIter *args)
 		fprintf(out, "\tAuth state: %s  ", auth);
 		fprintf(out, "IP: %s\n", ip);
 
-		if (vpn_ipv4 != NULL && vpn_ipv4[0] != 0 && 
-			vpn_ptp_ipv4 != NULL && vpn_ptp_ipv4[0] != 0) {
+		if (vpn_ipv4 != NULL && vpn_ipv4[0] != 0 &&
+		    vpn_ptp_ipv4 != NULL && vpn_ptp_ipv4[0] != 0) {
 			fprintf(out, "\tIPv4: %s  ", vpn_ipv4);
 			fprintf(out, "P-t-P IPv4: %s\n", vpn_ptp_ipv4);
 		}
 		if (vpn_ipv6 != NULL && vpn_ipv6[0] != 0 &&
-			vpn_ptp_ipv6 != NULL && vpn_ptp_ipv6[0] != 0) {
+		    vpn_ptp_ipv6 != NULL && vpn_ptp_ipv6[0] != 0) {
 			fprintf(out, "\tIPv6: %s  ", vpn_ipv6);
 			fprintf(out, "P-t-P IPv6: %s\n", vpn_ptp_ipv6);
 		}
@@ -867,9 +877,10 @@ void common_info_cmd(DBusMessageIter *args)
 		at_least_one = 1;
 
 		if (!dbus_message_iter_next(&suba))
-			goto cleanup;
+			break;
 	}
 
+	ret = 0;
 	goto cleanup;
 
  error_parse:
@@ -878,20 +889,22 @@ void common_info_cmd(DBusMessageIter *args)
  error_recv:
 	fprintf(stderr, "%s: D-BUS message receiving error\n", __func__);
  cleanup:
- 	if (at_least_one == 0)
- 		fprintf(out, "user or ID not found\n");
+	if (at_least_one == 0)
+		fprintf(out, "user or ID not found\n");
 	pager_stop(out);
+
+	return ret;
 }
 
-
-void handle_user_info_cmd(DBusConnection * conn, const char *arg)
+int handle_user_info_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
+	int ret = 1;
 
 	if (arg == NULL || need_help(arg)) {
 		check_cmd_help(rl_line_buffer);
-		return;
+		return 1;
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
@@ -908,8 +921,8 @@ void handle_user_info_cmd(DBusConnection * conn, const char *arg)
 	if (!dbus_message_iter_has_next(&args))
 		goto error_server;
 
-	common_info_cmd(&args);
-	
+	ret = common_info_cmd(&args);
+
 	goto cleanup;
 
  error_server:
@@ -921,20 +934,23 @@ void handle_user_info_cmd(DBusConnection * conn, const char *arg)
  cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return ret;
 }
 
-void handle_id_info_cmd(DBusConnection * conn, const char *arg)
+int handle_id_info_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
 	dbus_uint32_t id = 0;
+	int ret = 1;
 
 	if (arg != NULL)
 		id = atoi(arg);
 
 	if (arg == NULL || need_help(arg) || id == 0) {
 		check_cmd_help(rl_line_buffer);
-		return;
+		return 1;
 	}
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
@@ -951,7 +967,7 @@ void handle_id_info_cmd(DBusConnection * conn, const char *arg)
 	if (!dbus_message_iter_has_next(&args))
 		goto error_server;
 
-	common_info_cmd(&args);
+	ret = common_info_cmd(&args);
 
 	goto cleanup;
 
@@ -964,20 +980,25 @@ void handle_id_info_cmd(DBusConnection * conn, const char *arg)
  cleanup:
 	if (msg != NULL)
 		dbus_message_unref(msg);
+
+	return ret;
 }
 
-static void handle_help_cmd(DBusConnection * conn, const char *arg)
+static int handle_help_cmd(DBusConnection * conn, const char *arg)
 {
 	print_commands(1);
+	return 0;
 }
 
-static void handle_reset_cmd(DBusConnection * conn, const char *arg)
+static int handle_reset_cmd(DBusConnection * conn, const char *arg)
 {
 	rl_reset_terminal(NULL);
 	rl_reset_screen_size();
+
+	return 0;
 }
 
-static void handle_exit_cmd(DBusConnection * conn, const char *arg)
+static int handle_exit_cmd(DBusConnection * conn, const char *arg)
 {
 	exit(0);
 }
@@ -986,7 +1007,7 @@ static void handle_exit_cmd(DBusConnection * conn, const char *arg)
  * the given cmd (e.g., "list users"). If yes it executes func() and returns true.
  */
 unsigned check_cmd(const char *cmd, const char *input,
-		   DBusConnection * conn, cmd_func func)
+		   DBusConnection * conn, cmd_func func, int *status)
 {
 	char *t, *p;
 	unsigned len, tlen;
@@ -1023,7 +1044,7 @@ unsigned check_cmd(const char *cmd, const char *input,
 		while (whitespace(*p))
 			p++;
 
-		func(conn, p);
+		*status = func(conn, p);
 
 		ret = 1;
 	}
@@ -1051,26 +1072,28 @@ char *stripwhite(char *string)
 	return s;
 }
 
-void handle_cmd(DBusConnection * conn, char *line)
+int handle_cmd(DBusConnection * conn, char *line)
 {
 	char *cline;
 	unsigned int i;
+	int status = 0;
 
 	cline = stripwhite(line);
 
 	if (strlen(cline) == 0)
-		return;
+		return 1;
 
 	for (i = 0;; i++) {
 		if (commands[i].name == NULL)
 			goto error;
 
 		if (check_cmd
-		    (commands[i].name, cline, conn, commands[i].func) != 0)
+		    (commands[i].name, cline, conn, commands[i].func,
+		     &status) != 0)
 			break;
 	}
 
-	return;
+	return status;
 
  error:
 	if (check_cmd_help(line) == 0) {
@@ -1078,7 +1101,7 @@ void handle_cmd(DBusConnection * conn, char *line)
 		fprintf(stderr,
 			"use help or '?' to get a list of the available commands\n");
 	}
-	return;
+	return 1;
 }
 
 static DBusConnection *init_dbus(void)
@@ -1157,21 +1180,27 @@ static char *command_generator(const char *text, int state)
 		if (cmd_start > name_size) {
 			/* check for user or ID options */
 			if (rl_line_buffer != NULL &&
-				c_strncasecmp(rl_line_buffer, name, name_size) == 0 &&
-				/* make sure only one argument is appended */
-				rl_line_buffer[name_size] != 0 &&
-				strchr(&rl_line_buffer[name_size+1], ' ') == NULL) {
+			    c_strncasecmp(rl_line_buffer, name, name_size) == 0
+			    &&
+			    /* make sure only one argument is appended */
+			    rl_line_buffer[name_size] != 0 &&
+			    strchr(&rl_line_buffer[name_size + 1],
+				   ' ') == NULL) {
 
 				if (arg != NULL) {
 					ret = NULL;
 					if (strcmp(arg, "[NAME]") == 0)
-						ret = search_for_user(entries_idx, text, len);
+						ret =
+						    search_for_user(entries_idx,
+								    text, len);
 					else if (strcmp(arg, "[ID]") == 0)
-						ret = search_for_id(entries_idx, text, len);
+						ret =
+						    search_for_id(entries_idx,
+								  text, len);
 					if (ret != NULL) {
 						entries_idx++;
 					}
-					list_index--; /* restart at the same cmd */
+					list_index--;	/* restart at the same cmd */
 					return ret;
 				}
 			}
@@ -1228,8 +1257,11 @@ int main(int argc, char **argv)
 	conn = init_dbus();
 
 	if (argc > 1) {
+		int ret;
+
 		if (argv[1][0] == '-') {
-			if (argv[1][1] == 'v' || (argv[1][1] == '-' && argv[1][2] == 'v')) {
+			if (argv[1][1] == 'v'
+			    || (argv[1][1] == '-' && argv[1][2] == 'v')) {
 				version();
 			} else {
 				usage();
@@ -1238,10 +1270,10 @@ int main(int argc, char **argv)
 		}
 
 		line = merge_args(argc, argv);
-		handle_cmd(conn, line);
+		ret = handle_cmd(conn, line);
 
 		free(line);
-		return 0;
+		return ret;
 	}
 
 	initialize_readline();

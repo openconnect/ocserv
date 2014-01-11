@@ -7,7 +7,7 @@
  * Michael K. Johnson.
  *
  * Changes by Albert Cahalan, 2002.
- * Modified for occtl by Nikos Mavrogiannopoulos, 2013.
+ * Modified for occtl by Nikos Mavrogiannopoulos, 2014.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public

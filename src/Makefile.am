@@ -4,7 +4,6 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS)
 
-EXTRA_DIST = occtl-args.def ipc.proto
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
 
@@ -23,7 +22,8 @@ NEEDED_LIBOPTS = $(LIBOPTS_LDADD)
 endif
 
 EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
-	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc
+	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
+	occtl-args.def ipc.proto
 
 bin_PROGRAMS = ocpasswd
 if HAVE_DBUS

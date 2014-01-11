@@ -165,14 +165,12 @@ int open_tun(main_server_st* s, struct proc_st* proc)
 	memcpy(proc->tun_lease.name, ifr.ifr_name, IFNAMSIZ);
 	mslog(s, proc, LOG_INFO, "assigning tun device %s\n", proc->tun_lease.name);
 
-# if 0
 	/* we no longer use persistent tun */
 	if (ioctl(tunfd, TUNSETPERSIST, (void *)0) < 0) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "%s: TUNSETPERSIST: %s\n", proc->tun_lease.name, strerror(e));
 		goto fail;
 	}
-# endif
 
 	if (s->config->uid != -1) {
 		t = s->config->uid;

@@ -49,6 +49,8 @@
 
 #define SUCCESS_MSG_FOOT "</auth>\n"
 
+#define CONFIG_MSG "<vpn-client-pkg-version><pkgversion>0,0,0000</pkgversion></vpn-client-pkg-version>\n"
+
 static const char login_msg_user[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 	"<auth id=\"main\">\n"
 	 "<message>Please enter your username</message>\n"
@@ -107,7 +109,7 @@ unsigned int lsize;
 	ret = tls_send(ws->session, login_msg, lsize);
 	if (ret < 0)
 		return -1;
-	
+
 	ret = tls_uncork(ws->session);
 	if (ret < 0)
 		return -1;
@@ -436,6 +438,12 @@ char msg[MAX_BANNER_SIZE+32];
 	ret = tls_printf(ws->session, "\r\n"SUCCESS_MSG_HEAD"%s"SUCCESS_MSG_FOOT, msg);
 	if (ret < 0)
 		return -1;
+
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	ret = tls_send(ws->session, CONFIG_MSG, sizeof(CONFIG_MSG)-1);
+	if (ret < 0)
+		return -1;
+#endif
 
 	ret = tls_uncork(ws->session);
 	if (ret < 0)

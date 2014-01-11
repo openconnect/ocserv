@@ -41,8 +41,8 @@ static int handle_help_cmd(DBusConnection * conn, const char *arg);
 static int handle_exit_cmd(DBusConnection * conn, const char *arg);
 static int handle_status_cmd(DBusConnection * conn, const char *arg);
 static int handle_list_users_cmd(DBusConnection * conn, const char *arg);
-static int handle_user_info_cmd(DBusConnection * conn, const char *arg);
-static int handle_id_info_cmd(DBusConnection * conn, const char *arg);
+static int handle_show_user_cmd(DBusConnection * conn, const char *arg);
+static int handle_show_id_cmd(DBusConnection * conn, const char *arg);
 static int handle_disconnect_user_cmd(DBusConnection * conn, const char *arg);
 static int handle_disconnect_id_cmd(DBusConnection * conn, const char *arg);
 static int handle_reset_cmd(DBusConnection * conn, const char *arg);
@@ -72,9 +72,9 @@ static const commands_st commands[] = {
 	      "Reloads the server configuration", 1),
 	ENTRY("show status", NULL, handle_status_cmd,
 	      "Prints the status of the server", 1),
-	ENTRY("show user", "[NAME]", handle_user_info_cmd,
+	ENTRY("show user", "[NAME]", handle_show_user_cmd,
 	      "Prints information on the specified user", 1),
-	ENTRY("show id", "[NAME]", handle_id_info_cmd,
+	ENTRY("show id", "[NAME]", handle_show_id_cmd,
 	      "Prints information on the specified ID", 1),
 	ENTRY("stop", "now", handle_stop_cmd,
 	      "Terminates the server", 1),
@@ -900,7 +900,7 @@ int common_info_cmd(DBusMessageIter * args)
 	return ret;
 }
 
-int handle_user_info_cmd(DBusConnection * conn, const char *arg)
+int handle_show_user_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -922,10 +922,9 @@ int handle_user_info_cmd(DBusConnection * conn, const char *arg)
 	if (!dbus_message_iter_init(msg, &args))
 		goto error_server;
 
-	if (!dbus_message_iter_has_next(&args))
-		goto error_server;
-
 	ret = common_info_cmd(&args);
+	if (ret != 0)
+		goto error_server;
 
 	goto cleanup;
 
@@ -942,7 +941,7 @@ int handle_user_info_cmd(DBusConnection * conn, const char *arg)
 	return ret;
 }
 
-int handle_id_info_cmd(DBusConnection * conn, const char *arg)
+int handle_show_id_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -968,10 +967,9 @@ int handle_id_info_cmd(DBusConnection * conn, const char *arg)
 	if (!dbus_message_iter_init(msg, &args))
 		goto error_server;
 
-	if (!dbus_message_iter_has_next(&args))
-		goto error_server;
-
 	ret = common_info_cmd(&args);
+	if (ret != 0)
+		goto error_server;
 
 	goto cleanup;
 

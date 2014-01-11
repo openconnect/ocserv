@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <syslog.h>
 #include <c-strcase.h>
 
 #include "html.h"
@@ -89,6 +90,7 @@ char *unescape_url(const char *url, unsigned len, unsigned *out_len)
 
 			if (sscanf(b, "%02x", &u) <= 0) {
 				free(msg);
+				syslog(LOG_ERR, "%s: error parsing URL: %s", __func__, url);
 				return NULL;
 			}
 

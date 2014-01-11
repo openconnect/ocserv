@@ -460,6 +460,7 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 			/* body should contain <username>test</username><password>test</password> */
 			*username = memmem(body, body_length, XMLUSER, sizeof(XMLUSER)-1);
 			if (*username == NULL) {
+				oclog(ws, LOG_ERR, "cannot find username in client XML message");
 				return -1;
 			}
 			*username += sizeof(XMLUSER)-1;
@@ -468,6 +469,7 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 		if (password != NULL) {
         		*password = memmem(body, body_length, XMLPASS, sizeof(XMLPASS)-1);
 	        	if (*password == NULL) {
+				oclog(ws, LOG_ERR, "cannot find password in client XML message");
 	        		return -1;
 	        	}
 	        	*password += sizeof(XMLPASS)-1;
@@ -500,12 +502,13 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 
 			*password = unescape_html(*password, strlen(*password), NULL);
                 }
-	
+
 	} else { /* non-xml version */
 		/* body should be "username=test&password=test" */
 		if (username != NULL) {
 			*username = memmem(body, body_length, "username=", sizeof("username=")-1);
 			if (*username == NULL) {
+				oclog(ws, LOG_ERR, "cannot find username in client message");
 				return -1;
 			}
 			*username += sizeof("username=")-1;
@@ -514,6 +517,7 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
 		if (password != NULL) {
         		*password = memmem(body, body_length, "password=", sizeof("password=")-1);
         		if (*password == NULL) {
+				oclog(ws, LOG_ERR, "cannot find password in client message");
         			return -1;
         		}
         		*password += sizeof("password=")-1;
@@ -547,11 +551,15 @@ int read_user_pass(worker_st *ws, char* body, unsigned body_length, char** usern
                 }
 	}
 	
-	if (username != NULL && *username == NULL)
+	if (username != NULL && *username == NULL) {
+		oclog(ws, LOG_ERR, "username requested but no username in client message");
 		return -1;
+	}
 
-	if (password != NULL && *password == NULL)
+	if (password != NULL && *password == NULL) {
+		oclog(ws, LOG_ERR, "password requested but no password in client message");
 		return -1;
+	}
 	
 	return 0;
 }

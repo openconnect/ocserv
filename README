@@ -17,6 +17,9 @@ $ ./configure && make
 At the minimum this requires GnuTLS and libprotobuf-c headers and libraries
 installed.  It will also link against libpam and libwrap, if present.
 
+For the occtl tool the additional libraries, readline, and dbus are
+required.
+
 When cross compiling it may be useful to add the --enable-local-libopts
 option to configure.
 

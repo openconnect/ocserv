@@ -775,7 +775,11 @@ int main(int argc, char** argv)
 	struct ctl_handler_st* ctl_tmp = NULL, *ctl_pos;
 	fd_set rd_set, wr_set;
 	int n = 0, ret, flags;
+#ifdef HAVE_PSELECT
 	struct timespec ts;
+#else
+	struct timeval ts;
+#endif
 	int cmd_fd[2];
 	struct worker_st ws;
 	struct cfg_st config;
@@ -910,9 +914,17 @@ int main(int argc, char** argv)
 			}
 		}
 
+#ifdef HAVE_PSELECT
 		ts.tv_nsec = 0;
 		ts.tv_sec = 30;
 		ret = pselect(n + 1, &rd_set, &wr_set, NULL, &ts, &emptyset);
+#else
+		ts.tv_usec = 0;
+		ts.tv_sec = 30;
+		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
+		ret = select(n + 1, &rd_set, &wr_set, NULL, &ts);
+		sigprocmask(SIG_BLOCK, &blockset, NULL);
+#endif
 		if (ret == -1 && errno == EINTR)
 			continue;
 

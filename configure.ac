@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [0.3.0], [nmav@gnutls.org])
+AC_INIT([ocserv], [0.3.0pre0], [nmav@gnutls.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([gl/m4])
@@ -114,7 +114,7 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 
 AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h], [], [], [])
 
-AC_CHECK_FUNCS([setproctitle clock_gettime isatty])
+AC_CHECK_FUNCS([setproctitle clock_gettime isatty pselect])
 
 if [ test -z "$LIBWRAP" ];then
 	libwrap_enabled="no"

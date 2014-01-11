@@ -676,6 +676,10 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		t = since;
 		tm = localtime(&t);
 		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+
+		if (groupname == NULL || groupname[0] == 0)
+			groupname = "(none)";
+
 		fprintf(out, "%6u %8s %8s %15s %15s %6s ",
 			(unsigned)id, username, groupname, ip, vpn_ip, device);
 
@@ -1253,6 +1257,8 @@ int main(int argc, char **argv)
 {
 	char *line = NULL;
 	DBusConnection *conn;
+
+	signal(SIGPIPE, SIG_IGN);
 
 	conn = init_dbus();
 

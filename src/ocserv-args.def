@@ -539,3 +539,11 @@ To enable compatibility with CISCO's AnyConnect the client's policy must
 set in a way that disables the downloader. 
 _EOT_;
 };
+
+doc-section = {
+  ds-type   = 'SEE ALSO';
+  ds-format = 'man';
+  ds-text   = <<-_EOText_
+ocpasswd(8), occtl(8)
+_EOText_;
+};

@@ -669,7 +669,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		/* add header */
 		if (iteration++ == 0) {
-			fprintf(out, "%6s %8s %8s %15s %15s %6s %7s %9s %9s\n",
+			fprintf(out, "%6s %8s %8s %14s %14s %6s %7s %9s %9s\n",
 				"id", "user", "group", "ip", "vpn-ip", "device",
 				"since", "cipher", "status");
 		}
@@ -681,7 +681,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		if (groupname == NULL || groupname[0] == 0)
 			groupname = NO_GROUP;
 
-		fprintf(out, "%6u %8s %8s %15s %15s %6s ",
+		fprintf(out, "%6u %8s %8s %14s %14s %6s ",
 			(unsigned)id, username, groupname, ip, vpn_ip, device);
 
 		print_time_ival7(t, out);

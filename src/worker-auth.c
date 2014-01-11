@@ -180,6 +180,10 @@ static int recv_auth_reply(worker_st *ws, char* txt, size_t max_txt_size)
 	ret = recv_socket_msg(ws->cmd_fd, AUTH_REP, &socketfd,
 		(void*)&msg, 
 		(unpack_func)auth_reply_msg__unpack);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "error receiving auth reply message");
+		return ret;
+	}
 
 	switch(msg->reply) {
 		case AUTH_REPLY_MSG__AUTH__REP__MSG:

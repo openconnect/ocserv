@@ -338,7 +338,7 @@ const char* group;
 
 	/* do scripts and utmp */
 	ret = user_connected(s, proc);
-	if (ret < 0) {
+	if (ret < 0 && ret != ERR_WAIT_FOR_SCRIPT) {
 		mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script", proc->username);
 	}
 
@@ -548,7 +548,7 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 			} else if (ret == 0) {
 				ret = accept_user(s, proc, cmd);
 				if (ret < 0) {
-					goto cleanup;
+					goto cleanup_auth;
 				}
 				proc->auth_status = PS_AUTH_COMPLETED;
 				goto cleanup;

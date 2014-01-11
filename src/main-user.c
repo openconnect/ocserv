@@ -66,26 +66,38 @@ const char* script;
 		char local[64];
 		char remote[64];
 
-		if (proc->ipv4 == NULL && proc->ipv6 == NULL)
+		if (proc->ipv4 == NULL && proc->ipv6 == NULL) {
+			mslog(s, proc, LOG_DEBUG, "no IP configured; script failed");
 			exit(1);
+		}
 		
-		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0)
+		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0) {
+			mslog(s, proc, LOG_DEBUG, "cannot determine peer address; script failed");
 			exit(1);
+		}
 
 		if (proc->ipv4 && proc->ipv4->lip_len > 0) {
-			if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
 				exit(1);
+			}
 		} else {
-			if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
 				exit(1);
+			}
 		}
 
 		if (proc->ipv4 && proc->ipv4->rip_len > 0) {
-			if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
 				exit(1);
+			}
 		} else {
-			if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0)
+			if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
 				exit(1);
+			}
 		}
 
 		setenv("USERNAME", proc->username, 1);

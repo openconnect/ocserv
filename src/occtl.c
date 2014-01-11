@@ -32,6 +32,7 @@
 #include <c-strcase.h>
 
 #define DEFAULT_TIMEOUT (10*1000)
+#define NO_GROUP "(none)"
 
 #define ERR_SERVER_UNREACHABLE "could not send message; is server online?\n"
 
@@ -678,7 +679,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
 
 		if (groupname == NULL || groupname[0] == 0)
-			groupname = "(none)";
+			groupname = NO_GROUP;
 
 		fprintf(out, "%6u %8s %8s %15s %15s %6s ",
 			(unsigned)id, username, groupname, ip, vpn_ip, device);
@@ -847,8 +848,12 @@ int common_info_cmd(DBusMessageIter * args)
 		dbus_message_iter_get_basic(&subs, &dtls_ciphersuite);
 
 		fprintf(out, "\tUsername: %s  ", username);
+
+		if (groupname == NULL || groupname[0] == 0)
+			groupname = NO_GROUP;
+
 		fprintf(out, "Groupname: %s\n", groupname);
-		fprintf(out, "\tAuth state: %s  ", auth);
+		fprintf(out, "\tState: %s  ", auth);
 		fprintf(out, "IP: %s\n", ip);
 
 		if (vpn_ipv4 != NULL && vpn_ipv4[0] != 0 &&
@@ -872,11 +877,9 @@ int common_info_cmd(DBusMessageIter * args)
 		print_time_ival7(t, out);
 		fprintf(out, ")\n");
 
-		fprintf(out, "\tTLS ciphersuite: %s  ", tls_ciphersuite);
+		fprintf(out, "\tTLS ciphersuite: %s\n", tls_ciphersuite);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
-			fprintf(out, "DTLS: %s\n", dtls_ciphersuite);
-		else
-			fprintf(out, "\n");
+			fprintf(out, "\tDTLS cipher: %s\n", dtls_ciphersuite);
 
 		at_least_one = 1;
 

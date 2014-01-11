@@ -26,8 +26,6 @@
 #include <unistd.h>
 #include <occtl.h>
 
-#define DEFAULT_PAGER "less"
-
 static const char* get_pager(void)
 {
 char* pager;
@@ -35,7 +33,7 @@ char* pager;
 	if (pager == NULL)
 		pager = getenv("PAGER");
 	if (pager == NULL)
-		pager = DEFAULT_PAGER;
+		pager = OCCTL_PAGER;
 	
 	return pager;
 }

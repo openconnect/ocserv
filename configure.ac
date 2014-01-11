@@ -159,7 +159,7 @@ AC_ARG_WITH(pager,
   AS_HELP_STRING([--with-pager], [set a specific pager for occtl]),
     occtl_pager=$withval)
 if [ test -z "$occtl_pager" ];then
-	AC_DEFINE([OCCTL_PAGER], [less], [The default pager for occtl])
+	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["less"], [The default pager for occtl])
 else
 	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["$occtl_pager"], [The default pager for occtl])
 fi

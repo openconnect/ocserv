@@ -597,7 +597,13 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 	DBusMessageIter suba;
 	DBusMessageIter subs;
 	int ret;
+	unsigned found_user = 0;
 	struct proc_st *ctmp = NULL;
+
+	if (user != NULL)
+		mslog(s, NULL, LOG_INFO, "providing info for user '%s'", user);
+	else
+		mslog(s, NULL, LOG_INFO, "providing info for ID '%u'", id);
 
 	/* no arguments needed */
 	reply = dbus_message_new_method_return(msg);
@@ -645,6 +651,8 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 			goto error;
 		}
 
+		found_user = 1;
+
 		if (id != 0)	/* id -> one a single element */
 			break;
 	}
@@ -652,6 +660,15 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 	if (dbus_message_iter_close_container(&args, &suba) == 0) {
 		mslog(s, NULL, LOG_ERR,
 		      "error closing container in dbus reply");
+		goto error;
+	}
+
+	if (found_user == 0) {
+		if (user != NULL)
+			mslog(s, NULL, LOG_INFO, "could not find user '%s'",
+			      user);
+		else
+			mslog(s, NULL, LOG_INFO, "could not find ID '%u'", id);
 		goto error;
 	}
 
@@ -672,7 +689,7 @@ static void method_user_info(main_server_st * s, DBusConnection * conn,
 	DBusMessageIter args;
 	const char *name;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: user_info");
+	mslog(s, NULL, LOG_DEBUG, "ctl: user_info (name)");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
 		mslog(s, NULL, LOG_ERR, "no arguments provided in user_info");
@@ -697,7 +714,7 @@ static void method_id_info(main_server_st * s, DBusConnection * conn,
 	DBusMessageIter args;
 	dbus_uint32_t id;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: user_info");
+	mslog(s, NULL, LOG_DEBUG, "ctl: user_info (id)");
 
 	if (dbus_message_iter_init(msg, &args) == 0) {
 		mslog(s, NULL, LOG_ERR, "no arguments provided in user_info");

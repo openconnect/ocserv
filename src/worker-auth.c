@@ -624,7 +624,7 @@ char msg[MAX_MSG_SIZE];
 		}
 		
 		ws->auth_state = S_AUTH_INIT;
-	} else {
+	} else if (ws->auth_state == S_AUTH_INIT || ws->auth_state == S_AUTH_REQ) {
 		AuthRequestMsg areq = AUTH_REQUEST_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
@@ -650,6 +650,9 @@ char msg[MAX_MSG_SIZE];
 			ws->auth_state = S_AUTH_REQ;
 		} else
 			goto auth_fail;
+	} else {
+		oclog(ws, LOG_ERR, "unexpected POST request in auth state %u", (unsigned)ws->auth_state);
+		goto auth_fail;
 	}
 
 	ret = recv_auth_reply(ws, msg, sizeof(msg));

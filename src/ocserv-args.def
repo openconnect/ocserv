@@ -536,21 +536,6 @@ doc-section = {
 The server has been tested to be compatible with the openconnect VPN client. However,
 it is also known to be compatible with certain CISCO AnyConnect clients.
 To enable compatibility with CISCO's AnyConnect the client's policy must
-set in a way that disables the downloader. An example policy file is shown below.
-@example
-<?xml version="1.0" encoding="UTF-8"?>
-<AnyConnectPreferences>
-<DefaultUser>my_user_name</DefaultUser>
-<BypassDownloader>true</BypassDownloader>
-<DefaultSecondUser></DefaultSecondUser>
-<ClientCertificateThumbprint></ClientCertificateThumbprint>
-<ServerCertificateThumbprint>2804076F5A73955FE7D92B656983EBA5BD48A276</ServerCertificateThumbprint>
-<DefaultHost>my_server_name</DefaultHost>
-<DefaultGroup></DefaultGroup>
-<ProxyHost></ProxyHost>
-<ProxyPort></ProxyPort>
-<ControllablePreferences></ControllablePreferences>
-</AnyConnectPreferences>
-@end example
+set in a way that disables the downloader. 
 _EOT_;
 };

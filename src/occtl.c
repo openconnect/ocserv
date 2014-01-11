@@ -604,13 +604,6 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
-
-		if (!dbus_message_iter_next(&subs))
-			goto error_recv;
-
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
-			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv4);
 
 		if (!dbus_message_iter_next(&subs))
@@ -618,7 +611,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
+		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -626,6 +619,13 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv6);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -785,13 +785,6 @@ int common_info_cmd(DBusMessageIter * args)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
-
-		if (!dbus_message_iter_next(&subs))
-			goto error_recv;
-
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
-			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv4);
 
 		if (!dbus_message_iter_next(&subs))
@@ -799,7 +792,7 @@ int common_info_cmd(DBusMessageIter * args)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
+		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -807,6 +800,13 @@ int common_info_cmd(DBusMessageIter * args)
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv6);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;

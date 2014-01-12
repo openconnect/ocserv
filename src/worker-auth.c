@@ -52,17 +52,25 @@
 #define CONFIG_MSG "<vpn-client-pkg-version><pkgversion>0,0,0000</pkgversion></vpn-client-pkg-version>\n"
 
 static const char login_msg_user[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" "<auth id=\"main\">\n"
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
+    "<config-auth client=\"vpn\" type=\"auth-request\">\n"
+    "<version who=\"sg\">0.1(1)</version>\n"
+    "<auth id=\"main\">\n"
     "<message>Please enter your username</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
-    "</form></auth>\n";
+    "</form></auth>\n"
+    "</config-auth>";
 
 static const char login_msg_no_user[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" "<auth id=\"main\">\n"
-    "<message>%s</message>\n" "<form method=\"post\" action=\"/auth\">\n"
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
+    "<config-auth client=\"vpn\" type=\"auth-request\">\n"
+    "<version who=\"sg\">0.1(1)</version>\n"
+    "<auth id=\"main\">\n"
+    "<message>%s</message>\n" 
+    "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
-    "</form></auth>\n";
+    "</form></auth></config-auth>\n";
 
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {

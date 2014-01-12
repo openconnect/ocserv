@@ -49,8 +49,6 @@
 
 #define SUCCESS_MSG_FOOT "</auth>\n"
 
-#define CONFIG_MSG "<vpn-client-pkg-version><pkgversion>0,0,0000</pkgversion></vpn-client-pkg-version>\n"
-
 static const char login_msg_user[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
@@ -465,9 +463,6 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 	}
 
 	size += (sizeof(SUCCESS_MSG_HEAD) - 1) + (sizeof(SUCCESS_MSG_FOOT) - 1);
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	size += sizeof(CONFIG_MSG) - 1;
-#endif
 
 	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)
@@ -513,12 +508,6 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 		       "\r\n" SUCCESS_MSG_HEAD "%s" SUCCESS_MSG_FOOT, msg);
 	if (ret < 0)
 		return -1;
-
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	ret = tls_send(ws->session, CONFIG_MSG, sizeof(CONFIG_MSG) - 1);
-	if (ret < 0)
-		return -1;
-#endif
 
 	ret = tls_uncork(ws->session);
 	if (ret < 0)

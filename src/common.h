@@ -50,5 +50,7 @@ int recv_msg(int fd, uint8_t cmd,
 int recv_socket_msg(int fd, uint8_t cmd, 
 			int *socketfd, void** msg, unpack_func);
 
+const char* cmd_request_to_str(unsigned cmd);
+
 #endif
 

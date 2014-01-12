@@ -384,7 +384,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 		return ERR_BAD_COMMAND;
 	}
 
-	mslog(s, proc, LOG_DEBUG, "main received message %u of %u bytes\n", (unsigned)cmd, (unsigned)length);
+	mslog(s, proc, LOG_DEBUG, "main received message '%s' of %u bytes\n", 
+			cmd_request_to_str(cmd), (unsigned)length);
 
 	raw = malloc(length);
 	if (raw == NULL) {

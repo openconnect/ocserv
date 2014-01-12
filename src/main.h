@@ -259,7 +259,7 @@ inline static
 int send_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd, 
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
-	mslog(s, proc, LOG_DEBUG, "sending message %u to worker", (unsigned)cmd);
+	mslog(s, proc, LOG_DEBUG, "sending message '%s' to worker", cmd_request_to_str(cmd));
 	return send_msg(proc->fd, cmd, msg, get_size, pack);
 }
 

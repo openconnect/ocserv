@@ -24,6 +24,42 @@
 #include <sys/socket.h>
 #include "common.h"
 
+const char* cmd_request_to_str(unsigned _cmd)
+{
+cmd_request_t cmd = _cmd;
+
+	switch(cmd) {
+	case AUTH_INIT:
+		return "auth init";
+	case AUTH_REP:
+		return "auth reply";
+	case AUTH_REQ:
+		return "auth request";
+	case AUTH_COOKIE_REQ:
+		return "auth cookie request";
+	case AUTH_MSG:
+		return "auth msg";
+	case RESUME_STORE_REQ:
+		return "resume data store request";
+	case RESUME_DELETE_REQ:
+		return "resume data delete request";
+	case RESUME_FETCH_REQ:
+		return "resume data fetch request";
+	case RESUME_FETCH_REP:
+		return "resume data fetch reply";
+	case CMD_UDP_FD:
+		return "udp fd";
+	case CMD_TUN_MTU:
+		return "tun mtu change";
+	case CMD_TERMINATE:
+		return "terminate";
+	case CMD_SESSION_INFO:
+		return "session info";
+	default:
+		return "unknown";
+	}
+}
+
 ssize_t force_write(int sockfd, const void *buf, size_t len)
 {
 int left = len;

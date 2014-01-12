@@ -93,8 +93,6 @@ SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 	msg.session_id.len = key.size;
 	msg.session_id.data = key.data;
 
-	oclog(ws, LOG_DEBUG, "sending resumption request (fetch)");
-
 	ret = send_msg_to_main(ws, RESUME_FETCH_REQ, &msg,
 		(pack_size_func)session_resume_fetch_msg__get_packed_size,
 		(pack_func)session_resume_fetch_msg__pack);
@@ -157,8 +155,6 @@ SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 
 	msg.session_id.len = key.size;
 	msg.session_id.data = key.data;
-
-	oclog(ws, LOG_DEBUG, "sending resumption request (delete)");
 
 	ret = send_msg_to_main(ws, RESUME_DELETE_REQ, &msg,
 		(pack_size_func)session_resume_fetch_msg__get_packed_size,

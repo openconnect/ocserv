@@ -100,6 +100,7 @@ struct proc_st {
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 
+	char user_agent[MAX_AGENT_SIZE];
 	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char dtls_ciphersuite[MAX_DTLS_CIPHERSUITE_NAME];
 

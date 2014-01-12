@@ -71,7 +71,7 @@ typedef struct {
 #define ENTRY(name, iface, desc, func) \
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
-#define LIST_USERS_SIG "(ussssssssussss)"
+#define LIST_USERS_SIG "(ussssssssusssss)"
 
 #define DESC_LIST \
 		"    <method name=\"list\">\n" \
@@ -491,6 +491,12 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	}
 
 	strtmp = ctmp->hostname;
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
+
+	strtmp = ctmp->user_agent;
 	if (dbus_message_iter_append_basic
 	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
 		return -1;

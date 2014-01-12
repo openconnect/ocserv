@@ -432,6 +432,8 @@ int handle_commands(main_server_st *s, struct proc_st* proc)
 				snprintf(proc->tls_ciphersuite, sizeof(proc->tls_ciphersuite), "%s", tmsg->tls_ciphersuite);
 			if (tmsg->dtls_ciphersuite)
 				snprintf(proc->dtls_ciphersuite, sizeof(proc->dtls_ciphersuite), "%s", tmsg->dtls_ciphersuite);
+			if (tmsg->user_agent)
+				snprintf(proc->user_agent, sizeof(proc->user_agent), "%s", tmsg->user_agent);
 
 			session_info_msg__free_unpacked(tmsg, NULL);
 

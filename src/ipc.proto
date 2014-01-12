@@ -93,4 +93,5 @@ message session_info_msg
 {
 	required string tls_ciphersuite = 1;
 	required string dtls_ciphersuite = 2;
+	required string user_agent = 3;
 }

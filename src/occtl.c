@@ -534,6 +534,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	char *vpn_ipv4 = "", *vpn_ptp_ipv4 = "";
 	char *vpn_ipv6 = "", *vpn_ptp_ipv6 = "";
 	char *hostname = "", *auth = "", *device = "";
+	char *user_agent = "";
 	char str_since[64];
 	const char *vpn_ip;
 	struct tm *tm;
@@ -646,6 +647,13 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &user_agent);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &auth);
 
 		if (!dbus_message_iter_next(&subs))
@@ -724,6 +732,7 @@ int common_info_cmd(DBusMessageIter * args)
 	char *vpn_ipv4 = "", *vpn_ptp_ipv4 = "";
 	char *vpn_ipv6 = "", *vpn_ptp_ipv6 = "";
 	char *hostname = "", *auth = "", *device = "";
+	char *user_agent = "";
 	char str_since[64];
 	struct tm *tm;
 	time_t t;
@@ -831,6 +840,13 @@ int common_info_cmd(DBusMessageIter * args)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &user_agent);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &auth);
 
 		if (!dbus_message_iter_next(&subs))
@@ -868,10 +884,13 @@ int common_info_cmd(DBusMessageIter * args)
 		}
 		fprintf(out, "\tDevice: %s  ", device);
 
-		if (hostname != NULL && hostname[0] != 0)
-			fprintf(out, "Hostname: %s\n", hostname);
+		if (user_agent != NULL && user_agent[0] != 0)
+			fprintf(out, "User-Agent: %s\n", user_agent);
 		else
 			fprintf(out, "\n");
+
+		if (hostname != NULL && hostname[0] != 0)
+			fprintf(out, "\tHostname: %s\n", hostname);
 
 		fprintf(out, "\tConnected at: %s (", str_since);
 		print_time_ival7(t, out);

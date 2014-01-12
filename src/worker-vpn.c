@@ -169,6 +169,7 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 }
 
 #define STR_HDR_COOKIE "Cookie"
+#define STR_HDR_USER_AGENT "User-Agent"
 #define STR_HDR_CONNECTION "Connection"
 #define STR_HDR_MS "X-DTLS-Master-Secret"
 #define STR_HDR_CS "X-DTLS-CipherSuite"
@@ -219,6 +220,14 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 		memcpy(req->hostname, req->value.data, req->value.length);
 		req->hostname[req->value.length] = 0;
+		break;
+	case HEADER_USER_AGENT:
+		if (req->value.length + 1 > MAX_AGENT_SIZE) {
+			req->user_agent[0] = 0;
+			return;
+		}
+		memcpy(req->user_agent, req->value.data, req->value.length);
+		req->user_agent[req->value.length] = 0;
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
@@ -395,6 +404,10 @@ static void header_check(struct http_req_st *req)
 		   strncmp((char *)req->header.data, STR_HDR_CONNECTION,
 			   req->header.length) == 0) {
 		req->next_header = HEADER_CONNECTION;
+	} else if (req->header.length == sizeof(STR_HDR_USER_AGENT) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_USER_AGENT,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_USER_AGENT;
 	} else {
 		req->next_header = 0;
 	}
@@ -762,6 +775,10 @@ void session_info_send(worker_st * ws)
 
 	if (ws->udp_state != UP_DISABLED) {
 		msg.dtls_ciphersuite = ws->req.selected_ciphersuite;
+	}
+
+	if (ws->req.user_agent[0] != 0) {
+		msg.user_agent = ws->req.user_agent;
 	}
 
 	send_msg_to_main(ws, CMD_SESSION_INFO, &msg,

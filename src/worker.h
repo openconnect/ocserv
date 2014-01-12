@@ -51,6 +51,7 @@ enum {
 	HEADER_DTLS_MTU,
 	HEADER_DTLS_CIPHERSUITE,
 	HEADER_CONNECTION,
+	HEADER_USER_AGENT,
 };
 
 enum {
@@ -74,6 +75,7 @@ struct http_req_st {
 	unsigned int header_state;
 
 	char hostname[MAX_HOSTNAME_SIZE];
+	char user_agent[MAX_AGENT_SIZE];
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;

@@ -23,5 +23,6 @@
 
 char* unescape_html(const char *html, unsigned len, unsigned *out_len);
 char *unescape_url(const char *url, unsigned len, unsigned *out_len);
+char *escape_url(const char *url, unsigned len, unsigned *out_len);
 
 #endif

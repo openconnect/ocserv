@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <c-strcase.h>
+#include <c-ctype.h>
 
 #include "html.h"
 
@@ -106,3 +107,30 @@ char *unescape_url(const char *url, unsigned len, unsigned *out_len)
 
 	return msg;
 }
+
+char *escape_url(const char *url, unsigned len, unsigned *out_len)
+{
+	char *msg;
+	int pos;
+	unsigned i;
+
+	msg = malloc(3*len + 1);
+	if (msg == NULL)
+		return NULL;
+
+	for (i = pos = 0; i < len;) {
+		if (c_isalpha(url[i])) {
+			msg[pos++] = url[i++];
+		} else {
+			snprintf(&msg[pos], 3, "%%%02x", (unsigned)url[i++]);
+			pos+=3;
+		}
+	}
+
+	msg[pos] = 0;
+	if (out_len)
+		*out_len = pos;
+
+	return msg;
+}
+

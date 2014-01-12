@@ -76,6 +76,7 @@ struct http_req_st {
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
+	unsigned int ocuser_cookie_set;
 	unsigned char master_secret[TLS_MASTER_SIZE];
 	unsigned int master_secret_set;
 

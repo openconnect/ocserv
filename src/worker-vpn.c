@@ -308,6 +308,8 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		if (c_strcasecmp(strtmp, "close") == 0) {
 			oclog(ws, LOG_INFO, "client needs compact auth");
 			req->needs_compact_auth = 1;
+		} else {
+			req->needs_compact_auth = 0;
 		}
 		break;
 	case HEADER_COOKIE:

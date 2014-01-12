@@ -53,3 +53,6 @@ src/libcmd-ocserv.a
 src/ipc.pb-c.c
 src/ipc.pb-c.h
 src/occtl
+.dirstamp
+config.h.in
+doc/occtl.8

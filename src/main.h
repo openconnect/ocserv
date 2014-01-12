@@ -213,7 +213,7 @@ __attribute__ ((format(printf, 4, 5)))
 
 #ifdef __GNUC__
 # define mslog(s, proc, prio, fmt, ...) \
-	(prio==LOG_ERR)?_mslog(s, proc, prio, "%s:%d: "fmt, __func__, __LINE__, ##__VA_ARGS__): \
+	(prio==LOG_ERR)?_mslog(s, proc, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
 	_mslog(s, proc, prio, fmt, ##__VA_ARGS__)
 #else
 # define mslog _mslog

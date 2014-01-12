@@ -451,6 +451,9 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 	}
 
 	size += (sizeof(SUCCESS_MSG_HEAD) - 1) + (sizeof(SUCCESS_MSG_FOOT) - 1);
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	size += sizeof(CONFIG_MSG) - 1;
+#endif
 
 	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)

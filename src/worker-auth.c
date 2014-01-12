@@ -44,10 +44,11 @@
 #include <http_parser.h>
 
 #define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
+			"<config-auth client=\"vpn\" type=\"complete\">\n" \
                         "<auth id=\"success\">\n" \
                         "<title>SSL VPN Service</title>"
 
-#define SUCCESS_MSG_FOOT "</auth>\n"
+#define SUCCESS_MSG_FOOT "</auth></config-auth>\n"
 
 static const char login_msg_user[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 

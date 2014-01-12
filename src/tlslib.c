@@ -121,6 +121,28 @@ ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size)
 	return ret;
 }
 
+/* Typically used in a resumed session. It will return
+ * true if a certificate has been used.
+ */
+unsigned tls_has_session_cert(struct worker_st * ws)
+{
+	unsigned int list_size = 0;
+	const gnutls_datum_t * certs;
+
+	if (ws->cert_auth_ok)
+		return 1;
+
+	if (ws->config->force_cert_auth != 0) {
+		return 0;
+	}
+
+	certs = gnutls_certificate_get_peers(ws->session, &list_size);
+	if (certs != NULL)
+		return 1;
+
+	return 0;
+}
+
 int __attribute__ ((format(printf, 2, 3)))
     tls_printf(gnutls_session_t session, const char *fmt, ...)
 {

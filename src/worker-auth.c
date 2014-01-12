@@ -688,7 +688,8 @@ restart:
 			 */
 			complete_auth = 1;
 			ireq.user_name = ws->username;
-		} else
+			ireq.tls_auth_ok = tls_has_session_cert(ws);
+		} else {
 #endif
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret =
@@ -723,6 +724,10 @@ restart:
 			ireq.cert_user_name = tmp_user;
 			ireq.cert_group_name = tmp_group;
 		}
+
+#ifdef ANYCONNECT_CLIENT_COMPAT
+		}
+#endif
 
 		ireq.hostname = req->hostname;
 

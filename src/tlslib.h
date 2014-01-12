@@ -71,6 +71,8 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 
 void tls_close(gnutls_session_t session);
 
+unsigned tls_has_session_cert(struct worker_st * ws);
+
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
 

@@ -43,8 +43,12 @@
 
 #include <http_parser.h>
 
+#define VERSION_MSG "<version who=\"sg\">0.1(1)</version>\n"
+
+
 #define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
 			"<config-auth client=\"vpn\" type=\"complete\">\n" \
+			VERSION_MSG \
                         "<auth id=\"success\">\n" \
                         "<title>SSL VPN Service</title>"
 
@@ -53,7 +57,7 @@
 static const char login_msg_user[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    "<version who=\"sg\">0.1(1)</version>\n"
+    VERSION_MSG \
     "<auth id=\"main\">\n"
     "<message>Please enter your username</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
@@ -64,7 +68,7 @@ static const char login_msg_user[] =
 static const char login_msg_compact[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    "<version who=\"sg\">0.1(1)</version>\n"
+    VERSION_MSG \
     "<auth id=\"main\">\n"
     "<message>Please enter your username and password</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
@@ -76,7 +80,7 @@ static const char login_msg_compact[] =
 static const char login_msg_no_user[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    "<version who=\"sg\">0.1(1)</version>\n"
+    VERSION_MSG \
     "<auth id=\"main\">\n"
     "<message>%s</message>\n" 
     "<form method=\"post\" action=\"/auth\">\n"

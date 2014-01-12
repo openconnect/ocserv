@@ -169,7 +169,7 @@ void __attribute__ ((format(printf, 3, 4)))
 
 #ifdef __GNUC__
 # define oclog(server, prio, fmt, ...) \
-	(prio==LOG_ERR)?_oclog(server, prio, "%s:%d: "fmt, __func__, __LINE__, ##__VA_ARGS__): \
+	(prio==LOG_ERR)?_oclog(server, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
 	_oclog(server, prio, fmt, ##__VA_ARGS__)
 #else
 # define oclog _oclog

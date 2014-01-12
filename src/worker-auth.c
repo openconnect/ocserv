@@ -62,6 +62,18 @@ static const char login_msg_user[] =
     "</form></auth>\n"
     "</config-auth>";
 
+static const char login_msg_compact[] =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
+    "<config-auth client=\"vpn\" type=\"auth-request\">\n"
+    "<version who=\"sg\">0.1(1)</version>\n"
+    "<auth id=\"main\">\n"
+    "<message>Please enter your username and password</message>\n"
+    "<form method=\"post\" action=\"/auth\">\n"
+    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
+    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
+    "</form></auth>\n"
+    "</config-auth>";
+
 static const char login_msg_no_user[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
@@ -75,9 +87,9 @@ static const char login_msg_no_user[] =
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
+	struct http_req_st *req = &ws->req;
 	char login_msg[MAX_MSG_SIZE + sizeof(login_msg_user)];
 	unsigned int lsize;
-	char *u;
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -92,38 +104,32 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ret < 0)
 		return -1;
 
-	if (ws->auth_state == S_AUTH_REQ) {
-		/* only ask password */
-		if (pmsg == NULL)
-			pmsg = "Please enter password";
-		lsize =
-		    snprintf(login_msg, sizeof(login_msg), login_msg_no_user,
-			     pmsg);
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	if (req && req->needs_compact_auth != 0) {
+		lsize = snprintf(login_msg, sizeof(login_msg), "%s", login_msg_compact);
 	} else {
-		/* ask for username only */
-		lsize = snprintf(login_msg, sizeof(login_msg), login_msg_user);
+#endif
+		if (ws->auth_state == S_AUTH_REQ) {
+			/* only ask password */
+			if (pmsg == NULL)
+				pmsg = "Please enter password";
+			lsize =
+			    snprintf(login_msg, sizeof(login_msg), login_msg_no_user,
+				     pmsg);
+		} else {
+			/* ask for username only */
+			lsize = snprintf(login_msg, sizeof(login_msg), "%s", login_msg_user);
+		}
+
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	}
+#endif
 
 	ret =
 	    tls_printf(ws->session, "Content-Length: %u\r\n",
 		       (unsigned int)lsize);
 	if (ret < 0)
 		return -1;
-
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	if (ws->username[0] != 0) {
-		/* This is to make sure that some cisco clients that
-		 * like to connect for each request, don't lose the
-		 * username */
-		u = escape_url(ws->username, strlen(ws->username), NULL);
-		ret = tls_printf(ws->session, "Set-Cookie: ocuser=%s\r\n", u);
-
-		free(u);
-
-		if (ret < 0)
-			return -1;
-	}
-#endif
 
 	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
@@ -536,8 +542,6 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 	char *p;
 
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
-		oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", body_length,
-		      body);
 
 		if (username != NULL) {
 			/* body should contain <username>test</username><password>test</password> */
@@ -683,25 +687,24 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char tmp_user[MAX_USERNAME_SIZE];
 	char tmp_group[MAX_USERNAME_SIZE];
 	char msg[MAX_MSG_SIZE];
-	unsigned complete_auth = 0;
+	unsigned compact_auth = 0;
 
+	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
+		      req->body);
 restart:
 
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		AuthInitMsg ireq = AUTH_INIT_MSG__INIT;
-		
+
 #ifdef ANYCONNECT_CLIENT_COMPAT
-		if (req->ocuser_cookie_set != 0) {
-			/* the client has provided the username in a different
-			 * session and reconnected here to provide the password.
-			 * So we read the username from the cookie, start auth
-			 * and continue reading the password.
+		if (req->needs_compact_auth != 0) {
+			/* the client uses Connection: Close and needs to
+			 * be asked the username and password in one go.
 			 */
-			complete_auth = 1;
-			ireq.user_name = ws->username;
-			ireq.tls_auth_ok = tls_has_session_cert(ws);
-		} else {
+			compact_auth = 1;
+		}
 #endif
+
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret =
 			    read_user_pass(ws, req->body, req->body_length,
@@ -735,10 +738,6 @@ restart:
 			ireq.cert_user_name = tmp_user;
 			ireq.cert_group_name = tmp_group;
 		}
-
-#ifdef ANYCONNECT_CLIENT_COMPAT
-		}
-#endif
 
 		ireq.hostname = req->hostname;
 
@@ -799,7 +798,8 @@ restart:
 		ws->auth_state = S_AUTH_REQ;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-		if (complete_auth != 0) {
+		if (compact_auth != 0) {
+			compact_auth = 0; /* avoid infinite loop */
 			goto restart;
 		}
 #endif

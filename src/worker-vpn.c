@@ -42,6 +42,7 @@
 #include <gettime.h>
 #include <common.h>
 #include <html.h>
+#include <c-strcase.h>
 #include <worker-bandwidth.h>
 
 #include <vpn.h>
@@ -110,6 +111,8 @@ const static struct known_urls_st known_urls[] = {
 
 	LL("/profiles", get_config_handler, NULL),
 	LL("/+CSCOT+/translation-table", get_string_handler, NULL),
+	LL("/+CSCOT+/oem-customization", get_string_handler, NULL),
+	LL("/logout", get_empty_handler, NULL),
 #endif
 	{NULL, 0, 0, NULL, NULL}
 };
@@ -167,6 +170,7 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 }
 
 #define STR_HDR_COOKIE "Cookie"
+#define STR_HDR_CONNECTION "Connection"
 #define STR_HDR_MS "X-DTLS-Master-Secret"
 #define STR_HDR_CS "X-DTLS-CipherSuite"
 #define STR_HDR_DMTU "X-DTLS-MTU"
@@ -186,6 +190,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	uint8_t *p;
 	char *token;
 	char *str;
+	char strtmp[16];
 
 	if (req->value.length <= 0)
 		return;
@@ -292,30 +297,22 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	case HEADER_DTLS_MTU:
 		req->dtls_mtu = atoi((char *)req->value.data);
 		break;
-	case HEADER_COOKIE:
+	case HEADER_CONNECTION:
 		length = req->value.length;
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
-		if (ws->username[0] == 0) {
-			p = memmem(req->value.data, length, "ocuser=", 7);
-			if (p != NULL) {
-				char *u;
+		if (length > sizeof(strtmp)-1)
+			break;
 
-				p += 7;
-				length -= 7;
-				u = unescape_url((char *)p, length, NULL);
-				if (u == NULL)
-					break;
+		memcpy(strtmp, req->value.data, length);
+		strtmp[length] = 0;
 
-				snprintf(ws->username, sizeof(ws->username),
-					 "%s", u);
-				free(u);
-				req->ocuser_cookie_set = 1;
-
-				break;
-			}
+		if (c_strcasecmp(strtmp, "close") == 0) {
+			oclog(ws, LOG_INFO, "client needs compact auth");
+			req->needs_compact_auth = 1;
 		}
-#endif
+		break;
+	case HEADER_COOKIE:
+		length = req->value.length;
 
 		p = memmem(req->value.data, length, "webvpn=", 7);
 		if (p == NULL || length <= 7) {
@@ -393,6 +390,10 @@ static void header_check(struct http_req_st *req)
 		   strncmp((char *)req->header.data, STR_HDR_ATYPE,
 			   req->header.length) == 0) {
 		req->next_header = HEADER_CSTP_ATYPE;
+	} else if (req->header.length == sizeof(STR_HDR_CONNECTION) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_CONNECTION,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_CONNECTION;
 	} else {
 		req->next_header = 0;
 	}

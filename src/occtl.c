@@ -889,6 +889,8 @@ int common_info_cmd(DBusMessageIter * args)
 		else
 			fprintf(out, "\n");
 
+		print_iface_stats(device, since, out);
+
 		if (hostname != NULL && hostname[0] != 0)
 			fprintf(out, "\tHostname: %s\n", hostname);
 

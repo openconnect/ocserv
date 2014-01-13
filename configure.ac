@@ -70,6 +70,11 @@ libprotobuf-c was not found.])
  )
 )
 
+PKG_CHECK_MODULES(LIBNL3, libnl-route-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
+if (test "${have_libnl3}" = "yes"); then
+  AC_DEFINE(HAVE_LIBNL, 1, [have libnl])
+fi
+
 if test "$dbus_enabled" = yes;then
 occtl_enabled=yes
 AC_CHECK_LIB(readline, [readline], 
@@ -255,6 +260,7 @@ Summary of build options:
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}
   dbus:                 ${dbus_enabled}
+  libnl:                ${have_libnl3}
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}

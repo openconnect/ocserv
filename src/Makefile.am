@@ -2,7 +2,8 @@ SUBDIRS =
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
-	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS)
+	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS) \
+	$(LIBNL3_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
@@ -84,8 +85,10 @@ ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 	$(AUTOGEN) $<
 ocpasswd-args.h: ocpasswd-args.c
 
-occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c
-occtl_LDADD = ../gl/libgnu.a $(LIBDBUS_LIBS) $(LIBREADLINE_LIBS)
+occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c \
+	occtl-nl.c
+occtl_LDADD = ../gl/libgnu.a $(LIBDBUS_LIBS) $(LIBREADLINE_LIBS) \
+	$(LIBNL3_LIBS)
 
 ipc.pb-c.c: ipc.proto
 	protoc-c --c_out=. $<

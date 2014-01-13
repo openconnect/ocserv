@@ -66,6 +66,9 @@ const char* script;
 		char local[64];
 		char remote[64];
 
+		snprintf(real, sizeof(real), "%u", (unsigned)proc->pid);
+		setenv("ID", real, 1);
+
 		if (proc->ipv4 == NULL && proc->ipv6 == NULL) {
 			mslog(s, proc, LOG_DEBUG, "no IP configured; script failed");
 			exit(1);

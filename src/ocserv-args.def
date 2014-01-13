@@ -201,8 +201,8 @@ cookie-validity = 172800
 # Parameters are passed on the environment.
 # REASON, USERNAME, GROUPNAME, HOSTNAME (the hostname selected by client), 
 # DEVICE, IP_REAL (the real IP of the client), IP_LOCAL (the local IP
-# in the P-t-P connection), IP_REMOTE (the VPN IP of the client). REASON
-# may be "connect" or "disconnect".
+# in the P-t-P connection), IP_REMOTE (the VPN IP of the client),
+# ID (a unique numeric ID); REASON may be "connect" or "disconnect".
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript
 

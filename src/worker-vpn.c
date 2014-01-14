@@ -784,6 +784,8 @@ void session_info_send(worker_st * ws)
 	send_msg_to_main(ws, CMD_SESSION_INFO, &msg,
 			 (pack_size_func) session_info_msg__get_packed_size,
 			 (pack_func) session_info_msg__pack);
+
+	gnutls_free(msg.tls_ciphersuite);
 }
 
 static

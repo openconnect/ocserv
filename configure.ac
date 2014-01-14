@@ -259,14 +259,24 @@ Summary of build options:
   PAM auth backend:     ${pam_enabled}
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}
+  (socket activation)
   dbus:                 ${dbus_enabled}
-  libnl:                ${have_libnl3}
+  libnl3:               ${have_libnl3}
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}
 
 Optional programs:
   occtl:                ${occtl_enabled}
+])
+
+if test "$occtl_enabled" = no;then
+AC_MSG_NOTICE([
+  (needs dbus and libnl3)
+])
+fi
+
+AC_MSG_NOTICE([
 
 Experimental options:
   seccomp:              ${seccomp_enabled}

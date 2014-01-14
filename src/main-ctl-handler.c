@@ -675,7 +675,6 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 			      user);
 		else
 			mslog(s, NULL, LOG_INFO, "could not find ID '%u'", id);
-		goto error;
 	}
 
 	if (!dbus_connection_send(conn, reply, NULL)) {

@@ -749,8 +749,10 @@ int common_info_cmd(DBusMessageIter * args)
 	dbus_message_iter_recurse(args, &suba);
 
 	for (;;) {
-		if (dbus_message_iter_get_arg_type(&suba) != DBUS_TYPE_STRUCT)
+		if (dbus_message_iter_get_arg_type(&suba) != DBUS_TYPE_STRUCT) {
+			ret = 2;
 			goto cleanup;
+		}
 		dbus_message_iter_recurse(&suba, &subs);
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
@@ -953,7 +955,8 @@ int handle_show_user_cmd(DBusConnection * conn, const char *arg)
 	goto cleanup;
 
  error_server:
-	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	if (ret == 1)
+		fprintf(stderr, ERR_SERVER_UNREACHABLE);
 	goto cleanup;
  error_send:
 	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);
@@ -998,7 +1001,8 @@ int handle_show_id_cmd(DBusConnection * conn, const char *arg)
 	goto cleanup;
 
  error_server:
-	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	if (ret == 1)
+		fprintf(stderr, ERR_SERVER_UNREACHABLE);
 	goto cleanup;
  error_send:
 	fprintf(stderr, "%s: D-BUS message creation error\n", __func__);

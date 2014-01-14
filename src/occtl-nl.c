@@ -148,7 +148,7 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 }
 
 #else
-void print_iface_stats(const char *iface, FILE * out)
+void print_iface_stats(const char *iface, time_t since, FILE * out)
 {
 	return;
 }

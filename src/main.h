@@ -64,10 +64,12 @@ struct script_wait_st {
 	struct proc_st* proc;
 };
 
+#define MAX_ZOMBIE_SECS 240
 enum {
-	PS_AUTH_INACTIVE,
-	PS_AUTH_INIT,
-	PS_AUTH_COMPLETED,
+	PS_AUTH_INACTIVE, /* no comm with worker */
+	PS_AUTH_INIT, /* worker has sent an auth init msg */
+	PS_AUTH_ZOMBIE, /* in INIT state but worker has disconnected! - only present when cisco-client-compat is set */
+	PS_AUTH_COMPLETED, /* successful authentication */
 };
 
 /* Each worker process maps to a unique proc_st structure.
@@ -88,11 +90,16 @@ struct proc_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 
+	/* The TLS session ID.
+	 */
+	uint8_t tls_session_id[GNUTLS_MAX_SESSION_ID];
+	unsigned tls_session_id_size; /* would act as a flag if session_id is set */
+
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
 	 */
-	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
-	unsigned session_id_size; /* would act as a flag if session_id is set */
+	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
+	unsigned dtls_session_id_size; /* would act as a flag if session_id is set */
 	
 	/* The following are set by the worker process (or by a stored cookie) */
 	char username[MAX_USERNAME_SIZE]; /* the owner */
@@ -111,7 +118,7 @@ struct proc_st {
 	uint8_t ipv4_seed[4];
 
 	void * auth_ctx; /* the context of authentication */
-	unsigned auth_status; /* PS_AUTH_ */
+	unsigned status; /* PS_AUTH_ */
 	unsigned auth_reqs; /* the number of requests received */
 	
 	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
@@ -193,6 +200,7 @@ int user_connected(main_server_st *s, struct proc_st* cur);
 void user_disconnected(main_server_st *s, struct proc_st* cur);
 
 void expire_tls_sessions(main_server_st *s);
+void expire_zombies(main_server_st* s);
 
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 
@@ -235,6 +243,8 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 int generate_cookie(main_server_st *s, struct proc_st* proc);
 int handle_auth_init(main_server_st *s, struct proc_st* proc,
 		     const AuthInitMsg * req);
+int handle_auth_reinit(main_server_st *s, struct proc_st** proc,
+		     const AuthReinitMsg * req);
 int handle_auth_req(main_server_st *s, struct proc_st* proc,
 		     const AuthRequestMsg * req);
 
@@ -252,6 +262,7 @@ int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_s
 
 void del_additional_config(struct group_cfg_st* config);
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k);
+void proc_to_zombie(main_server_st* s, struct proc_st *proc);
 
 void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);
 

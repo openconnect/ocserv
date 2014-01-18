@@ -31,6 +31,8 @@ cmd_request_t cmd = _cmd;
 	switch(cmd) {
 	case AUTH_INIT:
 		return "auth init";
+	case AUTH_REINIT:
+		return "auth reinit";
 	case AUTH_REP:
 		return "auth reply";
 	case AUTH_REQ:

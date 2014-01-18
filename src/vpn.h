@@ -94,6 +94,7 @@ typedef enum {
 	CMD_TUN_MTU = 11,
 	CMD_TERMINATE = 12,
 	CMD_SESSION_INFO = 13,
+	AUTH_REINIT = 14,
 } cmd_request_t;
 
 typedef struct 

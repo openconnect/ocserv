@@ -190,7 +190,6 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	uint8_t *p;
 	char *token;
 	char *str;
-	char strtmp[16];
 
 	if (req->value.length <= 0)
 		return;
@@ -304,22 +303,6 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 	case HEADER_DTLS_MTU:
 		req->dtls_mtu = atoi((char *)req->value.data);
-		break;
-	case HEADER_CONNECTION:
-		length = req->value.length;
-
-		if (length > sizeof(strtmp)-1)
-			break;
-
-		memcpy(strtmp, req->value.data, length);
-		strtmp[length] = 0;
-
-		if (c_strcasecmp(strtmp, "close") == 0) {
-			oclog(ws, LOG_INFO, "client needs compact auth");
-			req->needs_compact_auth = 1;
-		} else {
-			req->needs_compact_auth = 0;
-		}
 		break;
 	case HEADER_COOKIE:
 		length = req->value.length;

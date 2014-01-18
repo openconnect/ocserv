@@ -79,12 +79,7 @@ struct http_req_st {
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
-	/* some CISCO clients reconnect for each request
-	 * and is impossible to keep state for them. For
-	 * that we ask username and password in one go for
-	 * them.
-	 */
-	unsigned int needs_compact_auth;
+
 	unsigned char master_secret[TLS_MASTER_SIZE];
 	unsigned int master_secret_set;
 

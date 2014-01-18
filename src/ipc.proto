@@ -7,6 +7,16 @@ message auth_init_msg
 	optional string cert_user_name = 4;
 	optional string cert_group_name = 5;
 	optional string hostname = 6;
+	required bytes session_id = 7;
+}
+
+/* AUTH_REINIT - used in cisco compatible clients, to
+ * revive open authentication in zombie mode. */
+message auth_reinit_msg
+{
+	required bool tls_auth_ok = 1 [default = false];
+	required string password = 2;
+	required bytes session_id = 3;
 }
 
 /* AUTH_COOKIE_REQ */

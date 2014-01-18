@@ -502,12 +502,16 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 		return -1;
 	}
 
-	if (ctmp->auth_status == PS_AUTH_COMPLETED)
+	if (ctmp->status == PS_AUTH_COMPLETED)
 		strtmp = "connected";
-	else if (ctmp->auth_status == PS_AUTH_INIT)
+	else if (ctmp->status == PS_AUTH_INIT)
 		strtmp = "auth";
-	else
+	else if (ctmp->status == PS_AUTH_ZOMBIE)
+		strtmp = "zombie";
+	else if (ctmp->status == PS_AUTH_INACTIVE)
 		strtmp = "pre-auth";
+	else
+		strtmp = "unknown";
 	if (dbus_message_iter_append_basic
 	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
 		return -1;

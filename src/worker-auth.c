@@ -65,18 +65,6 @@ static const char login_msg_user[] =
     "</form></auth>\n"
     "</config-auth>";
 
-static const char login_msg_compact[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
-    "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    VERSION_MSG \
-    "<auth id=\"main\">\n"
-    "<message>Please enter your username and password</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n"
-    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
-    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
-    "</form></auth>\n"
-    "</config-auth>";
-
 static const char login_msg_no_user[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
@@ -90,7 +78,6 @@ static const char login_msg_no_user[] =
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
-	struct http_req_st *req = &ws->req;
 	char login_msg[MAX_MSG_SIZE + sizeof(login_msg_user)];
 	unsigned int lsize;
 
@@ -107,26 +94,17 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ret < 0)
 		return -1;
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	if (req && req->needs_compact_auth != 0) {
-		lsize = snprintf(login_msg, sizeof(login_msg), "%s", login_msg_compact);
+	if (ws->auth_state == S_AUTH_REQ) {
+		/* only ask password */
+		if (pmsg == NULL)
+			pmsg = "Please enter password";
+		lsize =
+		    snprintf(login_msg, sizeof(login_msg), login_msg_no_user,
+			     pmsg);
 	} else {
-#endif
-		if (ws->auth_state == S_AUTH_REQ) {
-			/* only ask password */
-			if (pmsg == NULL)
-				pmsg = "Please enter password";
-			lsize =
-			    snprintf(login_msg, sizeof(login_msg), login_msg_no_user,
-				     pmsg);
-		} else {
-			/* ask for username only */
-			lsize = snprintf(login_msg, sizeof(login_msg), "%s", login_msg_user);
-		}
-
-#ifdef ANYCONNECT_CLIENT_COMPAT
+		/* ask for username only */
+		lsize = snprintf(login_msg, sizeof(login_msg), "%s", login_msg_user);
 	}
-#endif
 
 	ret =
 	    tls_printf(ws->session, "Content-Length: %u\r\n",
@@ -678,31 +656,64 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *password = NULL;
 	char tmp_user[MAX_USERNAME_SIZE];
 	char tmp_group[MAX_USERNAME_SIZE];
+	uint8_t tls_session_id[GNUTLS_MAX_SESSION_ID];
+	size_t tls_session_id_size;
 	char msg[MAX_MSG_SIZE];
-	unsigned compact_auth = 0;
 
 	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
 		      req->body);
-restart:
 
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		AuthInitMsg ireq = AUTH_INIT_MSG__INIT;
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
-		if (req->needs_compact_auth != 0) {
-			/* the client uses Connection: Close and needs to
-			 * be asked the username and password in one go.
-			 */
-			compact_auth = 1;
+		tls_session_id_size = sizeof(tls_session_id);
+		ret = gnutls_session_get_id(ws->session, tls_session_id, &tls_session_id_size);
+		if (ret < 0) {
+			oclog(ws, LOG_INFO, "failed obtainng session ID");
+			goto auth_fail;
 		}
-#endif
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret =
 			    read_user_pass(ws, req->body, req->body_length,
 					   &username, NULL);
 			if (ret < 0) {
-				oclog(ws, LOG_ERR, "failed reading username");
+				/* Try if we need to ReInit */
+				if (ws->config->cisco_client_compat != 0 &&
+					gnutls_session_is_resumed(ws->session) != 0) {
+					AuthReinitMsg rreq = AUTH_REINIT_MSG__INIT;
+
+					/* could it be a client reconnecting and sending
+					 * his password? */
+					ret =
+					    read_user_pass(ws, req->body, req->body_length,
+						   NULL, &password);
+					if (ret < 0) {
+						oclog(ws, LOG_INFO, "failed reading password as well");
+						goto ask_auth;
+					}
+
+					rreq.tls_auth_ok = ws->cert_auth_ok;
+					rreq.password = password;
+					rreq.session_id.data = tls_session_id;
+					rreq.session_id.len = tls_session_id_size;
+
+					ret = send_msg_to_main(ws, AUTH_REINIT, &rreq,
+					       (pack_size_func)auth_reinit_msg__get_packed_size,
+					       (pack_func)auth_reinit_msg__pack);
+					free(username);
+
+					if (ret < 0) {
+						oclog(ws, LOG_ERR,
+						      "failed sending auth reinit message to main");
+						goto auth_fail;
+					}
+
+					ws->auth_state = S_AUTH_INIT;
+					goto recv_reply;
+				}
+
+				oclog(ws, LOG_INFO, "failed reading username");
 				goto ask_auth;
 			}
 
@@ -731,6 +742,8 @@ restart:
 			ireq.cert_group_name = tmp_group;
 		}
 
+		ireq.session_id.data = tls_session_id;
+		ireq.session_id.len = tls_session_id_size;
 		ireq.hostname = req->hostname;
 
 		ret = send_msg_to_main(ws, AUTH_INIT,
@@ -783,18 +796,13 @@ restart:
 		goto auth_fail;
 	}
 
+ recv_reply:
 	ret = recv_auth_reply(ws, msg, sizeof(msg));
 	if (ret == ERR_AUTH_CONTINUE) {
 		oclog(ws, LOG_DEBUG, "continuing authentication for '%s'",
 		      ws->username);
 		ws->auth_state = S_AUTH_REQ;
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
-		if (compact_auth != 0) {
-			compact_auth = 0; /* avoid infinite loop */
-			goto restart;
-		}
-#endif
 		return get_auth_handler2(ws, http_ver, msg);
 	} else if (ret < 0) {
 		oclog(ws, LOG_ERR, "failed authentication for '%s'",

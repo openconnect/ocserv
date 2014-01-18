@@ -657,8 +657,8 @@ time_t now;
 	now = time(0);
 
 	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (session_id_size == ctmp->session_id_size &&
-			memcmp(session_id, ctmp->session_id, session_id_size) == 0 &&
+		if (session_id_size == ctmp->dtls_session_id_size &&
+			memcmp(session_id, ctmp->dtls_session_id, session_id_size) == 0 &&
 			(now - ctmp->udp_fd_receive_time > UDP_FD_RESEND_TIME)) {
 			UdpFdMsg msg = UDP_FD_MSG__INIT;
 
@@ -744,6 +744,7 @@ unsigned total = 10;
 		need_maintenance = 0;
 		mslog(s, NULL, LOG_INFO, "Performing maintenance");
 		expire_tls_sessions(s);
+		expire_zombies(s);
 		expire_banned(s);
 		alarm(MAINTAINANCE_TIME(s));
 	}
@@ -900,8 +901,10 @@ int main(int argc, char** argv)
 		}
 
 		list_for_each(&s.proc_list.head, ctmp, list) {
-			FD_SET(ctmp->fd, &rd_set);
-			n = MAX(n, ctmp->fd);
+			if (ctmp->fd > 0) {
+				FD_SET(ctmp->fd, &rd_set);
+				n = MAX(n, ctmp->fd);
+			}
 		}
 
 		list_for_each(&s.ctl_list.head, ctl_tmp, list) {
@@ -1046,9 +1049,12 @@ fork_failed:
 
 		/* Check for any pending commands */
 		list_for_each_safe(&s.proc_list.head, ctmp, cpos, list) {
-			if (FD_ISSET(ctmp->fd, &rd_set)) {
+			if (ctmp->fd >= 0 && FD_ISSET(ctmp->fd, &rd_set)) {
 				ret = handle_commands(&s, ctmp);
-				if (ret < 0) {
+				if (ret == ERR_WORKER_TERMINATED && ctmp->status == PS_AUTH_INIT &&
+					s.config->cisco_client_compat != 0) {
+					proc_to_zombie(&s, ctmp);
+				} else if (ret < 0) {
 					remove_proc(&s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
 				}
 			}

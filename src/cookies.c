@@ -129,16 +129,16 @@ int generate_cookie(main_server_st *s, struct proc_st* proc)
 int ret;
 struct stored_cookie_st sc;
 
-        ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->session_id, sizeof(proc->session_id));
+        ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->dtls_session_id, sizeof(proc->dtls_session_id));
         if (ret < 0)
                 return -1;
         
-        proc->session_id_size = sizeof(proc->session_id);
+        proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
 
 	memcpy(sc.username, proc->username, sizeof(proc->username));
 	memcpy(sc.groupname, proc->groupname, sizeof(proc->groupname));
 	memcpy(sc.hostname, proc->hostname, sizeof(proc->hostname));
-	memcpy(sc.session_id, proc->session_id, sizeof(proc->session_id));
+	memcpy(sc.session_id, proc->dtls_session_id, sizeof(proc->dtls_session_id));
 	
 	sc.expiration = time(0) + s->config->cookie_validity;
 	

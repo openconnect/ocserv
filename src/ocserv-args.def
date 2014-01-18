@@ -331,9 +331,10 @@ route = 192.168.5.0/255.255.255.0
 
 # Unless set to false it is required for clients to present their
 # certificate even if they are authenticating via a previously granted
-# cookie. Legacy CISCO clients do not do that, and thus this option
-# should be set for them.
-#always-require-cert = false
+# cookie and complete their authentication in the same TCP connection.
+# Legacy CISCO clients do not do that, and thus this option should be 
+# set for them.
+#cisco-client-compat = false
 
 
 @end example

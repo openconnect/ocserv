@@ -72,7 +72,9 @@ static struct cfg_options available_options[] = {
 	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
+	/* this is alias for cisco-client-compat */
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 1 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -231,6 +233,7 @@ unsigned j, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned prefix = 0;
+unsigned force_cert_auth;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
@@ -328,7 +331,13 @@ unsigned prefix = 0;
 	READ_STRING("socket-file", config->socket_file_prefix);
 
 	READ_STRING("banner", config->banner);
-	READ_TF("always-require-cert", config->force_cert_auth, 1);
+	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);
+	READ_TF("always-require-cert", force_cert_auth, 1);
+	if (force_cert_auth == 0) {
+		fprintf(stderr, "note that 'always-require-cert' was replaced by 'cisco-client-compat'\n");
+		config->cisco_client_compat = 1;
+	}
+
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);
@@ -433,7 +442,7 @@ static void check_cfg( struct cfg_st *config)
 	}
 
 	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (config->force_cert_auth)
+		if (config->cisco_client_compat == 0)
 			config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;

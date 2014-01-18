@@ -185,7 +185,9 @@ struct cfg_st {
 	unsigned use_utmp;
 	unsigned use_dbus; /* whether the D-BUS service is registered */
 	unsigned try_mtu; /* MTU discovery enabled */
-	unsigned force_cert_auth; /* always require client certificate */
+	unsigned cisco_client_compat; /* do not require client certificate, 
+	                               * and allow auth to complete in different
+	                               * TCP sessions. */
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
 	

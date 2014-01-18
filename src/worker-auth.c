@@ -383,7 +383,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 	char tmp_group[MAX_USERNAME_SIZE];
 
 	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE)
-	    && ws->config->force_cert_auth != 0) {
+	    && ws->config->cisco_client_compat == 0) {
 		if (ws->cert_auth_ok == 0) {
 			oclog(ws, LOG_INFO,
 			      "no certificate provided for cookie authentication");

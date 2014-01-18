@@ -132,7 +132,7 @@ unsigned tls_has_session_cert(struct worker_st * ws)
 	if (ws->cert_auth_ok)
 		return 1;
 
-	if (ws->config->force_cert_auth != 0) {
+	if (ws->config->cisco_client_compat == 0) {
 		return 0;
 	}
 
@@ -283,7 +283,7 @@ static int verify_certificate_cb(gnutls_session_t session)
 	/* notify gnutls to continue handshake normally */
 	return 0;
 fail:
-	if (ws->config->force_cert_auth != 0)
+	if (ws->config->cisco_client_compat == 0)
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	else
 		return 0;

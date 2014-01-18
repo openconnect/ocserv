@@ -1,3 +1,36 @@
+/*
+ * == Auth with username/password ==
+ *
+ *   main                     worker
+ *               <------     AUTH_INIT (username)
+ * AUTH_REP(MSG) ------>
+ *               <------     AUTH_REQ (password)
+ *                 .
+ *                 .
+ *                 .
+ * AUTH_REP(ΟΚ)  ------>
+ *
+ *
+ * == Auth with cookie ==
+ *
+ *   main                       worker
+ *               <------     AUTH_COOKIE_REQ
+ * AUTH_REP(OK)  ------>
+ *
+ *
+ * == Auth with legacy client ==
+ *
+ *   main                     worker
+ *               <------     AUTH_INIT (username)
+ * AUTH_REP(MSG) ------>
+ *
+ * (worker terminates as client disconnects)
+ *
+ *               <------     AUTH_REINIT (password)
+ * AUTH_REP(ΟΚ)  ------>
+ *
+ */
+
 /* AUTH_INIT */
 message auth_init_msg
 {
@@ -7,7 +40,7 @@ message auth_init_msg
 	optional string cert_user_name = 4;
 	optional string cert_group_name = 5;
 	optional string hostname = 6;
-	required bytes session_id = 7;
+	required bytes session_id = 7; /* TLS */
 }
 
 /* AUTH_REINIT - used in cisco compatible clients, to

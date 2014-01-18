@@ -8,17 +8,30 @@ used by CISCO's AnyConnect SSL VPN.
 [0]. http://www.infradead.org/openconnect/
 
 
+=== Build dependencies ===
+
+Required dependencies:
+libprotobuf-c0-dev / protobuf-c-devel
+libgnutls-dev      / gnutls-devel
+
+Optional dependencies:
+libhttp-parser-dev / http-parser-devel
+libwrap0-dev       / tcp_wrappers-devel
+libpcl1-dev        / pcllib-devel
+libpam0g-dev       / pam-devel
+libopts25-dev      / autogen-libopts-devel
+autogen            / autogen
+
+Optional dependencies for occtl:
+libdbus-1-dev      / dbus-devel
+libreadline-dev    / readline-devel
+
+
 === Build instructions ===
 
 To build from a distributed release use:
 
 $ ./configure && make
-
-At the minimum this requires GnuTLS and libprotobuf-c headers and libraries
-installed.  It will also link against libpam and libwrap, if present.
-
-For the occtl tool the additional libraries, readline, and dbus are
-required.
 
 When cross compiling it may be useful to add the --enable-local-libopts
 option to configure.

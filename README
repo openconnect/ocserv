@@ -25,6 +25,7 @@ autogen            / autogen
 Optional dependencies for occtl:
 libdbus-1-dev      / dbus-devel
 libreadline-dev    / readline-devel
+libnl-route-3-dev  / libnl3-devel
 
 
 === Build instructions ===

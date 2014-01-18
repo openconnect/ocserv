@@ -6,6 +6,9 @@
 - Added occtl a control tool for ocserv.
 - Added the use-dbus configuration option. It can be used to disable
   the D-BUS service (and thus the usage of the occtl utility).
+- Added configuration option cisco-client-compat which if enabled
+  it allows a client to authenticate by sending its credentials in
+  different TLS (resumed) sessions. 
 
 
 * Version 0.2.4 (released 2014-01-08)

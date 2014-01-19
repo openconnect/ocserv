@@ -979,7 +979,11 @@ static int connect_handler(worker_st * ws)
 	struct vpn_st vinfo;
 	unsigned tls_retry, dtls_mtu, cstp_mtu;
 	char *p;
+#ifdef HAVE_PSELECT
+	struct timespec tv;
+#else
 	struct timeval tv;
+#endif
 	unsigned tls_pending, dtls_pending = 0, i;
 	time_t udp_recv_time = 0, now;
 	struct timespec tnow;
@@ -988,6 +992,11 @@ static int connect_handler(worker_st * ws)
 	socklen_t sl;
 	bandwidth_st b_tx;
 	bandwidth_st b_rx;
+	sigset_t emptyset, blockset;
+
+	sigemptyset(&blockset);
+	sigemptyset(&emptyset);
+	sigaddset(&blockset, SIGTERM);
 
 	ws->buffer_size = 16 * 1024;
 	ws->buffer = malloc(ws->buffer_size);
@@ -1389,9 +1398,17 @@ static int connect_handler(worker_st * ws)
 			dtls_pending =
 			    gnutls_record_check_pending(ws->dtls_session);
 		if (tls_pending == 0 && dtls_pending == 0) {
+#ifdef HAVE_PSELECT
+			tv.tv_nsec = 0;
+			tv.tv_sec = 10;
+			ret = pselect(max + 1, &rfds, NULL, NULL, &tv, &emptyset);
+#else
 			tv.tv_usec = 0;
 			tv.tv_sec = 10;
+			sigprocmask(SIG_UNBLOCK, &blockset, NULL);
 			ret = select(max + 1, &rfds, NULL, NULL, &tv);
+			sigprocmask(SIG_BLOCK, &blockset, NULL);
+#endif
 			if (ret == -1) {
 				if (errno == EINTR)
 					continue;

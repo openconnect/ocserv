@@ -79,7 +79,7 @@ extern int syslog_open;
 #define MAX_CIPHERSUITE_NAME 64
 #define MAX_DTLS_CIPHERSUITE_NAME 24
 #define MAX_MSG_SIZE 256
-#define MAX_SID_SIZE 12
+#define SID_SIZE 12
 
 #define MAX_ZOMBIE_SECS 240
 
@@ -233,7 +233,7 @@ struct main_server_st;
 
 #define MAX_BANNER_SIZE 256
 #define MAX_USERNAME_SIZE 64
-#define MAX_AGENT_SIZE 32
+#define MAX_AGENT_NAME 32
 #define MAX_PASSWORD_SIZE 64
 #define TLS_MASTER_SIZE 48
 #define MAX_HOSTNAME_SIZE MAX_USERNAME_SIZE

@@ -95,7 +95,7 @@ struct proc_st {
 	 * who re-uses it when it performs authentication in multiple
 	 * sessions.
 	 */
-	uint8_t sid[MAX_SID_SIZE];
+	uint8_t sid[SID_SIZE];
 	unsigned sid_size; /* acts as a flag if sid is set */
 
 	/* The DTLS session ID associated with the TLS session 
@@ -110,7 +110,9 @@ struct proc_st {
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
 
-	char user_agent[MAX_AGENT_SIZE];
+	/* the following are copied here from the worker process for reporting
+	 * purposes (from main-ctl-handler). */
+	char user_agent[MAX_AGENT_NAME];
 	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char dtls_ciphersuite[MAX_DTLS_CIPHERSUITE_NAME];
 

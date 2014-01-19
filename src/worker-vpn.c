@@ -223,7 +223,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		req->hostname[req->value.length] = 0;
 		break;
 	case HEADER_USER_AGENT:
-		if (req->value.length + 1 > MAX_AGENT_SIZE) {
+		if (req->value.length + 1 > MAX_AGENT_NAME) {
 			req->user_agent[0] = 0;
 			return;
 		}

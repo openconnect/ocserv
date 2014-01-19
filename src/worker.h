@@ -75,7 +75,7 @@ struct http_req_st {
 	unsigned int header_state;
 
 	char hostname[MAX_HOSTNAME_SIZE];
-	char user_agent[MAX_AGENT_SIZE];
+	char user_agent[MAX_AGENT_NAME];
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
@@ -108,7 +108,7 @@ typedef struct worker_st {
 	gnutls_session_t dtls_session;
 
 	/* inique session identifier */
-	uint8_t sid[MAX_SID_SIZE];
+	uint8_t sid[SID_SIZE];
 
 	int cmd_fd;
 	int conn_fd;

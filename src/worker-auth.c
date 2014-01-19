@@ -93,7 +93,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		return -1;
 
 	if (req->sid_cookie_set == 0) {
-		char context[BASE64_LENGTH(MAX_SID_SIZE)+1];
+		char context[BASE64_LENGTH(SID_SIZE)+1];
 		size_t csize = sizeof(context);
 
                 base64_encode((char*)ws->sid, sizeof(ws->sid), (char*)context, csize);

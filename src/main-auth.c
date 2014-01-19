@@ -249,14 +249,34 @@ const char* ip;
 		return -1;
         }
 
-	if (req->session_id.len == 0 || req->session_id.len > sizeof(proc->tls_session_id)) {
-		mslog(s, proc, LOG_DEBUG, "auth init from '%s' with no session ID present", ip);
-	        return -1;
-        }
+	if (req->hostname != NULL) {
+		snprintf(proc->hostname, sizeof(proc->hostname), "%s", req->hostname);
+	}
 
-	if (req->hostname == NULL) {
-		memcpy(proc->hostname, req->hostname, MAX_HOSTNAME_SIZE);
-		proc->hostname[sizeof(proc->hostname)-1] = 0;
+	if (req->has_sid != 0 && req->sid.len == sizeof(proc->sid)) {
+		unsigned unique = 1;
+		struct proc_st *ctmp = NULL;
+
+		/* the client has requested changing its SID. We must first make sure it is
+		 * unique.
+		 */
+		list_for_each(&s->proc_list.head, ctmp, list) {
+			if (ctmp->sid_size > 0 && ctmp->sid_size == req->sid.len) {
+				if (memcmp(req->sid.data, ctmp->sid, ctmp->sid_size) == 0) {
+					/* it is not */
+					unique = 0;
+					break;
+				}
+			}
+		}
+
+		if (unique != 0) {
+			memcpy(proc->sid, req->sid.data, sizeof(proc->sid));
+			proc->sid_size = sizeof(proc->sid);
+			mslog_hex(s, proc, LOG_DEBUG, "auth init updated SID to", req->sid.data, req->sid.len);
+		} else {
+			mslog_hex(s, proc, LOG_DEBUG, "auth init asks to update SID but it is not unique", req->sid.data, req->sid.len);
+		}
 	}
 
 	if (req->user_name != NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
@@ -275,9 +295,6 @@ const char* ip;
 			snprintf(proc->username, MAX_USERNAME_SIZE, "%s", req->user_name);
 		}
 	}
-
-	memcpy(proc->tls_session_id, req->session_id.data, req->session_id.len);
-	proc->tls_session_id_size = req->session_id.len;
 
 	ret = check_user_group_status(s, proc, req->tls_auth_ok, req->cert_user_name, req->cert_group_name);
 	if (ret < 0)
@@ -304,8 +321,8 @@ unsigned found = 0;
 	ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
 			ipbuf, sizeof(ipbuf));
 
-	if (req->session_id.len == 0) {
-		mslog(s, proc, LOG_DEBUG, "auth reinit from '%s' with no session ID present", ip);
+	if (req->sid.len == 0) {
+		mslog(s, proc, LOG_DEBUG, "auth reinit from '%s' with no SID present", ip);
 	        return -1;
         }
 
@@ -314,11 +331,10 @@ unsigned found = 0;
 	        return -1;
         }
 
-	/* search all procs for a matching session ID */
-
+	/* search all procs for a matching SID */
 	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (ctmp->status == PS_AUTH_ZOMBIE && ctmp->tls_session_id_size == req->session_id.len) {
-			if (memcmp(req->session_id.data, ctmp->tls_session_id, ctmp->tls_session_id_size) == 0) {
+		if (ctmp->status == PS_AUTH_ZOMBIE && ctmp->sid_size > 0 && ctmp->sid_size == req->sid.len) {
+			if (memcmp(req->sid.data, ctmp->sid, ctmp->sid_size) == 0) {
 				/* replace sessions */
 				ctmp->pid = proc->pid;
 				ctmp->fd = proc->fd;
@@ -326,6 +342,7 @@ unsigned found = 0;
 
 				proc->pid = -1;
 				proc->fd = -1;
+				proc->sid_size = 0;
 				*_proc = proc = ctmp;
 				found = 1;
 				break;
@@ -334,7 +351,7 @@ unsigned found = 0;
 	}
 
 	if (found == 0) {
-		mslog(s, proc, LOG_DEBUG, "auth reinit received from '%s', but does not match any session", ip);
+		mslog_hex(s, proc, LOG_DEBUG, "auth reinit received but does not match any session with SID", req->sid.data, req->sid.len);
 		return -1;
 	}
 

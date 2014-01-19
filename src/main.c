@@ -858,8 +858,6 @@ int main(int argc, char** argv)
 	deny_severity = LOG_DAEMON|LOG_WARNING;
 #endif	
 
-	memset(&ws, 0, sizeof(ws));
-
 	if (config.foreground == 0) {
 		if (daemon(0, 0) == -1) {
 			e = errno;
@@ -943,6 +941,8 @@ int main(int argc, char** argv)
 			set = FD_ISSET(ltmp->fd, &rd_set);
 			if (set && ltmp->socktype == SOCK_STREAM) {
 				/* connection on TCP port */
+				memset(&ws, 0, sizeof(ws));
+
 				ws.remote_addr_len = sizeof(ws.remote_addr);
 				fd = accept(ltmp->fd, (void*)&ws.remote_addr, &ws.remote_addr_len);
 				if (fd < 0) {
@@ -981,6 +981,9 @@ int main(int argc, char** argv)
 					break;
 				}
 
+				gnutls_rnd(GNUTLS_RND_NONCE, ws.sid, sizeof(ws.sid));
+				ws.sid_size = sizeof(ws.sid);
+
 				pid = fork();
 				if (pid == 0) {	/* child */
 					/* close any open descriptors, and erase
@@ -992,7 +995,6 @@ int main(int argc, char** argv)
 					setproctitle(PACKAGE_NAME"-worker");
 					kill_on_parent_kill(SIGTERM);
 					
-
 					ws.config = &config;
 					ws.cmd_fd = cmd_fd[1];
 					ws.tun_fd = -1;

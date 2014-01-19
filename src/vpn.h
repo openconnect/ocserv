@@ -79,6 +79,9 @@ extern int syslog_open;
 #define MAX_CIPHERSUITE_NAME 64
 #define MAX_DTLS_CIPHERSUITE_NAME 24
 #define MAX_MSG_SIZE 256
+#define MAX_SID_SIZE 12
+
+#define MAX_ZOMBIE_SECS 240
 
 typedef enum {
 	AUTH_INIT = 1,

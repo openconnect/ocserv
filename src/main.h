@@ -64,7 +64,6 @@ struct script_wait_st {
 	struct proc_st* proc;
 };
 
-#define MAX_ZOMBIE_SECS 240
 enum {
 	PS_AUTH_INACTIVE, /* no comm with worker */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
@@ -90,10 +89,11 @@ struct proc_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 
-	/* The TLS session ID.
+	/* A unique session identifier used to distinguish
+	 * sessions prior to authentication.
 	 */
-	uint8_t tls_session_id[GNUTLS_MAX_SESSION_ID];
-	unsigned tls_session_id_size; /* would act as a flag if session_id is set */
+	uint8_t sid[MAX_SID_SIZE];
+	unsigned sid_size; /* would act as a flag if sid is set */
 
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.

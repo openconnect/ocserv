@@ -79,6 +79,7 @@ struct http_req_st {
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
+	unsigned int sid_cookie_set;
 
 	unsigned char master_secret[TLS_MASTER_SIZE];
 	unsigned int master_secret_set;
@@ -105,6 +106,11 @@ typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
+
+	/* inique session identifier */
+	uint8_t sid[MAX_SID_SIZE];
+	unsigned sid_size;
+
 	int cmd_fd;
 	int conn_fd;
 	

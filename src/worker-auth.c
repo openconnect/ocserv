@@ -79,6 +79,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
 	char login_msg[MAX_MSG_SIZE + sizeof(login_msg_user)];
+	struct http_req_st *req = &ws->req;
 	unsigned int lsize;
 
 	tls_cork(ws->session);
@@ -89,6 +90,21 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
+
+	if (req->sid_cookie_set == 0) {
+		char context[MAX_SID_SIZE*2+1];
+		size_t csize = sizeof(context);
+		gnutls_datum_t sid = {ws->sid, ws->sid_size};
+
+                ret = gnutls_hex_encode(&sid, context, &csize);
+		ret =
+		    tls_printf(ws->session, "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
+			       context, (unsigned)MAX_ZOMBIE_SECS);
+		if (ret < 0)
+			return -1;
+
+		oclog(ws, LOG_ERR, "sent sid: %s", context);
+	}
 
 	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
 	if (ret < 0)
@@ -454,7 +470,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 		return -1;
 
 	ret =
-	    tls_printf(ws->session, "Set-Cookie: webvpn=%s;Max-Age=%u\r\n",
+	    tls_printf(ws->session, "Set-Cookie: webvpn=%s; Max-Age=%u; Secure\r\n",
 		       str_cookie, (unsigned)ws->config->cookie_validity);
 	if (ret < 0)
 		return -1;
@@ -462,21 +478,21 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	ret =
 	    tls_puts(ws->session,
-		     "Set-Cookie: webvpnc=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; secure\r\n");
+		     "Set-Cookie: webvpnc=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
 	if (ret < 0)
 		return -1;
 
 	if (ws->config->xml_config_file) {
 		ret =
 		    tls_printf(ws->session,
-			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2F%s&fh:%s; path=/; secure\r\n",
+			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2F%s&fh:%s; path=/; Secure\r\n",
 			       ws->config->cert_hash,
 			       ws->config->xml_config_file,
 			       ws->config->xml_config_hash);
 	} else {
 		ret =
 		    tls_printf(ws->session,
-			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; secure\r\n",
+			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; Secure\r\n",
 			       ws->config->cert_hash);
 	}
 
@@ -656,8 +672,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *password = NULL;
 	char tmp_user[MAX_USERNAME_SIZE];
 	char tmp_group[MAX_USERNAME_SIZE];
-	uint8_t tls_session_id[GNUTLS_MAX_SESSION_ID];
-	size_t tls_session_id_size;
 	char msg[MAX_MSG_SIZE];
 
 	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
@@ -665,13 +679,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		AuthInitMsg ireq = AUTH_INIT_MSG__INIT;
-
-		tls_session_id_size = sizeof(tls_session_id);
-		ret = gnutls_session_get_id(ws->session, tls_session_id, &tls_session_id_size);
-		if (ret < 0) {
-			oclog(ws, LOG_INFO, "failed obtainng session ID");
-			goto auth_fail;
-		}
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret =
@@ -695,8 +702,8 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 					rreq.tls_auth_ok = ws->cert_auth_ok;
 					rreq.password = password;
-					rreq.session_id.data = tls_session_id;
-					rreq.session_id.len = tls_session_id_size;
+					rreq.sid.data = ws->sid;
+					rreq.sid.len = ws->sid_size;
 
 					ret = send_msg_to_main(ws, AUTH_REINIT, &rreq,
 					       (pack_size_func)auth_reinit_msg__get_packed_size,
@@ -742,9 +749,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			ireq.cert_group_name = tmp_group;
 		}
 
-		ireq.session_id.data = tls_session_id;
-		ireq.session_id.len = tls_session_id_size;
 		ireq.hostname = req->hostname;
+		if (req->sid_cookie_set != 0) {
+			oclog(ws, LOG_INFO, "updating SID (%u)", ws->sid_size);
+			ireq.sid.data = ws->sid;
+			ireq.sid.len = ws->sid_size;
+			ireq.has_sid = 1;
+		}
 
 		ret = send_msg_to_main(ws, AUTH_INIT,
 				       &ireq,

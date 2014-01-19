@@ -308,26 +308,48 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		length = req->value.length;
 
 		p = memmem(req->value.data, length, "webvpn=", 7);
-		if (p == NULL || length <= 7) {
-			req->cookie_set = 0;
-			break;
-		}
-		p += 7;
-		length -= 7;
+		if (p != NULL && length > 7) {
+			p += 7;
+			length -= 7;
 
-		if (length < COOKIE_SIZE * 2) {
-			req->cookie_set = 0;
-			break;
-		}
-		length = COOKIE_SIZE * 2;
-		nlen = sizeof(req->cookie);
-		gnutls_hex2bin((void *)p, length, req->cookie, &nlen);
+			if (length < COOKIE_SIZE * 2) {
+				req->cookie_set = 0;
+				break;
+			}
+			length = COOKIE_SIZE * 2;
+			nlen = sizeof(req->cookie);
+			gnutls_hex2bin((void *)p, length, req->cookie, &nlen);
 
-		if (nlen < COOKIE_SIZE) {
-			req->cookie_set = 0;
+			if (nlen < COOKIE_SIZE) {
+				req->cookie_set = 0;
+				break;
+			}
+			req->cookie_set = 1;
 			break;
+		} else {
+			p = memmem(req->value.data, length, "webvpncontext=", 14);
+			if (p != NULL && length > 14) {
+				p += 14;
+				length -= 14;
+
+				if (length < sizeof(ws->sid) * 2) {
+					req->sid_cookie_set = 0;
+					break;
+				}
+				length = sizeof(ws->sid) * 2;
+				nlen = sizeof(ws->sid);
+				gnutls_hex2bin((void *)p, length, ws->sid, &nlen);
+
+				if (nlen < sizeof(ws->sid)) {
+					req->sid_cookie_set = 0;
+					break;
+				}
+				req->sid_cookie_set = 1;
+				ws->sid_size = nlen;
+				oclog(ws, LOG_ERR, "received sid: %.*s", length, p);
+				break;
+			}
 		}
-		req->cookie_set = 1;
 		break;
 	}
 }

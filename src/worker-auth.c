@@ -104,7 +104,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		if (ret < 0)
 			return -1;
 
-		oclog(ws, LOG_ERR, "sent sid: %s", context);
+		oclog(ws, LOG_DEBUG, "sent sid: %s", context);
 	}
 
 	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
@@ -228,7 +228,7 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 		return ret;
 	}
 
-	oclog(ws, LOG_DEBUG, "received auth reply message %u",
+	oclog(ws, LOG_DEBUG, "received auth reply message (value: %u)",
 	      (unsigned)msg->reply);
 
 	switch (msg->reply) {
@@ -531,7 +531,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			    memmem(body, body_length, XMLUSER,
 				   sizeof(XMLUSER) - 1);
 			if (*username == NULL) {
-				oclog(ws, LOG_ERR,
+				oclog(ws, LOG_DEBUG,
 				      "cannot find username in client XML message");
 				return -1;
 			}
@@ -543,7 +543,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			    memmem(body, body_length, XMLPASS,
 				   sizeof(XMLPASS) - 1);
 			if (*password == NULL) {
-				oclog(ws, LOG_ERR,
+				oclog(ws, LOG_DEBUG,
 				      "cannot find password in client XML message");
 				return -1;
 			}
@@ -595,7 +595,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			    memmem(body, body_length, "username=",
 				   sizeof("username=") - 1);
 			if (*username == NULL) {
-				oclog(ws, LOG_ERR,
+				oclog(ws, LOG_DEBUG,
 				      "cannot find username in client message");
 				return -1;
 			}
@@ -607,7 +607,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			    memmem(body, body_length, "password=",
 				   sizeof("password=") - 1);
 			if (*password == NULL) {
-				oclog(ws, LOG_ERR,
+				oclog(ws, LOG_DEBUG,
 				      "cannot find password in client message");
 				return -1;
 			}

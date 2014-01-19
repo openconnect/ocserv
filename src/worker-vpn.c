@@ -337,7 +337,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 				}
 
 				req->sid_cookie_set = 1;
-				oclog(ws, LOG_ERR, "received sid: %.*s", length, p);
+				oclog(ws, LOG_DEBUG, "received sid: %.*s", length, p);
 				break;
 			}
 		}

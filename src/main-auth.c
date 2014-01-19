@@ -343,6 +343,7 @@ unsigned found = 0;
 				proc->pid = -1;
 				proc->fd = -1;
 				proc->sid_size = 0;
+				proc->status = PS_AUTH_ZOMBIE;
 				*_proc = proc = ctmp;
 				found = 1;
 				break;

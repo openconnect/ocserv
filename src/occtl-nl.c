@@ -45,7 +45,7 @@ int if_idx;
 
 	if (sock != NULL)
 		return 0;
-	
+
 	if (nl_failed != 0) /* don't bother re-opening */
 		return -1;
 
@@ -85,7 +85,7 @@ error:
 	if (cache != NULL)
 		nl_cache_free(cache);
 	nl_failed = 1;
-	
+
 	return -1;
 }
 
@@ -130,6 +130,9 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 	char buf1[32], buf2[32];
 	time_t diff = time(0) - since;
 
+	if (iface == NULL || iface[0] == 0)
+		return;
+
 	if (open_netlink(iface) < 0)
 		return;
 
@@ -139,7 +142,7 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 	bytes2human(rx, buf1, sizeof(buf1), NULL);
 	bytes2human(tx, buf2, sizeof(buf2), NULL);
 	fprintf(out, "\tRX: %"PRIu64" (%s) TX: %"PRIu64" (%s)\n", rx, buf1, tx, buf2);
-	
+
 	value2speed(rx, diff, buf1, sizeof(buf1));
 	value2speed(tx, diff, buf2, sizeof(buf2));
 	fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1, buf2);

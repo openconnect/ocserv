@@ -55,5 +55,5 @@ void print_time_ival7(time_t t, FILE * fout)
 		fprintf(fout, "%2lum:%02us", t / 60, (unsigned)t % 60);
 	else
 	        /* Translation Hint: Seconds:Centiseconds */
-		fprintf(fout, _("%4lus"), t);
+		fprintf(fout, _("%5lus"), t);
 }

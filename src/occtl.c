@@ -33,6 +33,7 @@
 
 #define DEFAULT_TIMEOUT (10*1000)
 #define NO_GROUP "(none)"
+#define NO_USER "(none)"
 
 #define ERR_SERVER_UNREACHABLE "could not send message; is server online?\n"
 
@@ -677,7 +678,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 		/* add header */
 		if (iteration++ == 0) {
-			fprintf(out, "%6s %8s %8s %14s %14s %6s %7s %14s %9s\n",
+			fprintf(out, "%8s %8s %8s %14s %14s %6s %7s %14s %9s\n",
 				"id", "user", "group", "ip", "vpn-ip", "device",
 				"since", "cipher", "status");
 		}
@@ -689,7 +690,10 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		if (groupname == NULL || groupname[0] == 0)
 			groupname = NO_GROUP;
 
-		fprintf(out, "%6u %8s %8s %14s %14s %6s ",
+		if (username == NULL || username[0] == 0)
+			username = NO_USER;
+
+		fprintf(out, "%8u %8s %8s %14s %14s %6s ",
 			(unsigned)id, username, groupname, ip, vpn_ip, device);
 
 		print_time_ival7(t, out);
@@ -864,6 +868,9 @@ int common_info_cmd(DBusMessageIter * args)
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &dtls_ciphersuite);
+
+		if (username == NULL || username[0] == 0)
+			username = NO_USER;
 
 		fprintf(out, "\tUsername: %s  ", username);
 

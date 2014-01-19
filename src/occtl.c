@@ -175,14 +175,14 @@ void version(void)
 		"OpenConnect server control (occtl) version %s\n", VERSION);
 	fprintf(stderr, "Copyright (C) 2014 Red Hat and others.\n");
 	fprintf(stderr,
-		"ocserv comes with ABSOLUTELY NO WARRANTY. This is free\n");
+		"ocserv comes with ABSOLUTELY NO WARRANTY. This is free software,\n");
 	fprintf(stderr,
-		"software, and you are welcome to redistribute it under the\n");
+		"and you are welcome to redistribute it under the conditions of the\n");
 	fprintf(stderr,
-		"conditions of the GNU General Public License version 2.\n");
+		"GNU General Public License version 2.\n");
 	fprintf(stderr, "\nFor help type ? or 'help'\n");
 	fprintf(stderr,
-		"==========================================================\n");
+		"==================================================================\n");
 }
 
 /* Read a string, and return a pointer to it.  Returns NULL on EOF. */

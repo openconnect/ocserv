@@ -286,7 +286,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	list_del(&proc->list);
 	s->active_clients--;
 
-	if (k && proc->pid != -1)
+	if (k && proc->pid != -1 && proc->pid != 0)
 		kill(proc->pid, SIGTERM);
 
 	remove_from_script_list(s, proc);
@@ -686,7 +686,11 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			goto cleanup;
 		}
 
-		break;
+		/* handle_auth_reinit() has succeeded so the current proc
+		 * is in zombie state and unused. Terminate it.
+		 */
+		ret = ERR_WORKER_TERMINATED;
+		goto cleanup;
 
 	case AUTH_REQ:
 		if (proc->status != PS_AUTH_INIT) {

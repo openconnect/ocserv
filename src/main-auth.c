@@ -273,9 +273,9 @@ const char* ip;
 		if (unique != 0) {
 			memcpy(proc->sid, req->sid.data, sizeof(proc->sid));
 			proc->sid_size = sizeof(proc->sid);
-			mslog_hex(s, proc, LOG_DEBUG, "auth init updated SID to", req->sid.data, req->sid.len);
+			mslog_hex(s, proc, LOG_DEBUG, "auth init set SID to", req->sid.data, req->sid.len);
 		} else {
-			mslog_hex(s, proc, LOG_DEBUG, "auth init asks to update SID but it is not unique", req->sid.data, req->sid.len);
+			mslog_hex(s, proc, LOG_DEBUG, "auth init asks to set SID but it is not unique", req->sid.data, req->sid.len);
 		}
 	}
 

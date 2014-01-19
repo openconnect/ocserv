@@ -90,11 +90,13 @@ struct proc_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 
-	/* A unique session identifier used to distinguish
-	 * sessions prior to authentication.
+	/* A unique session identifier used to distinguish sessions
+	 * prior to authentication. It is sent as cookie to the client
+	 * who re-uses it when it performs authentication in multiple
+	 * sessions.
 	 */
 	uint8_t sid[MAX_SID_SIZE];
-	unsigned sid_size; /* would act as a flag if sid is set */
+	unsigned sid_size; /* acts as a flag if sid is set */
 
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
@@ -113,7 +115,8 @@ struct proc_st {
 	char dtls_ciphersuite[MAX_DTLS_CIPHERSUITE_NAME];
 
 	/* if the session is initiated by a cookie the following two are set
-	 * and are considered when generating an IP address.
+	 * and are considered when generating an IP address. That is used to
+	 * generate the same address as previously allocated.
 	 */
 	uint8_t seeds_are_set; /* non zero if the following two elements are set */
 	uint8_t ipv4_seed[4];

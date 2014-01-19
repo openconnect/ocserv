@@ -21,7 +21,7 @@
  * == Auth with legacy client ==
  *
  *   main                     worker
- *               <------     AUTH_INIT (username)
+ *               <------     AUTH_INIT (username, sid)
  * AUTH_REP(MSG) ------>
  *
  * (worker terminates as client disconnects)

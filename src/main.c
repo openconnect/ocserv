@@ -981,9 +981,6 @@ int main(int argc, char** argv)
 					break;
 				}
 
-				gnutls_rnd(GNUTLS_RND_NONCE, ws.sid, sizeof(ws.sid));
-				ws.sid_size = sizeof(ws.sid);
-
 				pid = fork();
 				if (pid == 0) {	/* child */
 					/* close any open descriptors, and erase

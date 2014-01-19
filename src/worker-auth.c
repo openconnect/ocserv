@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <ipc.pb-c.h>
+#include <base64.h>
 
 #include <vpn.h>
 #include "html.h"
@@ -92,11 +93,11 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		return -1;
 
 	if (req->sid_cookie_set == 0) {
-		char context[MAX_SID_SIZE*2+1];
+		char context[BASE64_LENGTH(MAX_SID_SIZE)+1];
 		size_t csize = sizeof(context);
-		gnutls_datum_t sid = {ws->sid, ws->sid_size};
 
-                ret = gnutls_hex_encode(&sid, context, &csize);
+                base64_encode((char*)ws->sid, sizeof(ws->sid), (char*)context, csize);
+
 		ret =
 		    tls_printf(ws->session, "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
 			       context, (unsigned)MAX_ZOMBIE_SECS);
@@ -422,16 +423,11 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver)
 {
 	int ret, size;
-	char str_cookie[2 * COOKIE_SIZE + 1];
-	char *p;
-	unsigned i;
+	char str_cookie[BASE64_LENGTH(COOKIE_SIZE)+1];
+	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 
-	p = str_cookie;
-	for (i = 0; i < sizeof(ws->cookie); i++) {
-		sprintf(p, "%.2x", (unsigned int)ws->cookie[i]);
-		p += 2;
-	}
+	base64_encode((char*)ws->cookie, sizeof(ws->cookie), (char*)str_cookie, str_cookie_size); 
 
 	/* reply */
 	tls_cork(ws->session);
@@ -703,7 +699,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					rreq.tls_auth_ok = ws->cert_auth_ok;
 					rreq.password = password;
 					rreq.sid.data = ws->sid;
-					rreq.sid.len = ws->sid_size;
+					rreq.sid.len = sizeof(ws->sid);
 
 					ret = send_msg_to_main(ws, AUTH_REINIT, &rreq,
 					       (pack_size_func)auth_reinit_msg__get_packed_size,
@@ -751,9 +747,9 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		ireq.hostname = req->hostname;
 		if (req->sid_cookie_set != 0) {
-			oclog(ws, LOG_INFO, "updating SID (%u)", ws->sid_size);
+			oclog(ws, LOG_INFO, "updating SID");
 			ireq.sid.data = ws->sid;
-			ireq.sid.len = ws->sid_size;
+			ireq.sid.len = sizeof(ws->sid);
 			ireq.has_sid = 1;
 		}
 

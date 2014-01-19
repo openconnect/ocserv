@@ -109,7 +109,6 @@ typedef struct worker_st {
 
 	/* inique session identifier */
 	uint8_t sid[MAX_SID_SIZE];
-	unsigned sid_size;
 
 	int cmd_fd;
 	int conn_fd;

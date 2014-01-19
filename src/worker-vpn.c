@@ -42,6 +42,7 @@
 #include <gettime.h>
 #include <common.h>
 #include <html.h>
+#include <base64.h>
 #include <c-strcase.h>
 #include <worker-bandwidth.h>
 
@@ -186,6 +187,7 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 static void value_check(struct worker_st *ws, struct http_req_st *req)
 {
 	unsigned length;
+	int ret;
 	size_t nlen;
 	uint8_t *p;
 	char *token;
@@ -312,18 +314,13 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 			p += 7;
 			length -= 7;
 
-			if (length < COOKIE_SIZE * 2) {
-				req->cookie_set = 0;
-				break;
-			}
-			length = COOKIE_SIZE * 2;
 			nlen = sizeof(req->cookie);
-			gnutls_hex2bin((void *)p, length, req->cookie, &nlen);
-
-			if (nlen < COOKIE_SIZE) {
+			ret = base64_decode((char*)p, length, (char*)req->cookie, &nlen);
+			if (ret == 0 || nlen != COOKIE_SIZE) {
 				req->cookie_set = 0;
 				break;
 			}
+
 			req->cookie_set = 1;
 			break;
 		} else {
@@ -332,20 +329,14 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 				p += 14;
 				length -= 14;
 
-				if (length < sizeof(ws->sid) * 2) {
-					req->sid_cookie_set = 0;
-					break;
-				}
-				length = sizeof(ws->sid) * 2;
 				nlen = sizeof(ws->sid);
-				gnutls_hex2bin((void *)p, length, ws->sid, &nlen);
-
-				if (nlen < sizeof(ws->sid)) {
+				ret = base64_decode((char*)p, length, (char*)ws->sid, &nlen);
+				if (ret == 0 || nlen != sizeof(ws->sid)) {
 					req->sid_cookie_set = 0;
 					break;
 				}
+
 				req->sid_cookie_set = 1;
-				ws->sid_size = nlen;
 				oclog(ws, LOG_ERR, "received sid: %.*s", length, p);
 				break;
 			}
@@ -625,6 +616,12 @@ void vpn_server(struct worker_st *ws)
 		ws->proto = AF_INET;
 	else
 		ws->proto = AF_INET6;
+
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, ws->sid, sizeof(ws->sid));
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "Error generating SID");
+		exit_worker(ws);
+	}
 
 	/* initialize the session */
 	ret = gnutls_init(&session, GNUTLS_SERVER);

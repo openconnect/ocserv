@@ -67,6 +67,15 @@ enum {
 	S_AUTH_COMPLETE
 };
 
+typedef struct dtls_ciphersuite_st {
+	const char* oc_name;
+	const char* gnutls_name; /* the gnutls priority string to set */
+	unsigned server_prio; /* the highest the more we want to negotiate that */
+	unsigned gnutls_cipher;
+	unsigned gnutls_mac;
+	unsigned gnutls_version;
+} dtls_ciphersuite_st;
+
 struct http_req_st {
 	char url[256];
 
@@ -87,11 +96,7 @@ struct http_req_st {
 	char *body;
 	unsigned int body_length;
 
-	char *gnutls_ciphersuite; /* static string */
-	char *selected_ciphersuite; /* static string */
-	int gnutls_cipher;
-	int gnutls_mac;
-	int gnutls_version;
+	const dtls_ciphersuite_st *selected_ciphersuite;
 
 	unsigned int headers_complete;
 	unsigned int message_complete;

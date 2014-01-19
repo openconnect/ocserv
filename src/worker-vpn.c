@@ -184,9 +184,65 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
 
+/* Consider switching to gperf when this table grows significantly.
+ */
+static const dtls_ciphersuite_st ciphersuites[] =
+{
+#if GNUTLS_VERSION_NUMBER >= 0x030207
+	{
+		.oc_name = CS_ESALSA20,
+		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+ESTREAM-SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+		.gnutls_version = GNUTLS_DTLS1_2,
+		.gnutls_mac = GNUTLS_MAC_SHA1,
+		.gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256,
+		.server_prio = 100
+	},
+	{
+		.oc_name = CS_SALSA20,
+		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+		.gnutls_version = GNUTLS_DTLS1_2,
+		.gnutls_mac = GNUTLS_MAC_SHA1,
+		.gnutls_cipher = GNUTLS_CIPHER_SALSA20_256,
+		.server_prio = 100
+	},
+	{
+		.oc_name = CS_AES128_GCM,
+		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
+		.gnutls_version = GNUTLS_DTLS1_2,
+		.gnutls_mac = GNUTLS_MAC_AEAD,
+		.gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
+		.server_prio = 90
+	},
+	{
+		.oc_name = CS_AES256_GCM,
+		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
+		.gnutls_version = GNUTLS_DTLS1_2,
+		.gnutls_mac = GNUTLS_MAC_AEAD,
+		.gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
+		.server_prio = 80,
+	},
+#endif
+	{
+		.oc_name = "AES128-SHA",
+		.gnutls_name = "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+		.gnutls_version = GNUTLS_DTLS0_9,
+		.gnutls_mac = GNUTLS_MAC_SHA1,
+		.gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
+		.server_prio = 50,
+	},
+	{
+		.oc_name = "DES-CBC3-SHA",
+		.gnutls_name = "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+		.gnutls_version = GNUTLS_DTLS0_9,
+		.gnutls_mac = GNUTLS_MAC_SHA1,
+		.gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
+		.server_prio = 1,
+	},
+};
+
 static void value_check(struct worker_st *ws, struct http_req_st *req)
 {
-	unsigned length;
+	unsigned length, i;
 	int ret;
 	size_t nlen;
 	uint8_t *p;
@@ -232,60 +288,18 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
+		req->selected_ciphersuite = NULL;
+
 		str = (char *)req->value.data;
 		while ((token = strtok(str, ":")) != NULL) {
-#if GNUTLS_VERSION_NUMBER >= 0x030207
-			if (strcmp(token, CS_ESALSA20) == 0) {
-				req->selected_ciphersuite = CS_ESALSA20;
-				req->gnutls_ciphersuite =
-				    "NONE:+VERS-DTLS1.2:+COMP-NULL:+ESTREAM-SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-				req->gnutls_cipher =
-				    GNUTLS_CIPHER_ESTREAM_SALSA20_256;
-				req->gnutls_mac = GNUTLS_MAC_SHA1;
-				req->gnutls_version = GNUTLS_DTLS1_2;
-				break;
-			} else if (strcmp(token, CS_SALSA20) == 0) {
-				req->selected_ciphersuite = CS_SALSA20;
-				req->gnutls_ciphersuite =
-				    "NONE:+VERS-DTLS1.2:+COMP-NULL:+SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-				req->gnutls_cipher = GNUTLS_CIPHER_SALSA20_256;
-				req->gnutls_mac = GNUTLS_MAC_SHA1;
-				req->gnutls_version = GNUTLS_DTLS1_2;
-				break;
-			} else if (strcmp(token, CS_AES128_GCM) == 0) {
-				req->selected_ciphersuite = CS_AES128_GCM;
-				req->gnutls_ciphersuite =
-				    "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL";
-				req->gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM;
-				req->gnutls_mac = GNUTLS_MAC_AEAD;
-				req->gnutls_version = GNUTLS_DTLS1_2;
-				break;
-			} else if (strcmp(token, CS_AES256_GCM) == 0) {
-				req->selected_ciphersuite = CS_AES256_GCM;
-				req->gnutls_ciphersuite =
-				    "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL";
-				req->gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM;
-				req->gnutls_mac = GNUTLS_MAC_AEAD;
-				req->gnutls_version = GNUTLS_DTLS1_2;
-				break;
-			} else
-#endif
-			if (strcmp(token, "AES128-SHA") == 0) {
-				req->gnutls_ciphersuite =
-				    "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-				req->selected_ciphersuite = "AES128-SHA";
-				req->gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC;
-				req->gnutls_mac = GNUTLS_MAC_SHA1;
-				req->gnutls_version = GNUTLS_DTLS0_9;
-				break;
-			} else if (strcmp(token, "DES-CBC3-SHA") == 0) {
-				req->gnutls_ciphersuite =
-				    "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION";
-				req->selected_ciphersuite = "DES-CBC3-SHA";
-				req->gnutls_cipher = GNUTLS_CIPHER_3DES_CBC;
-				req->gnutls_mac = GNUTLS_MAC_SHA1;
-				req->gnutls_version = GNUTLS_DTLS0_9;
-				break;
+			for (i=0;i<sizeof(ciphersuites)/sizeof(ciphersuites[0]);i++) {
+				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
+					if (req->selected_ciphersuite == NULL || 
+						req->selected_ciphersuite->server_prio < ciphersuites[i].server_prio) {
+
+						req->selected_ciphersuite = &ciphersuites[i];
+					}
+				}
 			}
 			str = NULL;
 		}
@@ -476,7 +490,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 	    { ws->master_secret, sizeof(ws->master_secret) };
 	gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 
-	if (ws->req.gnutls_ciphersuite == NULL) {
+	if (ws->req.selected_ciphersuite == NULL) {
 		oclog(ws, LOG_ERR, "no DTLS ciphersuite negotiated");
 		return -1;
 	}
@@ -493,7 +507,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	ret =
-	    gnutls_priority_set_direct(session, ws->req.gnutls_ciphersuite,
+	    gnutls_priority_set_direct(session, ws->req.selected_ciphersuite->gnutls_name,
 				       NULL);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s",
@@ -502,9 +516,9 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
-					   ws->req.gnutls_version,
-					   GNUTLS_KX_RSA, ws->req.gnutls_cipher,
-					   ws->req.gnutls_mac, GNUTLS_COMP_NULL,
+					   ws->req.selected_ciphersuite->gnutls_version,
+					   GNUTLS_KX_RSA, ws->req.selected_ciphersuite->gnutls_cipher,
+					   ws->req.selected_ciphersuite->gnutls_mac, GNUTLS_COMP_NULL,
 					   &master, &sid);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s",
@@ -776,7 +790,7 @@ void session_info_send(worker_st * ws)
 	}
 
 	if (ws->udp_state != UP_DISABLED) {
-		msg.dtls_ciphersuite = ws->req.selected_ciphersuite;
+		msg.dtls_ciphersuite = (char*)ws->req.selected_ciphersuite->oc_name;
 	}
 
 	if (ws->req.user_agent[0] != 0) {
@@ -1264,10 +1278,10 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 
 		oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
-		      ws->req.selected_ciphersuite);
+		      ws->req.selected_ciphersuite->oc_name);
 		ret =
 		    tls_printf(ws->session, "X-DTLS-CipherSuite: %s\r\n",
-			       ws->req.selected_ciphersuite);
+			       ws->req.selected_ciphersuite->oc_name);
 		SEND_ERR(ret);
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
@@ -1287,8 +1301,8 @@ static int connect_handler(worker_st * ws)
 
 		overhead =
 		    CSTP_DTLS_OVERHEAD +
-		    tls_get_overhead(ws->req.gnutls_version,
-				     ws->req.gnutls_cipher, ws->req.gnutls_mac);
+		    tls_get_overhead(ws->req.selected_ciphersuite->gnutls_version,
+				     ws->req.selected_ciphersuite->gnutls_cipher, ws->req.selected_ciphersuite->gnutls_mac);
 		dtls_mtu = ws->conn_mtu - overhead;
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);

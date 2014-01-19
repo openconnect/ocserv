@@ -631,8 +631,8 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 	}
 
 	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (id != 0) {	/* id */
-			if (id != ctmp->pid) {
+		if (user == NULL) {	/* id */
+			if (id == 0 || id == -1 || id != ctmp->pid) {
 				continue;
 			}
 		} else {	/* username */

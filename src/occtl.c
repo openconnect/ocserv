@@ -68,7 +68,7 @@ static const commands_st commands[] = {
 	      "Disconnect the specified user", 1),
 	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
 	      "Disconnect the specified ID", 1),
-	ENTRY("list users", NULL, handle_list_users_cmd,
+	ENTRY("show users", NULL, handle_list_users_cmd,
 	      "Prints the connected users", 1),
 	ENTRY("reload", NULL, handle_reload_cmd,
 	      "Reloads the server configuration", 1),

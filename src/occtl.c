@@ -35,7 +35,7 @@
 #define NO_GROUP "(none)"
 #define NO_USER "(none)"
 
-#define ERR_SERVER_UNREACHABLE "could not send message; is server online?\n"
+#define ERR_SERVER_UNREACHABLE "could not send message; possibly insufficient permissions or server is offline.\n"
 
 typedef int (*cmd_func) (DBusConnection * conn, const char *arg);
 

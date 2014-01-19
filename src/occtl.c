@@ -172,7 +172,7 @@ void version(void)
 {
 	fprintf(stderr,
 		"OpenConnect server control (occtl) version %s\n", VERSION);
-	fprintf(stderr, "Copyright (C) 2013 Red Hat and others.\n");
+	fprintf(stderr, "Copyright (C) 2014 Red Hat and others.\n");
 	fprintf(stderr,
 		"ocserv comes with ABSOLUTELY NO WARRANTY. This is free\n");
 	fprintf(stderr,

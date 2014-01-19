@@ -1,5 +1,5 @@
 # DO NOT EDIT! GENERATED AUTOMATICALLY!
-# Copyright (C) 2002-2013 Free Software Foundation, Inc.
+# Copyright (C) 2002-2014 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,6 +38,8 @@ AC_DEFUN([gl_EARLY],
   m4_pattern_allow([^gl_LIBOBJS$])dnl a variable
   m4_pattern_allow([^gl_LTLIBOBJS$])dnl a variable
   AC_REQUIRE([gl_PROG_AR_RANLIB])
+  # Code from module absolute-header:
+  # Code from module base64:
   # Code from module c-ctype:
   # Code from module c-strcase:
   # Code from module cloexec:
@@ -58,6 +60,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module getdtablesize:
   # Code from module getline:
   # Code from module getpass:
+  # Code from module gettimeofday:
   # Code from module havelib:
   # Code from module include_next:
   # Code from module largefile:
@@ -85,6 +88,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module strdup-posix:
   # Code from module string:
   # Code from module sys_stat:
+  # Code from module sys_time:
   # Code from module sys_types:
   # Code from module time:
   # Code from module unistd:
@@ -106,6 +110,7 @@ AC_DEFUN([gl_INIT],
   m4_pushdef([gl_LIBSOURCES_DIR], [])
   gl_COMMON
   gl_source_base='gl'
+  gl_FUNC_BASE64
   gl_MODULE_INDICATOR_FOR_TESTS([cloexec])
   gl_FUNC_CLOSE
   if test $REPLACE_CLOSE = 1; then
@@ -166,6 +171,12 @@ AC_DEFUN([gl_INIT],
     AC_LIBOBJ([getpass])
     gl_PREREQ_GETPASS
   fi
+  gl_FUNC_GETTIMEOFDAY
+  if test $HAVE_GETTIMEOFDAY = 0 || test $REPLACE_GETTIMEOFDAY = 1; then
+    AC_LIBOBJ([gettimeofday])
+    gl_PREREQ_GETTIMEOFDAY
+  fi
+  gl_SYS_TIME_MODULE_INDICATOR([gettimeofday])
   AC_REQUIRE([gl_LARGEFILE])
   gl_FUNC_LSEEK
   if test $REPLACE_LSEEK = 1; then
@@ -221,6 +232,8 @@ AC_DEFUN([gl_INIT],
   gl_STRING_MODULE_INDICATOR([strdup])
   gl_HEADER_STRING_H
   gl_HEADER_SYS_STAT_H
+  AC_PROG_MKDIR_P
+  gl_HEADER_SYS_TIME_H
   AC_PROG_MKDIR_P
   gl_SYS_TYPES_H
   AC_PROG_MKDIR_P
@@ -371,6 +384,8 @@ AC_DEFUN([gl_FILE_LIST], [
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
+  lib/base64.c
+  lib/base64.h
   lib/c-ctype.c
   lib/c-ctype.h
   lib/c-strcase.h
@@ -393,6 +408,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/getline.c
   lib/getpass.c
   lib/getpass.h
+  lib/gettimeofday.c
   lib/lseek.c
   lib/malloc.c
   lib/memchr.c
@@ -414,11 +430,14 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/strdup.c
   lib/string.in.h
   lib/sys_stat.in.h
+  lib/sys_time.in.h
   lib/sys_types.in.h
   lib/time.in.h
   lib/unistd.c
   lib/unistd.in.h
   m4/00gnulib.m4
+  m4/absolute-header.m4
+  m4/base64.m4
   m4/close.m4
   m4/dup2.m4
   m4/errno_h.m4
@@ -434,6 +453,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/getdtablesize.m4
   m4/getline.m4
   m4/getpass.m4
+  m4/gettimeofday.m4
   m4/gnulib-common.m4
   m4/include_next.m4
   m4/largefile.m4
@@ -460,7 +480,9 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/stdlib_h.m4
   m4/strdup.m4
   m4/string_h.m4
+  m4/sys_socket_h.m4
   m4/sys_stat_h.m4
+  m4/sys_time_h.m4
   m4/sys_types_h.m4
   m4/time_h.m4
   m4/unistd_h.m4

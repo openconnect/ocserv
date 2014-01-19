@@ -832,7 +832,8 @@ static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
 		if (ctmp->pid == id) {
 			remove_proc(s, ctmp, 1);
 			status = 1;
-			break;
+			if (id != -1)
+				break;
 		}
 	}
 

@@ -102,7 +102,7 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 
 				mslog_hex(s, proc, LOG_DEBUG, "TLS session DB resuming",
 					  req->session_id.data,
-					  req->session_id.len);
+					  req->session_id.len, 0);
 
 				return 0;
 			}
@@ -156,7 +156,7 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 
 	mslog_hex(s, proc, LOG_DEBUG, "TLS session DB storing",
 				req->session_id.data,
-				req->session_id.len);
+				req->session_id.len, 0);
 
 	return 0;
 }

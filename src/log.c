@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <base64.h>
 
 #include <vpn.h>
 #include <worker.h>
@@ -151,7 +152,7 @@ void __attribute__ ((format(printf, 4, 5)))
 }
 
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
-    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size)
+    	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
 {
 	char buf[512];
 	int ret;
@@ -161,10 +162,14 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	if (priority == LOG_DEBUG && s->config->debug == 0)
 		return;
 
-	buf_size = sizeof(buf);
-	ret = gnutls_hex_encode(&data, buf, &buf_size);
-	if (ret < 0)
-		return;
+	if (b64) {
+		base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+	} else {
+		buf_size = sizeof(buf);
+		ret = gnutls_hex_encode(&data, buf, &buf_size);
+		if (ret < 0)
+			return;
+	}
 
 	_mslog(s, proc, priority, "%s %s", prefix, buf);
 

@@ -273,9 +273,9 @@ const char* ip;
 		if (unique != 0) {
 			memcpy(proc->sid, req->sid.data, sizeof(proc->sid));
 			proc->sid_size = sizeof(proc->sid);
-			mslog_hex(s, proc, LOG_DEBUG, "auth init set SID to", req->sid.data, req->sid.len);
+			mslog_hex(s, proc, LOG_DEBUG, "auth init set SID to", req->sid.data, req->sid.len, 1);
 		} else {
-			mslog_hex(s, proc, LOG_DEBUG, "auth init asks to set SID but it is not unique", req->sid.data, req->sid.len);
+			mslog_hex(s, proc, LOG_DEBUG, "auth init asks to set SID but it is not unique", req->sid.data, req->sid.len, 1);
 		}
 	}
 
@@ -352,7 +352,7 @@ unsigned found = 0;
 	}
 
 	if (found == 0) {
-		mslog_hex(s, proc, LOG_DEBUG, "auth reinit received but does not match any session with SID", req->sid.data, req->sid.len);
+		mslog_hex(s, proc, LOG_DEBUG, "auth reinit received but does not match any session with SID", req->sid.data, req->sid.len, 1);
 		return -1;
 	}
 

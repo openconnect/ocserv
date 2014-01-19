@@ -699,7 +699,7 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME(s) ((s)->config->cookie_validity + 300)
+#define MAINTAINANCE_TIME(s) (MIN((60 + MAX_ZOMBIE_SECS), ((s)->config->cookie_validity + 300)))
 
 static void check_other_work(main_server_st *s)
 {

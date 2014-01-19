@@ -16,6 +16,7 @@
  */
 
 #include <config.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
@@ -27,6 +28,7 @@
 const char* cmd_request_to_str(unsigned _cmd)
 {
 cmd_request_t cmd = _cmd;
+static char tmp[32];
 
 	switch(cmd) {
 	case AUTH_INIT:
@@ -58,7 +60,8 @@ cmd_request_t cmd = _cmd;
 	case CMD_SESSION_INFO:
 		return "session info";
 	default:
-		return "unknown";
+		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
+		return tmp;
 	}
 }
 

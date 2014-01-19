@@ -87,7 +87,7 @@ int handle_worker_commands(struct worker_st *ws)
 		exit(0);
 	}
 
-	oclog(ws, LOG_DEBUG, "worker received message %u of %u bytes\n", (unsigned)cmd, (unsigned)length);
+	oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
 
 	/*cmd_data_len = ret - 1;*/
 	

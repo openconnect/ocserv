@@ -699,7 +699,7 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME(s) (MIN((60 + MAX_ZOMBIE_SECS), ((s)->config->cookie_validity + 300)))
+#define MAINTAINANCE_TIME(s) (MIN((300 + MAX_ZOMBIE_SECS), ((s)->config->cookie_validity + 300)))
 
 static void check_other_work(main_server_st *s)
 {
@@ -742,7 +742,7 @@ unsigned total = 10;
 	/* Check if we need to expire any cookies */
 	if (need_maintenance != 0) {
 		need_maintenance = 0;
-		mslog(s, NULL, LOG_INFO, "Performing maintenance");
+		mslog(s, NULL, LOG_DEBUG, "Performing maintenance");
 		expire_tls_sessions(s);
 		expire_zombies(s);
 		expire_banned(s);

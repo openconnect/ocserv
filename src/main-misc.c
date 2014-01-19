@@ -396,6 +396,7 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 	if (cont != 0 && result == ERR_AUTH_CONTINUE) {
 		ret = send_auth_reply_msg(s, proc);
 		if (ret < 0) {
+			proc->status = PS_AUTH_FAILED;
 			mslog(s, proc, LOG_ERR,
 			      "could not send reply auth cmd.");
 			return ret;
@@ -408,10 +409,12 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 		}
 		proc->status = PS_AUTH_COMPLETED;
 	} else if (result < 0) {
+		proc->status = PS_AUTH_FAILED;
 		add_to_ip_ban_list(s, &proc->remote_addr,
 				   proc->remote_addr_len);
 		ret = result;
 	} else {
+		proc->status = PS_AUTH_FAILED;
 		mslog(s, proc, LOG_ERR, "unexpected auth result: %d\n", result);
 		ret = ERR_BAD_COMMAND;
 	}
@@ -422,6 +425,8 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 	else {
 		/* no script was called. Handle it as a successful script call. */
 		ret = handle_script_exit(s, proc, ret);
+		if (ret < 0)
+			proc->status = PS_AUTH_FAILED;
 	}
 
 	return ret;

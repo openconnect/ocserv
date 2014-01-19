@@ -66,6 +66,7 @@ struct script_wait_st {
 
 enum {
 	PS_AUTH_INACTIVE, /* no comm with worker */
+	PS_AUTH_FAILED, /* no tried authenticated but failed */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
 	PS_AUTH_ZOMBIE, /* in INIT state but worker has disconnected! - only present when cisco-client-compat is set */
 	PS_AUTH_COMPLETED, /* successful authentication */

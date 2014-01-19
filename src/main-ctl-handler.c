@@ -510,6 +510,8 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 		strtmp = "zombie";
 	else if (ctmp->status == PS_AUTH_INACTIVE)
 		strtmp = "pre-auth";
+	else if (ctmp->status == PS_AUTH_FAILED)
+		strtmp = "auth failed";
 	else
 		strtmp = "unknown";
 	if (dbus_message_iter_append_basic

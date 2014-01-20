@@ -62,13 +62,16 @@ dbus_conf_dir=$($PKG_CONFIG dbus-1 --variable=sysconfdir)
 AC_SUBST(DBUS_CONFIG_DIR, [$dbus_conf_dir/etc/dbus-1/system.d/])
 fi
 
+with_local_protobuf_c=no
 PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
  AC_CHECK_LIB(protobuf-c, [protobuf_c_message_pack], 
   AC_SUBST(LIBPROTOBUF_C_LIBS, [-lprotobuf-c]),
-  AC_MSG_ERROR([***
+  AC_MSG_WARN([***
 libprotobuf-c was not found.])
+with_local_protobuf_c=yes
  )
 )
+AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
 PKG_CHECK_MODULES(LIBNL3, libnl-route-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
 if (test "${have_libnl3}" = "yes"); then
@@ -262,6 +265,7 @@ Summary of build options:
   (socket activation)
   dbus:                 ${dbus_enabled}
   libnl3:               ${have_libnl3}
+  local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}

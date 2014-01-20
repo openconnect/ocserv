@@ -33,7 +33,6 @@ endif
 
 sbin_PROGRAMS = ocserv
 
-
 CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
 	ccan/container_of/container_of.h ccan/hash/hash.c ccan/hash/hash.h \
 	ccan/htable/htable.c ccan/htable/htable.h ccan/htable/htable_type.h \
@@ -59,6 +58,10 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES)
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
+
+if LOCAL_PROTOBUF_C
+ocserv_SOURCES += google/protobuf-c/protobuf-c.h google/protobuf-c/protobuf-c.c
+endif
 
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \

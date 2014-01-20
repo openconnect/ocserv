@@ -11,21 +11,24 @@ used by CISCO's AnyConnect SSL VPN.
 === Build dependencies ===
 
 Required dependencies:
-libprotobuf-c0-dev / protobuf-c-devel
 libgnutls-dev      / gnutls-devel
 
-Optional dependencies:
+Optional dependencies that enable specific functionality:
+* TCP wrappers: libwrap0-dev       / tcp_wrappers-devel
+* PAM:          libpam0g-dev       / pam-devel
+* occtl:        libdbus-1-dev      / dbus-devel
+                libreadline-dev    / readline-devel
+                libnl-route-3-dev  / libnl3-devel
+
+Dependencies that can be skipped in an embedded system:
+(a replacement library is included)
+
+libprotobuf-c0-dev / protobuf-c-devel
 libhttp-parser-dev / http-parser-devel
-libwrap0-dev       / tcp_wrappers-devel
 libpcl1-dev        / pcllib-devel
-libpam0g-dev       / pam-devel
 libopts25-dev      / autogen-libopts-devel
 autogen            / autogen
 
-Optional dependencies for occtl:
-libdbus-1-dev      / dbus-devel
-libreadline-dev    / readline-devel
-libnl-route-3-dev  / libnl3-devel
 
 
 === Build instructions ===

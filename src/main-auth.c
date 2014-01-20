@@ -326,7 +326,7 @@ unsigned found = 0;
 	        return -1;
         }
 
-	if (req->password == NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (req->password == NULL) {
 		mslog(s, proc, LOG_DEBUG, "auth reinit from '%s' with no password present", ip);
 	        return -1;
         }

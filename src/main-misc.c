@@ -778,7 +778,7 @@ int check_if_banned(main_server_st * s, struct sockaddr_storage *addr,
 		    socklen_t addr_len)
 {
 	time_t now = time(0);
-	struct banned_st *btmp, *bpos;
+	struct banned_st *btmp = NULL, *bpos;
 
 	if (s->config->min_reauth_time == 0)
 		return 0;

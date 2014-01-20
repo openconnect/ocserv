@@ -68,8 +68,9 @@ PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
  if test x$ac_cv_libprotobuf_c = xyes; then
   AC_SUBST([LIBPROTOBUF_C_LIBS], [$LIBPROTOBUF_C])
  else
-  AC_MSG_WARN([***
-libprotobuf-c was not found.])
+  AC_MSG_WARN([[***
+*** libprotobuf-c was not found.
+***]])
   AC_SUBST([LIBPROTOBUF_C_CFLAGS], [-Iprotobuf/])
   with_local_protobuf_c=yes
  fi
@@ -83,15 +84,18 @@ if (test "${have_libnl3}" = "yes"); then
 fi
 
 if test "$dbus_enabled" = yes;then
-occtl_enabled=yes
-AC_CHECK_LIB(readline, [readline], 
-  AC_SUBST(LIBREADLINE_LIBS, [-lreadline]),
-  occtl_enabled=no
-  AC_MSG_WARN([***
-libreadline was not found. occtl will not be built.])
-)
+  occtl_enabled=yes
+  AC_LIB_HAVE_LINKFLAGS(readline,, [#include <readline/readline.h>], [readline(0);])
+  if test x$ac_cv_libreadline = xyes; then
+    AC_SUBST(LIBREADLINE_LIBS, [$LIBREADLINE]),
+  else
+    occtl_enabled=no
+    AC_MSG_WARN([[***
+*** libreadline was not found. occtl will not be built.
+***]])
+  fi
 else
-occtl_enabled=no
+  occtl_enabled=no
 fi
 
 pam_enabled=no
@@ -268,6 +272,7 @@ Summary of build options:
   systemd:              ${systemd_enabled}
   (socket activation)
   dbus:                 ${dbus_enabled}
+  readline:             ${ac_cv_libreadline}
   libnl3:               ${have_libnl3}
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}

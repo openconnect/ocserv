@@ -1,7 +1,7 @@
 * Version 0.3.0 (unreleased)
 
-- Added dependency on protocolbuffer-c, allowing a simpler handling
-  of the internal IPC protocol.
+- Added (optional) dependency on protocolbuffer-c, allowing a simpler 
+  handling of the internal IPC protocol.
 - Added support for systemd socket-activatable service.
 - Added occtl a control tool for ocserv.
 - Added the use-dbus configuration option. It can be used to disable

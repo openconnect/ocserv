@@ -60,7 +60,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
 
 if LOCAL_PROTOBUF_C
-ocserv_SOURCES += google/protobuf-c/protobuf-c.h google/protobuf-c/protobuf-c.c
+ocserv_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
 endif
 
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a

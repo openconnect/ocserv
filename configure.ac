@@ -64,12 +64,16 @@ fi
 
 with_local_protobuf_c=no
 PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
- AC_CHECK_LIB(protobuf-c, [protobuf_c_message_pack], 
-  AC_SUBST(LIBPROTOBUF_C_LIBS, [-lprotobuf-c]),
+[AC_LIB_HAVE_LINKFLAGS(protobuf-c,, [#include <google/protobuf-c/protobuf-c.h>], [protobuf_c_message_pack(0,0);])
+ if test x$ac_cv_libprotobuf_c = xyes; then
+  AC_SUBST([LIBPROTOBUF_C_LIBS], [$LIBPROTOBUF_C])
+ else
   AC_MSG_WARN([***
 libprotobuf-c was not found.])
-with_local_protobuf_c=yes
- )
+  AC_SUBST([LIBPROTOBUF_C_CFLAGS], [-Iprotobuf/])
+  with_local_protobuf_c=yes
+ fi
+]
 )
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 

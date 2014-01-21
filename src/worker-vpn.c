@@ -1499,7 +1499,7 @@ static int connect_handler(worker_st * ws)
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
 			ret =
-			    gnutls_record_recv(ws->session, ws->buffer,
+			    tls_recv(ws->session, ws->buffer,
 					       ws->buffer_size);
 			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)", ret);
 
@@ -1534,6 +1534,15 @@ static int connect_handler(worker_st * ws)
 					}
 				}
 			}
+
+			if (ret == GNUTLS_E_REHANDSHAKE) {
+				/* rekey? */
+				oclog(ws, LOG_INFO, "client requested rehandshake on TLS channel");
+				do {
+					ret = gnutls_handshake(ws->session);
+				} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+				GNUTLS_FATAL_ERR(ret);
+			}
 		}
 
 		if (ws->udp_state > UP_WAIT_FD
@@ -1543,7 +1552,7 @@ static int connect_handler(worker_st * ws)
 			case UP_ACTIVE:
 			case UP_INACTIVE:
 				ret =
-				    gnutls_record_recv(ws->dtls_session,
+				    tls_recv(ws->dtls_session,
 						       ws->buffer,
 						       ws->buffer_size);
 				oclog(ws, LOG_DEBUG,
@@ -1572,6 +1581,15 @@ static int connect_handler(worker_st * ws)
 				} else
 					oclog(ws, LOG_DEBUG,
 					      "no data received (%d)", ret);
+
+				if (ret == GNUTLS_E_REHANDSHAKE) {
+					/* rekey? */
+					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel");
+					do {
+						ret = gnutls_handshake(ws->dtls_session);
+					} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+					GNUTLS_FATAL_ERR(ret);
+				}
 
 				udp_recv_time = now;
 				break;

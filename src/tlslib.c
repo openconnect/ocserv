@@ -116,7 +116,7 @@ ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size)
 
 	do {
 		ret = gnutls_record_recv(session, data, data_size);
-	} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+	} while (ret < 0 && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
 
 	return ret;
 }

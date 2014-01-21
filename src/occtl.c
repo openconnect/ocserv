@@ -25,8 +25,13 @@
 #include <string.h>
 #include <time.h>
 #include <signal.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <c-ctype.h>
+#ifdef HAVE_ORIG_READLINE
+# include <readline/readline.h>
+# include <readline/history.h>
+#else
+# include <readline.h>
+#endif
 #include <dbus/dbus.h>
 #include <occtl.h>
 #include <c-strcase.h>
@@ -113,6 +118,10 @@ static void print_commands(unsigned interactive)
 			       commands[i].doc);
 	}
 }
+
+#ifndef HAVE_ORIG_READLINE
+# define whitespace(x) c_isspace(x)
+#endif
 
 static unsigned need_help(const char *arg)
 {
@@ -1029,7 +1038,9 @@ static int handle_help_cmd(DBusConnection * conn, const char *arg)
 static int handle_reset_cmd(DBusConnection * conn, const char *arg)
 {
 	rl_reset_terminal(NULL);
+#ifdef HAVE_ORIG_READLINE
 	rl_reset_screen_size();
+#endif
 
 	return 0;
 }
@@ -1268,9 +1279,11 @@ static char *occtl_completion(char *text, int start, int end)
 
 void handle_sigint(int signo)
 {
+#ifdef HAVE_ORIG_READLINE
 	rl_reset_line_state();
 	rl_replace_line("", 0);
 	rl_crlf();
+#endif
 	rl_redisplay();
 	return;
 }
@@ -1281,7 +1294,9 @@ void initialize_readline(void)
 	rl_attempted_completion_function = (CPPFunction *) occtl_completion;
 	rl_completion_entry_function = command_generator;
 	rl_completion_query_items = 20;
+#ifdef HAVE_ORIG_READLINE
 	rl_clear_signals();
+#endif
 	signal(SIGINT, handle_sigint);
 }
 

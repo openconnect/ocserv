@@ -79,24 +79,37 @@ PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
 PKG_CHECK_MODULES(LIBNL3, libnl-route-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
-if (test "${have_libnl3}" = "yes"); then
+if test "${have_libnl3}" = "yes"; then
   AC_DEFINE(HAVE_LIBNL, 1, [have libnl])
 fi
 
 if test "$dbus_enabled" = yes;then
   occtl_enabled=yes
-  AC_LIB_HAVE_LINKFLAGS(readline,, [#include <readline/readline.h>], [readline(0);])
+
+  have_readline=no
+  AC_LIB_HAVE_LINKFLAGS(readline,, [
+#include <stdio.h>
+#include <readline/readline.h>], [readline(0);])
   if test x$ac_cv_libreadline = xyes; then
-    AC_SUBST(LIBREADLINE_LIBS, [$LIBREADLINE]),
+    AC_SUBST(LIBREADLINE_LIBS, [$LIBREADLINE])
+    AC_DEFINE(HAVE_ORIG_READLINE, 1, [have original readline])
+    have_readline=yes
   else
-    occtl_enabled=no
-    AC_MSG_WARN([[***
-*** libreadline was not found. occtl will not be built.
+    PKG_CHECK_MODULES(LIBREADLINE, libedit, [have_libedit=yes], [have_libedit=no])
+    if test "${have_libedit}" = "no"; then
+      occtl_enabled=no
+      AC_MSG_WARN([[***
+*** libreadline or editline was not found. occtl will not be built.
 ***]])
+    else
+      have_readline=editline
+    fi
   fi
 else
   occtl_enabled=no
 fi
+
+AM_CONDITIONAL(ENABLE_OCCTL, test "x$occtl_enabled" = xyes)
 
 pam_enabled=no
 LIBS="$oldlibs -lpam"
@@ -272,7 +285,7 @@ Summary of build options:
   systemd:              ${systemd_enabled}
   (socket activation)
   dbus:                 ${dbus_enabled}
-  readline:             ${ac_cv_libreadline}
+  readline:             ${have_readline}
   libnl3:               ${have_libnl3}
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}

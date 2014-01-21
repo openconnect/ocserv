@@ -3,7 +3,7 @@ SUBDIRS =
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS) \
-	$(LIBNL3_CFLAGS)
+	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
@@ -27,7 +27,7 @@ EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	occtl-args.def ipc.proto
 
 bin_PROGRAMS = ocpasswd
-if HAVE_DBUS
+if ENABLE_OCCTL
 bin_PROGRAMS += occtl
 endif
 

@@ -137,7 +137,6 @@ typedef struct worker_st {
 
 	/* protection from multiple rehandshakes */
 	time_t last_tls_rehandshake;
-	time_t last_dtls_rehandshake;
 
 	/* for mtu trials */
 	unsigned last_good_mtu;

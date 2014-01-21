@@ -1591,20 +1591,12 @@ static int connect_handler(worker_st * ws)
 					      "no data received (%d)", ret);
 
 				if (ret == GNUTLS_E_REHANDSHAKE) {
-					/* rekey? */
-					if (ws->last_dtls_rehandshake > 0 &&
-						now-ws->last_dtls_rehandshake < ws->config->cookie_validity/3) {
-						oclog(ws, LOG_ERR, "client requested DTLS rehandshake too soon");
-						goto exit;
-					}
-
-					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel");
-					do {
-						ret = gnutls_handshake(ws->dtls_session);
-					} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+					/* there is not much we can rehandshake on the DTLS channel,
+					 * at least not the way AnyConnect sets it up.
+					 */
+					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel (!)");
+					ret = gnutls_alert_send(ws->dtls_session, GNUTLS_AL_WARNING, GNUTLS_A_NO_RENEGOTIATION);
 					GNUTLS_FATAL_ERR(ret);
-
-					ws->last_dtls_rehandshake = now;
 				}
 
 				udp_recv_time = now;

@@ -89,7 +89,7 @@ if test "$dbus_enabled" = yes;then
   have_readline=no
   AC_LIB_HAVE_LINKFLAGS(readline,, [
 #include <stdio.h>
-#include <readline/readline.h>], [readline(0);])
+#include <readline/readline.h>], [rl_replace_line(0,0);])
   if test x$ac_cv_libreadline = xyes; then
     AC_SUBST(LIBREADLINE_LIBS, [$LIBREADLINE])
     AC_DEFINE(HAVE_ORIG_READLINE, 1, [have original readline])

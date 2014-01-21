@@ -46,29 +46,45 @@ int disable_system_calls(struct worker_st *ws)
 		goto fail; \
 	}
 
+	/* we use quite some system calls here, and in the end
+	 * we don't even know whether a newer libc will change the
+	 * underlying calls to something else. seccomp seems to be useful
+	 * in very restricted designs.
+	 */
 	ADD_SYSCALL(time, 0);
 	ADD_SYSCALL(gettimeofday, 0);
+	ADD_SYSCALL(nanosleep, 0);
+	ADD_SYSCALL(getrusage, 0);
+	ADD_SYSCALL(alarm, 0);
+	ADD_SYSCALL(brk, 0);
+
 	ADD_SYSCALL(recvmsg, 0);
 	ADD_SYSCALL(sendmsg, 0);
+
 	ADD_SYSCALL(read, 0);
+
 	ADD_SYSCALL(write, 0);
 	ADD_SYSCALL(writev, 0);
+
 	ADD_SYSCALL(send, 0);
 	ADD_SYSCALL(recv, 0);
 
 	/* it seems we need to add sendto and recvfrom
-	 * since send() and recv() aren't real system
-	 * calls.
+	 * since send() and recv() aren't called by libc.
 	 */
 	ADD_SYSCALL(sendto, 0);
 	ADD_SYSCALL(recvfrom, 0);
+
 	ADD_SYSCALL(select, 0);
-	ADD_SYSCALL(alarm, 0);
+	ADD_SYSCALL(pselect6, 0);
 	ADD_SYSCALL(close, 0);
 	ADD_SYSCALL(exit, 0);
 	ADD_SYSCALL(exit_group, 0);
 	ADD_SYSCALL(socket, 0);
 	ADD_SYSCALL(connect, 0);
+
+	ADD_SYSCALL(getsockopt, 0);
+	ADD_SYSCALL(setsockopt, 0);
 
 	/* this we need to get the MTU from
 	 * the TUN device */

@@ -9,6 +9,8 @@
 - Added configuration option cisco-client-compat which if enabled
   it allows a client to authenticate by sending its credentials in
   different TLS sessions. A cookie is used to associate the sessions.
+- Updated seccomp rules to allow the system calls used by the
+  worker process.
 
 
 * Version 0.2.4 (released 2014-01-08)

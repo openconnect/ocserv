@@ -1519,7 +1519,7 @@ static int connect_handler(worker_st * ws)
 					    parse_cstp_data(ws, ws->buffer, l,
 							    now);
 					if (ret < 0) {
-						oclog(ws, LOG_INFO,
+						oclog(ws, LOG_ERR,
 						      "error parsing CSTP data");
 						goto exit;
 					}
@@ -1537,11 +1537,19 @@ static int connect_handler(worker_st * ws)
 
 			if (ret == GNUTLS_E_REHANDSHAKE) {
 				/* rekey? */
+				if (ws->last_tls_rehandshake > 0 &&
+					now-ws->last_tls_rehandshake < ws->config->cookie_validity/3) {
+					oclog(ws, LOG_ERR, "client requested TLS rehandshake too soon");
+					goto exit;
+				}
+
 				oclog(ws, LOG_INFO, "client requested rehandshake on TLS channel");
 				do {
 					ret = gnutls_handshake(ws->session);
 				} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
 				GNUTLS_FATAL_ERR(ret);
+
+				ws->last_tls_rehandshake = now;
 			}
 		}
 
@@ -1584,11 +1592,19 @@ static int connect_handler(worker_st * ws)
 
 				if (ret == GNUTLS_E_REHANDSHAKE) {
 					/* rekey? */
+					if (ws->last_dtls_rehandshake > 0 &&
+						now-ws->last_dtls_rehandshake < ws->config->cookie_validity/3) {
+						oclog(ws, LOG_ERR, "client requested DTLS rehandshake too soon");
+						goto exit;
+					}
+
 					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel");
 					do {
 						ret = gnutls_handshake(ws->dtls_session);
 					} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
 					GNUTLS_FATAL_ERR(ret);
+
+					ws->last_dtls_rehandshake = now;
 				}
 
 				udp_recv_time = now;

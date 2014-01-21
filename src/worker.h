@@ -134,7 +134,11 @@ typedef struct worker_st {
 	/* set after authentication */
 	int udp_fd;
 	udp_port_state_t udp_state;
-	
+
+	/* protection from multiple rehandshakes */
+	time_t last_tls_rehandshake;
+	time_t last_dtls_rehandshake;
+
 	/* for mtu trials */
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;

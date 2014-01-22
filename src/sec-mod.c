@@ -51,27 +51,32 @@ struct pin_st {
 };
 
 static
-int pin_callback (void *user, int attempt, const char *token_url,
-	const char *token_label, unsigned int flags, char *pin,
-	size_t pin_max)
+int pin_callback(void *user, int attempt, const char *token_url,
+		 const char *token_label, unsigned int flags, char *pin,
+		 size_t pin_max)
 {
-struct pin_st * ps = user;
-int srk = 0;
-const char* p;
-unsigned len;
+	struct pin_st *ps = user;
+	int srk = 0;
+	const char *p;
+	unsigned len;
 
 	if (flags & GNUTLS_PIN_FINAL_TRY) {
-		syslog(LOG_ERR, "PIN callback: final try before locking; not attempting to unlock");
+		syslog(LOG_ERR,
+		       "PIN callback: final try before locking; not attempting to unlock");
 		return -1;
 	}
 
 	if (flags & GNUTLS_PIN_WRONG) {
-		syslog(LOG_ERR, "PIN callback: wrong PIN was entered for '%s' (%s)", token_label, token_url);
+		syslog(LOG_ERR,
+		       "PIN callback: wrong PIN was entered for '%s' (%s)",
+		       token_label, token_url);
 		return -1;
 	}
 
 	if (ps->pin[0] == 0) {
-		syslog(LOG_ERR, "PIN required for '%s' but pin-file was not set", token_label);
+		syslog(LOG_ERR,
+		       "PIN required for '%s' but pin-file was not set",
+		       token_label);
 		return -1;
 	}
 
@@ -83,26 +88,28 @@ unsigned len;
 	}
 
 	if (srk != 0 && ps->srk_pin[0] == 0) {
-		syslog(LOG_ERR, "PIN required for '%s' but srk-pin-file was not set", token_label);
+		syslog(LOG_ERR,
+		       "PIN required for '%s' but srk-pin-file was not set",
+		       token_label);
 		return -1;
 	}
-	
+
 	len = strlen(p);
-	if (len > pin_max-1) {
+	if (len > pin_max - 1) {
 		syslog(LOG_ERR, "Too long PIN (%u chars)", len);
 		return -1;
 	}
-	
+
 	memcpy(pin, p, len);
 	pin[len] = 0;
-	
+
 	return 0;
 }
 
 static
-int load_pins(struct cfg_st* config, struct pin_st* s)
+int load_pins(struct cfg_st *config, struct pin_st *s)
 {
-int fd, ret;
+	int fd, ret;
 
 	s->srk_pin[0] = 0;
 	s->pin[0] = 0;
@@ -110,41 +117,45 @@ int fd, ret;
 	if (config->srk_pin_file != NULL) {
 		fd = open(config->srk_pin_file, O_RDONLY);
 		if (fd < 0) {
-			syslog(LOG_ERR, "could not open SRK PIN file '%s'", config->srk_pin_file);
+			syslog(LOG_ERR, "could not open SRK PIN file '%s'",
+			       config->srk_pin_file);
 			return -1;
 		}
-	
+
 		ret = read(fd, s->srk_pin, sizeof(s->srk_pin));
 		close(fd);
 		if (ret <= 1) {
-			syslog(LOG_ERR, "could not read from PIN file '%s'", config->srk_pin_file);
+			syslog(LOG_ERR, "could not read from PIN file '%s'",
+			       config->srk_pin_file);
 			return -1;
 		}
-	
-		if (s->srk_pin[ret-1] == '\n' || s->srk_pin[ret-1] == '\r')
-			s->srk_pin[ret-1] = 0;
+
+		if (s->srk_pin[ret - 1] == '\n' || s->srk_pin[ret - 1] == '\r')
+			s->srk_pin[ret - 1] = 0;
 		s->srk_pin[ret] = 0;
 	}
 
 	if (config->pin_file != NULL) {
 		fd = open(config->pin_file, O_RDONLY);
 		if (fd < 0) {
-			syslog(LOG_ERR, "could not open PIN file '%s'", config->pin_file);
+			syslog(LOG_ERR, "could not open PIN file '%s'",
+			       config->pin_file);
 			return -1;
 		}
-	
+
 		ret = read(fd, s->pin, sizeof(s->pin));
 		close(fd);
 		if (ret <= 1) {
-			syslog(LOG_ERR, "could not read from PIN file '%s'", config->pin_file);
+			syslog(LOG_ERR, "could not read from PIN file '%s'",
+			       config->pin_file);
 			return -1;
 		}
-	
-		if (s->pin[ret-1] == '\n' || s->pin[ret-1] == '\r')
-			s->pin[ret-1] = 0;
+
+		if (s->pin[ret - 1] == '\n' || s->pin[ret - 1] == '\r')
+			s->pin[ret - 1] = 0;
 		s->pin[ret] = 0;
 	}
-	
+
 	return 0;
 }
 
@@ -180,24 +191,23 @@ int fd, ret;
  * clients fast without becoming a bottleneck due to private 
  * key operations.
  */
-void
-sec_mod_server(struct cfg_st* config, const char* socket_file)
+void sec_mod_server(struct cfg_st *config, const char *socket_file)
 {
-struct sockaddr_un sa;
-socklen_t sa_len;
-int cfd, ret, e;
-unsigned i, buffer_size, type;
-gnutls_privkey_t *key;
-uint8_t *buffer;
-unsigned key_size = config->key_size;
-struct pin_st pins;
-gnutls_datum_t data, out;
-uint16_t length;
-struct iovec iov[2];
-int sd;
+	struct sockaddr_un sa;
+	socklen_t sa_len;
+	int cfd, ret, e;
+	unsigned i, buffer_size, type;
+	gnutls_privkey_t *key;
+	uint8_t *buffer;
+	unsigned key_size = config->key_size;
+	struct pin_st pins;
+	gnutls_datum_t data, out;
+	uint16_t length;
+	struct iovec iov[2];
+	int sd;
 #if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
-struct ucred cr;
-socklen_t cr_len;
+	struct ucred cr;
+	socklen_t cr_len;
 #endif
 
 	ocsignal(SIGHUP, SIG_IGN);
@@ -207,18 +217,19 @@ socklen_t cr_len;
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();
 	if (ret < 0) {
-	 	syslog(LOG_WARNING, "error in PKCS #11 reinitialization: %s", gnutls_strerror(ret));
+		syslog(LOG_WARNING, "error in PKCS #11 reinitialization: %s",
+		       gnutls_strerror(ret));
 	}
 #endif
 
-	buffer_size = 8*1024;
+	buffer_size = 8 * 1024;
 	buffer = malloc(buffer_size);
 	if (buffer == NULL) {
-	 	syslog(LOG_ERR, "error in memory allocation");
-	 	exit(1);
-	}	
+		syslog(LOG_ERR, "error in memory allocation");
+		exit(1);
+	}
 
-	memset(&sa, 0, sizeof(sa));	
+	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
 	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
 	remove(socket_file);
@@ -226,61 +237,72 @@ socklen_t cr_len;
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not create socket '%s': %s", socket_file, strerror(e));
+		syslog(LOG_ERR, "could not create socket '%s': %s", socket_file,
+		       strerror(e));
 		exit(1);
 	}
-	
+
 	umask(066);
 	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not bind socket '%s': %s", socket_file, strerror(e));
+		syslog(LOG_ERR, "could not bind socket '%s': %s", socket_file,
+		       strerror(e));
 		exit(1);
 	}
 
 	ret = chown(socket_file, config->uid, config->gid);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not chown socket '%s': %s", socket_file, strerror(e));
+		syslog(LOG_ERR, "could not chown socket '%s': %s", socket_file,
+		       strerror(e));
 	}
 
 	ret = listen(sd, 1024);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not listen to socket '%s': %s", socket_file, strerror(e));
+		syslog(LOG_ERR, "could not listen to socket '%s': %s",
+		       socket_file, strerror(e));
 		exit(1);
 	}
 
 	ret = load_pins(config, &pins);
 	if (ret < 0) {
-	 	syslog(LOG_ERR, "error loading PIN files");
-	 	exit(1);
-	}	
-	
-	key = malloc(sizeof(*key)*config->key_size);
+		syslog(LOG_ERR, "error loading PIN files");
+		exit(1);
+	}
+
+	key = malloc(sizeof(*key) * config->key_size);
 	if (key == NULL) {
-	 	syslog(LOG_ERR, "error in memory allocation");
-	 	exit(1);
-	}	
+		syslog(LOG_ERR, "error in memory allocation");
+		exit(1);
+	}
 
 	/* read private keys */
-	for (i=0;i<key_size;i++) {
+	for (i = 0; i < key_size; i++) {
 		ret = gnutls_privkey_init(&key[i]);
 		GNUTLS_FATAL_ERR(ret);
 
 		/* load the private key */
 		if (gnutls_url_is_supported(config->key[i]) != 0) {
-			gnutls_privkey_set_pin_function (key[i], pin_callback, &pins);
-			ret = gnutls_privkey_import_url(key[i], config->key[i], 0);
+			gnutls_privkey_set_pin_function(key[i], pin_callback,
+							&pins);
+			ret =
+			    gnutls_privkey_import_url(key[i], config->key[i],
+						      0);
 			GNUTLS_FATAL_ERR(ret);
 		} else {
 			ret = gnutls_load_file(config->key[i], &data);
 			if (ret < 0) {
-				syslog(LOG_ERR, "error loading file '%s'", config->key[i]);
+				syslog(LOG_ERR, "error loading file '%s'",
+				       config->key[i]);
 				GNUTLS_FATAL_ERR(ret);
 			}
 
-			ret = gnutls_privkey_import_x509_raw(key[i], &data, GNUTLS_X509_FMT_PEM, NULL, 0);
+			ret =
+			    gnutls_privkey_import_x509_raw(key[i], &data,
+							   GNUTLS_X509_FMT_PEM,
+							   NULL, 0);
 			GNUTLS_FATAL_ERR(ret);
 
 			gnutls_free(data.data);
@@ -292,11 +314,12 @@ socklen_t cr_len;
 		sa_len = sizeof(sa);
 		cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
 		if (cfd == -1) {
-		 	e = errno;
-		 	syslog(LOG_ERR, "sec-mod error accepting connection: %s", strerror(e));
-		 	continue;
+			e = errno;
+			syslog(LOG_ERR,
+			       "sec-mod error accepting connection: %s",
+			       strerror(e));
+			continue;
 		}
-
 #if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
 		/* This check is superfluous in Linux and mostly for debugging
 		 * purposes. The socket permissions set with umask should
@@ -305,15 +328,21 @@ socklen_t cr_len;
 		cr_len = sizeof(cr);
 		ret = getsockopt(cfd, SOL_SOCKET, SO_PEERCRED, &cr, &cr_len);
 		if (ret == -1) {
-		 	e = errno;
-		 	syslog(LOG_ERR, "sec-mod error obtaining peer credentials: %s", strerror(e));
-		 	goto cont;
+			e = errno;
+			syslog(LOG_ERR,
+			       "sec-mod error obtaining peer credentials: %s",
+			       strerror(e));
+			goto cont;
 		}
 
-	 	syslog(LOG_DEBUG, "sec-mod received request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
+		syslog(LOG_DEBUG,
+		       "sec-mod received request from pid %u and uid %u",
+		       (unsigned)cr.pid, (unsigned)cr.uid);
 		if (cr.uid != config->uid || cr.gid != config->gid) {
-		 	syslog(LOG_ERR, "sec-mod received unauthorized request from pid %u and uid %u", (unsigned)cr.pid, (unsigned)cr.uid);
-		 	goto cont;
+			syslog(LOG_ERR,
+			       "sec-mod received unauthorized request from pid %u and uid %u",
+			       (unsigned)cr.pid, (unsigned)cr.uid);
+			goto cont;
 		}
 #elif defined(HAVE_GETPEEREID)
 		{
@@ -322,77 +351,91 @@ socklen_t cr_len;
 			ret = getpeereid(cfd, &euid, &egid);
 
 			if (ret == -1) {
-			 	e = errno;
-			 	syslog(LOG_ERR, "sec-mod getpeereid error: %s", strerror(e));
-			 	goto cont;
+				e = errno;
+				syslog(LOG_ERR, "sec-mod getpeereid error: %s",
+				       strerror(e));
+				goto cont;
 			}
 
-		 	syslog(LOG_DEBUG, "sec-mod received request from a processes with uid %u", (unsigned)euid);
+			syslog(LOG_DEBUG,
+			       "sec-mod received request from a processes with uid %u",
+			       (unsigned)euid);
 			if (euid != config->uid || egid != config->gid) {
-			 	syslog(LOG_ERR, "sec-mod received unauthorized request from a process with uid %u", (unsigned)euid);
-			 	goto cont;
+				syslog(LOG_ERR,
+				       "sec-mod received unauthorized request from a process with uid %u",
+				       (unsigned)euid);
+				goto cont;
 			}
 		}
 #else
-# error "Unsupported UNIX variant"
+#error "Unsupported UNIX variant"
 #endif
 		/* read request */
 		ret = recv(cfd, buffer, buffer_size, 0);
 		if (ret == 0)
 			goto cont;
 		else if (ret <= 2) {
-		 	e = errno;
-		 	syslog(LOG_ERR, "error receiving sec-mod data: %s", strerror(e));
-		 	goto cont;
+			e = errno;
+			syslog(LOG_ERR, "error receiving sec-mod data: %s",
+			       strerror(e));
+			goto cont;
 		}
-		 
+
 		/* calculate */
 		i = buffer[0];
 		type = buffer[1];
 
 		if (i >= key_size) {
-		 	syslog(LOG_ERR, "sec-mod received out-of-bounds key index");
+			syslog(LOG_ERR,
+			       "sec-mod received out-of-bounds key index");
 			goto cont;
 		}
-		 
+
 		data.data = &buffer[2];
 		data.size = ret - 2;
-		 
+
 		if (type == 'S') {
 #if GNUTLS_VERSION_NUMBER >= 0x030200
-		 	ret = gnutls_privkey_sign_hash(key[i], 0, GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA, &data, &out);
+			ret =
+			    gnutls_privkey_sign_hash(key[i], 0,
+						     GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA,
+						     &data, &out);
 #else
-		 	ret = gnutls_privkey_sign_raw_data(key[i], 0, &data, &out);
+			ret =
+			    gnutls_privkey_sign_raw_data(key[i], 0, &data,
+							 &out);
 #endif
 		} else if (type == 'D') {
-		 	ret = gnutls_privkey_decrypt_data(key[i], 0, &data, &out);
+			ret =
+			    gnutls_privkey_decrypt_data(key[i], 0, &data, &out);
 		} else {
-		 	syslog(LOG_ERR, "unknown type 0x%.2x", type);
+			syslog(LOG_ERR, "unknown type 0x%.2x", type);
 			goto cont;
 		}
-		
+
 		if (ret < 0) {
-		 	syslog(LOG_ERR, "sec-mod error in crypto operation: %s", gnutls_strerror(ret));
+			syslog(LOG_ERR, "sec-mod error in crypto operation: %s",
+			       gnutls_strerror(ret));
 			goto cont;
 		}
-		 
+
 		/* write reply */
 		length = out.size;
-		
+
 		iov[0].iov_base = &length;
 		iov[0].iov_len = 2;
-		
+
 		iov[1].iov_base = out.data;
 		iov[1].iov_len = out.size;
 		ret = writev(cfd, iov, 2);
 		if (ret == -1) {
-		        e = errno;
-		 	syslog(LOG_ERR, "sec-mod error in writev: %s", strerror(e));
+			e = errno;
+			syslog(LOG_ERR, "sec-mod error in writev: %s",
+			       strerror(e));
 		}
 
 		gnutls_free(out.data);
-cont:
+ cont:
 		close(cfd);
 	}
 }
-

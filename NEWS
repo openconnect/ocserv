@@ -1,16 +1,24 @@
-* Version 0.3.0 (unreleased)
+* Version 0.3.0 (released 2014-01-24)
 
-- Added (optional) dependency on protocolbuffer-c, allowing a simpler 
-  handling of the internal IPC protocol.
+- Added occtl a control tool for ocserv, that can be used to query
+  the server about the connected users, and perform certain actions
+  such as reload the server's configuration, stop the server or
+  disconnect a user.
 - Added support for systemd socket-activatable service.
-- Added occtl a control tool for ocserv.
+- Added priorities on the OpenConnect DTLS ciphersuites to ensure the
+  server has a say on the selected one (and prevent clients from negotiating
+  3DES when AES is supported by both).
+- Better display of IP addresses in log messages.
 - Added the use-dbus configuration option. It can be used to disable
   the D-BUS service (and thus the usage of the occtl utility).
+- Added (optional) dependency on protocolbuffer-c, allowing a simpler 
+  handling and easier extension of the internal IPC protocol.
 - Added configuration option cisco-client-compat which if enabled
   it allows a client to authenticate by sending its credentials in
   different TLS sessions. A cookie is used to associate the sessions.
 - Updated seccomp rules to allow the system calls used by the
   worker process.
+- Allow TLS rehandshakes on the TCP channel.
 
 
 * Version 0.2.4 (released 2014-01-08)

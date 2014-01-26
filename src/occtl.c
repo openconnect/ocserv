@@ -887,7 +887,7 @@ int common_info_cmd(DBusMessageIter * args)
 
 		fprintf(out, "Groupname: %s\n", groupname);
 		fprintf(out, "\tState: %s  ", auth);
-		fprintf(out, "IP: %s\n", ip);
+		fprintf(out, "Remote IP: %s\n", ip);
 
 		if (vpn_ipv4 != NULL && vpn_ipv4[0] != 0 &&
 		    vpn_ptp_ipv4 != NULL && vpn_ptp_ipv4[0] != 0) {

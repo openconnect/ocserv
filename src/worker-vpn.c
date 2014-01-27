@@ -346,6 +346,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 				nlen = sizeof(ws->sid);
 				ret = base64_decode((char*)p, length, (char*)ws->sid, &nlen);
 				if (ret == 0 || nlen != sizeof(ws->sid)) {
+					oclog(ws, LOG_DEBUG, "could not decode sid: %.*s", length, p);
 					req->sid_cookie_set = 0;
 					break;
 				}

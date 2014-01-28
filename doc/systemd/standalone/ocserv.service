@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenConnect SSL VPN server
+Documentation=man:ocserv(8)
+After=syslog.target
+After=network.target
+After=dbus.service
+
+[Service]
+PrivateTmp=true
+Type=forking
+PIDFile=/var/run/ocserv.pid
+ExecStart=/usr/sbin/ocserv --pid-file /var/run/ocserv.pid --config /etc/ocserv/ocserv.conf
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target

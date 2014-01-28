@@ -1,5 +1,6 @@
 EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd \
-	systemd/ocserv.service systemd/ocserv.socket \
+	systemd/socket-activated/ocserv.service  systemd/standalone/ocserv.service \
+	systemd/socket-activated/ocserv.socket \
 	dbus/org.infradead.ocserv.conf
 
 dist_man_MANS = ocserv.8 ocpasswd.8 occtl.8
@@ -21,5 +22,4 @@ ocpasswd.8: ../src/ocpasswd-args.def
 
 install-data-local:
 	-test -d "$(DBUS_CONFIG_DIR)" && $(INSTALL_DATA) dbus/org.infradead.ocserv.conf $(DBUS_CONFIG_DIR)
-	-test -d "/usr/lib/systemd/system/" && $(INSTALL_DATA) systemd/ocserv.service /usr/lib/systemd/system/
-	-test -d "/usr/lib/systemd/system/" && $(INSTALL_DATA) systemd/ocserv.socket /usr/lib/systemd/system/
+	-test -d "/usr/lib/systemd/system/" && $(INSTALL_DATA) systemd/standalone/ocserv.service /usr/lib/systemd/system/

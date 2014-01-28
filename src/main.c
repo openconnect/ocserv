@@ -658,15 +658,19 @@ time_t now;
 
 	list_for_each(&s->proc_list.head, ctmp, list) {
 		if (session_id_size == ctmp->dtls_session_id_size &&
-			memcmp(session_id, ctmp->dtls_session_id, session_id_size) == 0 &&
-			(now - ctmp->udp_fd_receive_time > UDP_FD_RESEND_TIME)) {
+			memcmp(session_id, ctmp->dtls_session_id, session_id_size) == 0) {
 			UdpFdMsg msg = UDP_FD_MSG__INIT;
+
+			if (now - ctmp->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
+				mslog(s, ctmp, LOG_INFO, "received UDP connection too soon");
+				break;
+			}
 
 			ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
 			if (ret == -1) {
 				e = errno;
 				mslog(s, ctmp, LOG_ERR, "connect UDP socket: %s", strerror(e));
-				return -1;
+				break;
 			}
 
 			ret = send_socket_msg_to_worker(s, ctmp, CMD_UDP_FD,
@@ -676,7 +680,7 @@ time_t now;
 				(pack_func)udp_fd_msg__pack);
 			if (ret < 0) {
 				mslog(s, ctmp, LOG_ERR, "error passing UDP socket");
-				return -1;
+				break;
 			}
 			mslog(s, ctmp, LOG_DEBUG, "passed UDP socket");
 			ctmp->udp_fd_receive_time = now;

@@ -288,8 +288,11 @@ ping-leases = false
 output-buffer = 10
 
 # Routes to be forwarded to the client. If you need the
-# client to forward routes to the server, you may use the connect 
-# and disconnect scripts.
+# client to forward routes to the server, you may use the 
+# config-per-user/group or even connect and disconnect scripts.
+#
+# To set the server as the default gateway for the client just
+# comment out all routes from the server.
 route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 

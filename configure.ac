@@ -56,8 +56,6 @@ AC_DEFINE([HAVE_DBUS], [], [dbus detected]),
 AM_CONDITIONAL(HAVE_DBUS, test "x$dbus_enabled" != xno)
 
 if test "x$dbus_enabled" != xno;then
-dbus_services_dir=$($PKG_CONFIG dbus-1 --variable=system_bus_services_dir)
-AC_SUBST(DBUS_SERVICES_DIR, [$dbus_services_dir])
 dbus_conf_dir=$($PKG_CONFIG dbus-1 --variable=sysconfdir)
 AC_SUBST(DBUS_CONFIG_DIR, [$dbus_conf_dir/etc/dbus-1/system.d/])
 fi

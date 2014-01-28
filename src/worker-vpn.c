@@ -44,6 +44,7 @@
 #include <html.h>
 #include <base64.h>
 #include <c-strcase.h>
+#include <c-ctype.h>
 #include <worker-bandwidth.h>
 
 #include <vpn.h>
@@ -242,12 +243,11 @@ static const dtls_ciphersuite_st ciphersuites[] =
 
 static void value_check(struct worker_st *ws, struct http_req_st *req)
 {
-	unsigned length, i;
+	unsigned tmplen, i;
 	int ret;
-	size_t nlen;
-	uint8_t *p;
-	char *token;
-	char *str;
+	size_t nlen, value_length;
+	char *token, *value;
+	char *str, *p;
 
 	if (req->value.length <= 0)
 		return;
@@ -255,48 +255,56 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length,
 	      req->header.data, (int)req->value.length, req->value.data);
 
+	value = malloc(req->value.length + 1);
+	if (value == NULL)
+		return;
+
+	/* make sure the value is null terminated */
+	value_length = req->value.length;
+	memcpy(value, req->value.data, value_length);
+	value[value_length] = 0;
+
 	switch (req->next_header) {
 	case HEADER_MASTER_SECRET:
-		if (req->value.length < TLS_MASTER_SIZE * 2) {
+		if (value_length < TLS_MASTER_SIZE * 2) {
 			req->master_secret_set = 0;
-			return;
+			goto cleanup;
 		}
 
-		length = TLS_MASTER_SIZE * 2;
+		tmplen = TLS_MASTER_SIZE * 2;
 
 		nlen = sizeof(req->master_secret);
-		gnutls_hex2bin((void *)req->value.data, length,
+		gnutls_hex2bin((void *)value, tmplen,
 			       req->master_secret, &nlen);
 
 		req->master_secret_set = 1;
 		break;
 	case HEADER_HOSTNAME:
-		if (req->value.length + 1 > MAX_HOSTNAME_SIZE) {
+		if (value_length + 1 > MAX_HOSTNAME_SIZE) {
 			req->hostname[0] = 0;
-			return;
+			goto cleanup;
 		}
-		memcpy(req->hostname, req->value.data, req->value.length);
-		req->hostname[req->value.length] = 0;
+		memcpy(req->hostname, value, value_length);
+		req->hostname[value_length] = 0;
 		break;
 	case HEADER_USER_AGENT:
-		if (req->value.length + 1 > MAX_AGENT_NAME) {
+		if (value_length + 1 > MAX_AGENT_NAME) {
 			req->user_agent[0] = 0;
-			return;
+			goto cleanup;
 		}
-		memcpy(req->user_agent, req->value.data, req->value.length);
-		req->user_agent[req->value.length] = 0;
+		memcpy(req->user_agent, value, value_length);
+		req->user_agent[value_length] = 0;
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
 		req->selected_ciphersuite = NULL;
 
-		str = (char *)req->value.data;
+		str = (char *)value;
 		while ((token = strtok(str, ":")) != NULL) {
 			for (i=0;i<sizeof(ciphersuites)/sizeof(ciphersuites[0]);i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
 					if (req->selected_ciphersuite == NULL || 
 						req->selected_ciphersuite->server_prio < ciphersuites[i].server_prio) {
-
 						req->selected_ciphersuite = &ciphersuites[i];
 					}
 				}
@@ -307,57 +315,71 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_CSTP_MTU:
-		req->cstp_mtu = atoi((char *)req->value.data);
+		req->cstp_mtu = atoi((char *)value);
 		break;
 	case HEADER_CSTP_ATYPE:
-		if (memmem(req->value.data, req->value.length, "IPv4", 4) ==
+		if (memmem(value, value_length, "IPv4", 4) ==
 		    NULL)
 			req->no_ipv4 = 1;
-		if (memmem(req->value.data, req->value.length, "IPv6", 4) ==
+		if (memmem(value, value_length, "IPv6", 4) ==
 		    NULL)
 			req->no_ipv6 = 1;
 		break;
 	case HEADER_DTLS_MTU:
-		req->dtls_mtu = atoi((char *)req->value.data);
+		req->dtls_mtu = atoi((char *)value);
 		break;
 	case HEADER_COOKIE:
-		length = req->value.length;
 
-		p = memmem(req->value.data, length, "webvpn=", 7);
-		if (p != NULL && length > 7) {
-			p += 7;
-			length -= 7;
-
-			nlen = sizeof(req->cookie);
-			ret = base64_decode((char*)p, length, (char*)req->cookie, &nlen);
-			if (ret == 0 || nlen != COOKIE_SIZE) {
-				req->cookie_set = 0;
-				break;
+		str = (char *)value;
+		while ((token = strtok(str, ";")) != NULL) {
+			p = token;
+			while(c_isspace(*p)) {
+				p++;
 			}
+			tmplen = strlen(p);
 
-			req->cookie_set = 1;
-			break;
-		} else {
-			p = memmem(req->value.data, length, "webvpncontext=", 14);
-			if (p != NULL && length > 14) {
-				p += 14;
-				length -= 14;
+			if (strncmp(p, "webvpn=", 7) == 0) {
+				tmplen -= 7;
+				p += 7;
 
-				nlen = sizeof(ws->sid);
-				ret = base64_decode((char*)p, length, (char*)ws->sid, &nlen);
-				if (ret == 0 || nlen != sizeof(ws->sid)) {
-					oclog(ws, LOG_DEBUG, "could not decode sid: %.*s", length, p);
-					req->sid_cookie_set = 0;
-					break;
+				while(tmplen > 1 && c_isspace(p[tmplen-1])) {
+					tmplen--;
 				}
 
-				req->sid_cookie_set = 1;
-				oclog(ws, LOG_DEBUG, "received sid: %.*s", length, p);
-				break;
+				nlen = sizeof(req->cookie);
+				ret = base64_decode((char*)p, tmplen, (char*)req->cookie, &nlen);
+				if (ret == 0 || nlen != COOKIE_SIZE) {
+					oclog(ws, LOG_DEBUG, "could not decode cookie: %.*s", tmplen, p);
+					req->cookie_set = 0;
+				} else {
+					req->cookie_set = 1;
+				}
+			} else if (strncmp(p, "webvpncontext=", 14) == 0) {
+				p += 14;
+				tmplen -= 14;
+
+				while(tmplen > 1 && c_isspace(p[tmplen-1])) {
+					tmplen--;
+				}
+
+				nlen = sizeof(ws->sid);
+				ret = base64_decode((char*)p, tmplen, (char*)ws->sid, &nlen);
+				if (ret == 0 || nlen != sizeof(ws->sid)) {
+					oclog(ws, LOG_DEBUG, "could not decode sid: %.*s", tmplen, p);
+					req->sid_cookie_set = 0;
+				} else {
+					req->sid_cookie_set = 1;
+					oclog(ws, LOG_DEBUG, "received sid: %.*s", tmplen, p);
+				}
 			}
+
+			str = NULL;
 		}
 		break;
 	}
+
+cleanup:
+	free(value);
 }
 
 int header_field_cb(http_parser * parser, const char *at, size_t length)

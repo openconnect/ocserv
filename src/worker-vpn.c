@@ -1245,7 +1245,7 @@ static int connect_handler(worker_st * ws)
 		      strerror(e));
 	} else {
 		max -= 13;
-		oclog(ws, LOG_INFO, "TCP MSS is %u", max);
+		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
 		if (max > 0 && max - mtu_overhead < ws->conn_mtu) {
 			oclog(ws, LOG_DEBUG,
 			      "reducing MTU due to TCP MSS to %u",

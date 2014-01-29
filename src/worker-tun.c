@@ -72,8 +72,8 @@ int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
 
 		if (strcmp(vinfo->name, ifa->ifa_name) == 0) {
 			p = (char *)inet_ntop(ifa->ifa_addr->sa_family,
-					      ifa->ifa_addr, *buffer,
-					      *buffer_size);
+					      SA_IN_P_TYPE(ifa->ifa_addr, ifa->ifa_addr->sa_family),
+					      *buffer, *buffer_size);
 			if (p == NULL) {
 				e = errno;
 				oclog(ws, LOG_ERR, "inet_ntop error: %s",
@@ -100,8 +100,8 @@ int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
 				continue;
 
 			p = (char *)inet_ntop(ifa->ifa_dstaddr->sa_family,
-					      ifa->ifa_dstaddr, *buffer,
-					      *buffer_size);
+					      SA_IN_P_TYPE(ifa->ifa_dstaddr, ifa->ifa_dstaddr->sa_family), 
+					      *buffer, *buffer_size);
 			if (p == NULL) {
 				e = errno;
 				oclog(ws, LOG_ERR, "inet_ntop error: %s",

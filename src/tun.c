@@ -39,8 +39,15 @@
 # include <net/if_tun.h>
 #endif
 
-#include <netdb.h>
+#ifdef __linux__
+struct in6_ifreq {
+	struct in6_addr ifr6_addr;
+	__u32 ifr6_prefixlen;
+	unsigned int ifr6_ifindex;
+};
+#endif
 
+#include <netdb.h>
 #include <vpn.h>
 #include <tun.h>
 #include <main.h>
@@ -48,83 +55,125 @@
 
 static int set_network_info( main_server_st* s, struct proc_st* proc)
 {
+	int fd = -1, ret, e;
+	int fd6 = -1;
 	struct ifreq ifr;
-	int fd, ret, e;
-
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		return -1;
 
 	if (proc->ipv4 && proc->ipv4->lip_len > 0 && proc->ipv4->rip_len > 0) {
 		memset(&ifr, 0, sizeof(ifr));
-		ifr.ifr_addr.sa_family = AF_INET;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
+		fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (fd == -1)
+			return -1;
+
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 		memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
+		ifr.ifr_addr.sa_family = AF_INET;
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv4: %s\n", proc->tun_lease.name, strerror(e));
+			ret = -1;
+			goto cleanup;
 		}
 
 		memset(&ifr, 0, sizeof(ifr));
-		ifr.ifr_addr.sa_family = AF_INET;
+
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 		memcpy(&ifr.ifr_dstaddr, &proc->ipv4->rip, proc->ipv4->rip_len);
+		ifr.ifr_dstaddr.sa_family = AF_INET;
 
 		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
 		if (ret != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv4: %s\n", proc->tun_lease.name, strerror(e));
+			ret = -1;
+			goto cleanup;
+		}
+
+		/* bring interface up */
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET;
+		ifr.ifr_flags |= IFF_UP;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+
+		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
+		if (ret != 0) {
+			mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface.\n", proc->tun_lease.name);
+			ret = -1;
 		}
 	}
 
 	if (proc->ipv6 && proc->ipv6->lip_len > 0 && proc->ipv6->rip_len > 0) {
+#ifdef __linux__
+		struct in6_ifreq ifr6;
+		unsigned idx;
+
+		fd6 = socket(AF_INET6, SOCK_STREAM, 0);
+		if (fd6 == -1) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: Error socket(AF_INET6): %s\n", proc->tun_lease.name, strerror(e));
+			ret = -1;
+			goto cleanup;
+		}
+
 		memset(&ifr, 0, sizeof(ifr));
-		ifr.ifr_addr.sa_family = AF_INET6;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
-		memcpy(&ifr.ifr_addr, &proc->ipv6->lip, proc->ipv6->lip_len);
+		ret = ioctl(fd6, SIOGIFINDEX, &ifr);
+		if (ret != 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: Error in SIOGIFINDEX: %s\n", proc->tun_lease.name, strerror(e));
+			ret = -1;
+			goto cleanup;
+		}
 
-		ret = ioctl(fd, SIOCSIFADDR, &ifr);
+		idx = ifr.ifr_ifindex;
+
+		memset(&ifr6, 0, sizeof(ifr6));
+		memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip), SA_IN_SIZE(proc->ipv6->lip_len));
+		ifr6.ifr6_ifindex = idx;
+		ifr6.ifr6_prefixlen = 64;
+
+		ret = ioctl(fd6, SIOCSIFADDR, &ifr6);
 		if (ret != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n", proc->tun_lease.name, strerror(e));
+			ret = -1;
+			goto cleanup;
 		}
 
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET6;
+		ifr.ifr_flags |= IFF_UP;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
-		memcpy(&ifr.ifr_dstaddr, &proc->ipv6->rip, proc->ipv6->rip_len);
 
-		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
+		ret = ioctl(fd6, SIOCSIFFLAGS, &ifr);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv6: %s\n", proc->tun_lease.name, strerror(e));
+			mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface: %s\n", proc->tun_lease.name, strerror(e));
+			ret = -1;
 		}
+
+#else
+# warn "No IPv6 support on this platform"
+#endif
 	}
-	
+
 	if (proc->ipv6 == 0 && proc->ipv4 == 0) {
 		mslog(s, NULL, LOG_ERR, "%s: Could not set any IP.\n", proc->tun_lease.name);
 		ret = -1;
 		goto cleanup;
 	}
 		
-	/* bring interface up */
-	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_addr.sa_family = AF_INET;
-	ifr.ifr_flags |= IFF_UP;
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
-
-	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
-	if (ret != 0) {
-		mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface.\n", proc->tun_lease.name);
-		ret = -1;
-	}
+	ret = 0;
 
 cleanup:
-	close(fd);
+	if (fd != -1)
+		close(fd);
+	if (fd6 != -1)
+		close(fd6);
 	return ret;
 }
 
@@ -230,7 +279,7 @@ int open_tun(main_server_st* s, struct proc_st* proc)
 	if (ret < 0) {
 		goto fail;
 	}
-	
+
 	proc->tun_lease.fd = tunfd;
 
 	return 0;

@@ -541,7 +541,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	dbus_uint32_t since = 0;
 	char *groupname = "", *ip = "";
 	char *vpn_ipv4 = "", *vpn_ptp_ipv4 = "";
-	char *vpn_ipv6 = "", *vpn_ptp_ipv6 = "";
+	char *vpn_ipv6 = "";
 	char *hostname = "", *auth = "", *device = "";
 	char *user_agent = "";
 	char str_since[64];
@@ -622,13 +622,6 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ipv4);
-
-		if (!dbus_message_iter_next(&subs))
-			goto error_recv;
-
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
-			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv6);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -742,7 +735,7 @@ int common_info_cmd(DBusMessageIter * args)
 	dbus_uint32_t since = 0;
 	char *groupname = "", *ip = "";
 	char *vpn_ipv4 = "", *vpn_ptp_ipv4 = "";
-	char *vpn_ipv6 = "", *vpn_ptp_ipv6 = "";
+	char *vpn_ipv6 = "";
 	char *hostname = "", *auth = "", *device = "";
 	char *user_agent = "";
 	char str_since[64];
@@ -822,13 +815,6 @@ int common_info_cmd(DBusMessageIter * args)
 
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &vpn_ptp_ipv6);
-
-		if (!dbus_message_iter_next(&subs))
-			goto error_recv;
-
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
-			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &vpn_ipv6);
 
 		if (!dbus_message_iter_next(&subs))
@@ -894,10 +880,8 @@ int common_info_cmd(DBusMessageIter * args)
 			fprintf(out, "\tIPv4: %s  ", vpn_ipv4);
 			fprintf(out, "P-t-P IPv4: %s\n", vpn_ptp_ipv4);
 		}
-		if (vpn_ipv6 != NULL && vpn_ipv6[0] != 0 &&
-		    vpn_ptp_ipv6 != NULL && vpn_ptp_ipv6[0] != 0) {
-			fprintf(out, "\tIPv6: %s  ", vpn_ipv6);
-			fprintf(out, "P-t-P IPv6: %s\n", vpn_ptp_ipv6);
+		if (vpn_ipv6 != NULL && vpn_ipv6[0] != 0) {
+			fprintf(out, "\tIPv6: %s\n", vpn_ipv6);
 		}
 		fprintf(out, "\tDevice: %s  ", device);
 

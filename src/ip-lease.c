@@ -289,10 +289,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
        		memcpy(&tmp, &network, sizeof(tmp));
         	((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
-        	((struct sockaddr_in6*)&tmp)->sin6_port = AF_INET6;
+        	((struct sockaddr_in6*)&tmp)->sin6_port = 0;
 
         	((struct sockaddr_in6*)&rnd)->sin6_family = AF_INET6;
-        	((struct sockaddr_in6*)&rnd)->sin6_port = AF_INET6;
+        	((struct sockaddr_in6*)&rnd)->sin6_port = 0;
 
 		do {
 			if (max_loops == 0) {
@@ -335,7 +335,8 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
         		memcpy(&proc->ipv6->lip, &rnd, proc->ipv6->lip_len);
 
         		/* RIP = LIP + 1 */
-        		memcpy(&tmp, &proc->ipv6->lip, proc->ipv6->rip_len);
+        		memcpy(&tmp, &proc->ipv6->lip, sizeof(tmp));
+        		proc->ipv6->rip_len = proc->ipv6->lip_len;
 
 	        	bignum_add(SA_IN6_U8_P(&tmp), sizeof(struct in6_addr), 1);
 
@@ -347,7 +348,6 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 				continue;
 			}
 
-        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
         		memcpy(&proc->ipv6->rip, &tmp, proc->ipv6->rip_len);
 
         		/* mask the last IP with the netmask */
@@ -419,7 +419,7 @@ char buf[128];
 	if (proc->ipv6)
 		mslog(s, proc, LOG_INFO, "assigned IPv6 to '%s': %s", proc->username,
 			human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));
-		
+
 	return 0;
 }
 

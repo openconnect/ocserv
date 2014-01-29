@@ -49,7 +49,7 @@
 static int set_network_info( main_server_st* s, struct proc_st* proc)
 {
 	struct ifreq ifr;
-	int fd, ret;
+	int fd, ret, e;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
@@ -64,7 +64,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
-			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv4.\n", proc->tun_lease.name);
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv4: %s\n", proc->tun_lease.name, strerror(e));
 		}
 
 		memset(&ifr, 0, sizeof(ifr));
@@ -74,7 +75,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
 		if (ret != 0) {
-			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv4.\n", proc->tun_lease.name);
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv4: %s\n", proc->tun_lease.name, strerror(e));
 		}
 	}
 
@@ -87,7 +89,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
-			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6.\n", proc->tun_lease.name);
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n", proc->tun_lease.name, strerror(e));
 		}
 
 		memset(&ifr, 0, sizeof(ifr));
@@ -97,7 +100,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
 		if (ret != 0) {
-			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv6.\n", proc->tun_lease.name);
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv6: %s\n", proc->tun_lease.name, strerror(e));
 		}
 	}
 	

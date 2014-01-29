@@ -45,72 +45,89 @@
 #include <worker.h>
 #include <tlslib.h>
 
-/* if local is non zero it returns the local, otherwise the remote */
+#include <ifaddrs.h>
+
 static
-int get_ip(struct worker_st* ws, int fd, int family, unsigned int local,
-           struct vpn_st* vinfo, char** buffer, size_t* buffer_size)
+int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
+	    size_t * buffer_size)
 {
-void* ptr;
-void* p;
-struct ifreq ifr;
-unsigned int flags;
-int ret, e;
+	struct ifaddrs *ifaddr, *ifa;
+	int ret, e;
+	void *p;
 
-	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_addr.sa_family = family;
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+	/* getifaddrs looks like a waste, especially when the number of devices/clients
+	 * is large. We should instead get that info from the main process
+	 */
 
-	if (local != 0)
-		flags = SIOCGIFADDR;
-	else
-		flags = SIOCGIFDSTADDR;
-
-	ret = ioctl(fd, flags, &ifr);
+	ret = getifaddrs(&ifaddr);
 	if (ret != 0) {
 		e = errno;
-		oclog(ws, LOG_DEBUG, "ioctl error: %s", strerror(e));
-		goto fail;
-	}
-
-	if (family == AF_INET) {
-		ptr = SA_IN_P(&ifr.ifr_addr);
-	} else if (family == AF_INET6) {
-		ptr = SA_IN6_P(&ifr.ifr_addr);
-	} else {
-		oclog(ws, LOG_DEBUG, "unknown family!");
+		oclog(ws, LOG_ERR, "getifaddrs error: %s", strerror(e));
 		return -1;
 	}
 
-	p = (char*)inet_ntop(family, ptr, *buffer, *buffer_size);
-	if (p == NULL) {
-		e = errno;
-		oclog(ws, LOG_DEBUG, "inet_ntop error: %s", strerror(e));
-		goto fail;
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL)
+			continue;
+
+		if (strcmp(vinfo->name, ifa->ifa_name) == 0) {
+			p = (char *)inet_ntop(ifa->ifa_addr->sa_family,
+					      ifa->ifa_addr, *buffer,
+					      *buffer_size);
+			if (p == NULL) {
+				e = errno;
+				oclog(ws, LOG_ERR, "inet_ntop error: %s",
+				      strerror(e));
+				continue;
+			}
+
+			ret = strlen(p) + 1;
+			*buffer += ret;
+			*buffer_size -= ret;
+
+			if (ifa->ifa_addr->sa_family == AF_INET) {
+				if (strcmp(p, "0.0.0.0") == 0)
+					p = NULL;
+				vinfo->ipv4 = p;
+			} else {
+				if (strcmp(p, "::") == 0)
+					p = NULL;
+				vinfo->ipv6 = p;
+			}
+
+			/* DST */
+			if (ifa->ifa_dstaddr == NULL)
+				continue;
+
+			p = (char *)inet_ntop(ifa->ifa_dstaddr->sa_family,
+					      ifa->ifa_dstaddr, *buffer,
+					      *buffer_size);
+			if (p == NULL) {
+				e = errno;
+				oclog(ws, LOG_ERR, "inet_ntop error: %s",
+				      strerror(e));
+				continue;
+			}
+
+			ret = strlen(p) + 1;
+			*buffer += ret;
+			*buffer_size -= ret;
+
+			if (ifa->ifa_dstaddr->sa_family == AF_INET) {
+				if (strcmp(p, "0.0.0.0") == 0)
+					p = NULL;
+				vinfo->ipv4_local = p;
+			} else {
+				if (strcmp(p, "::") == 0)
+					p = NULL;
+				vinfo->ipv6_local = p;
+			}
+		}
 	}
 
-	ret = strlen(p) + 1;
-	*buffer += ret;
-	*buffer_size -= ret;
-
-	if (family == AF_INET) {
-		if (strcmp(p, "0.0.0.0")==0)
-			p = NULL;
-		if (local != 0)
-			vinfo->ipv4_local = p;
-		else
-			vinfo->ipv4 = p;
-	} else {
-		if (strcmp(p, "::")==0)
-			p = NULL;
-		if (local != 0)
-			vinfo->ipv6_local = p;
-		else
-			vinfo->ipv6 = p;
-	}
+	freeifaddrs(ifaddr);
 
 	return 0;
-fail:
-	return -1;
 }
 
 /* Returns information based on an VPN network stored in worker_st but
@@ -120,58 +137,44 @@ fail:
  * Returns 0 on success.
  */
 int get_rt_vpn_info(worker_st * ws,
-                    struct vpn_st* vinfo, char* buffer, size_t buffer_size)
+		    struct vpn_st *vinfo, char *buffer, size_t buffer_size)
 {
-int fd, ret;
-struct ifreq ifr;
+	int ret, fd;
+	struct ifreq ifr;
 
 	memset(vinfo, 0, sizeof(*vinfo));
 	vinfo->name = ws->tun_name;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		return -1;
-        
 	/* get the remote IPs */
-        ret = get_ip(ws, fd, AF_INET6, 0, vinfo, &buffer, &buffer_size);
-        if (ret < 0)
-                oclog(ws, LOG_DEBUG, "cannot obtain IPv6 remote IP for %s", vinfo->name);
+	ret = get_ips(ws, vinfo, &buffer, &buffer_size);
+	if (ret < 0) {
+		oclog(ws, LOG_DEBUG, "cannot obtain IPs for %s", vinfo->name);
+	}
 
-        ret = get_ip(ws, fd, AF_INET, 0, vinfo, &buffer, &buffer_size);
-        if (ret < 0)
-                oclog(ws, LOG_DEBUG, "cannot obtain IPv4 remote IP for %s", vinfo->name);
-
-        if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
-                ret = -1;
-                goto fail;
-        }
-
-	/* get the local IPs */
-        ret = get_ip(ws, fd, AF_INET6, 1, vinfo, &buffer, &buffer_size);
-        if (ret < 0)
-                oclog(ws, LOG_DEBUG, "cannot obtain IPv6 local IP for %s", vinfo->name);
-
-        ret = get_ip(ws, fd, AF_INET, 1, vinfo, &buffer, &buffer_size);
-        if (ret < 0)
-                oclog(ws, LOG_DEBUG, "cannot obtain IPv4 local IP for %s", vinfo->name);
-
+	if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
+		return -1;
+	}
 #define LOCAL "local"
-	if (ws->config->network.ipv4_dns && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
+	if (ws->config->network.ipv4_dns
+	    && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
 		vinfo->ipv4_dns = vinfo->ipv4_local;
 	else
 		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
 
-	if (ws->config->network.ipv6_dns && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
+	if (ws->config->network.ipv6_dns
+	    && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
 		vinfo->ipv6_dns = vinfo->ipv6_local;
 	else
 		vinfo->ipv6_dns = ws->config->network.ipv6_dns;
 
-	if (ws->config->network.ipv4_nbns && strcmp(ws->config->network.ipv4_nbns, LOCAL) == 0)
+	if (ws->config->network.ipv4_nbns
+	    && strcmp(ws->config->network.ipv4_nbns, LOCAL) == 0)
 		vinfo->ipv4_nbns = vinfo->ipv4_local;
 	else
 		vinfo->ipv4_nbns = ws->config->network.ipv4_nbns;
 
-	if (ws->config->network.ipv6_nbns && strcmp(ws->config->network.ipv6_nbns, LOCAL) == 0)
+	if (ws->config->network.ipv6_nbns
+	    && strcmp(ws->config->network.ipv6_nbns, LOCAL) == 0)
 		vinfo->ipv6_nbns = vinfo->ipv6_local;
 	else
 		vinfo->ipv6_nbns = ws->config->network.ipv6_nbns;
@@ -183,21 +186,26 @@ struct ifreq ifr;
 	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
 	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
 
-	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_addr.sa_family = AF_INET;
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
-	ret = ioctl(fd, SIOCGIFMTU, (caddr_t)&ifr);
-	if (ret < 0) {
-		oclog(ws, LOG_ERR, "cannot obtain MTU for %s. Assuming 1500", vinfo->name);
-		vinfo->mtu = 1500;
+	if (ws->config->network.mtu != 0) {
+		vinfo->mtu = ws->config->network.mtu;
 	} else {
-		vinfo->mtu = ifr.ifr_mtu;
+		fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (fd == -1)
+			return -1;
+
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+		ret = ioctl(fd, SIOCGIFMTU, (caddr_t) & ifr);
+		if (ret < 0) {
+			oclog(ws, LOG_ERR, "cannot obtain MTU for %s. Assuming 1500",
+			      vinfo->name);
+			vinfo->mtu = 1500;
+		} else {
+			vinfo->mtu = ifr.ifr_mtu;
+		}
+		close(fd);
 	}
 
-	ret = 0;
-fail:
-	close(fd);
-	return ret;
+	return 0;
 }
-
-

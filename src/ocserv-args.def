@@ -263,12 +263,12 @@ ipv4-dns = 192.168.1.2
 #ipv4-nbns = 192.168.1.3
 
 # The same, but for IPv6.
-#ipv6-network = 
 #ipv6-dns = 
 #ipv6-nbns = 
 
 # The IPv6 subnet prefix
-#ipv6-prefix =
+#ipv6-network = fc00::
+#ipv6-prefix = 16
 
 # Prior to leasing any IP from the pool ping it to verify that
 # it is not in use by another (unrelated to this server) host.

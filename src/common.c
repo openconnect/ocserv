@@ -162,21 +162,21 @@ char* ipv6_prefix_to_mask(unsigned prefix)
 {
 	switch (prefix) {
 		case 16:
-			return strdup("FFFF::");
+			return strdup("ffff::");
 		case 32:
-			return strdup("FFFF:FFFF::");
+			return strdup("ffff:ffff::");
 		case 48:
-			return strdup("FFFF:FFFF:FFFF::");
+			return strdup("ffff:ffff:ffff::");
 		case 64:
-			return strdup("FFFF:FFFF:FFFF:FFFF::");
+			return strdup("ffff:ffff:ffff:ffff::");
 		case 80:
-			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF::");
+			return strdup("ffff:ffff:ffff:ffff:ffff::");
 		case 96:
-			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF::");
+			return strdup("ffff:ffff:ffff:ffff:ffff:ffff::");
 		case 112:
-			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF::");
+			return strdup("ffff:ffff:ffff:ffff:ffff:ffff:ffff::");
 		case 128:
-			return strdup("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+			return strdup("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
 		default:
 			return NULL;
 	}

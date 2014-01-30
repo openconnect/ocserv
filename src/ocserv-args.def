@@ -76,7 +76,7 @@ doc-section = {
   ds-format = 'texi';
   ds-text   = <<-_EOT_
 @subheading ocserv's configuration file format
-By default, if no other file is specified, ocserv looks for its configuration file at @file{/etc/ocserv.conf}.
+By default, if no other file is specified, ocserv looks for its configuration file at @file{/etc/ocserv/ocserv.conf}.
 An example configuration file follows.
 
 @example
@@ -92,7 +92,7 @@ auth = "pam"
 # "username:groupname:encoded-password"
 # One entry must be listed per line, and 'ocpasswd' can be used
 # to generate password entries.
-#auth = "plain[/etc/ocserv-passwd]"
+#auth = "plain[/etc/ocserv/ocpasswd]"
 
 # A banner to be displayed on clients
 #banner = "Welcome"

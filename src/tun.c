@@ -94,13 +94,14 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		/* bring interface up */
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
-		ifr.ifr_flags |= IFF_UP;
+		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
 		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 		if (ret != 0) {
 			mslog(s, NULL, LOG_ERR, "%s: Could not bring up IPv4 interface.\n", proc->tun_lease.name);
 			ret = -1;
+			goto cleanup;
 		}
 
 		close(fd);
@@ -148,7 +149,7 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET6;
-		ifr.ifr_flags |= IFF_UP;
+		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
 		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
@@ -156,6 +157,7 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Could not bring up IPv6 interface: %s\n", proc->tun_lease.name, strerror(e));
 			ret = -1;
+			goto cleanup;
 		}
 
 		close(fd);

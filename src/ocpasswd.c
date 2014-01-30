@@ -36,7 +36,7 @@
 
 #define DEFAULT_OCPASSWD "/etc/ocserv/ocpasswd"
 
-static const char alphabet[] = 
+static const char alphabet[] =
 	"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./";
 
 #define SALT_SIZE 16
@@ -128,7 +128,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 		}
 		free(line);
 		fclose(fd);
-		
+
 		if (found == 0)
 			fprintf(fd2, "%s:%s:%s\n", username, groupname, cr_passwd);
 	}
@@ -189,7 +189,7 @@ lock_user(const char *fpasswd, const char *username)
 			if (p == NULL)
 				continue;
 			p++;
-			
+
 			l = p-line;
 			fwrite(line, 1, l, fd2);
 			fputc('!', fd2);
@@ -253,7 +253,7 @@ unlock_user(const char *fpasswd, const char *username)
 			if (p == NULL)
 				continue;
 			p++;
-			
+
 			l = p-line;
 			fwrite(line, 1, l, fd2);
 
@@ -277,7 +277,8 @@ int main(int argc, char **argv)
 {
 	int ret, optct;
 	const char *username, *groupname, *fpasswd;
-	const char* passwd;
+	char* passwd;
+	size_t l, i;
 
 	if ((ret = gnutls_global_init()) < 0) {
 		fprintf(stderr, "global_init: %s\n", gnutls_strerror(ret));
@@ -289,12 +290,12 @@ int main(int argc, char **argv)
 	optct = optionProcess(&ocpasswdOptions, argc, argv);
 	argc -= optct;
 	argv += optct;
-	
+
 	if (argc > 0)
 		username = argv[0];
 	else {
 		fprintf(stderr, "Please specify a user\n");
-		exit(1); 
+		exit(1);
 	}
 
 	if (HAVE_OPT(PASSWD)) {
@@ -308,21 +309,22 @@ int main(int argc, char **argv)
 	else {
 		groupname = "*";
 	}
-	
+
 	if (HAVE_OPT(LOCK))
 		lock_user(fpasswd, username);
 	else if (HAVE_OPT(UNLOCK))
 		unlock_user(fpasswd, username);
 	else { /* set password */
 
-		passwd = getpass("Enter password: ");
-		if (passwd == NULL) {
-			fprintf(stderr, "Please specify a password\n");
-			exit(1); 
-		}
-
 		if (isatty(STDIN_FILENO)) {
 			char* p2;
+
+			passwd = getpass("Enter password: ");
+			if (passwd == NULL) {
+				fprintf(stderr, "Please specify a password\n");
+				exit(1);
+			}
+
 
 			p2 = strdup(passwd);
 			passwd = getpass("Re-enter password: ");
@@ -336,11 +338,21 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			free(p2);
+		} else {
+			passwd = NULL;
+			l = getline(&passwd, &i, stdin);
+			if (l <= 1) {
+				fprintf(stderr, "Please specify a password\n");
+				exit(1);
+			}
+
+			if (passwd[l-1] == '\n')
+				passwd[l-1] = 0;
 		}
 
 		crypt_int(fpasswd, username, groupname, passwd);
 	}
-	
+
 	gnutls_global_deinit();
 	return 0;
 }

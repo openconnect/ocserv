@@ -72,8 +72,10 @@ int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
 
 		if (strcmp(vinfo->name, ifa->ifa_name) == 0) {
 			p = (char *)inet_ntop(ifa->ifa_addr->sa_family,
-					      SA_IN_P_TYPE(ifa->ifa_addr, ifa->ifa_addr->sa_family),
-					      *buffer, *buffer_size);
+					      SA_IN_P_TYPE(ifa->ifa_addr,
+							   ifa->ifa_addr->
+							   sa_family), *buffer,
+					      *buffer_size);
 			if (p == NULL) {
 				e = errno;
 				oclog(ws, LOG_ERR, "inet_ntop error: %s",
@@ -95,32 +97,62 @@ int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
 				vinfo->ipv6_local = p;
 			}
 
-			/* DST */
-			if (ifa->ifa_dstaddr == NULL)
-				continue;
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
+				/* no DST address */
+				struct in6_addr ip;
 
-			p = (char *)inet_ntop(ifa->ifa_dstaddr->sa_family,
-					      SA_IN_P_TYPE(ifa->ifa_dstaddr, ifa->ifa_dstaddr->sa_family), 
-					      *buffer, *buffer_size);
-			if (p == NULL) {
-				e = errno;
-				oclog(ws, LOG_ERR, "inet_ntop error: %s",
-				      strerror(e));
-				continue;
-			}
+				memcpy(&ip,
+				       SA_IN_P_TYPE(ifa->ifa_addr,
+						    ifa->ifa_addr->sa_family),
+				       sizeof(ip));
+				((uint8_t *) & ip)[15]++;
 
-			ret = strlen(p) + 1;
-			*buffer += ret;
-			*buffer_size -= ret;
+				p = (char *)inet_ntop(AF_INET6,
+						      &ip, *buffer,
+						      *buffer_size);
+				if (p == NULL) {
+					e = errno;
+					oclog(ws, LOG_ERR,
+					      "inet_ntop error: %s",
+					      strerror(e));
+					continue;
+				}
 
-			if (ifa->ifa_dstaddr->sa_family == AF_INET) {
-				if (strcmp(p, "0.0.0.0") == 0)
-					p = NULL;
-				vinfo->ipv4 = p;
-			} else {
+				ret = strlen(p) + 1;
+				*buffer += ret;
+				*buffer_size -= ret;
+
 				if (strcmp(p, "::") == 0)
 					p = NULL;
 				vinfo->ipv6 = p;
+			} else {
+				/* DST */
+				if (ifa->ifa_dstaddr == NULL)
+					continue;
+
+				p = (char *)inet_ntop(ifa->ifa_dstaddr->
+						      sa_family,
+						      SA_IN_P_TYPE(ifa->
+								   ifa_dstaddr,
+								   ifa->
+								   ifa_dstaddr->
+								   sa_family),
+						      *buffer, *buffer_size);
+				if (p == NULL) {
+					e = errno;
+					oclog(ws, LOG_ERR,
+					      "inet_ntop error: %s",
+					      strerror(e));
+					continue;
+				}
+
+				ret = strlen(p) + 1;
+				*buffer += ret;
+				*buffer_size -= ret;
+
+				if (strcmp(p, "0.0.0.0") == 0)
+					p = NULL;
+				vinfo->ipv4 = p;
 			}
 		}
 	}
@@ -198,7 +230,8 @@ int get_rt_vpn_info(worker_st * ws,
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 		ret = ioctl(fd, SIOCGIFMTU, (caddr_t) & ifr);
 		if (ret < 0) {
-			oclog(ws, LOG_ERR, "cannot obtain MTU for %s. Assuming 1500",
+			oclog(ws, LOG_ERR,
+			      "cannot obtain MTU for %s. Assuming 1500",
 			      vinfo->name);
 			vinfo->mtu = 1500;
 		} else {

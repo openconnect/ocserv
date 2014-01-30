@@ -4,7 +4,8 @@
 - Changed the method X-CSTP-MTU is taken into account to avoid
   smaller MTU sizes than the intended.
 - Corrected IPv6 address assignment.
-
+- Default configuration file changed to /etc/ocserv/ocserv.conf and
+  default password file for ocpasswd to /etc/ocserv/ocpasswd.
 
 * Version 0.3.0 (released 2014-01-24)
 

@@ -35,13 +35,11 @@
 
 static struct nl_sock *sock = NULL;
 static struct nl_cache *cache = NULL;
-static struct rtnl_link *rlink = NULL;
 static int nl_failed = 0;
 
-static int open_netlink(const char* iface)
+static int open_netlink(void)
 {
 int err;
-int if_idx;
 
 	if (sock != NULL)
 		return 0;
@@ -62,17 +60,6 @@ int if_idx;
 
 	if (rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache) < 0) {
 		fprintf(stderr, "nl: failed to alloc cache");
-		goto error;
-	}
-
-	if (!(if_idx = rtnl_link_name2i(cache, iface))) {
-		fprintf(stderr, "nl: cannot find %s\n", iface);
-		goto error;
-	}
-
-	rlink = rtnl_link_get (cache, if_idx);
-	if (rlink == NULL) {
-		fprintf(stderr, "nl: cannot get rlink\n");
 		goto error;
 	}
 
@@ -129,12 +116,25 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 	uint64_t tx, rx;
 	char buf1[32], buf2[32];
 	time_t diff = time(0) - since;
+	int if_idx;
+	struct rtnl_link *rlink = NULL;
 
 	if (iface == NULL || iface[0] == 0)
 		return;
 
-	if (open_netlink(iface) < 0)
+	if (open_netlink() < 0)
 		return;
+
+	if (!(if_idx = rtnl_link_name2i(cache, iface))) {
+		fprintf(stderr, "nl: cannot find %s\n", iface);
+		return;
+	}
+
+	rlink = rtnl_link_get (cache, if_idx);
+	if (rlink == NULL) {
+		fprintf(stderr, "nl: cannot get rlink\n");
+		return;
+	}
 
 	rx = rtnl_link_get_stat(rlink, RTNL_LINK_RX_BYTES);
 	tx = rtnl_link_get_stat(rlink, RTNL_LINK_TX_BYTES);

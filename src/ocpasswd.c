@@ -34,6 +34,8 @@
 #include <getpass.h>
 #include <minmax.h>
 
+#define DEFAULT_OCPASSWD "/etc/ocserv/ocpasswd"
+
 static const char alphabet[] = 
 	"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./";
 
@@ -102,7 +104,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		fprintf(stderr, "Cannot open '%s' for write\n", tmp_passwd);
+		fprintf(stderr, "Cannot open '%s' for writing\n", tmp_passwd);
 		exit(1);
 	}
 
@@ -133,7 +135,11 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 
 	fclose(fd2);
 
-	rename(tmp_passwd, fpasswd);
+	ret = rename(tmp_passwd, fpasswd);
+	if (ret < 0) {
+		fprintf(stderr, "Cannot write '%s'\n", fpasswd);
+		exit(1);
+	}
 	free(tmp_passwd);
 }
 
@@ -167,7 +173,7 @@ lock_user(const char *fpasswd, const char *username)
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		fprintf(stderr, "Cannot open '%s' for write\n", tmp_passwd);
+		fprintf(stderr, "Cannot open '%s' for writing\n", tmp_passwd);
 		exit(1);
 	}
 
@@ -231,7 +237,7 @@ unlock_user(const char *fpasswd, const char *username)
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		fprintf(stderr, "Cannot open '%s' for write\n", tmp_passwd);
+		fprintf(stderr, "Cannot open '%s' for writing\n", tmp_passwd);
 		exit(1);
 	}
 
@@ -291,11 +297,10 @@ int main(int argc, char **argv)
 		exit(1); 
 	}
 
-	if (HAVE_OPT(PASSWD))
+	if (HAVE_OPT(PASSWD)) {
 		fpasswd = OPT_ARG(PASSWD);
-	else {
-		fprintf(stderr, "Password file was not specified\n");
-		exit(1);
+	} else {
+		fpasswd = DEFAULT_OCPASSWD;
 	}
 
 	if (HAVE_OPT(GROUPNAME))

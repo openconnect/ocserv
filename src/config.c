@@ -34,7 +34,7 @@
 #include <vpn.h>
 #include <tlslib.h>
 
-#define DEFAULT_CFG_FILE "/etc/ocserv.conf"
+#define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
 
 static const char* pid_file = NULL;
 static const char* cfg_file = DEFAULT_CFG_FILE;

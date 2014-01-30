@@ -88,11 +88,11 @@ int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
 			if (ifa->ifa_addr->sa_family == AF_INET) {
 				if (strcmp(p, "0.0.0.0") == 0)
 					p = NULL;
-				vinfo->ipv4 = p;
+				vinfo->ipv4_local = p;
 			} else {
 				if (strcmp(p, "::") == 0)
 					p = NULL;
-				vinfo->ipv6 = p;
+				vinfo->ipv6_local = p;
 			}
 
 			/* DST */
@@ -116,11 +116,11 @@ int get_ips(struct worker_st *ws, struct vpn_st *vinfo, char **buffer,
 			if (ifa->ifa_dstaddr->sa_family == AF_INET) {
 				if (strcmp(p, "0.0.0.0") == 0)
 					p = NULL;
-				vinfo->ipv4_local = p;
+				vinfo->ipv4 = p;
 			} else {
 				if (strcmp(p, "::") == 0)
 					p = NULL;
-				vinfo->ipv6_local = p;
+				vinfo->ipv6 = p;
 			}
 		}
 	}

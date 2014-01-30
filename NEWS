@@ -1,6 +1,7 @@
 * Version 0.3.1 (unreleased)
 - Corrected decoding of cookies. That will prevent issues where
   the server is unable to parse client cookies.
+- Corrected IPv6 address assignment.
 
 
 * Version 0.3.0 (released 2014-01-24)

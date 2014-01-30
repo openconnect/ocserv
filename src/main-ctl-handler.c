@@ -71,7 +71,7 @@ typedef struct {
 #define ENTRY(name, iface, desc, func) \
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
-#define LIST_USERS_SIG "(usssssssusssss)"
+#define LIST_USERS_SIG "(ussssssssusssss)"
 
 #define DESC_LIST \
 		"    <method name=\"list\">\n" \
@@ -474,6 +474,17 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 		return -1;
 	}
 
+	strtmp = NULL;
+	if (ctmp->ipv6 != NULL)
+		strtmp =
+		    human_addr2((struct sockaddr *)&ctmp->ipv6->lip,
+			       ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf), 0);
+	if (strtmp == NULL)
+		strtmp = "";
+	if (dbus_message_iter_append_basic
+	    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+		return -1;
+	}
 	tmp = ctmp->conn_time;
 	if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
 		return -1;

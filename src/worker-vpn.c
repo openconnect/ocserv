@@ -848,17 +848,19 @@ void mtu_set(worker_st * ws, unsigned mtu)
 static
 int mtu_not_ok(worker_st * ws)
 {
+unsigned min = MIN_MTU(ws);
+
 	ws->last_bad_mtu = ws->conn_mtu;
 
-	if (ws->last_good_mtu >= ws->conn_mtu) {
-		ws->last_good_mtu = (2 * (ws->conn_mtu)) / 3;
+	if (ws->last_good_mtu == min) {
+		oclog(ws, LOG_INFO,
+		      "could not calculate a sufficient MTU. Disabling DTLS.");
+		ws->udp_state = UP_DISABLED;
+		return -1;
+	}
 
-		if (ws->last_good_mtu < MIN_MTU(ws)) {
-			oclog(ws, LOG_INFO,
-			      "could not calculate a sufficient MTU. Disabling DTLS.");
-			ws->udp_state = UP_DISABLED;
-			return -1;
-		}
+	if (ws->last_good_mtu >= ws->conn_mtu) {
+		ws->last_good_mtu = MAX(((2 * (ws->conn_mtu)) / 3), min);
 	}
 
 	mtu_set(ws, ws->last_good_mtu);

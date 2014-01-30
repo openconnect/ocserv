@@ -85,7 +85,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 		cr_passwd = crypt(passwd, salt);
 	}
 	if (cr_passwd == NULL) {
-		fprintf(stderr, "Error in crypt()\n");
+		fprintf(stderr, "Error in crypt().\n");
 		exit(1);
 	}
 
@@ -98,13 +98,13 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
-		fprintf(stderr, "file '%s' is locked\n", fpasswd);
+		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
 		exit(1);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		fprintf(stderr, "Cannot open '%s' for writing\n", tmp_passwd);
+		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
 		exit(1);
 	}
 
@@ -137,7 +137,7 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 
 	ret = rename(tmp_passwd, fpasswd);
 	if (ret < 0) {
-		fprintf(stderr, "Cannot write '%s'\n", fpasswd);
+		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
 		exit(1);
 	}
 	free(tmp_passwd);
@@ -161,19 +161,19 @@ lock_user(const char *fpasswd, const char *username)
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
-		fprintf(stderr, "file '%s' is locked\n", fpasswd);
+		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
 		exit(1);
 	}
 
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
-		fprintf(stderr, "Cannot open '%s' for read\n", fpasswd);
+		fprintf(stderr, "Cannot open '%s' for reading.\n", fpasswd);
 		exit(1);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		fprintf(stderr, "Cannot open '%s' for writing\n", tmp_passwd);
+		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
 		exit(1);
 	}
 
@@ -225,19 +225,19 @@ unlock_user(const char *fpasswd, const char *username)
 
 	snprintf(tmp_passwd, tmp_passwd_len, "%s.tmp", fpasswd);
 	if (stat(tmp_passwd, &st) != -1) {
-		fprintf(stderr, "file '%s' is locked\n", fpasswd);
+		fprintf(stderr, "file '%s' is locked.\n", fpasswd);
 		exit(1);
 	}
 
 	fd = fopen(fpasswd, "r");
 	if (fd == NULL) {
-		fprintf(stderr, "Cannot open '%s' for read\n", fpasswd);
+		fprintf(stderr, "Cannot open '%s' for reading.\n", fpasswd);
 		exit(1);
 	}
 
 	fd2 = fopen(tmp_passwd, "w");
 	if (fd2 == NULL) {
-		fprintf(stderr, "Cannot open '%s' for writing\n", tmp_passwd);
+		fprintf(stderr, "Cannot open '%s' for writing.\n", tmp_passwd);
 		exit(1);
 	}
 
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 	if (argc > 0)
 		username = argv[0];
 	else {
-		fprintf(stderr, "Please specify a user\n");
+		optionUsage(&ocpasswdOptions, 1);
 		exit(1);
 	}
 

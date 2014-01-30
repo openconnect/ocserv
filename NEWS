@@ -1,6 +1,8 @@
 * Version 0.3.1 (unreleased)
 - Corrected decoding of cookies. That will prevent issues where
   the server is unable to parse client cookies.
+- Changed the method X-CSTP-MTU is taken into account to avoid
+  smaller MTU sizes than the intended.
 - Corrected IPv6 address assignment.
 
 

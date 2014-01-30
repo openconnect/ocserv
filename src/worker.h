@@ -156,6 +156,9 @@ typedef struct worker_st {
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	unsigned cert_auth_ok;
 	int tun_fd;
+
+	/* information on the tun device addresses and network */
+	struct vpn_st vinfo;
 	
 	/* additional data - received per user or per group */
 	unsigned routes_size;

@@ -55,6 +55,8 @@
 
 #include <http_parser.h>
 
+#define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:257)
+
 /* after that time (secs) of inactivity in the UDP part, connection switches to 
  * TCP (if activity occurs there).
  */
@@ -833,9 +835,9 @@ void mtu_set(worker_st * ws, unsigned mtu)
 	ws->conn_mtu = mtu;
 
 	if (ws->dtls_session)
-		gnutls_dtls_set_data_mtu(ws->dtls_session, mtu);
+		gnutls_dtls_set_data_mtu(ws->dtls_session, ws->conn_mtu);
 
-	mtu_send(ws, mtu);
+	mtu_send(ws, ws->conn_mtu);
 }
 
 /* sets the current value of mtu as bad,
@@ -851,9 +853,9 @@ int mtu_not_ok(worker_st * ws)
 	if (ws->last_good_mtu >= ws->conn_mtu) {
 		ws->last_good_mtu = (2 * (ws->conn_mtu)) / 3;
 
-		if (ws->last_good_mtu < 128) {
+		if (ws->last_good_mtu < MIN_MTU(ws)) {
 			oclog(ws, LOG_INFO,
-			      "could not calculate a valid MTU. Disabling DTLS.");
+			      "could not calculate a sufficient MTU. Disabling DTLS.");
 			ws->udp_state = UP_DISABLED;
 			return -1;
 		}
@@ -1010,7 +1012,6 @@ static int connect_handler(worker_st * ws)
 	struct http_req_st *req = &ws->req;
 	fd_set rfds;
 	int l, e, max, ret, overhead;
-	struct vpn_st vinfo;
 	unsigned tls_retry, dtls_mtu, cstp_mtu;
 	char *p;
 #ifdef HAVE_PSELECT
@@ -1080,7 +1081,7 @@ static int connect_handler(worker_st * ws)
 		return -1;
 	}
 
-	ret = get_rt_vpn_info(ws, &vinfo, (char *)ws->buffer, ws->buffer_size);
+	ret = get_rt_vpn_info(ws, &ws->vinfo, (char *)ws->buffer, ws->buffer_size);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR,
 		      "no networks are configured; rejecting client");
@@ -1120,73 +1121,73 @@ static int connect_handler(worker_st * ws)
 		oclog(ws, LOG_DEBUG, "disabling UDP (DTLS) connection");
 	}
 
-	if (vinfo.ipv4 && req->no_ipv4 == 0) {
-		oclog(ws, LOG_DEBUG, "sending IPv4 %s", vinfo.ipv4);
+	if (ws->vinfo.ipv4 && req->no_ipv4 == 0) {
+		oclog(ws, LOG_DEBUG, "sending IPv4 %s", ws->vinfo.ipv4);
 		ret =
 		    tls_printf(ws->session, "X-CSTP-Address: %s\r\n",
-			       vinfo.ipv4);
+			       ws->vinfo.ipv4);
 		SEND_ERR(ret);
 
-		if (vinfo.ipv4_netmask) {
+		if (ws->vinfo.ipv4_netmask) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n",
-				       vinfo.ipv4_netmask);
+				       ws->vinfo.ipv4_netmask);
 			SEND_ERR(ret);
 		}
 
-		if (vinfo.ipv4_dns) {
+		if (ws->vinfo.ipv4_dns) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-DNS: %s\r\n",
-				       vinfo.ipv4_dns);
+				       ws->vinfo.ipv4_dns);
 			SEND_ERR(ret);
 		}
 
-		if (vinfo.ipv4_nbns) {
+		if (ws->vinfo.ipv4_nbns) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n",
-				       vinfo.ipv4_nbns);
+				       ws->vinfo.ipv4_nbns);
 			SEND_ERR(ret);
 		}
 	}
 
-	if (vinfo.ipv6 && req->no_ipv6 == 0) {
-		oclog(ws, LOG_DEBUG, "sending IPv6 %s", vinfo.ipv6);
+	if (ws->vinfo.ipv6 && req->no_ipv6 == 0) {
+		oclog(ws, LOG_DEBUG, "sending IPv6 %s", ws->vinfo.ipv6);
 		ret =
 		    tls_printf(ws->session, "X-CSTP-Address: %s\r\n",
-			       vinfo.ipv6);
+			       ws->vinfo.ipv6);
 		SEND_ERR(ret);
 
-		if (vinfo.ipv6_netmask) {
+		if (ws->vinfo.ipv6_netmask) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n",
-				       vinfo.ipv6_netmask);
+				       ws->vinfo.ipv6_netmask);
 			SEND_ERR(ret);
 		}
 
-		if (vinfo.ipv6_dns) {
+		if (ws->vinfo.ipv6_dns) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-DNS: %s\r\n",
-				       vinfo.ipv6_dns);
+				       ws->vinfo.ipv6_dns);
 			SEND_ERR(ret);
 		}
 
-		if (vinfo.ipv6_nbns) {
+		if (ws->vinfo.ipv6_nbns) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n",
-				       vinfo.ipv6_nbns);
+				       ws->vinfo.ipv6_nbns);
 			SEND_ERR(ret);
 		}
 	}
 
-	for (i = 0; i < vinfo.routes_size; i++) {
-		if (req->no_ipv6 != 0 && strchr(vinfo.routes[i], ':') != 0)
+	for (i = 0; i < ws->vinfo.routes_size; i++) {
+		if (req->no_ipv6 != 0 && strchr(ws->vinfo.routes[i], ':') != 0)
 			continue;
-		if (req->no_ipv4 != 0 && strchr(vinfo.routes[i], '.') != 0)
+		if (req->no_ipv4 != 0 && strchr(ws->vinfo.routes[i], '.') != 0)
 			continue;
-		oclog(ws, LOG_DEBUG, "adding route %s", vinfo.routes[i]);
+		oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
 		ret = tls_printf(ws->session,
 				 "X-CSTP-Split-Include: %s\r\n",
-				 vinfo.routes[i]);
+				 ws->vinfo.routes[i]);
 		SEND_ERR(ret);
 	}
 
@@ -1227,14 +1228,14 @@ static int connect_handler(worker_st * ws)
 	SEND_ERR(ret);
 
 	if (ws->config->default_mtu > 0) {
-		vinfo.mtu = ws->config->default_mtu;
+		ws->vinfo.mtu = ws->config->default_mtu;
 	}
 
 	mtu_overhead = CSTP_OVERHEAD;
-	ws->conn_mtu = vinfo.mtu - mtu_overhead;
+	ws->conn_mtu = ws->vinfo.mtu - mtu_overhead;
+
 	if (req->cstp_mtu > 0) {
-		ws->conn_mtu = MIN(ws->conn_mtu, req->cstp_mtu);
-		oclog(ws, LOG_DEBUG, "peer CSTP MTU is %u", req->cstp_mtu);
+		oclog(ws, LOG_DEBUG, "peer's CSTP MTU is %u (ignored)", req->cstp_mtu);
 	}
 
 	sl = sizeof(max);
@@ -1313,19 +1314,22 @@ static int connect_handler(worker_st * ws)
 		else
 			mtu_overhead = 40 + CSTP_DTLS_OVERHEAD;	/* ipv6 */
 		mtu_overhead += 8;	/* udp */
-		ws->conn_mtu = MIN(ws->conn_mtu, vinfo.mtu - mtu_overhead);
+		ws->conn_mtu = MIN(ws->conn_mtu, ws->vinfo.mtu - mtu_overhead);
 
-		if (req->dtls_mtu > 0) {
-			ws->conn_mtu = MIN(req->dtls_mtu, ws->conn_mtu);
-			oclog(ws, LOG_INFO,
-			      "reducing DTLS MTU to peer's DTLS MTU (%u)",
-			      req->dtls_mtu);
-		}
 
 		overhead =
 		    CSTP_DTLS_OVERHEAD +
 		    tls_get_overhead(ws->req.selected_ciphersuite->gnutls_version,
 				     ws->req.selected_ciphersuite->gnutls_cipher, ws->req.selected_ciphersuite->gnutls_mac);
+
+		if (req->dtls_mtu <= 0)
+			req->dtls_mtu = req->cstp_mtu;
+		if (req->dtls_mtu > 0) {
+			ws->conn_mtu = MIN(req->dtls_mtu+overhead+mtu_overhead, ws->conn_mtu);
+			oclog(ws, LOG_DEBUG,
+			      "peer's DTLS MTU is %u (overhead: %u)", req->dtls_mtu, mtu_overhead+overhead);
+		}
+
 		dtls_mtu = ws->conn_mtu - overhead;
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);

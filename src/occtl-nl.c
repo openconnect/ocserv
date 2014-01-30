@@ -34,7 +34,6 @@
 #include <inttypes.h>
 
 static struct nl_sock *sock = NULL;
-static struct nl_cache *cache = NULL;
 static int nl_failed = 0;
 
 static int open_netlink(void)
@@ -58,19 +57,12 @@ int err;
 		goto error;
 	}
 
-	if (rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache) < 0) {
-		fprintf(stderr, "nl: failed to alloc cache");
-		goto error;
-	}
-
 	return 0;
 error:
 	if (sock != NULL) {
 		nl_socket_free(sock);
 		sock = NULL;
 	}
-	if (cache != NULL)
-		nl_cache_free(cache);
 	nl_failed = 1;
 
 	return -1;
@@ -116,7 +108,7 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 	uint64_t tx, rx;
 	char buf1[32], buf2[32];
 	time_t diff = time(0) - since;
-	int if_idx;
+	int ret;
 	struct rtnl_link *rlink = NULL;
 
 	if (iface == NULL || iface[0] == 0)
@@ -125,14 +117,9 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 	if (open_netlink() < 0)
 		return;
 
-	if (!(if_idx = rtnl_link_name2i(cache, iface))) {
+	ret = rtnl_link_get_kernel(sock, 0, iface, &rlink);
+	if (ret < 0) {
 		fprintf(stderr, "nl: cannot find %s\n", iface);
-		return;
-	}
-
-	rlink = rtnl_link_get (cache, if_idx);
-	if (rlink == NULL) {
-		fprintf(stderr, "nl: cannot get rlink\n");
 		return;
 	}
 

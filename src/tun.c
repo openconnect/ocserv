@@ -56,7 +56,6 @@ struct in6_ifreq {
 static int set_network_info( main_server_st* s, struct proc_st* proc)
 {
 	int fd = -1, ret, e;
-	int fd6 = -1;
 	struct ifreq ifr;
 
 	if (proc->ipv4 && proc->ipv4->lip_len > 0 && proc->ipv4->rip_len > 0) {
@@ -100,9 +99,12 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 		if (ret != 0) {
-			mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface.\n", proc->tun_lease.name);
+			mslog(s, NULL, LOG_ERR, "%s: Could not bring up IPv4 interface.\n", proc->tun_lease.name);
 			ret = -1;
 		}
+
+		close(fd);
+		fd = -1;
 	}
 
 	if (proc->ipv6 && proc->ipv6->lip_len > 0 && proc->ipv6->rip_len > 0) {
@@ -110,8 +112,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		struct in6_ifreq ifr6;
 		unsigned idx;
 
-		fd6 = socket(AF_INET6, SOCK_STREAM, 0);
-		if (fd6 == -1) {
+		fd = socket(AF_INET6, SOCK_STREAM, 0);
+		if (fd == -1) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Error socket(AF_INET6): %s\n", proc->tun_lease.name, strerror(e));
 			ret = -1;
@@ -121,7 +123,7 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		memset(&ifr, 0, sizeof(ifr));
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
-		ret = ioctl(fd6, SIOGIFINDEX, &ifr);
+		ret = ioctl(fd, SIOGIFINDEX, &ifr);
 		if (ret != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Error in SIOGIFINDEX: %s\n", proc->tun_lease.name, strerror(e));
@@ -134,9 +136,9 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		memset(&ifr6, 0, sizeof(ifr6));
 		memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip), SA_IN_SIZE(proc->ipv6->lip_len));
 		ifr6.ifr6_ifindex = idx;
-		ifr6.ifr6_prefixlen = 64;
+		ifr6.ifr6_prefixlen = 127;
 
-		ret = ioctl(fd6, SIOCSIFADDR, &ifr6);
+		ret = ioctl(fd, SIOCSIFADDR, &ifr6);
 		if (ret != 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n", proc->tun_lease.name, strerror(e));
@@ -149,13 +151,15 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		ifr.ifr_flags |= IFF_UP;
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
-		ret = ioctl(fd6, SIOCSIFFLAGS, &ifr);
+		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Could not bring up interface: %s\n", proc->tun_lease.name, strerror(e));
+			mslog(s, NULL, LOG_ERR, "%s: Could not bring up IPv6 interface: %s\n", proc->tun_lease.name, strerror(e));
 			ret = -1;
 		}
 
+		close(fd);
+		fd = -1;
 #else
 # warn "No IPv6 support on this platform"
 #endif
@@ -172,8 +176,6 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 cleanup:
 	if (fd != -1)
 		close(fd);
-	if (fd6 != -1)
-		close(fd6);
 	return ret;
 }
 

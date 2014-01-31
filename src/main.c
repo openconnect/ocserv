@@ -722,6 +722,9 @@ unsigned total = 10;
 	if (terminate != 0) {
 		mslog(s, NULL, LOG_DEBUG, "termination request received; waiting for children to die");
 		kill_children(s);
+		remove(s->socket_file);
+		remove_pid_file();
+
 		while (waitpid(-1, NULL, WNOHANG) == 0) {
 			if (total == 0) {
 				mslog(s, NULL, LOG_DEBUG, "not everyone died; forcing kill");
@@ -730,8 +733,6 @@ unsigned total = 10;
 			ms_sleep(500);
 			total--;
 		}
-		remove(s->socket_file);
-		remove_pid_file();
 
 		/* try to clean-up everything allocated to ease checks 
 		 * for memory leaks.

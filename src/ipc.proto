@@ -82,17 +82,23 @@ message auth_reply_msg
 	optional string user_name = 5;
 	optional string msg = 6;
 
+	/* the ips of the tun device */
+	optional string ipv4 = 7;
+	optional string ipv6 = 8;
+	optional string ipv4_local = 9;
+	optional string ipv6_local = 10;
+
 	/* additional config */
-	optional string ipv4_dns = 7;
-	optional string ipv6_dns = 8;
-	optional string ipv4_nbns = 9;
-	optional string ipv6_nbns = 10;
-	optional string ipv4_netmask = 11;
-	optional string ipv6_netmask = 12;
-	optional uint32 rx_per_sec = 13;
-	optional uint32 tx_per_sec = 14;
-	optional uint32 net_priority = 15;
-	repeated string routes = 16;
+	optional string ipv4_dns = 11;
+	optional string ipv6_dns = 12;
+	optional string ipv4_nbns = 13;
+	optional string ipv6_nbns = 14;
+	optional string ipv4_netmask = 15;
+	optional string ipv6_netmask = 16;
+	optional uint32 rx_per_sec = 17;
+	optional uint32 tx_per_sec = 18;
+	optional uint32 net_priority = 19;
+	repeated string routes = 20;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

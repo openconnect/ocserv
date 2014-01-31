@@ -251,7 +251,7 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 				goto cleanup;
 			}
 
-			snprintf(ws->tun_name, sizeof(ws->tun_name), "%s",
+			snprintf(ws->vinfo.name, sizeof(ws->vinfo.name), "%s",
 				 msg->vname);
 			snprintf(ws->username, sizeof(ws->username), "%s",
 				 msg->user_name);
@@ -264,6 +264,38 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			memcpy(ws->cookie, msg->cookie.data, msg->cookie.len);
 			memcpy(ws->session_id, msg->session_id.data,
 			       msg->session_id.len);
+
+			if (msg->ipv4 != NULL) {
+				free(ws->vinfo.ipv4);
+				if (strcmp(msg->ipv4, "0.0.0.0") == 0)
+					ws->vinfo.ipv4 = NULL;
+				else
+					ws->vinfo.ipv4 = strdup(msg->ipv4);
+			}
+
+			if (msg->ipv6 != NULL) {
+				free(ws->vinfo.ipv6);
+				if (strcmp(msg->ipv6, "::") == 0)
+					ws->vinfo.ipv6 = NULL;
+				else
+					ws->vinfo.ipv6 = strdup(msg->ipv6);
+			}
+
+			if (msg->ipv4_local != NULL) {
+				free(ws->vinfo.ipv4_local);
+				if (strcmp(msg->ipv4_local, "0.0.0.0") == 0)
+					ws->vinfo.ipv4_local = NULL;
+				else
+					ws->vinfo.ipv4_local = strdup(msg->ipv4_local);
+			}
+
+			if (msg->ipv6_local != NULL) {
+				free(ws->vinfo.ipv6_local);
+				if (strcmp(msg->ipv6_local, "::") == 0)
+					ws->vinfo.ipv6_local = NULL;
+				else
+					ws->vinfo.ipv6_local = strdup(msg->ipv6_local);
+			}
 
 			/* Read any additional data */
 			if (msg->ipv4_dns != NULL) {

@@ -46,7 +46,7 @@ ocserv-args.c: $(srcdir)/ocserv-args.def
 ocserv-args.h: ocserv-args.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	cookies.c worker-tun.c main-misc.c main-ctl-handler.c \
+	cookies.c main-misc.c main-ctl-handler.c \
 	group-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \

@@ -33,6 +33,10 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <net/if.h>
+
 #include <vpn.h>
 #include <worker.h>
 #include <cookies.h>
@@ -131,4 +135,73 @@ udp_fd_fail:
 		ws->udp_state = UP_DISABLED;
 
 	return -1;
+}
+
+/* Completes the VPN device information.
+ * 
+ * Returns 0 on success.
+ */
+int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
+{
+	int ret, fd;
+	struct ifreq ifr;
+
+	if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
+		return -1;
+	}
+#define LOCAL "local"
+	if (ws->config->network.ipv4_dns
+	    && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
+		vinfo->ipv4_dns = vinfo->ipv4_local;
+	else
+		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
+
+	if (ws->config->network.ipv6_dns
+	    && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
+		vinfo->ipv6_dns = vinfo->ipv6_local;
+	else
+		vinfo->ipv6_dns = ws->config->network.ipv6_dns;
+
+	if (ws->config->network.ipv4_nbns
+	    && strcmp(ws->config->network.ipv4_nbns, LOCAL) == 0)
+		vinfo->ipv4_nbns = vinfo->ipv4_local;
+	else
+		vinfo->ipv4_nbns = ws->config->network.ipv4_nbns;
+
+	if (ws->config->network.ipv6_nbns
+	    && strcmp(ws->config->network.ipv6_nbns, LOCAL) == 0)
+		vinfo->ipv6_nbns = vinfo->ipv6_local;
+	else
+		vinfo->ipv6_nbns = ws->config->network.ipv6_nbns;
+
+	vinfo->routes_size = ws->config->network.routes_size;
+	if (ws->config->network.routes_size > 0)
+		vinfo->routes = ws->config->network.routes;
+
+	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
+	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
+
+	if (ws->config->network.mtu != 0) {
+		vinfo->mtu = ws->config->network.mtu;
+	} else {
+		fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (fd == -1)
+			return -1;
+
+		memset(&ifr, 0, sizeof(ifr));
+		ifr.ifr_addr.sa_family = AF_INET;
+		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
+		ret = ioctl(fd, SIOCGIFMTU, (caddr_t) & ifr);
+		if (ret < 0) {
+			oclog(ws, LOG_ERR,
+			      "cannot obtain MTU for %s. Assuming 1500",
+			      vinfo->name);
+			vinfo->mtu = 1500;
+		} else {
+			vinfo->mtu = ifr.ifr_mtu;
+		}
+		close(fd);
+	}
+
+	return 0;
 }

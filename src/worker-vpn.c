@@ -1083,7 +1083,7 @@ static int connect_handler(worker_st * ws)
 		return -1;
 	}
 
-	ret = get_rt_vpn_info(ws, &ws->vinfo, (char *)ws->buffer, ws->buffer_size);
+	ret = complete_vpn_info(ws, &ws->vinfo);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR,
 		      "no networks are configured; rejecting client");

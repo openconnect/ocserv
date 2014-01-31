@@ -214,7 +214,7 @@ int send_socket_msg(int fd, uint8_t cmd,
 	if (length > 0) {
 		packed = malloc(length);
 		if (packed == NULL) {
-			syslog(LOG_ERR, "%s:%u: memory error", __func__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: memory error", __FILE__, __LINE__);
 			return -1;
 		}
 
@@ -223,7 +223,7 @@ int send_socket_msg(int fd, uint8_t cmd,
 
 		ret = pack(msg, packed);
 		if (ret == 0) {
-			syslog(LOG_ERR, "%s:%u: packing error", __func__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: packing error", __FILE__, __LINE__);
 			ret = -1;
 			goto cleanup;
 		}
@@ -245,7 +245,7 @@ int send_socket_msg(int fd, uint8_t cmd,
 	ret = sendmsg(fd, &hdr, 0);
 	if (ret < 0) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: %s", __func__, __LINE__, strerror(e));
+		syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
 	}
 
 cleanup:
@@ -293,12 +293,12 @@ int recv_socket_msg(int fd, uint8_t cmd,
 	} while (ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __func__, __LINE__, strerror(e));
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
 	if (ret == 0) {
-		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __func__, __LINE__);
+		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__, __LINE__);
 		return ERR_WORKER_TERMINATED;
 	}
 	
@@ -310,7 +310,7 @@ int recv_socket_msg(int fd, uint8_t cmd,
 	if (socketfd != NULL) {
 		if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
 			if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
-				syslog(LOG_ERR, "%s:%u: recvmsg returned invalid msg type", __func__, __LINE__);
+				syslog(LOG_ERR, "%s:%u: recvmsg returned invalid msg type", __FILE__, __LINE__);
 				return ERR_BAD_COMMAND;
 			}
 
@@ -330,14 +330,14 @@ int recv_socket_msg(int fd, uint8_t cmd,
 		ret = force_read(fd, data, length);
 		if (ret < length) {
 			int e = errno;
-			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __func__, __LINE__, strerror(e));
+			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));
 			ret = ERR_BAD_COMMAND;
 			goto cleanup;
 		}
 
 		*msg = unpack(NULL, length, data);
 		if (*msg == NULL) {
-			syslog(LOG_ERR, "%s:%u: unpacking error", __func__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__, __LINE__);
 			ret = ERR_MEM;
 			goto cleanup;
 		}

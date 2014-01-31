@@ -148,7 +148,8 @@ typedef struct worker_st {
 	unsigned buffer_size;
 
 	/* the following are set only if authentication is complete */
-	char tun_name[IFNAMSIZ];
+
+
 	char username[MAX_USERNAME_SIZE];
 	char hostname[MAX_HOSTNAME_SIZE];
 	uint8_t cookie[COOKIE_SIZE];
@@ -194,8 +195,8 @@ void __attribute__ ((format(printf, 3, 4)))
 # define oclog _oclog
 #endif
 
-int get_rt_vpn_info(worker_st * ws,
-                    struct vpn_st* vinfo, char* buffer, size_t buffer_size);
+int complete_vpn_info(worker_st * ws,
+                    struct vpn_st* vinfo);
 
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);

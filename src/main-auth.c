@@ -34,6 +34,7 @@
 #include <gnutls/crypto.h>
 #include <tlslib.h>
 #include <script-list.h>
+#include <ip-lease.h>
 #include "str.h"
 
 #include <vpn.h>
@@ -74,6 +75,10 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	}
 
 	if (r == AUTH_REPLY_MSG__AUTH__REP__OK && proc->tun_lease.name[0] != 0) {
+		char ipv6[MAX_IP_STR];
+		char ipv4[MAX_IP_STR];
+		char ipv6_local[MAX_IP_STR];
+		char ipv4_local[MAX_IP_STR];
 
 		/* fill message */
 		msg.reply = AUTH_REPLY_MSG__AUTH__REP__OK;
@@ -87,6 +92,20 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 
 		msg.vname = proc->tun_lease.name;
 		msg.user_name = proc->username;
+
+		if (proc->ipv4 && proc->ipv4->rip_len > 0) {
+			msg.ipv4 = human_addr2((struct sockaddr*)&proc->ipv4->rip, proc->ipv4->rip_len,
+					ipv4, sizeof(ipv4), 0);
+			msg.ipv4_local = human_addr2((struct sockaddr*)&proc->ipv4->lip, proc->ipv4->lip_len,
+					ipv4_local, sizeof(ipv4_local), 0);
+		}
+
+		if (proc->ipv6 && proc->ipv6->rip_len > 0) {
+			msg.ipv6 = human_addr2((struct sockaddr*)&proc->ipv6->rip, proc->ipv6->rip_len,
+					ipv6, sizeof(ipv6), 0);
+			msg.ipv6_local = human_addr2((struct sockaddr*)&proc->ipv6->lip, proc->ipv6->lip_len,
+					ipv6_local, sizeof(ipv6_local), 0);
+		}
 
 		msg.ipv4_dns = proc->config.ipv4_dns;
 		msg.ipv6_dns = proc->config.ipv6_dns;

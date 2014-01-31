@@ -157,7 +157,16 @@ unsigned j;
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}
-	
+
+#define READ_STATIC_STRING(name, s_name) \
+	val = get_option(name, &mand); \
+	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
+		snprintf(s_name, sizeof(s_name), "%s", val->v.strVal); \
+	else if (mand != 0) { \
+		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
+	}
+
 #define READ_TF(name, s_name, def) \
 	{ char* tmp_tf = NULL; \
 		READ_STRING(name, tmp_tf); \
@@ -383,7 +392,7 @@ unsigned force_cert_auth;
 		config->gid = grp->gr_gid;
 	}
 
-	READ_STRING("device", config->network.name);
+	READ_STATIC_STRING("device", config->network.name);
 	READ_STRING("cgroup", config->cgroup);
 
 	READ_STRING("ipv4-network", config->network.ipv4);
@@ -560,7 +569,6 @@ unsigned i;
 	DEL(config->connect_script);
 	DEL(config->disconnect_script);
 
-	DEL(config->network.name);
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);
 	DEL(config->network.ipv4_dns);

@@ -29,10 +29,10 @@
 #include <worker.h>
 #include <main.h>
 
-const char *human_addr2(const struct sockaddr *sa, socklen_t salen,
+char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 		       void *_buf, size_t buflen, unsigned full)
 {
-	const char *save_buf = _buf;
+	char *save_buf = _buf;
 	char *buf = _buf;
 	size_t l;
 

@@ -106,6 +106,8 @@ typedef struct
 	unsigned int entries;
 } hash_db_st;
 
+#define MAX_IP_STR 46
+
 struct group_cfg_st {
 	/* routes to be forwarded to the client */
 	char **routes;
@@ -133,7 +135,7 @@ struct group_cfg_st {
 };
 
 struct vpn_st {
-	char *name;	/* device name */
+	char name[IFNAMSIZ];
 	char *ipv4_netmask;
 	char *ipv4;
 	char *ipv4_local; /* local IPv4 address */
@@ -246,7 +248,7 @@ struct main_server_st;
 
 #include <tun.h>
 
-const char *human_addr2(const struct sockaddr *sa, socklen_t salen,
+char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen, unsigned full);
 
 #define human_addr(x, y, z, w) human_addr2(x, y, z, w, 1)

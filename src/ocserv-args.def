@@ -334,6 +334,11 @@ route = 192.168.5.0/255.255.255.0
 # set for them.
 #cisco-client-compat = false
 
+#Advanced options
+
+# Option to allow sending arbitrary custom headers to the client after
+# authentication and prior to VPN tunnel establishment.
+#custom-header = "X-My-Header: hi there"
 
 @end example
 

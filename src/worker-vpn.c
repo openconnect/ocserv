@@ -1225,6 +1225,13 @@ static int connect_handler(worker_st * ws)
 		       "X-CSTP-License: accept\r\n");
 	SEND_ERR(ret);
 
+	for (i = 0; i < ws->config->custom_header_size; i++) {
+		oclog(ws, LOG_DEBUG, "adding custom header '%s'", ws->config->custom_header[i]);
+		ret = tls_printf(ws->session,
+				 "%s\r\n", ws->config->custom_header[i]);
+		SEND_ERR(ret);
+	}
+
 	if (ws->config->default_mtu > 0) {
 		ws->vinfo.mtu = ws->config->default_mtu;
 	}

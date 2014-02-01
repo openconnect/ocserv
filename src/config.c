@@ -50,6 +50,7 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -412,6 +413,8 @@ unsigned force_cert_auth;
 	if (prefix > 0) 
 		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
 
+	READ_MULTI_LINE("custom-header", config->custom_header, config->custom_header_size);
+
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
 	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);
 	if (config->network.dns_size == 0) {
@@ -609,6 +612,9 @@ unsigned i;
 	for (i=0;i<config->cert_size;i++)
 		DEL(config->cert[i]);
 	DEL(config->cert);
+	for (i=0;i<config->custom_header_size;i++)
+		DEL(config->custom_header[i]);
+	DEL(config->custom_header);
 
 	return;
 }

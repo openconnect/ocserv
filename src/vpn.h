@@ -180,7 +180,10 @@ struct cfg_st {
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */
 	char *default_domain; /* domain to be advertised */
-	
+
+	char **custom_header;
+	unsigned custom_header_size;;
+
 	char* socket_file_prefix;
 	time_t cookie_validity;	/* in seconds */
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */

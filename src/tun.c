@@ -121,6 +121,64 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	return ret;
 }
+#elif defined(SIOCSIFPHYADDR_IN6)
+
+#warn "IPv6 support on this platform is untested"
+
+/* untested code for FreeBSD */
+static
+int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
+{
+	int fd, e, ret;
+	struct in6_aliasreq ifr6;
+	struct ifreq ifr;
+
+	fd = socket(AF_INET6, SOCK_STREAM, 0);
+	if (fd == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: Error socket(AF_INET6): %s\n",
+		      proc->tun_lease.name, strerror(e));
+		return -1;
+	}
+
+	memset(&ifr6, 0, sizeof(ifr6));
+	snprintf(ifr6.ifra_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+
+	memcpy(&ifr6.ifra_addr, SA_IN6_P(&proc->ipv6->lip),
+	       SA_IN_SIZE(proc->ipv6->lip_len));
+	memcpy(&ifr6.ifra_dstaddr, SA_IN6_P(&proc->ipv6->rip),
+	       SA_IN_SIZE(proc->ipv6->rip_len));
+
+	ret = ioctl(fd, SIOCSIFPHYADDR_IN6, &ifr6);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_addr.sa_family = AF_INET6;
+	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+
+	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR,
+		      "%s: Could not bring up IPv6 interface: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = 0;
+ cleanup:
+	close(fd);
+
+	return ret;
+}
 #else
 #warn "No IPv6 support on this platform"
 static int set_ipv6_addr(main_server_st * s, struct proc_st *proc)

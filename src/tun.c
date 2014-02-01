@@ -40,6 +40,7 @@
 #endif
 
 #ifdef __linux__
+# include <linux/types.h>
 struct in6_ifreq {
 	struct in6_addr ifr6_addr;
 	__u32 ifr6_prefixlen;

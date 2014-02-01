@@ -89,16 +89,14 @@ message auth_reply_msg
 	optional string ipv6_local = 10;
 
 	/* additional config */
-	optional string ipv4_dns = 11;
-	optional string ipv6_dns = 12;
-	optional string ipv4_nbns = 13;
-	optional string ipv6_nbns = 14;
 	optional string ipv4_netmask = 15;
 	optional string ipv6_netmask = 16;
 	optional uint32 rx_per_sec = 17;
 	optional uint32 tx_per_sec = 18;
 	optional uint32 net_priority = 19;
 	repeated string routes = 20;
+	repeated string dns = 21;
+	repeated string nbns = 22;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

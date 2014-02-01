@@ -107,10 +107,6 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 					ipv6_local, sizeof(ipv6_local), 0);
 		}
 
-		msg.ipv4_dns = proc->config.ipv4_dns;
-		msg.ipv6_dns = proc->config.ipv6_dns;
-		msg.ipv4_nbns = proc->config.ipv4_nbns;
-		msg.ipv6_nbns = proc->config.ipv6_nbns;
 		msg.ipv4_netmask = proc->config.ipv4_netmask;
 		msg.ipv6_netmask = proc->config.ipv6_netmask;
 		if (proc->config.rx_per_sec != 0) {
@@ -126,6 +122,18 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 		if (proc->config.net_priority != 0) {
 			msg.has_net_priority = 1;
 			msg.net_priority = proc->config.net_priority;
+		}
+
+		msg.n_dns = proc->config.dns_size;
+		for (i=0;i<proc->config.dns_size;i++) {
+			mslog(s, proc, LOG_DEBUG, "sending dns '%s'", proc->config.dns[i]);
+			msg.dns = proc->config.dns;
+		}
+
+		msg.n_nbns = proc->config.nbns_size;
+		for (i=0;i<proc->config.nbns_size;i++) {
+			mslog(s, proc, LOG_DEBUG, "sending nbns '%s'", proc->config.nbns[i]);
+			msg.nbns = proc->config.nbns;
 		}
 
 		msg.n_routes = proc->config.routes_size;

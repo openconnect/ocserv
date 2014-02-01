@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
  *
  * This file is part of ocserv.
  *
@@ -149,30 +149,14 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 	if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
 		return -1;
 	}
-#define LOCAL "local"
-	if (ws->config->network.ipv4_dns
-	    && strcmp(ws->config->network.ipv4_dns, LOCAL) == 0)
-		vinfo->ipv4_dns = vinfo->ipv4_local;
-	else
-		vinfo->ipv4_dns = ws->config->network.ipv4_dns;
 
-	if (ws->config->network.ipv6_dns
-	    && strcmp(ws->config->network.ipv6_dns, LOCAL) == 0)
-		vinfo->ipv6_dns = vinfo->ipv6_local;
-	else
-		vinfo->ipv6_dns = ws->config->network.ipv6_dns;
+	vinfo->dns_size = ws->config->network.dns_size;
+	if (ws->config->network.dns_size > 0)
+		vinfo->dns = ws->config->network.dns;
 
-	if (ws->config->network.ipv4_nbns
-	    && strcmp(ws->config->network.ipv4_nbns, LOCAL) == 0)
-		vinfo->ipv4_nbns = vinfo->ipv4_local;
-	else
-		vinfo->ipv4_nbns = ws->config->network.ipv4_nbns;
-
-	if (ws->config->network.ipv6_nbns
-	    && strcmp(ws->config->network.ipv6_nbns, LOCAL) == 0)
-		vinfo->ipv6_nbns = vinfo->ipv6_local;
-	else
-		vinfo->ipv6_nbns = ws->config->network.ipv6_nbns;
+	vinfo->nbns_size = ws->config->network.nbns_size;
+	if (ws->config->network.nbns_size > 0)
+		vinfo->nbns = ws->config->network.nbns;
 
 	vinfo->routes_size = ws->config->network.routes_size;
 	if (ws->config->network.routes_size > 0)

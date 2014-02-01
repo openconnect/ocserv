@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -180,24 +180,20 @@ static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
 			cfg.iroutes_size = 0;
 		}
 
-		if (proc->config.ipv4_dns == NULL) {
-			proc->config.ipv4_dns = cfg.ipv4_dns;
-			cfg.ipv4_dns = NULL;
+		if (proc->config.dns == NULL) {
+			proc->config.dns = cfg.dns;
+			proc->config.dns_size = cfg.dns_size;
+
+			cfg.dns = NULL;
+			cfg.dns_size = 0;
 		}
 
-		if (proc->config.ipv6_dns == NULL) {
-			proc->config.ipv6_dns = cfg.ipv6_dns;
-			cfg.ipv6_dns = NULL;
-		}
+		if (proc->config.nbns == NULL) {
+			proc->config.nbns = cfg.nbns;
+			proc->config.nbns_size = cfg.nbns_size;
 
-		if (proc->config.ipv4_nbns == NULL) {
-			proc->config.ipv4_nbns = cfg.ipv4_nbns;
-			cfg.ipv4_nbns = NULL;
-		}
-
-		if (proc->config.ipv6_nbns == NULL) {
-			proc->config.ipv6_nbns = cfg.ipv6_nbns;
-			cfg.ipv6_nbns = NULL;
+			cfg.nbns = NULL;
+			cfg.nbns_size = 0;
 		}
 
 		if (proc->config.ipv4_network == NULL) {

@@ -1136,20 +1136,6 @@ static int connect_handler(worker_st * ws)
 				       ws->vinfo.ipv4_netmask);
 			SEND_ERR(ret);
 		}
-
-		if (ws->vinfo.ipv4_dns) {
-			ret =
-			    tls_printf(ws->session, "X-CSTP-DNS: %s\r\n",
-				       ws->vinfo.ipv4_dns);
-			SEND_ERR(ret);
-		}
-
-		if (ws->vinfo.ipv4_nbns) {
-			ret =
-			    tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n",
-				       ws->vinfo.ipv4_nbns);
-			SEND_ERR(ret);
-		}
 	}
 
 	if (ws->vinfo.ipv6 && req->no_ipv6 == 0) {
@@ -1165,20 +1151,30 @@ static int connect_handler(worker_st * ws)
 				       ws->vinfo.ipv6_netmask);
 			SEND_ERR(ret);
 		}
+	}
 
-		if (ws->vinfo.ipv6_dns) {
-			ret =
-			    tls_printf(ws->session, "X-CSTP-DNS: %s\r\n",
-				       ws->vinfo.ipv6_dns);
-			SEND_ERR(ret);
-		}
+	for (i = 0; i < ws->vinfo.dns_size; i++) {
+		if (req->no_ipv6 != 0 && strchr(ws->vinfo.dns[i], ':') != 0)
+			continue;
+		if (req->no_ipv4 != 0 && strchr(ws->vinfo.dns[i], '.') != 0)
+			continue;
 
-		if (ws->vinfo.ipv6_nbns) {
-			ret =
-			    tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n",
-				       ws->vinfo.ipv6_nbns);
-			SEND_ERR(ret);
-		}
+		ret =
+		    tls_printf(ws->session, "X-CSTP-DNS: %s\r\n",
+			       ws->vinfo.dns[i]);
+		SEND_ERR(ret);
+	}
+
+	for (i = 0; i < ws->vinfo.nbns_size; i++) {
+		if (req->no_ipv6 != 0 && strchr(ws->vinfo.nbns[i], ':') != 0)
+			continue;
+		if (req->no_ipv4 != 0 && strchr(ws->vinfo.nbns[i], '.') != 0)
+			continue;
+
+		ret =
+		    tls_printf(ws->session, "X-CSTP-NBNS: %s\r\n",
+			       ws->vinfo.nbns[i]);
+		SEND_ERR(ret);
 	}
 
 	for (i = 0; i < ws->vinfo.routes_size; i++) {

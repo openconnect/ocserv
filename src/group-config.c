@@ -42,10 +42,12 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "route", .type = OPTION_MULTI_LINE },
 	{ .name = "iroute", .type = OPTION_MULTI_LINE },
-	{ .name = "ipv4-dns", .type = OPTION_STRING },
-	{ .name = "ipv6-dns", .type = OPTION_STRING },
-	{ .name = "ipv4-nbns", .type = OPTION_STRING },
-	{ .name = "ipv6-nbns", .type = OPTION_STRING },
+	{ .name = "dns", .type = OPTION_MULTI_LINE },
+	{ .name = "ipv4-dns", .type = OPTION_MULTI_LINE }, /* alias of dns */
+	{ .name = "ipv6-dns", .type = OPTION_MULTI_LINE }, /* alias of dns */
+	{ .name = "nbns", .type = OPTION_MULTI_LINE },
+	{ .name = "ipv4-nbns", .type = OPTION_MULTI_LINE }, /* alias of nbns */
+	{ .name = "ipv6-nbns", .type = OPTION_MULTI_LINE }, /* alias of nbns */
 	{ .name = "ipv4-network", .type = OPTION_STRING },
 	{ .name = "ipv6-network", .type = OPTION_STRING },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING },
@@ -63,16 +65,16 @@ static struct cfg_options available_options[] = {
 		if (s_name == NULL) { \
 			num = 0; \
 			s_name = malloc(sizeof(char*)*MAX_CONFIG_ENTRIES); \
-			do { \
-			        if (val && !strcmp(val->pzName, name)==0) \
-					continue; \
-			        s_name[num] = strdup(val->v.strVal); \
-			        num++; \
-			        if (num>=MAX_CONFIG_ENTRIES) \
-			        break; \
-		      } while((val = optionNextValue(pov, val)) != NULL); \
-		      s_name[num] = NULL; \
 		} \
+		do { \
+		        if (val && !strcmp(val->pzName, name)==0) \
+				continue; \
+		        s_name[num] = strdup(val->v.strVal); \
+		        num++; \
+		        if (num>=MAX_CONFIG_ENTRIES) \
+		        break; \
+	      } while((val = optionNextValue(pov, val)) != NULL); \
+	      s_name[num] = NULL; \
 	}
 
 #define READ_RAW_STRING(name, s_name) \
@@ -148,11 +150,21 @@ unsigned prefix = 0;
 	READ_RAW_MULTI_LINE("route", config->routes, config->routes_size);
 	READ_RAW_MULTI_LINE("iroute", config->iroutes, config->iroutes_size);
 
+	READ_RAW_MULTI_LINE("dns", config->dns, config->dns_size);
+	if (config->dns_size == 0) {
+		/* try aliases */
+		READ_RAW_MULTI_LINE("ipv6-dns", config->dns, config->dns_size);
+		READ_RAW_MULTI_LINE("ipv4-dns", config->dns, config->dns_size);
+	}
+
+	READ_RAW_MULTI_LINE("nbns", config->nbns, config->nbns_size);
+	if (config->nbns_size == 0) {
+		/* try aliases */
+		READ_RAW_MULTI_LINE("ipv6-nbns", config->nbns, config->nbns_size);
+		READ_RAW_MULTI_LINE("ipv4-nbns", config->nbns, config->nbns_size);
+	}
+
 	READ_RAW_STRING("cgroup", config->cgroup);
-	READ_RAW_STRING("ipv4-dns", config->ipv4_dns);
-	READ_RAW_STRING("ipv6-dns", config->ipv6_dns);
-	READ_RAW_STRING("ipv4-nbns", config->ipv4_nbns);
-	READ_RAW_STRING("ipv6-nbns", config->ipv6_nbns);
 	READ_RAW_STRING("ipv4-network", config->ipv4_network);
 	READ_RAW_STRING("ipv6-network", config->ipv6_network);
 	READ_RAW_STRING("ipv4-netmask", config->ipv4_netmask);
@@ -189,11 +201,17 @@ unsigned i;
 	}
 	free(config->iroutes);
 
+	for(i=0;i<config->dns_size;i++) {
+		free(config->dns[i]);
+	}
+	free(config->dns);
+
+	for(i=0;i<config->nbns_size;i++) {
+		free(config->nbns[i]);
+	}
+	free(config->nbns);
+
 	free(config->cgroup);
-	free(config->ipv4_dns);
-	free(config->ipv6_dns);
-	free(config->ipv4_nbns);
-	free(config->ipv6_nbns);
 	free(config->ipv4_network);
 	free(config->ipv6_network);
 	free(config->ipv4_netmask);

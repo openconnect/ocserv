@@ -117,10 +117,12 @@ struct group_cfg_st {
 	char **iroutes;
 	unsigned int iroutes_size;
 
-	char *ipv4_dns;
-	char *ipv6_dns;
-	char *ipv4_nbns;
-	char *ipv6_nbns;
+	char **dns;
+	unsigned int dns_size;
+
+	char **nbns;
+	unsigned int nbns_size;
+
 	char *ipv4_network;
 	char *ipv6_network;
 	char *ipv4_netmask;
@@ -142,13 +144,16 @@ struct vpn_st {
 	char *ipv6_netmask;
 	char *ipv6;
 	char *ipv6_local; /* local IPv6 address */
-	char *ipv4_dns;
-	char *ipv6_dns;
-	char *ipv4_nbns;
-	char *ipv6_nbns;
 	unsigned int mtu;
+
 	char **routes;
 	unsigned int routes_size;
+
+	char **dns;
+	unsigned int dns_size;
+
+	char **nbns;
+	unsigned int nbns_size;
 };
 
 struct cfg_st {

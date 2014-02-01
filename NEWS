@@ -7,6 +7,8 @@
   for BSD-derivatives is untested).
 - Default configuration file changed to /etc/ocserv/ocserv.conf and
   default password file for ocpasswd to /etc/ocserv/ocpasswd.
+- Added support for multiple DNS and NBNS servers in ocserv.conf.
+  The 'local' keyword is no longer supported.
 - occtl: fixed gathering of interface statistics.
 
 

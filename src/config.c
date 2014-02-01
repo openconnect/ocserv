@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,13 +101,16 @@ static struct cfg_options available_options[] = {
 
 	{ .name = "ipv4-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "ipv4-dns", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "ipv4-nbns", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "ipv4-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 }, /* alias dns */
+	{ .name = "ipv6-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 }, /* alias dns */
+	{ .name = "nbns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "ipv4-nbns", .type = OPTION_MULTI_LINE, .mandatory = 0 }, /* alias nbns */
+	{ .name = "ipv6-nbns", .type = OPTION_MULTI_LINE, .mandatory = 0 }, /* alias nbns */
+
 	{ .name = "ipv6-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-netmask", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
-	{ .name = "ipv6-dns", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "ipv6-nbns", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "route-add-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "route-del-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
@@ -125,7 +128,7 @@ unsigned j;
 			return available_options[j].val;
 		}
 	}
-	
+
 	return NULL;
 }
 
@@ -135,16 +138,16 @@ unsigned j;
 		if (s_name == NULL) { \
 			num = 0; \
 			s_name = malloc(sizeof(char*)*MAX_CONFIG_ENTRIES); \
-			do { \
-			        if (val && !strcmp(val->pzName, name)==0) \
-					continue; \
-			        s_name[num] = strdup(val->v.strVal); \
-			        num++; \
-			        if (num>=MAX_CONFIG_ENTRIES) \
-			        break; \
-		      } while((val = optionNextValue(pov, val)) != NULL); \
-		      s_name[num] = NULL; \
 		} \
+		do { \
+		        if (val && !strcmp(val->pzName, name)==0) \
+				continue; \
+		        s_name[num] = strdup(val->v.strVal); \
+		        num++; \
+		        if (num>=MAX_CONFIG_ENTRIES) \
+		        break; \
+	      } while((val = optionNextValue(pov, val)) != NULL); \
+	      s_name[num] = NULL; \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
@@ -222,7 +225,7 @@ unsigned j;
 			return 1;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -307,7 +310,7 @@ unsigned force_cert_auth;
 		free(auth[j]);
 	}
 	free(auth);
-	
+
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
 	 */
@@ -337,7 +340,7 @@ unsigned force_cert_auth;
 
 	READ_STRING("connect-script", config->connect_script);
 	READ_STRING("disconnect-script", config->disconnect_script);
-	
+
 	if (pid_file == NULL)
 		READ_STRING("pid-file", pid_file);
 
@@ -401,7 +404,6 @@ unsigned force_cert_auth;
 
 	READ_STRING("ipv4-network", config->network.ipv4);
 	READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
-	READ_STRING("ipv4-dns", config->network.ipv4_dns);
 
 	READ_STRING("ipv6-network", config->network.ipv6);
 	READ_STRING("ipv6-netmask", config->network.ipv6_netmask);
@@ -409,19 +411,34 @@ unsigned force_cert_auth;
 	READ_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) 
 		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
-	
-	READ_STRING("ipv6-dns", config->network.ipv6_dns);
-
-	READ_STRING("ipv4-nbns", config->network.ipv4_nbns);
-	READ_STRING("ipv6-nbns", config->network.ipv6_nbns);
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
+	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);
+	if (config->network.dns_size == 0) {
+		/* try the aliases */
+		READ_MULTI_LINE("ipv6-dns", config->network.dns, config->network.dns_size);
+		READ_MULTI_LINE("ipv4-dns", config->network.dns, config->network.dns_size);
+	}
+
+	for (j=0;j<config->network.dns_size;j++) {
+		if (strcmp(config->network.dns[j], "local") == 0) {
+			fprintf(stderr, "The 'local' DNS keyword is no longer supported.\n");
+			exit(1);
+		}
+	}
+
+	READ_MULTI_LINE("nbns", config->network.nbns, config->network.nbns_size);
+	if (config->network.nbns_size == 0) {
+		/* try the aliases */
+		READ_MULTI_LINE("ipv6-nbns", config->network.nbns, config->network.nbns_size);
+		READ_MULTI_LINE("ipv4-nbns", config->network.nbns, config->network.nbns_size);
+	}
 
 	READ_STRING("route-add-cmd", config->route_add_cmd);
 	READ_STRING("route-del-cmd", config->route_del_cmd);
 	READ_STRING("config-per-user", config->per_user_dir);
 	READ_STRING("config-per-group", config->per_group_dir);
-		
+
 	optionUnloadNested(pov);
 }
 
@@ -443,7 +460,7 @@ static void check_cfg( struct cfg_st *config)
 		fprintf(stderr, "No mask found for IPv6 network.\n");
 		exit(1);
 	}
-	
+
 	if (config->banner && strlen(config->banner) > MAX_BANNER_SIZE) {
 		fprintf(stderr, "Banner size is too long\n");
 		exit(1);
@@ -460,7 +477,7 @@ static void check_cfg( struct cfg_st *config)
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;
 	}
-	
+
 	if (config->plain_passwd != NULL) {
 		if (access(config->plain_passwd, R_OK) != 0) {
 			fprintf(stderr, "cannot access password file '%s'\n", config->plain_passwd);
@@ -477,10 +494,10 @@ static void check_cfg( struct cfg_st *config)
 		config->xml_config_hash = calc_sha1_hash(config->xml_config_file, 0);
 		if (config->xml_config_hash == NULL && config->chroot_dir != NULL) {
 			char path[_POSIX_PATH_MAX];
-			
+
 			snprintf(path, sizeof(path), "%s/%s", config->chroot_dir, config->xml_config_file);
 			config->xml_config_hash = calc_sha1_hash(path, 0);
-			
+
 			if (config->xml_config_hash == NULL) {
 				fprintf(stderr, "Cannot open file '%s'\n", path);
 				exit(1);
@@ -492,7 +509,7 @@ static void check_cfg( struct cfg_st *config)
 		}
 	}
 #endif
-	
+
 	if (config->keepalive == 0)
 		config->keepalive = 3600;
 
@@ -524,18 +541,18 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 
 	if (HAVE_OPT(DEBUG))
 		config->debug = 1;
-	
+
 	if (HAVE_OPT(CONFIG)) {
 		cfg_file = OPT_ARG(CONFIG);
 	} else if (access(cfg_file, R_OK) != 0) {
 		fprintf(stderr, "%s -c [config]\nUse %s --help for more information.\n", argv[0], argv[0]);
 		exit(1);
 	}
-	
+
 	parse_cfg_file(cfg_file, config);
-	
+
 	check_cfg(config);
-	
+
 	return 0;
 
 }
@@ -575,19 +592,23 @@ unsigned i;
 
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);
-	DEL(config->network.ipv4_dns);
 	DEL(config->network.ipv6);
 	DEL(config->network.ipv6_netmask);
-	DEL(config->network.ipv6_dns);
 	for (i=0;i<config->network.routes_size;i++)
 		DEL(config->network.routes[i]);
+	DEL(config->network.routes);
+	for (i=0;i<config->network.dns_size;i++)
+		DEL(config->network.dns[i]);
+	DEL(config->network.dns);
+	for (i=0;i<config->network.nbns_size;i++)
+		DEL(config->network.nbns[i]);
+	DEL(config->network.nbns);
 	for (i=0;i<config->key_size;i++)
 		DEL(config->key[i]);
 	DEL(config->key);
 	for (i=0;i<config->cert_size;i++)
 		DEL(config->cert[i]);
 	DEL(config->cert);
-	DEL(config->network.routes);
 
 	return;
 }
@@ -601,7 +622,7 @@ void reload_cfg_file(struct cfg_st* config)
 	parse_cfg_file(cfg_file, config);
 
 	check_cfg(config);
-	
+
 	return;
 }
 
@@ -617,7 +638,7 @@ FILE* fp;
 		fprintf(stderr, "Cannot open pid file '%s'\n", pid_file);
 		exit(1);
 	}
-	
+
 	fprintf(fp, "%u", (unsigned)getpid());
 	fclose(fp);
 }

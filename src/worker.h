@@ -112,6 +112,8 @@ typedef struct worker_st {
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
 
+	struct http_req_st req;
+
 	/* inique session identifier */
 	uint8_t sid[SID_SIZE];
 
@@ -164,8 +166,10 @@ typedef struct worker_st {
 	/* additional data - received per user or per group */
 	unsigned routes_size;
 	char* routes[MAX_ROUTES];
-	
-	struct http_req_st req;
+	unsigned dns_size;
+	char* dns[MAX_ROUTES];
+	unsigned nbns_size;
+	char* nbns[MAX_ROUTES];
 } worker_st;
 
 void vpn_server(struct worker_st* ws);

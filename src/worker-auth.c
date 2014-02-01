@@ -298,30 +298,6 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			}
 
 			/* Read any additional data */
-			if (msg->ipv4_dns != NULL) {
-				free(ws->config->network.ipv4_dns);
-				ws->config->network.ipv4_dns =
-				    strdup(msg->ipv4_dns);
-			}
-
-			if (msg->ipv6_dns != NULL) {
-				free(ws->config->network.ipv6_dns);
-				ws->config->network.ipv4_dns =
-				    strdup(msg->ipv6_dns);
-			}
-
-			if (msg->ipv4_nbns != NULL) {
-				free(ws->config->network.ipv4_nbns);
-				ws->config->network.ipv4_nbns =
-				    strdup(msg->ipv4_nbns);
-			}
-
-			if (msg->ipv6_nbns != NULL) {
-				free(ws->config->network.ipv6_nbns);
-				ws->config->network.ipv4_nbns =
-				    strdup(msg->ipv6_nbns);
-			}
-
 			if (msg->ipv4_netmask != NULL) {
 				free(ws->config->network.ipv4_netmask);
 				ws->config->network.ipv4_netmask =
@@ -348,6 +324,18 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 
 			for (i = 0; i < ws->routes_size; i++) {
 				ws->routes[i] = strdup(msg->routes[i]);
+			}
+
+			ws->dns_size = msg->n_dns;
+
+			for (i = 0; i < ws->dns_size; i++) {
+				ws->dns[i] = strdup(msg->dns[i]);
+			}
+
+			ws->nbns_size = msg->n_nbns;
+
+			for (i = 0; i < ws->nbns_size; i++) {
+				ws->nbns[i] = strdup(msg->nbns[i]);
 			}
 		} else {
 			oclog(ws, LOG_ERR, "error in received message");

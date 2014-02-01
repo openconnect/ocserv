@@ -1177,6 +1177,13 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
+	for (i = 0; i < ws->config->split_dns_size; i++) {
+		oclog(ws, LOG_DEBUG, "adding split DNS %s", ws->config->split_dns[i]);
+		ret = tls_printf(ws->session,
+				 "X-CSTP-Split-DNS: %s\r\n", ws->config->split_dns[i]);
+		SEND_ERR(ret);
+	}
+
 	for (i = 0; i < ws->vinfo.routes_size; i++) {
 		if (req->no_ipv6 != 0 && strchr(ws->vinfo.routes[i], ':') != 0)
 			continue;

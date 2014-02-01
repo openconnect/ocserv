@@ -51,6 +51,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -414,6 +415,7 @@ unsigned force_cert_auth;
 		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
 
 	READ_MULTI_LINE("custom-header", config->custom_header, config->custom_header_size);
+	READ_MULTI_LINE("split-dns", config->split_dns, config->split_dns_size);
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
 	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);
@@ -615,6 +617,9 @@ unsigned i;
 	for (i=0;i<config->custom_header_size;i++)
 		DEL(config->custom_header[i]);
 	DEL(config->custom_header);
+	for (i=0;i<config->split_dns_size;i++)
+		DEL(config->split_dns[i]);
+	DEL(config->split_dns);
 
 	return;
 }

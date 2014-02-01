@@ -184,6 +184,9 @@ struct cfg_st {
 	char **custom_header;
 	unsigned custom_header_size;;
 
+	char **split_dns;
+	unsigned split_dns_size;;
+
 	char* socket_file_prefix;
 	time_t cookie_validity;	/* in seconds */
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */

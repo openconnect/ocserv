@@ -39,22 +39,98 @@
 # include <net/if_tun.h>
 #endif
 
-#ifdef __linux__
-# include <linux/types.h>
-struct in6_ifreq {
-	struct in6_addr ifr6_addr;
-	__u32 ifr6_prefixlen;
-	unsigned int ifr6_ifindex;
-};
-#endif
-
 #include <netdb.h>
 #include <vpn.h>
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
 
-static int set_network_info( main_server_st* s, struct proc_st* proc)
+#ifdef __linux__
+
+#include <linux/types.h>
+
+struct in6_ifreq {
+	struct in6_addr ifr6_addr;
+	__u32 ifr6_prefixlen;
+	unsigned int ifr6_ifindex;
+};
+
+static
+int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
+{
+	int fd, e, ret;
+	struct in6_ifreq ifr6;
+	struct ifreq ifr;
+	unsigned idx;
+
+	fd = socket(AF_INET6, SOCK_STREAM, 0);
+	if (fd == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: Error socket(AF_INET6): %s\n",
+		      proc->tun_lease.name, strerror(e));
+		return -1;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+
+	ret = ioctl(fd, SIOGIFINDEX, &ifr);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: Error in SIOGIFINDEX: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	idx = ifr.ifr_ifindex;
+
+	memset(&ifr6, 0, sizeof(ifr6));
+	memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip),
+	       SA_IN_SIZE(proc->ipv6->lip_len));
+	ifr6.ifr6_ifindex = idx;
+	ifr6.ifr6_prefixlen = 127;
+
+	ret = ioctl(fd, SIOCSIFADDR, &ifr6);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_addr.sa_family = AF_INET6;
+	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+
+	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR,
+		      "%s: Could not bring up IPv6 interface: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = 0;
+ cleanup:
+	close(fd);
+
+	return ret;
+}
+#else
+#warn "No IPv6 support on this platform"
+static int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
+{
+	return -1;
+}
+
+#endif
+
+static int set_network_info(main_server_st * s, struct proc_st *proc)
 {
 	int fd = -1, ret, e;
 	struct ifreq ifr;
@@ -73,7 +149,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		ret = ioctl(fd, SIOCSIFADDR, &ifr);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv4: %s\n", proc->tun_lease.name, strerror(e));
+			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv4: %s\n",
+			      proc->tun_lease.name, strerror(e));
 			ret = -1;
 			goto cleanup;
 		}
@@ -87,7 +164,9 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		ret = ioctl(fd, SIOCSIFDSTADDR, &ifr);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error setting DST IPv4: %s\n", proc->tun_lease.name, strerror(e));
+			mslog(s, NULL, LOG_ERR,
+			      "%s: Error setting DST IPv4: %s\n",
+			      proc->tun_lease.name, strerror(e));
 			ret = -1;
 			goto cleanup;
 		}
@@ -100,7 +179,9 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 
 		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 		if (ret != 0) {
-			mslog(s, NULL, LOG_ERR, "%s: Could not bring up IPv4 interface.\n", proc->tun_lease.name);
+			mslog(s, NULL, LOG_ERR,
+			      "%s: Could not bring up IPv4 interface.\n",
+			      proc->tun_lease.name);
 			ret = -1;
 			goto cleanup;
 		}
@@ -110,75 +191,23 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 	}
 
 	if (proc->ipv6 && proc->ipv6->lip_len > 0 && proc->ipv6->rip_len > 0) {
-#ifdef __linux__
-		struct in6_ifreq ifr6;
-		unsigned idx;
-
-		fd = socket(AF_INET6, SOCK_STREAM, 0);
-		if (fd == -1) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error socket(AF_INET6): %s\n", proc->tun_lease.name, strerror(e));
-			ret = -1;
-			goto cleanup;
+		ret = set_ipv6_addr(s, proc);
+		if (ret < 0) {
+			remove_ip_lease(s, proc->ipv6);
+			proc->ipv6 = NULL;
 		}
-
-		memset(&ifr, 0, sizeof(ifr));
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
-
-		ret = ioctl(fd, SIOGIFINDEX, &ifr);
-		if (ret != 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error in SIOGIFINDEX: %s\n", proc->tun_lease.name, strerror(e));
-			ret = -1;
-			goto cleanup;
-		}
-
-		idx = ifr.ifr_ifindex;
-
-		memset(&ifr6, 0, sizeof(ifr6));
-		memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip), SA_IN_SIZE(proc->ipv6->lip_len));
-		ifr6.ifr6_ifindex = idx;
-		ifr6.ifr6_prefixlen = 127;
-
-		ret = ioctl(fd, SIOCSIFADDR, &ifr6);
-		if (ret != 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n", proc->tun_lease.name, strerror(e));
-			ret = -1;
-			goto cleanup;
-		}
-
-		memset(&ifr, 0, sizeof(ifr));
-		ifr.ifr_addr.sa_family = AF_INET6;
-		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
-
-		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
-		if (ret != 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: Could not bring up IPv6 interface: %s\n", proc->tun_lease.name, strerror(e));
-			ret = -1;
-			goto cleanup;
-		}
-
-		close(fd);
-		fd = -1;
-#else
-		remove_ip_lease(s, proc->ipv6);
-		proc->ipv6 = NULL;
-# warn "No IPv6 support on this platform"
-#endif
 	}
 
 	if (proc->ipv6 == 0 && proc->ipv4 == 0) {
-		mslog(s, NULL, LOG_ERR, "%s: Could not set any IP.\n", proc->tun_lease.name);
+		mslog(s, NULL, LOG_ERR, "%s: Could not set any IP.\n",
+		      proc->tun_lease.name);
 		ret = -1;
 		goto cleanup;
 	}
-		
+
 	ret = 0;
 
-cleanup:
+ cleanup:
 	if (fd != -1)
 		close(fd);
 	return ret;
@@ -186,49 +215,53 @@ cleanup:
 
 #include <ccan/hash/hash.h>
 
-int open_tun(main_server_st* s, struct proc_st* proc)
+int open_tun(main_server_st * s, struct proc_st *proc)
 {
 	int tunfd, ret, e;
 	struct ifreq ifr;
 	unsigned int t;
-	
+
 	ret = get_ip_leases(s, proc);
 	if (ret < 0)
 		return ret;
-	snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%%d", s->config->network.name);
+	snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%%d",
+		 s->config->network.name);
 
 	/* No need to free the lease after this point.
 	 */
-	 
+
 	/* Obtain a free tun device */
 #ifdef __linux__
 	tunfd = open("/dev/net/tun", O_RDWR);
 	if (tunfd < 0) {
 		int e = errno;
 		mslog(s, NULL, LOG_ERR, "Can't open /dev/net/tun: %s\n",
-		       strerror(e));
+		      strerror(e));
 		return -1;
 	}
-	
-	set_cloexec_flag (tunfd, 1);
+
+	set_cloexec_flag(tunfd, 1);
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 
-        memcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+	memcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
-	if (ioctl(tunfd, TUNSETIFF, (void *) &ifr) < 0) {
+	if (ioctl(tunfd, TUNSETIFF, (void *)&ifr) < 0) {
 		e = errno;
-		mslog(s, NULL, LOG_ERR, "%s: TUNSETIFF: %s\n", proc->tun_lease.name, strerror(e));
+		mslog(s, NULL, LOG_ERR, "%s: TUNSETIFF: %s\n",
+		      proc->tun_lease.name, strerror(e));
 		goto fail;
 	}
 	memcpy(proc->tun_lease.name, ifr.ifr_name, IFNAMSIZ);
-	mslog(s, proc, LOG_INFO, "assigning tun device %s\n", proc->tun_lease.name);
+	mslog(s, proc, LOG_INFO, "assigning tun device %s\n",
+	      proc->tun_lease.name);
 
 	/* we no longer use persistent tun */
 	if (ioctl(tunfd, TUNSETPERSIST, (void *)0) < 0) {
 		e = errno;
-		mslog(s, NULL, LOG_ERR, "%s: TUNSETPERSIST: %s\n", proc->tun_lease.name, strerror(e));
+		mslog(s, NULL, LOG_ERR, "%s: TUNSETPERSIST: %s\n",
+		      proc->tun_lease.name, strerror(e));
 		goto fail;
 	}
 
@@ -238,47 +271,47 @@ int open_tun(main_server_st* s, struct proc_st* proc)
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_INFO, "%s: TUNSETOWNER: %s\n",
-			       proc->tun_lease.name, strerror(e));
+			      proc->tun_lease.name, strerror(e));
 			goto fail;
 		}
 	}
-
-# ifdef TUNSETGROUP
+#ifdef TUNSETGROUP
 	if (s->config->gid != -1) {
 		t = s->config->uid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNSETGROUP: %s\n",
-			       proc->tun_lease.name, strerror(e));
+			      proc->tun_lease.name, strerror(e));
 			goto fail;
 		}
 	}
-# endif
-#else /* freebsd */
+#endif
+#else				/* freebsd */
 	tunfd = open("/dev/tun", O_RDWR);
 	if (tunfd < 0) {
 		int e = errno;
 		mslog(s, NULL, LOG_ERR, "Can't open /dev/tun: %s\n",
-		       strerror(e));
+		      strerror(e));
 		return -1;
 	}
-	
+
 	/* find device name */
 	{
 		struct stat st;
-		
+
 		ret = fstat(tunfd, &st);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: stat: %s\n", strerror(e));
 			goto fail;
 		}
-		
-		snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s", devname(st.st_rdev, S_IFCHR));
+
+		snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name),
+			 "%s", devname(st.st_rdev, S_IFCHR));
 	}
 
-	set_cloexec_flag (tunfd, 1);
+	set_cloexec_flag(tunfd, 1);
 #endif
 
 	/* set IP/mask */
@@ -290,7 +323,7 @@ int open_tun(main_server_st* s, struct proc_st* proc)
 	proc->tun_lease.fd = tunfd;
 
 	return 0;
-fail:
+ fail:
 	close(tunfd);
 	return -1;
 }

@@ -164,6 +164,8 @@ static int set_network_info( main_server_st* s, struct proc_st* proc)
 		close(fd);
 		fd = -1;
 #else
+		remove_ip_lease(s, proc->ipv6);
+		proc->ipv6 = NULL;
 # warn "No IPv6 support on this platform"
 #endif
 	}

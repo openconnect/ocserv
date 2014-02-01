@@ -436,3 +436,9 @@ void remove_ip_leases(main_server_st* s, struct proc_st* proc)
 		proc->ipv6 = NULL;
 	}
 }
+
+void remove_ip_lease(main_server_st* s, struct ip_lease_st * lease)
+{
+	htable_del(&s->ip_leases.ht, rehash(lease, NULL), lease);
+	free(lease);
+}

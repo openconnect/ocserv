@@ -40,5 +40,6 @@ void ip_lease_init(struct ip_lease_db_st* db);
 
 int get_ip_leases(struct main_server_st* s, struct proc_st* proc);
 void remove_ip_leases(struct main_server_st* s, struct proc_st* proc);
+void remove_ip_lease(main_server_st* s, struct ip_lease_st * lease);
 
 #endif

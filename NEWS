@@ -9,6 +9,7 @@
   default password file for ocpasswd to /etc/ocserv/ocpasswd.
 - Added support for multiple DNS and NBNS servers in ocserv.conf.
   The 'local' keyword is no longer supported.
+- Added the new config options split-dns and custom-header.
 - occtl: fixed gathering of interface statistics.
 
 

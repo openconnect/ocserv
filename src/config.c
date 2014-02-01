@@ -34,6 +34,7 @@
 #include <vpn.h>
 #include <tlslib.h>
 
+#define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
 
 static const char* pid_file = NULL;
@@ -245,6 +246,9 @@ unsigned prefix = 0;
 unsigned force_cert_auth;
 
 	pov = configFileLoad(file);
+	if (pov == NULL && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0)
+		pov = configFileLoad(OLD_DEFAULT_CFG_FILE);
+
 	if (pov == NULL) {
 		fprintf(stderr, "Error loading config file %s\n", file);
 		exit(1);

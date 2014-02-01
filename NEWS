@@ -3,7 +3,8 @@
   the server is unable to parse client cookies.
 - Changed the method X-CSTP-MTU is taken into account to avoid
   smaller MTU sizes than the intended.
-- Corrected IPv6 address assignment.
+- Corrected IPv6 address assignment in Linux (the equivalent code
+  for BSD-derivatives is untested).
 - Default configuration file changed to /etc/ocserv/ocserv.conf and
   default password file for ocpasswd to /etc/ocserv/ocpasswd.
 - occtl: fixed gathering of interface statistics.

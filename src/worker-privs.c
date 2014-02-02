@@ -88,8 +88,6 @@ int disable_system_calls(struct worker_st *ws)
 
 	/* this we need to get the MTU from
 	 * the TUN device */
-	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFDSTADDR));
-	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFADDR));
 	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFMTU));
 
 	ret = seccomp_load(ctx);

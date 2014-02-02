@@ -10,6 +10,8 @@
 - Added support for multiple DNS and NBNS servers in ocserv.conf.
   The 'local' keyword is no longer supported.
 - Added the new config options split-dns and custom-header.
+- When seccomp is being used the forbidden system calls will
+  return error instead of the process being killed.
 - occtl: fixed gathering of interface statistics.
 
 

@@ -31,7 +31,7 @@ int disable_system_calls(struct worker_st *ws)
 	int ret;
 	scmp_filter_ctx ctx;
 
-	ctx = seccomp_init(SCMP_ACT_KILL);
+	ctx = seccomp_init(SCMP_ACT_ERRNO(EPERM));
 	if (ctx == NULL) {
 		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
 		return -1;

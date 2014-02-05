@@ -562,7 +562,7 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 
 }
 
-#define DEL(x) free(x);x=NULL
+#define DEL(x) {free(x);x=NULL;}
 void clear_cfg_file(struct cfg_st* config)
 {
 unsigned i;

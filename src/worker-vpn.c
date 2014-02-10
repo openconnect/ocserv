@@ -1546,7 +1546,7 @@ static int connect_handler(worker_st * ws)
 
 			if (ret == 0) {	/* disconnect */
 				oclog(ws, LOG_INFO, "client disconnected");
-				goto exit_nomsg;
+				goto exit;
 			}
 
 			if (ret > 0) {

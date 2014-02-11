@@ -1583,7 +1583,7 @@ static int connect_handler(worker_st * ws)
 			if (ret == GNUTLS_E_REHANDSHAKE) {
 				/* rekey? */
 				if (ws->last_tls_rehandshake > 0 &&
-					now-ws->last_tls_rehandshake < ws->config->cookie_validity/3) {
+					now-ws->last_tls_rehandshake < ws->config->rekey_time/2) {
 					oclog(ws, LOG_ERR, "client requested TLS rehandshake too soon");
 					goto exit;
 				}
@@ -1595,6 +1595,7 @@ static int connect_handler(worker_st * ws)
 				GNUTLS_FATAL_ERR(ret);
 
 				ws->last_tls_rehandshake = now;
+				oclog(ws, LOG_INFO, "TLS rehandshake completed");
 			}
 		}
 
@@ -1613,7 +1614,28 @@ static int connect_handler(worker_st * ws)
 
 				GNUTLS_FATAL_ERR(ret);
 
-				if (ret > 0) {
+				if (ret == GNUTLS_E_REHANDSHAKE) {
+
+					if (ws->last_dtls_rehandshake > 0 &&
+						now-ws->last_dtls_rehandshake < ws->config->rekey_time/2) {
+						oclog(ws, LOG_ERR, "client requested DTLS rehandshake too soon");
+						goto exit;
+					}
+
+					/* there is not much we can rehandshake on the DTLS channel,
+					 * at least not the way AnyConnect sets it up.
+					 */
+					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel (!)");
+
+					do {
+						ret = gnutls_handshake(ws->dtls_session);
+					} while (ret == GNUTLS_E_AGAIN || ret == GNUTLS_E_INTERRUPTED);
+
+					GNUTLS_FATAL_ERR(ret);
+					oclog(ws, LOG_INFO, "DTLS rehandshake completed");
+
+					ws->last_dtls_rehandshake = now;
+				} else if (ret > 0) {
 					l = ret;
 					ws->udp_state = UP_ACTIVE;
 
@@ -1634,15 +1656,6 @@ static int connect_handler(worker_st * ws)
 				} else
 					oclog(ws, LOG_DEBUG,
 					      "no data received (%d)", ret);
-
-				if (ret == GNUTLS_E_REHANDSHAKE) {
-					/* there is not much we can rehandshake on the DTLS channel,
-					 * at least not the way AnyConnect sets it up.
-					 */
-					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel (!)");
-					ret = gnutls_alert_send(ws->dtls_session, GNUTLS_AL_WARNING, GNUTLS_A_NO_RENEGOTIATION);
-					GNUTLS_FATAL_ERR(ret);
-				}
 
 				udp_recv_time = now;
 				break;

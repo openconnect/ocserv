@@ -12,6 +12,9 @@
 - Added the new config options split-dns and custom-header.
 - When seccomp is being used the forbidden system calls will
   return error instead of the process being killed.
+- Rekey time can now be configured using the rekey-time option, and
+  can also be disabled when setting it to zero.
+- Rekey method changed to SSL to use rehandshakes instead of new tunnels.
 - occtl: fixed gathering of interface statistics.
 
 

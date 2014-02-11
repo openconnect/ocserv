@@ -1720,7 +1720,7 @@ static int connect_handler(worker_st * ws)
 		tls_close(ws->dtls_session);
 		/*gnutls_deinit(ws->dtls_session); */
 	}
- exit_nomsg:
+
 	exit_worker(ws);
 
  send_error:

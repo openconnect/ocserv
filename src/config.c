@@ -88,6 +88,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "net-priority", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
+	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "min-reauth-time", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -376,6 +377,7 @@ unsigned force_cert_auth;
 	config->tx_per_sec /= 1000;
 
 	READ_NUMERIC("cookie-validity", config->cookie_validity);
+	READ_NUMERIC("rekey-time", config->rekey_time);
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("max-clients", config->max_clients);
 	READ_NUMERIC("min-reauth-time", config->min_reauth_time);

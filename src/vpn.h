@@ -189,6 +189,7 @@ struct cfg_st {
 
 	char* socket_file_prefix;
 	time_t cookie_validity;	/* in seconds */
+	time_t rekey_time;	/* in seconds */
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;

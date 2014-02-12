@@ -1309,10 +1309,18 @@ static int connect_handler(worker_st * ws)
 			       ws->config->udp_port);
 		SEND_ERR(ret);
 
-		ret =
-		    tls_printf(ws->session, "X-DTLS-Rekey-Time: %u\r\n",
-			       (unsigned)(2 * ws->config->cookie_validity) / 3);
-		SEND_ERR(ret);
+		if (ws->config->rekey_time > 0) {
+			ret =
+			    tls_printf(ws->session, "X-DTLS-Rekey-Time: %u\r\n",
+				       (unsigned)(ws->config->rekey_time+10));
+			SEND_ERR(ret);
+
+			ret = tls_puts(ws->session, "X-DTLS-Rekey-Method: ssl\r\n");
+			SEND_ERR(ret);
+		} else {
+			ret = tls_puts(ws->session, "X-DTLS-Rekey-Method: none\r\n");
+			SEND_ERR(ret);
+		}
 
 		ret =
 		    tls_printf(ws->session, "X-DTLS-Keepalive: %u\r\n",

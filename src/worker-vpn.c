@@ -1633,7 +1633,7 @@ static int connect_handler(worker_st * ws)
 					/* there is not much we can rehandshake on the DTLS channel,
 					 * at least not the way AnyConnect sets it up.
 					 */
-					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel (!)");
+					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel");
 
 					do {
 						ret = gnutls_handshake(ws->dtls_session);

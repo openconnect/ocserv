@@ -377,7 +377,13 @@ unsigned force_cert_auth;
 	config->tx_per_sec /= 1000;
 
 	READ_NUMERIC("cookie-validity", config->cookie_validity);
+
+	config->rekey_time = -1;
 	READ_NUMERIC("rekey-time", config->rekey_time);
+	if (config->rekey_time == -1) {
+		config->rekey_time = 24*60*60;
+	}
+
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("max-clients", config->max_clients);
 	READ_NUMERIC("min-reauth-time", config->min_reauth_time);

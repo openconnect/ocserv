@@ -45,7 +45,7 @@ FILE* fp;
 char * line = NULL;
 size_t len;
 ssize_t ll;
-char* p;
+char* p, *sp;
 int ret;
 
 	fp = fopen(pctx->passwd, "r");
@@ -55,25 +55,29 @@ int ret;
 	}
 
 	while((ll=getline(&line, &len, fp)) > 0) {
-		if (ll <= 2)
+		if (ll <= 4)
 			continue;
 
-		if (line[ll-1] == '\n')
-			line[ll-1] = 0;
-		if (line[ll-2] == '\n')
-			line[ll-2] = 0;
+		if (line[ll-1] == '\n') {
+			ll--;
+			line[ll] = 0;
+		}
+		if (line[ll-1] == '\r') {
+			ll--;
+			line[ll] = 0;
+		}
 
-		p = strtok(line, ":");
+		p = strtok_r(line, ":", &sp);
 
 		if (p != NULL && strcmp(pctx->username, p) == 0) {
-			p = strtok(NULL, ":");
+			p = strtok_r(NULL, ":", &sp);
 			if (p != NULL) {
 				groupname_size = sizeof(pctx->groupname);
 				groupname_size = snprintf(pctx->groupname, groupname_size, "%s", p);
 				if (groupname_size == 1) /* values like '*' or 'x' indicate empty group */
 					pctx->groupname[0] = 0;
 
-				p = strtok(NULL, ":");
+				p = strtok_r(NULL, ":", &sp);
 				if (p != NULL) {
 					snprintf(pctx->cpass, sizeof(pctx->cpass), "%s", p);
 					ret = 0;

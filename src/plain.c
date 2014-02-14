@@ -37,9 +37,8 @@ struct plain_ctx_st {
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
-static int read_auth_pass(void* ctx)
+static int read_auth_pass(struct plain_ctx_st* pctx)
 {
-struct plain_ctx_st* pctx = ctx;
 unsigned groupname_size;
 FILE* fp;
 char * line = NULL;

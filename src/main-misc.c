@@ -401,6 +401,7 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 	} else if (result == 0) {
 		ret = accept_user(s, proc, cmd);
 		if (ret < 0) {
+			proc->status = PS_AUTH_FAILED;
 			goto finished;
 		}
 		proc->status = PS_AUTH_COMPLETED;

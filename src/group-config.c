@@ -172,6 +172,10 @@ unsigned prefix = 0;
 	if (prefix > 0) {
 		config->ipv6_netmask = ipv6_prefix_to_mask(prefix);
 		config->ipv6_prefix = prefix;
+
+		if (config->ipv6_netmask == NULL) {
+			mslog(s, NULL, LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);
+		}
 	}
 
 	READ_RAW_NUMERIC("rx-data-per-sec", config->rx_per_sec);

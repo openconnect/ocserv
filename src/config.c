@@ -420,6 +420,11 @@ unsigned force_cert_auth;
 	if (prefix > 0) {
 		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
 		config->network.ipv6_prefix = prefix;
+
+		if (config->network.ipv6_netmask == NULL) {
+			fprintf(stderr, "invalid IPv6 prefix: %u\n", prefix);
+			exit(1);
+		}
 	}
 
 	READ_MULTI_LINE("custom-header", config->custom_header, config->custom_header_size);

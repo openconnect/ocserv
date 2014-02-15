@@ -310,6 +310,8 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 				    strdup(msg->ipv6_netmask);
 			}
 
+			ws->config->network.ipv6_prefix = msg->ipv6_prefix;
+
 			if (msg->has_rx_per_sec)
 				ws->config->rx_per_sec = msg->rx_per_sec;
 

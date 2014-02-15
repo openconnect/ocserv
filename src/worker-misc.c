@@ -164,6 +164,7 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 
 	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
 	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
+	vinfo->ipv6_prefix = ws->config->network.ipv6_prefix;
 
 	if (ws->config->network.mtu != 0) {
 		vinfo->mtu = ws->config->network.mtu;

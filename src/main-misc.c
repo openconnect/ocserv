@@ -216,6 +216,10 @@ static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
 			cfg.ipv6_netmask = NULL;
 		}
 
+		if (proc->config.ipv6_prefix != 0) {
+			proc->config.ipv6_prefix = cfg.ipv6_prefix;
+		}
+
 		if (proc->config.cgroup == NULL) {
 			proc->config.cgroup = cfg.cgroup;
 			cfg.cgroup = NULL;

@@ -51,6 +51,7 @@ enum {
 	HEADER_DTLS_MTU,
 	HEADER_DTLS_CIPHERSUITE,
 	HEADER_CONNECTION,
+	HEADER_FULL_IPV6,
 	HEADER_USER_AGENT,
 };
 
@@ -146,6 +147,10 @@ typedef struct worker_st {
 	unsigned last_bad_mtu;
 	unsigned conn_mtu;
 	
+	/* Indicates whether the new IPv6 headers will
+	 * be sent or the old */
+	unsigned full_ipv6;
+
 	/* Buffer used by worker */
 	uint8_t * buffer;
 	unsigned buffer_size;

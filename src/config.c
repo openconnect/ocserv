@@ -112,7 +112,6 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-nbns", .type = OPTION_MULTI_LINE, .mandatory = 0 }, /* alias nbns */
 
 	{ .name = "ipv6-network", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "ipv6-netmask", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "route-add-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "route-del-cmd", .type = OPTION_STRING, .mandatory = 0 },
@@ -416,11 +415,12 @@ unsigned force_cert_auth;
 	READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
 
 	READ_STRING("ipv6-network", config->network.ipv6);
-	READ_STRING("ipv6-netmask", config->network.ipv6_netmask);
 
 	READ_NUMERIC("ipv6-prefix", prefix);
-	if (prefix > 0) 
+	if (prefix > 0) {
 		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
+		config->network.ipv6_prefix = prefix;
+	}
 
 	READ_MULTI_LINE("custom-header", config->custom_header, config->custom_header_size);
 	READ_MULTI_LINE("split-dns", config->split_dns, config->split_dns_size);

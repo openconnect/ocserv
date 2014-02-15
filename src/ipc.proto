@@ -91,12 +91,13 @@ message auth_reply_msg
 	/* additional config */
 	optional string ipv4_netmask = 15;
 	optional string ipv6_netmask = 16;
-	optional uint32 rx_per_sec = 17;
-	optional uint32 tx_per_sec = 18;
-	optional uint32 net_priority = 19;
-	repeated string routes = 20;
-	repeated string dns = 21;
-	repeated string nbns = 22;
+	optional uint32 ipv6_prefix = 17;
+	optional uint32 rx_per_sec = 18;
+	optional uint32 tx_per_sec = 19;
+	optional uint32 net_priority = 20;
+	repeated string routes = 21;
+	repeated string dns = 22;
+	repeated string nbns = 23;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

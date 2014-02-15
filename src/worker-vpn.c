@@ -181,6 +181,7 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 #define STR_HDR_CMTU "X-CSTP-MTU"
 #define STR_HDR_ATYPE "X-CSTP-Address-Type"
 #define STR_HDR_HOST "X-CSTP-Hostname"
+#define STR_HDR_FULL_IPV6 "X-CSTP-Full-IPv6-Capability"
 
 #define CS_ESALSA20 "OC-DTLS1_2-ESALSA20-SHA"
 #define CS_SALSA20 "OC-DTLS1_2-SALSA20-SHA"
@@ -327,6 +328,11 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		    NULL)
 			req->no_ipv6 = 1;
 		break;
+	case HEADER_FULL_IPV6:
+		if (memmem(value, value_length, "true", 4) !=
+		    NULL)
+			ws->full_ipv6 = 1;
+		break;
 	case HEADER_DTLS_MTU:
 		req->dtls_mtu = atoi((char *)value);
 		break;
@@ -443,6 +449,10 @@ static void header_check(struct http_req_st *req)
 		   strncmp((char *)req->header.data, STR_HDR_USER_AGENT,
 			   req->header.length) == 0) {
 		req->next_header = HEADER_USER_AGENT;
+	} else if (req->header.length == sizeof(STR_HDR_FULL_IPV6) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_FULL_IPV6,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_FULL_IPV6;
 	} else {
 		req->next_header = 0;
 	}
@@ -1024,7 +1034,7 @@ static int connect_handler(worker_st * ws)
 	unsigned tls_pending, dtls_pending = 0, i;
 	time_t udp_recv_time = 0, now;
 	struct timespec tnow;
-	unsigned mtu_overhead = 0;
+	unsigned mtu_overhead = 0, ip6;
 	int sndbuf;
 	socklen_t sl;
 	bandwidth_st b_tx;
@@ -1140,16 +1150,23 @@ static int connect_handler(worker_st * ws)
 
 	if (ws->vinfo.ipv6 && req->no_ipv6 == 0) {
 		oclog(ws, LOG_DEBUG, "sending IPv6 %s", ws->vinfo.ipv6);
-		ret =
-		    tls_printf(ws->session, "X-CSTP-Address: %s\r\n",
-			       ws->vinfo.ipv6);
-		SEND_ERR(ret);
-
-		if (ws->vinfo.ipv6_netmask) {
+		if (ws->full_ipv6 && ws->vinfo.ipv6_prefix) {
 			ret =
-			    tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n",
-				       ws->vinfo.ipv6_netmask);
+			    tls_printf(ws->session, "X-CSTP-Address-IP6: %s/%u\r\n",
+			       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
 			SEND_ERR(ret);
+		} else {
+			ret =
+			    tls_printf(ws->session, "X-CSTP-Address: %s\r\n",
+			       ws->vinfo.ipv6);
+			SEND_ERR(ret);
+
+			if (ws->vinfo.ipv6_netmask) {
+				ret =
+				    tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n",
+					       ws->vinfo.ipv6_netmask);
+				SEND_ERR(ret);
+			}
 		}
 	}
 
@@ -1185,25 +1202,48 @@ static int connect_handler(worker_st * ws)
 	}
 
 	for (i = 0; i < ws->vinfo.routes_size; i++) {
-		if (req->no_ipv6 != 0 && strchr(ws->vinfo.routes[i], ':') != 0)
+		if (strchr(ws->vinfo.routes[i], ':') != 0)
+			ip6 = 1;
+		else
+			ip6 = 0;
+
+		if (req->no_ipv6 != 0 && ip6 != 0)
 			continue;
 		if (req->no_ipv4 != 0 && strchr(ws->vinfo.routes[i], '.') != 0)
 			continue;
 		oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
-		ret = tls_printf(ws->session,
-				 "X-CSTP-Split-Include: %s\r\n",
-				 ws->vinfo.routes[i]);
+		
+		if (ip6 != 0 && ws->full_ipv6) {
+			ret = tls_printf(ws->session,
+					 "X-CSTP-Split-Include-IP6: %s\r\n",
+					 ws->vinfo.routes[i]);
+		} else {
+			ret = tls_printf(ws->session,
+					 "X-CSTP-Split-Include: %s\r\n",
+					 ws->vinfo.routes[i]);
+		}
 		SEND_ERR(ret);
 	}
 
 	for (i = 0; i < ws->routes_size; i++) {
-		if (req->no_ipv6 != 0 && strchr(ws->routes[i], ':') != 0)
+		if (strchr(ws->routes[i], ':') != 0)
+			ip6 = 1;
+		else
+			ip6 = 0;
+
+		if (req->no_ipv6 != 0 && ip6 != 0)
 			continue;
 		if (req->no_ipv4 != 0 && strchr(ws->routes[i], '.') != 0)
 			continue;
 		oclog(ws, LOG_DEBUG, "adding private route %s", ws->routes[i]);
-		ret = tls_printf(ws->session,
-				 "X-CSTP-Split-Include: %s\r\n", ws->routes[i]);
+
+		if (ip6 != 0 && ws->full_ipv6) {
+			ret = tls_printf(ws->session,
+					 "X-CSTP-Split-Include-IP6: %s\r\n", ws->routes[i]);
+		} else {
+			ret = tls_printf(ws->session,
+					 "X-CSTP-Split-Include: %s\r\n", ws->routes[i]);
+		}
 		SEND_ERR(ret);
 	}
 	ret =

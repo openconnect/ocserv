@@ -19,6 +19,10 @@ Short term items:
 
 * Give each worker a limited number of accesses to the security module.
 
+* Switch to a fork-then-exec mode to reduce memory usage on workers.
+
+* Use talloc in main process to simplify the release of resources.
+
 Long term items:
 
 * Think how the DTLS part can use better negotiation of algorithms and DTLS

@@ -16,7 +16,7 @@ libgnutls-dev      / gnutls-devel
 Optional dependencies that enable specific functionality:
 * TCP wrappers: libwrap0-dev       / tcp_wrappers-devel
 * PAM:          libpam0g-dev       / pam-devel
-* seccomp:      libsecomp-dev      / libseccomp-devel
+* seccomp:      libseccomp-dev     / libseccomp-devel
 * occtl:        libdbus-1-dev      / dbus-devel
                 libreadline-dev    / readline-devel
                 libnl-route-3-dev  / libnl3-devel

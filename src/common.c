@@ -99,7 +99,7 @@ uint8_t * p = buf;
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
 		}
-		
+
 		if (ret > 0) {
 			left -= ret;
 			p += ret;

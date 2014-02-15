@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4450
+
+. `dirname $0`/common.sh
+
+run_client() {
+	HOST=$1;
+	shift;
+	USER=$1;
+	shift;
+	PASS=$1;
+	shift;
+
+	( echo $PASS | openconnect -q $HOST -u $USER --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >/dev/null 2>&1 ) ||
+		echo "$USER: Could not connect to server"
+}
+
+
+echo "Testing local backend with username-password... "
+
+launch_debug_server -f -c test-stress.config & PID=$!
+wait_server $PID
+
+sleep 3
+
+run_client localhost:$PORT test test &
+run_client localhost:$PORT test2 test2 &
+
+while true;do
+run_client localhost:$PORT test test &
+run_client localhost:$PORT test2 test2 &
+run_client localhost:$PORT test3 test3 &
+run_client localhost:$PORT test4 test4 &
+sleep 2
+if test $? != 0;then
+	break
+fi
+run_client localhost:$PORT test5 test5 &
+done
+
+kill $PID
+wait
+
+exit 0

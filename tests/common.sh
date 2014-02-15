@@ -56,6 +56,20 @@ launch_server() {
        fi
 }
 
+launch_debug_server() {
+       valgrind --leak-check=full $SERV $* >out.txt 2>&1 &
+       LOCALPID="$!";
+       trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
+       wait "${LOCALPID}"
+       LOCALRET="$?"
+       if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
+               # Houston, we'v got a problem...
+               echo "Failed to launch the server !"
+               test -z "${PARENT}" || kill -10 ${PARENT}
+               exit 1
+       fi
+}
+
 wait_server() {
 	trap "kill $1" 1 15 2
 	sleep 2

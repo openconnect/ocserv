@@ -300,6 +300,7 @@ output-buffer = 10
 # comment out all routes from the server.
 route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
+#route = fef4:db8:1000:1001::/64
 
 # Configuration files that will be applied per user connection or
 # per group. Each file name on these directories must match the username

@@ -143,9 +143,9 @@ void __attribute__ ((format(printf, 4, 5)))
 	va_end(args);
 
 	if (ip) {
-		syslog(priority, "%s %s", ip, buf);
+		syslog(priority, "[m] %s %s", ip, buf);
 	} else {
-		syslog(priority, "[main] %s", buf);
+		syslog(priority, "[m] %s", buf);
 	}
 
 	return;
@@ -171,7 +171,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 			return;
 	}
 
-	_mslog(s, proc, priority, "%s %s", prefix, buf);
+	_mslog(s, proc, priority, "[m] %s %s", prefix, buf);
 
 	return;
 }

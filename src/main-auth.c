@@ -384,6 +384,11 @@ unsigned found = 0;
 		return -1;
 	}
 
+	if (proc->auth_ctx == NULL) {
+		mslog(s, proc, LOG_ERR, "auth req but with no context!");
+		return -1;
+        }
+
 	mslog(s, proc, LOG_DEBUG, "auth reinit for user '%s' from '%s'", proc->username, ip);
 
 	return module->auth_pass(proc->auth_ctx, req->password, strlen(req->password));
@@ -393,7 +398,7 @@ int handle_auth_req(main_server_st *s, struct proc_st* proc,
 		    const AuthRequestMsg * req)
 {
 	if (proc->auth_ctx == NULL) {
-        	mslog(s, proc, LOG_ERR, "auth req but with no context!");
+		mslog(s, proc, LOG_ERR, "auth req but with no context!");
 		return -1;
         }
 	mslog(s, proc, LOG_DEBUG, "auth req for user '%s'", proc->username);

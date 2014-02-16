@@ -86,14 +86,14 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 	return ret;
 }
 
-int handle_script_exit(main_server_st * s, struct proc_st *proc, int code)
+int handle_script_exit(main_server_st * s, struct proc_st *proc, int code, unsigned need_sid)
 {
 	int ret;
 
 	if (code == 0) {
 		proc->status = PS_AUTH_COMPLETED;
 
-		ret = send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__OK);
+		ret = send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__OK, need_sid);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
 			      "could not send auth reply cmd.");
@@ -107,7 +107,7 @@ int handle_script_exit(main_server_st * s, struct proc_st *proc, int code)
 		      "failed authentication attempt for user '%s'",
 		      proc->username);
 		ret =
-		    send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__FAILED);
+		    send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__FAILED, need_sid);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
 			      "could not send reply auth cmd.");
@@ -314,7 +314,7 @@ void proc_to_zombie(main_server_st * s, struct proc_st *proc)
 {
 	proc->status = PS_AUTH_ZOMBIE;
 
-	mslog(s, proc, LOG_INFO, "client disconnected, became zombie");
+	mslog_hex(s, proc, LOG_INFO, "client disconnected, became zombie", proc->sid, sizeof(proc->sid), 1);
 
 	/* close the intercomm fd */
 	if (proc->fd >= 0)
@@ -389,12 +389,12 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 }
 
 static int handle_auth_res(main_server_st * s, struct proc_st *proc,
-			   unsigned cmd, int result, unsigned cont)
+			   unsigned cmd, int result, unsigned cont, unsigned need_sid)
 {
 	int ret;
 
 	if (cont != 0 && result == ERR_AUTH_CONTINUE) {
-		ret = send_auth_reply_msg(s, proc);
+		ret = send_auth_reply_msg(s, proc, need_sid);
 		if (ret < 0) {
 			proc->status = PS_AUTH_FAILED;
 			mslog(s, proc, LOG_ERR,
@@ -425,7 +425,7 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 		ret = 0;
 	else {
 		/* no script was called. Handle it as a successful script call. */
-		ret = handle_script_exit(s, proc, ret);
+		ret = handle_script_exit(s, proc, ret, need_sid);
 		if (ret < 0)
 			proc->status = PS_AUTH_FAILED;
 	}
@@ -657,7 +657,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		proc->status = PS_AUTH_INIT;
 
-		ret = handle_auth_res(s, proc, cmd, ret, 1);
+		ret = handle_auth_res(s, proc, cmd, ret, 1, 0);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -687,13 +687,13 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		proc->status = PS_AUTH_INIT;
 
-		ret = handle_auth_res(s, proc, cmd, ret, 1);
+		ret = handle_auth_res(s, proc, cmd, ret, 1, 1);
 		if (ret < 0) {
 			goto cleanup;
 		}
 
 		/* handle_auth_reinit() has succeeded so the current proc
-		 * is in zombie state and unused. Terminate it.
+		 * is in dead state and unused. Terminate it.
 		 */
 		ret = ERR_WORKER_TERMINATED;
 		goto cleanup;
@@ -727,7 +727,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		proc->status = PS_AUTH_INIT;
 
-		ret = handle_auth_res(s, proc, cmd, ret, 1);
+		ret = handle_auth_res(s, proc, cmd, ret, 1, 0);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -755,7 +755,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		auth_cookie_request_msg__free_unpacked(auth_cookie_req, NULL);
 
-		ret = handle_auth_res(s, proc, cmd, ret, 0);
+		ret = handle_auth_res(s, proc, cmd, ret, 0, 0);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -849,8 +849,11 @@ void expire_zombies(main_server_st * s)
 	if (s->config->cisco_client_compat == 0)
 		return;
 
+	/* In CISCO compatibility mode we could have proc_st in
+	 * mode INACTIVE or ZOMBIE that need to be cleaned up.
+	 */
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
-		if (ctmp->status == PS_AUTH_ZOMBIE &&
+		if ((ctmp->status == PS_AUTH_ZOMBIE || ctmp->status == PS_AUTH_DEAD) &&
 		    now - ctmp->conn_time > MAX_ZOMBIE_SECS) {
 			remove_proc(s, ctmp, 0);
 		}

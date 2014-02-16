@@ -80,6 +80,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
 	char login_msg[MAX_MSG_SIZE + sizeof(login_msg_user)];
+	char context[BASE64_LENGTH(SID_SIZE)+1];
 	struct http_req_st *req = &ws->req;
 	unsigned int lsize;
 
@@ -92,11 +93,8 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ret < 0)
 		return -1;
 
-	if (req->sid_cookie_set == 0) {
-		char context[BASE64_LENGTH(SID_SIZE)+1];
-		size_t csize = sizeof(context);
-
-                base64_encode((char*)ws->sid, sizeof(ws->sid), (char*)context, csize);
+	if (req->sid_cookie_set == 0 || memcmp(req->sid_cookie, ws->sid, SID_SIZE) != 0) {
+		base64_encode((char*)ws->sid, sizeof(ws->sid), (char*)context, sizeof(context));
 
 		ret =
 		    tls_printf(ws->session, "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
@@ -114,7 +112,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ws->auth_state == S_AUTH_REQ) {
 		/* only ask password */
 		if (pmsg == NULL)
-			pmsg = "Please enter password";
+			pmsg = "Please enter your password.";
 		lsize =
 		    snprintf(login_msg, sizeof(login_msg), login_msg_no_user,
 			     pmsg);
@@ -239,6 +237,10 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 		}
 
 		snprintf(txt, max_txt_size, "%s", msg->msg);
+		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
+			/* update our sid */
+			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
+		}
 
 		ret = ERR_AUTH_CONTINUE;
 		goto cleanup;
@@ -256,8 +258,15 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			snprintf(ws->username, sizeof(ws->username), "%s",
 				 msg->user_name);
 
-			if (msg->cookie.len != sizeof(ws->cookie) ||
-			    msg->session_id.len != sizeof(ws->session_id)) {
+			if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
+				/* update our sid */
+				memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
+			}
+
+			if (msg->has_cookie == 0 ||
+				msg->cookie.len != sizeof(ws->cookie) ||
+				msg->session_id.len != sizeof(ws->session_id)) {
+
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
@@ -720,8 +729,11 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 					rreq.tls_auth_ok = ws->cert_auth_ok;
 					rreq.password = password;
-					rreq.sid.data = ws->sid;
-					rreq.sid.len = sizeof(ws->sid);
+
+					if (req->sid_cookie_set != 0) {
+						rreq.sid.data = req->sid_cookie;
+						rreq.sid.len = sizeof(req->sid_cookie);
+					}
 
 					ret = send_msg_to_main(ws, AUTH_REINIT, &rreq,
 					       (pack_size_func)auth_reinit_msg__get_packed_size,
@@ -768,12 +780,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		ireq.hostname = req->hostname;
-		if (req->sid_cookie_set != 0) {
-			oclog(ws, LOG_INFO, "updating SID");
-			ireq.sid.data = ws->sid;
-			ireq.sid.len = sizeof(ws->sid);
-			ireq.has_sid = 1;
-		}
 
 		ret = send_msg_to_main(ws, AUTH_INIT,
 				       &ireq,

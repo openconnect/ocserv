@@ -423,7 +423,7 @@ struct script_wait_st *stmp = NULL, *spos;
 			if (stmp->pid == pid) {
 				mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
 				list_del(&stmp->list);
-				ret = handle_script_exit(s, stmp->proc, estatus);
+				ret = handle_script_exit(s, stmp->proc, estatus, 0);
 				if (ret < 0)
 					remove_proc(s, stmp->proc, 1);
 				free(stmp);
@@ -959,6 +959,13 @@ int main(int argc, char** argv)
 				}
 				set_cloexec_flag (fd, 1);
 
+				ret = gnutls_rnd(GNUTLS_RND_NONCE, ws.sid, sizeof(ws.sid));
+				if (ret < 0) {
+					close(fd);
+					mslog(&s, NULL, LOG_ERR, "Error generating SID");
+					break;
+				}
+
 				/* Check if the client is on the banned list */
 				ret = check_if_banned(&s, &ws.remote_addr, ws.remote_addr_len);
 				if (ret < 0) {
@@ -1024,6 +1031,7 @@ fork_failed:
 					}
 					memcpy(&ctmp->remote_addr, &ws.remote_addr, ws.remote_addr_len);
 					ctmp->remote_addr_len = ws.remote_addr_len;
+					memcpy(&ctmp->sid, &ws.sid, sizeof(ws.sid));
 
 					ctmp->pid = pid;
 					ctmp->conn_time = time(0);

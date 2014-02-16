@@ -63,7 +63,7 @@ void main_auth_init(main_server_st *s)
 }
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			AuthReplyMsg__AUTHREP r)
+			AuthReplyMsg__AUTHREP r, unsigned need_sid)
 {
 	AuthReplyMsg msg = AUTH_REPLY_MSG__INIT;
 	unsigned i;
@@ -143,6 +143,12 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.routes = proc->config.routes;
 		}
 
+		if (need_sid) {
+			msg.has_sid = 1;
+			msg.sid.data = proc->sid;
+			msg.sid.len = sizeof(proc->sid);
+		}
+
 		ret = send_socket_msg_to_worker(s, proc, AUTH_REP, proc->tun_lease.fd,
 			 &msg,
 			 (pack_size_func)auth_reply_msg__get_packed_size,
@@ -165,7 +171,7 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 	return 0;
 }
 
-int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
+int send_auth_reply_msg(main_server_st* s, struct proc_st* proc, unsigned need_sid)
 {
 	AuthReplyMsg msg = AUTH_REPLY_MSG__INIT;
 	char tmp[MAX_MSG_SIZE] = "";
@@ -181,6 +187,12 @@ int send_auth_reply_msg(main_server_st* s, struct proc_st* proc)
 
 	msg.msg = tmp;
 	msg.reply = AUTH_REPLY_MSG__AUTH__REP__MSG;
+
+	if (need_sid) {
+		msg.has_sid = 1;
+		msg.sid.data = proc->sid;
+		msg.sid.len = sizeof(proc->sid);
+	}
 
 	ret = send_msg_to_worker(s, proc, AUTH_REP, &msg, 
 		(pack_size_func)auth_reply_msg__get_packed_size,
@@ -281,32 +293,6 @@ const char* ip;
 		snprintf(proc->hostname, sizeof(proc->hostname), "%s", req->hostname);
 	}
 
-	if (req->has_sid != 0 && req->sid.len == sizeof(proc->sid)) {
-		unsigned unique = 1;
-		struct proc_st *ctmp = NULL;
-
-		/* the client has requested changing its SID. We must first make sure it is
-		 * unique.
-		 */
-		list_for_each(&s->proc_list.head, ctmp, list) {
-			if (ctmp->sid_size > 0 && ctmp->sid_size == req->sid.len) {
-				if (memcmp(req->sid.data, ctmp->sid, ctmp->sid_size) == 0) {
-					/* it is not */
-					unique = 0;
-					break;
-				}
-			}
-		}
-
-		if (unique != 0) {
-			memcpy(proc->sid, req->sid.data, sizeof(proc->sid));
-			proc->sid_size = sizeof(proc->sid);
-			mslog_hex(s, proc, LOG_DEBUG, "auth init set SID to", req->sid.data, req->sid.len, 1);
-		} else {
-			mslog_hex(s, proc, LOG_DEBUG, "auth init asks to set SID but it is not unique", req->sid.data, req->sid.len, 1);
-		}
-	}
-
 	if (req->user_name != NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		ret = module->auth_init(&proc->auth_ctx, req->user_name, ip, s->auth_extra);
 		if (ret < 0)
@@ -349,7 +335,7 @@ unsigned found = 0;
 	ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
 			ipbuf, sizeof(ipbuf));
 
-	if (req->sid.len == 0) {
+	if (req->sid.len != SID_SIZE) {
 		mslog(s, proc, LOG_DEBUG, "auth reinit from '%s' with no SID present", ip);
 	        return -1;
         }
@@ -361,8 +347,8 @@ unsigned found = 0;
 
 	/* search all procs for a matching SID */
 	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (ctmp->status == PS_AUTH_ZOMBIE && ctmp->sid_size > 0 && ctmp->sid_size == req->sid.len) {
-			if (memcmp(req->sid.data, ctmp->sid, ctmp->sid_size) == 0) {
+		if (ctmp->status == PS_AUTH_ZOMBIE) {
+			if (memcmp(req->sid.data, ctmp->sid, SID_SIZE) == 0) {
 				/* replace sessions */
 				ctmp->pid = proc->pid;
 				ctmp->fd = proc->fd;
@@ -370,8 +356,7 @@ unsigned found = 0;
 
 				proc->pid = -1;
 				proc->fd = -1;
-				proc->sid_size = 0;
-				proc->status = PS_AUTH_ZOMBIE;
+				proc->status = PS_AUTH_DEAD;
 				*_proc = proc = ctmp;
 				found = 1;
 				break;

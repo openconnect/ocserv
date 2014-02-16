@@ -370,9 +370,9 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
-				nlen = sizeof(ws->sid);
-				ret = base64_decode((char*)p, tmplen, (char*)ws->sid, &nlen);
-				if (ret == 0 || nlen != sizeof(ws->sid)) {
+				nlen = sizeof(req->sid_cookie);
+				ret = base64_decode((char*)p, tmplen, (char*)req->sid_cookie, &nlen);
+				if (ret == 0 || nlen != sizeof(req->sid_cookie)) {
 					oclog(ws, LOG_DEBUG, "could not decode sid: %.*s", tmplen, p);
 					req->sid_cookie_set = 0;
 				} else {
@@ -666,12 +666,6 @@ void vpn_server(struct worker_st *ws)
 	else
 		ws->proto = AF_INET6;
 
-	ret = gnutls_rnd(GNUTLS_RND_NONCE, ws->sid, sizeof(ws->sid));
-	if (ret < 0) {
-		oclog(ws, LOG_ERR, "Error generating SID");
-		exit_worker(ws);
-	}
-
 	/* initialize the session */
 	ret = gnutls_init(&session, GNUTLS_SERVER);
 	GNUTLS_FATAL_ERR(ret);
@@ -728,7 +722,8 @@ void vpn_server(struct worker_st *ws)
 		if (nrecvd <= 0) {
 			if (nrecvd == 0)
 				goto finish;
-			oclog(ws, LOG_INFO, "error receiving client data");
+			if (nrecvd != GNUTLS_E_PREMATURE_TERMINATION)
+				oclog(ws, LOG_ERR, "error receiving client data");
 			exit_worker(ws);
 		}
 

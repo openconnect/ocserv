@@ -86,9 +86,12 @@ struct http_req_st {
 
 	char hostname[MAX_HOSTNAME_SIZE];
 	char user_agent[MAX_AGENT_NAME];
+
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];
 	unsigned int cookie_set;
+
+	uint8_t sid_cookie[SID_SIZE];
 	unsigned int sid_cookie_set;
 
 	unsigned char master_secret[TLS_MASTER_SIZE];

@@ -69,6 +69,7 @@ enum {
 	PS_AUTH_FAILED, /* no tried authenticated but failed */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
 	PS_AUTH_ZOMBIE, /* in INIT state but worker has disconnected! - only present when cisco-client-compat is set */
+	PS_AUTH_DEAD, /* it was created but subsequently the client revived a zombie proc. - only present when cisco-client-compat is set */
 	PS_AUTH_COMPLETED, /* successful authentication */
 };
 
@@ -96,7 +97,6 @@ struct proc_st {
 	 * sessions.
 	 */
 	uint8_t sid[SID_SIZE];
-	unsigned sid_size; /* acts as a flag if sid is set */
 
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
@@ -239,10 +239,10 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 int open_tun(main_server_st* s, struct proc_st* proc);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
-int send_auth_reply_msg(main_server_st* s, struct proc_st* proc);
+int send_auth_reply_msg(main_server_st* s, struct proc_st* proc, unsigned need_sid);
 
 int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			AuthReplyMsg__AUTHREP r);
+			AuthReplyMsg__AUTHREP r, unsigned need_sid);
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req);
@@ -260,7 +260,7 @@ void add_to_ip_ban_list(main_server_st* s, struct sockaddr_storage *addr, sockle
 void expire_banned(main_server_st* s);
 int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
 
-int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
+int handle_script_exit(main_server_st *s, struct proc_st* proc, int code, unsigned need_sid);
 
 void run_sec_mod(main_server_st * s);
 

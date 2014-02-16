@@ -21,13 +21,13 @@
  * == Auth with legacy client ==
  *
  *   main                     worker
- *               <------     AUTH_INIT (username, sid)
+ *               <------     AUTH_INIT (username)
  * AUTH_REP(MSG) ------>
  *
  * (worker terminates as client disconnects)
  *
- *               <------     AUTH_REINIT (password, sid)
- * AUTH_REP(ΟΚ)  ------>
+ *                     <------  AUTH_REINIT (password, sid)
+ * AUTH_REP(ΟΚ,newsid) ------>
  *
  */
 
@@ -40,7 +40,6 @@ message auth_init_msg
 	optional string cert_user_name = 4;
 	optional string cert_group_name = 5;
 	optional string hostname = 6;
-	optional bytes sid = 7;
 }
 
 /* AUTH_REINIT - used in cisco compatible clients, to
@@ -98,6 +97,12 @@ message auth_reply_msg
 	repeated string routes = 21;
 	repeated string dns = 22;
 	repeated string nbns = 23;
+
+	/* The sid is used when this message is a reply
+	 * to an AUTH_REINIT, to let the worker know of
+	 * any change in the sid.
+	 */
+	optional bytes sid = 24;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

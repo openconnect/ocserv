@@ -29,11 +29,15 @@
 #define MAX_CPASS_SIZE 128
 #define MAX_TRIES 3
 
+const char* pass_msg_first = "Please enter your password.";
+const char* pass_msg_failed = "Login failed.\nPlease enter your password.";
+
 struct plain_ctx_st {
 	char username[MAX_USERNAME_SIZE];
 	char cpass[MAX_CPASS_SIZE];	/* crypt() passwd */
 	char groupname[MAX_GROUPNAME_SIZE];
 	const char *passwd;	/* password file */
+	const char *pass_msg;
 	unsigned retries;
 };
 
@@ -116,6 +120,7 @@ static int plain_auth_init(void **ctx, const char *username, const char *ip,
 	pctx->cpass[0] = 0;
 	pctx->passwd = additional;
 	pctx->retries = 0;
+	pctx->pass_msg = pass_msg_first;
 
 	ret = read_auth_pass(pctx);
 	if (ret < 0) {
@@ -157,6 +162,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			syslog(LOG_AUTH,
 			       "error authenticating (plain) user '%s' (retry: %d)",
 			       pctx->username, pctx->retries);
+			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {
 			syslog(LOG_AUTH,
@@ -169,7 +175,9 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 static int plain_auth_msg(void *ctx, char *msg, size_t msg_size)
 {
-	snprintf(msg, msg_size, "%s", "Please enter your password");
+	struct plain_ctx_st *pctx = ctx;
+
+	snprintf(msg, msg_size, "%s", pctx->pass_msg);
 	return 0;
 }
 

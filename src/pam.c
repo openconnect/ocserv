@@ -218,9 +218,9 @@ int size;
 	if (msg != NULL) {
 		if (pctx->msg.length == 0)
                         if (pctx->changing)
-				snprintf(msg, msg_size, "Please enter the new password");
+				snprintf(msg, msg_size, "Please enter the new password.");
                         else
-				snprintf(msg, msg_size, "Please enter your password");
+				snprintf(msg, msg_size, "Please enter your password.");
 		else {
 			size = MIN(msg_size-1, pctx->msg.length);
 			memcpy(msg, pctx->msg.data, size);

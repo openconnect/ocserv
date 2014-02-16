@@ -171,7 +171,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 			return;
 	}
 
-	_mslog(s, proc, priority, "[m] %s %s", prefix, buf);
+	_mslog(s, proc, priority, "%s %s", prefix, buf);
 
 	return;
 }

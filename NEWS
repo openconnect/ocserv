@@ -1,4 +1,4 @@
-* Version 0.3.1 (unreleased)
+* Version 0.3.1 (released 2014-02-16)
 - Corrected decoding of cookies. That will prevent issues where
   the server is unable to parse client cookies.
 - Changed the method X-CSTP-MTU is taken into account to avoid

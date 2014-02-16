@@ -160,7 +160,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	else {
 		if (pctx->retries++ < MAX_TRIES) {
 			syslog(LOG_AUTH,
-			       "error authenticating (plain) user '%s' (retry: %d)",
+			       "error authenticating (plain) user '%s' (attempt: %d)",
 			       pctx->username, pctx->retries);
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;

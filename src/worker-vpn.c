@@ -1402,7 +1402,7 @@ static int connect_handler(worker_st * ws)
 		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", dtls_mtu);
 
 		if (ws->config->output_buffer > 0) {
-			sndbuf = ws->conn_mtu * ws->config->output_buffer;
+			sndbuf = MIN(2048, dtls_mtu * ws->config->output_buffer);
 			setsockopt(ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf,
 				   sizeof(sndbuf));
 			if (ret == -1)

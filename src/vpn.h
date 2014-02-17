@@ -202,6 +202,7 @@ struct cfg_st {
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned keepalive;
 	unsigned dpd;
+	unsigned mobile_dpd;
 	unsigned foreground;
 	unsigned debug;
 	unsigned max_clients;

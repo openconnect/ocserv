@@ -110,8 +110,16 @@ udp-port = 3333
 # Keepalive in seconds
 keepalive = 32400
 
-# Dead peer detection in seconds
+# Dead peer detection in seconds. Set to zero
+# to disable.
 dpd = 240
+
+# Dead peer detection for mobile clients. The needs to
+# be much higher (or even disabled by setting to zero),
+# to prevent such clients being awaken too often by the DPD
+# messages, and save battery.
+# (clients that send the X-AnyConnect-Identifier-DeviceType)
+mobile-dpd = 1800
 
 # MTU discovery (DPD must be enabled)
 try-mtu-discovery = false

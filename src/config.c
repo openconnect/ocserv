@@ -57,6 +57,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "mobile-dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rate-limit-ms", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "ocsp-response", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "server-cert", .type = OPTION_STRING, .mandatory = 1 },
@@ -322,6 +323,7 @@ unsigned force_cert_auth;
 	READ_NUMERIC("udp-port", config->udp_port);
 	READ_NUMERIC("keepalive", config->keepalive);
 	READ_NUMERIC("dpd", config->dpd);
+	READ_NUMERIC("mobile-dpd", config->mobile_dpd);
 	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms);
 
 	READ_STRING("ocsp-response", config->ocsp_response);

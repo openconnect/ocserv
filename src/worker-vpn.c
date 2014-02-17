@@ -172,16 +172,6 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-#define STR_HDR_COOKIE "Cookie"
-#define STR_HDR_USER_AGENT "User-Agent"
-#define STR_HDR_CONNECTION "Connection"
-#define STR_HDR_MS "X-DTLS-Master-Secret"
-#define STR_HDR_CS "X-DTLS-CipherSuite"
-#define STR_HDR_DMTU "X-DTLS-MTU"
-#define STR_HDR_CMTU "X-CSTP-MTU"
-#define STR_HDR_ATYPE "X-CSTP-Address-Type"
-#define STR_HDR_HOST "X-CSTP-Hostname"
-#define STR_HDR_FULL_IPV6 "X-CSTP-Full-IPv6-Capability"
 
 #define CS_ESALSA20 "OC-DTLS1_2-ESALSA20-SHA"
 #define CS_SALSA20 "OC-DTLS1_2-SALSA20-SHA"
@@ -289,6 +279,9 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 		memcpy(req->hostname, value, value_length);
 		req->hostname[value_length] = 0;
+		break;
+	case HEADER_DEVICE_TYPE:
+		req->is_mobile = 1;
 		break;
 	case HEADER_USER_AGENT:
 		if (value_length + 1 > MAX_AGENT_NAME) {
@@ -413,6 +406,7 @@ int header_field_cb(http_parser * parser, const char *at, size_t length)
 
 static void header_check(struct http_req_st *req)
 {
+	/* FIXME: move this mess to a table */
 	if (req->header.length == sizeof(STR_HDR_COOKIE) - 1 &&
 	    strncmp((char *)req->header.data, STR_HDR_COOKIE,
 		    req->header.length) == 0) {
@@ -437,6 +431,10 @@ static void header_check(struct http_req_st *req)
 		   strncmp((char *)req->header.data, STR_HDR_CS,
 			   req->header.length) == 0) {
 		req->next_header = HEADER_DTLS_CIPHERSUITE;
+	} else if (req->header.length == sizeof(STR_HDR_DEVICE_TYPE) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_DEVICE_TYPE,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_DEVICE_TYPE;
 	} else if (req->header.length == sizeof(STR_HDR_ATYPE) - 1 &&
 		   strncmp((char *)req->header.data, STR_HDR_ATYPE,
 			   req->header.length) == 0) {
@@ -898,7 +896,7 @@ void mtu_ok(worker_st * ws)
 }
 
 static
-int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now)
+int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned dpd)
 {
 	socklen_t sl;
 	int max, e, ret;
@@ -907,22 +905,23 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now)
 		return 0;
 
 	/* check DPD. Otherwise exit */
-	if (ws->udp_state == UP_ACTIVE
-	    && now - ws->last_msg_udp > DPD_TRIES * ws->config->dpd) {
+	if (ws->udp_state == UP_ACTIVE &&
+	    now - ws->last_msg_udp > DPD_TRIES * dpd &&
+	    dpd > 0) {
 		oclog(ws, LOG_ERR,
-		      "have not received UDP any message or DPD for long (%d secs)",
-		      (int)(now - ws->last_msg_udp));
+		      "have not received UDP any message or DPD for long (%d secs, DPD is %d)",
+		      (int)(now - ws->last_msg_udp), dpd);
 
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 		tls_send(ws->dtls_session, ws->buffer, 1);
 
-		if (now - ws->last_msg_udp > DPD_MAX_TRIES * ws->config->dpd) {
+		if (now - ws->last_msg_udp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
 			      "have not received UDP message or DPD for very long; disabling UDP port");
 			ws->udp_state = UP_INACTIVE;
 		}
 	}
-	if (now - ws->last_msg_tcp > DPD_TRIES * ws->config->dpd) {
+	if (dpd > 0 && now - ws->last_msg_tcp > DPD_TRIES * dpd) {
 		oclog(ws, LOG_ERR,
 		      "have not received TCP DPD for long (%d secs)",
 		      (int)(now - ws->last_msg_tcp));
@@ -937,7 +936,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now)
 
 		tls_send(ws->session, ws->buffer, 8);
 
-		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * ws->config->dpd) {
+		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
 			      "have not received TCP DPD for very long; tearing down connection");
 			return -1;
@@ -1018,7 +1017,8 @@ static int connect_handler(worker_st * ws)
 {
 	struct http_req_st *req = &ws->req;
 	fd_set rfds;
-	int l, e, max, ret, overhead;
+	int l, e, max, ret, overhead, t;
+	int dpd;
 	unsigned tls_retry, dtls_mtu, cstp_mtu;
 	char *p;
 #ifdef HAVE_PSELECT
@@ -1030,7 +1030,6 @@ static int connect_handler(worker_st * ws)
 	time_t udp_recv_time = 0, now;
 	struct timespec tnow;
 	unsigned mtu_overhead = 0, ip6;
-	int sndbuf;
 	socklen_t sl;
 	bandwidth_st b_tx;
 	bandwidth_st b_rx;
@@ -1110,8 +1109,16 @@ static int connect_handler(worker_st * ws)
 	ret = tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
 	SEND_ERR(ret);
 
-	ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", ws->config->dpd);
-	SEND_ERR(ret);
+	if (req->is_mobile)
+		dpd = ws->config->mobile_dpd;
+	else
+		dpd = ws->config->dpd;
+
+	oclog(ws, LOG_DEBUG, "suggesting DPD of %d secs", dpd);
+	if (dpd > 0) {
+		ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", dpd);
+		SEND_ERR(ret);
+	}
 
 	if (ws->config->default_domain) {
 		ret =
@@ -1310,14 +1317,14 @@ static int connect_handler(worker_st * ws)
 
 	/* set TCP socket options */
 	if (ws->config->output_buffer > 0) {
-		sndbuf = ws->conn_mtu * ws->config->output_buffer;
+		t = ws->conn_mtu * ws->config->output_buffer;
 		ret =
-		    setsockopt(ws->conn_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf,
-			       sizeof(sndbuf));
+		    setsockopt(ws->conn_fd, SOL_SOCKET, SO_SNDBUF, &t,
+			       sizeof(t));
 		if (ret == -1)
 			oclog(ws, LOG_DEBUG,
 			      "setsockopt(TCP, SO_SNDBUF) to %u, failed.",
-			      sndbuf);
+			      t);
 	}
 
 	set_net_priority(ws, ws->conn_fd, ws->config->net_priority);
@@ -1334,10 +1341,10 @@ static int connect_handler(worker_st * ws)
 			       ws->buffer);
 		SEND_ERR(ret);
 
-		ret =
-		    tls_printf(ws->session, "X-DTLS-DPD: %u\r\n",
-			       ws->config->dpd);
-		SEND_ERR(ret);
+		if (dpd > 0) {
+			ret = tls_printf(ws->session, "X-DTLS-DPD: %u\r\n", dpd);
+			SEND_ERR(ret);
+		}
 
 		ret =
 		    tls_printf(ws->session, "X-DTLS-Port: %u\r\n",
@@ -1397,13 +1404,12 @@ static int connect_handler(worker_st * ws)
 		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", dtls_mtu);
 
 		if (ws->config->output_buffer > 0) {
-			sndbuf = MIN(2048, dtls_mtu * ws->config->output_buffer);
-			setsockopt(ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf,
-				   sizeof(sndbuf));
+			t = MIN(2048, dtls_mtu * ws->config->output_buffer);
+			setsockopt(ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &t,
+				   sizeof(t));
 			if (ret == -1)
 				oclog(ws, LOG_DEBUG,
-				      "setsockopt(UDP, SO_SNDBUF) to %u, failed.",
-				      sndbuf);
+				      "setsockopt(UDP, SO_SNDBUF) to %u, failed.", t);
 		}
 
 		set_net_priority(ws, ws->udp_fd, ws->config->net_priority);
@@ -1517,7 +1523,7 @@ static int connect_handler(worker_st * ws)
 		gettime(&tnow);
 		now = tnow.tv_sec;
 
-		if (periodic_check(ws, mtu_overhead, now) < 0)
+		if (periodic_check(ws, mtu_overhead, now, dpd) < 0)
 			goto exit;
 
 		if (FD_ISSET(ws->tun_fd, &rfds)) {

@@ -42,6 +42,18 @@ typedef enum {
 	UP_ACTIVE
 } udp_port_state_t;
 
+#define STR_HDR_COOKIE "Cookie"
+#define STR_HDR_USER_AGENT "User-Agent"
+#define STR_HDR_CONNECTION "Connection"
+#define STR_HDR_MS "X-DTLS-Master-Secret"
+#define STR_HDR_CS "X-DTLS-CipherSuite"
+#define STR_HDR_DMTU "X-DTLS-MTU"
+#define STR_HDR_CMTU "X-CSTP-MTU"
+#define STR_HDR_ATYPE "X-CSTP-Address-Type"
+#define STR_HDR_HOST "X-CSTP-Hostname"
+#define STR_HDR_FULL_IPV6 "X-CSTP-Full-IPv6-Capability"
+#define STR_HDR_DEVICE_TYPE "X-AnyConnect-Identifier-DeviceType"
+
 enum {
 	HEADER_COOKIE = 1,
 	HEADER_MASTER_SECRET,
@@ -49,6 +61,7 @@ enum {
 	HEADER_CSTP_MTU,
 	HEADER_CSTP_ATYPE,
 	HEADER_DTLS_MTU,
+	HEADER_DEVICE_TYPE,
 	HEADER_DTLS_CIPHERSUITE,
 	HEADER_CONNECTION,
 	HEADER_FULL_IPV6,
@@ -93,6 +106,8 @@ struct http_req_st {
 
 	uint8_t sid_cookie[SID_SIZE];
 	unsigned int sid_cookie_set;
+
+	unsigned int is_mobile;
 
 	unsigned char master_secret[TLS_MASTER_SIZE];
 	unsigned int master_secret_set;

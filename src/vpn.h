@@ -49,6 +49,9 @@
 #define DEBUG_TRANSFERRED 3
 #define DEBUG_TLS   4
 
+#define DEFAULT_DPD_TIME 600
+#define DEFAULT_MOBILE_DPD_TIME 1800
+
 #define AC_PKT_DATA             0	/* Uncompressed data */
 #define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
 #define AC_PKT_DPD_RESP         4	/* DPD response */

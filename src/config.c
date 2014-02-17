@@ -323,7 +323,13 @@ unsigned force_cert_auth;
 	READ_NUMERIC("udp-port", config->udp_port);
 	READ_NUMERIC("keepalive", config->keepalive);
 	READ_NUMERIC("dpd", config->dpd);
+	if (config->dpd == 0)
+		config->dpd = DEFAULT_DPD_TIME;
+
 	READ_NUMERIC("mobile-dpd", config->mobile_dpd);
+	if (config->mobile_dpd == 0)
+		config->mobile_dpd = DEFAULT_MOBILE_DPD_TIME;
+
 	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms);
 
 	READ_STRING("ocsp-response", config->ocsp_response);

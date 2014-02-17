@@ -1,7 +1,7 @@
 EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd \
 	systemd/socket-activated/ocserv.service  systemd/standalone/ocserv.service \
 	systemd/socket-activated/ocserv.socket \
-	dbus/org.infradead.ocserv.conf
+	dbus/org.infradead.ocserv.conf profile.xml
 
 dist_man_MANS = ocserv.8 ocpasswd.8 occtl.8
 

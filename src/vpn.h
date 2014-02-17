@@ -44,6 +44,10 @@
 # define _ATTR_PACKED
 #endif
 
+#define DEBUG_BASIC 1
+#define DEBUG_HTTP  2
+#define DEBUG_TRANSFERRED 3
+#define DEBUG_TLS   4
 
 #define AC_PKT_DATA             0	/* Uncompressed data */
 #define AC_PKT_DPD_OUT          3	/* Dead Peer Detection */
@@ -75,6 +79,7 @@ extern int syslog_open;
 #define ERR_CTL -12
 
 #define LOG_HTTP_DEBUG 2048
+#define LOG_TRANSFER_DEBUG 2049
 
 #define MAX_CIPHERSUITE_NAME 64
 #define MAX_DTLS_CIPHERSUITE_NAME 24
@@ -198,8 +203,6 @@ struct cfg_st {
 	unsigned keepalive;
 	unsigned dpd;
 	unsigned foreground;
-	unsigned tls_debug;
-	unsigned http_debug;
 	unsigned debug;
 	unsigned max_clients;
 	unsigned max_same_clients;

@@ -91,10 +91,15 @@ void __attribute__ ((format(printf, 3, 4)))
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
-	    if (ws->config->http_debug == 0)
+	    if (ws->config->debug < DEBUG_HTTP)
                 return;
             else
                 priority = LOG_INFO;
+        } else if (priority == LOG_TRANSFER_DEBUG) {
+	    if (ws->config->debug < DEBUG_TRANSFERRED)
+                return;
+            else
+                priority = LOG_DEBUG;
         }
 
 	ip = human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
@@ -127,7 +132,12 @@ void __attribute__ ((format(printf, 4, 5)))
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
-	    if (s->config->http_debug == 0)
+	    if (s->config->debug < DEBUG_HTTP)
+                return;
+            else
+                priority = LOG_DEBUG;
+        } else if (priority == LOG_TRANSFER_DEBUG) {
+	    if (s->config->debug < DEBUG_TRANSFERRED)
                 return;
             else
                 priority = LOG_DEBUG;

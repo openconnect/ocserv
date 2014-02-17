@@ -1484,7 +1484,7 @@ static int connect_handler(worker_st * ws)
 			ws->buffer[6] = AC_PKT_TERM_SERVER;
 			ws->buffer[7] = 0;
 
-			oclog(ws, LOG_DEBUG,
+			oclog(ws, LOG_TRANSFER_DEBUG,
 			      "sending disconnect message in TLS channel");
 			ret = tls_send(ws->session, ws->buffer, 8);
 			GNUTLS_FATAL_ERR(ret);
@@ -1543,7 +1543,7 @@ static int connect_handler(worker_st * ws)
 			if (bandwidth_update(&b_tx, l - 1, ws->conn_mtu, &tnow)
 			    != 0) {
 				tls_retry = 0;
-				oclog(ws, LOG_DEBUG, "sending %d byte(s)\n", l);
+				oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
 				if (ws->udp_state == UP_ACTIVE) {
 					ws->buffer[7] = AC_PKT_DATA;
 
@@ -1556,7 +1556,7 @@ static int connect_handler(worker_st * ws)
 					if (ret == GNUTLS_E_LARGE_PACKET) {
 						mtu_not_ok(ws);
 
-						oclog(ws, LOG_DEBUG,
+						oclog(ws, LOG_TRANSFER_DEBUG,
 						      "retrying (TLS) %d\n", l);
 						tls_retry = 1;
 					} else if (ret >= ws->conn_mtu
@@ -1589,7 +1589,7 @@ static int connect_handler(worker_st * ws)
 			ret =
 			    tls_recv(ws->session, ws->buffer,
 					       ws->buffer_size);
-			oclog(ws, LOG_DEBUG, "received %d byte(s) (TLS)", ret);
+			oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", ret);
 
 			GNUTLS_FATAL_ERR(ret);
 
@@ -1652,7 +1652,7 @@ static int connect_handler(worker_st * ws)
 				    tls_recv(ws->dtls_session,
 						       ws->buffer,
 						       ws->buffer_size);
-				oclog(ws, LOG_DEBUG,
+				oclog(ws, LOG_TRANSFER_DEBUG,
 				      "received %d byte(s) (DTLS)", ret);
 
 				GNUTLS_FATAL_ERR(ret);
@@ -1697,7 +1697,7 @@ static int connect_handler(worker_st * ws)
 					}
 
 				} else
-					oclog(ws, LOG_DEBUG,
+					oclog(ws, LOG_TRANSFER_DEBUG,
 					      "no data received (%d)", ret);
 
 				udp_recv_time = now;
@@ -1799,16 +1799,16 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 
 	switch (head) {
 	case AC_PKT_DPD_RESP:
-		oclog(ws, LOG_DEBUG, "received DPD response");
+		oclog(ws, LOG_TRANSFER_DEBUG, "received DPD response");
 		break;
 	case AC_PKT_KEEPALIVE:
-		oclog(ws, LOG_DEBUG, "received keepalive");
+		oclog(ws, LOG_TRANSFER_DEBUG, "received keepalive");
 		break;
 	case AC_PKT_DPD_OUT:
 		if (ws->session == ts) {
 			ret = tls_send(ts, "STF\x01\x00\x00\x04\x00", 8);
 
-			oclog(ws, LOG_DEBUG,
+			oclog(ws, LOG_TRANSFER_DEBUG,
 			      "received TLS DPD; sent response (%d bytes)",
 			      ret);
 		} else {
@@ -1821,7 +1821,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 				ret = tls_send(ts, ws->buffer, 1);
 			}
 
-			oclog(ws, LOG_DEBUG,
+			oclog(ws, LOG_TRANSFER_DEBUG,
 			      "received DTLS DPD; sent response (%d bytes)",
 			      ret);
 		}
@@ -1837,7 +1837,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 		exit_worker(ws);
 		break;
 	case AC_PKT_DATA:
-		oclog(ws, LOG_DEBUG, "writing %d byte(s) to TUN",
+		oclog(ws, LOG_TRANSFER_DEBUG, "writing %d byte(s) to TUN",
 		      (int)buf_size);
 		ret = force_write(ws->tun_fd, buf, buf_size);
 		if (ret == -1) {

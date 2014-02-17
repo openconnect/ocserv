@@ -557,7 +557,7 @@ const char* perr;
 char *tmp;
 unsigned len;
 
-	if (s->config->tls_debug) {
+	if (s->config->debug >= DEBUG_TLS) {
 		gnutls_global_set_log_function(tls_log_func);
 		gnutls_global_set_log_level(9);
 	}

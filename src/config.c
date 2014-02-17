@@ -551,14 +551,8 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 	if (HAVE_OPT(PID_FILE))
 		pid_file = OPT_ARG(PID_FILE);
 
-	if (HAVE_OPT(TLS_DEBUG))
-		config->tls_debug = 1;
-
-	if (HAVE_OPT(HTTP_DEBUG))
-		config->http_debug = 1;
-
 	if (HAVE_OPT(DEBUG))
-		config->debug = 1;
+		config->debug = OPT_VALUE_DEBUG;
 
 	if (HAVE_OPT(CONFIG)) {
 		cfg_file = OPT_ARG(CONFIG);

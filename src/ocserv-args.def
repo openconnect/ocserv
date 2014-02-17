@@ -33,20 +33,10 @@ flag = {
 };
 
 flag = {
-    name      = tls-debug;
-    descrip   = "Enable verbose TLS debugging information";
-    doc      = "";
-};
-
-flag = {
-    name      = http-debug;
-    descrip   = "Enable verbose HTTP debugging information";
-    doc      = "";
-};
-
-flag = {
     name      = debug;
     value     = d;
+    arg-type  = number;
+    arg-range = "0 -> 9999";
     descrip   = "Enable verbose network debugging information";
     doc      = "";
 };

@@ -3,6 +3,9 @@
 - Added doc/profile.xml to the distribution.
 - 'ocserv -d' accepts a numeric argument (0-9) that gradualy
   increases verbosity.
+- Added the 'mobile-dpd' config option. That allows providing a
+  longer DPD value to mobile clients to prevent waking them up
+  too often.
 
 
 * Version 0.3.1 (released 2014-02-16)

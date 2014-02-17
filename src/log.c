@@ -105,9 +105,9 @@ void __attribute__ ((format(printf, 3, 4)))
 	va_end(args);
 
 	if (ip) {
-		syslog(priority, "%s %s", ip, buf);
+		syslog(priority, "worker: %s %s", ip, buf);
 	} else {
-		syslog(priority, "[unknown] %s", buf);
+		syslog(priority, "worker: [unknown] %s", buf);
 	}
 
 	return;
@@ -143,9 +143,9 @@ void __attribute__ ((format(printf, 4, 5)))
 	va_end(args);
 
 	if (ip) {
-		syslog(priority, "[m] %s %s", ip, buf);
+		syslog(priority, "main: %s %s", ip, buf);
 	} else {
-		syslog(priority, "[m] %s", buf);
+		syslog(priority, "main: %s", buf);
 	}
 
 	return;

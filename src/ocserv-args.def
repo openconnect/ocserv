@@ -306,7 +306,7 @@ route = 192.168.5.0/255.255.255.0
 # per group. Each file name on these directories must match the username
 # or the groupname.
 # The options allowed in the configuration files are dns, nbns,
-#  ipv?-network, ipv?-netmask, ipv6-prefix, rx/tx-per-sec, iroute, route,
+#  ipv?-network, ipv4-netmask, ipv6-prefix, rx/tx-per-sec, iroute, route,
 #  net-priority and cgroup.
 #
 # Note that the 'iroute' option allows to add routes on the server

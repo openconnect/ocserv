@@ -1,5 +1,6 @@
 * Version 0.3.2 (unreleased)
 - Allow a number of retries (3) in plain password authentication.
+- Added doc/profile.xml to the distribution.
 
 
 * Version 0.3.1 (released 2014-02-16)

@@ -330,7 +330,7 @@ unsigned force_cert_auth;
 
 	READ_NUMERIC("mobile-dpd", config->mobile_dpd);
 	if (config->mobile_dpd == 0)
-		config->mobile_dpd = DEFAULT_MOBILE_DPD_TIME;
+		config->mobile_dpd = config->dpd;
 
 	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms);
 
@@ -395,7 +395,12 @@ unsigned force_cert_auth;
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("idle-timeout", config->idle_timeout);
+
+	config->mobile_idle_timeout = -1;
 	READ_NUMERIC("mobile-idle-timeout", config->mobile_idle_timeout);
+	if (config->mobile_idle_timeout == -1)
+		config->mobile_idle_timeout = config->idle_timeout;
+
 	READ_NUMERIC("max-clients", config->max_clients);
 	READ_NUMERIC("min-reauth-time", config->min_reauth_time);
 	READ_NUMERIC("max-same-clients", config->max_same_clients);

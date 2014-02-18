@@ -283,6 +283,8 @@ static int read_additional_config(struct main_server_st *s,
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 {
+	mslog(s, proc, LOG_DEBUG, "removing client '%s' with id '%d'", proc->username, (int)proc->pid);
+
 	list_del(&proc->list);
 	s->active_clients--;
 

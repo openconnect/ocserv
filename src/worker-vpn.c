@@ -1509,7 +1509,7 @@ static int connect_handler(worker_st * ws)
 			ws->buffer[3] = 1;
 			ws->buffer[4] = 0;
 			ws->buffer[5] = 0;
-			ws->buffer[6] = AC_PKT_TERM_SERVER;
+			ws->buffer[6] = AC_PKT_DISCONN;
 			ws->buffer[7] = 0;
 
 			oclog(ws, LOG_TRANSFER_DEBUG,

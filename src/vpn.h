@@ -204,6 +204,7 @@ struct cfg_st {
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned idle_timeout; /* timeout when idle */
+	unsigned mobile_idle_timeout; /* timeout when a mobile is idle */
 	unsigned keepalive;
 	unsigned dpd;
 	unsigned mobile_dpd;

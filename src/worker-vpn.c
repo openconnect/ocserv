@@ -1030,7 +1030,6 @@ static int connect_handler(worker_st * ws)
 	struct http_req_st *req = &ws->req;
 	fd_set rfds;
 	int l, e, max, ret, overhead, t;
-	int dpd;
 	unsigned tls_retry, dtls_mtu, cstp_mtu;
 	char *p;
 #ifdef HAVE_PSELECT
@@ -1121,14 +1120,14 @@ static int connect_handler(worker_st * ws)
 	ret = tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
 	SEND_ERR(ret);
 
-	if (req->is_mobile)
-		dpd = ws->config->mobile_dpd;
-	else
-		dpd = ws->config->dpd;
+	if (req->is_mobile) {
+		ws->config->dpd = ws->config->mobile_dpd;
+		ws->config->idle_timeout = ws->config->mobile_idle_timeout;
+	}
 
-	oclog(ws, LOG_DEBUG, "suggesting DPD of %d secs", dpd);
-	if (dpd > 0) {
-		ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", dpd);
+	oclog(ws, LOG_DEBUG, "suggesting DPD of %d secs", ws->config->dpd);
+	if (ws->config->dpd > 0) {
+		ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", ws->config->dpd);
 		SEND_ERR(ret);
 	}
 
@@ -1363,8 +1362,8 @@ static int connect_handler(worker_st * ws)
 			       ws->buffer);
 		SEND_ERR(ret);
 
-		if (dpd > 0) {
-			ret = tls_printf(ws->session, "X-DTLS-DPD: %u\r\n", dpd);
+		if (ws->config->dpd > 0) {
+			ret = tls_printf(ws->session, "X-DTLS-DPD: %u\r\n", ws->config->dpd);
 			SEND_ERR(ret);
 		}
 
@@ -1545,7 +1544,7 @@ static int connect_handler(worker_st * ws)
 		gettime(&tnow);
 		now = tnow.tv_sec;
 
-		if (periodic_check(ws, mtu_overhead, now, dpd) < 0)
+		if (periodic_check(ws, mtu_overhead, now, ws->config->dpd) < 0)
 			goto exit;
 
 		if (FD_ISSET(ws->tun_fd, &rfds)) {

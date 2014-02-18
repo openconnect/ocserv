@@ -183,6 +183,10 @@ tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT"
 # to authentication
 auth-timeout = 40
 
+# The time (in seconds) that a client is allowed to stay idle (no traffic)
+# before being disconnected. Unset to disable.
+#idle-timeout = 1200
+
 # The time (in seconds) that a client is not allowed to reconnect after 
 # a failed authentication attempt.
 #min-reauth-time = 2

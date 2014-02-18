@@ -91,6 +91,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "idle-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "min-reauth-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-same-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -392,6 +393,7 @@ unsigned force_cert_auth;
 	}
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
+	READ_NUMERIC("idle-timeout", config->idle_timeout);
 	READ_NUMERIC("max-clients", config->max_clients);
 	READ_NUMERIC("min-reauth-time", config->min_reauth_time);
 	READ_NUMERIC("max-same-clients", config->max_same_clients);

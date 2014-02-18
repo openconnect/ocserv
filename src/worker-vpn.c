@@ -904,6 +904,17 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 	if (now - ws->last_periodic_check < PERIODIC_CHECK_TIME)
 		return 0;
 
+	if (ws->config->idle_timeout > 0) {
+		if (now - ws->last_nc_msg > ws->config->idle_timeout) {
+			oclog(ws, LOG_ERR,
+			      "idle timeout reached for process (%d secs)",
+			      (int)(now - ws->last_nc_msg));
+			terminate = 1;
+			goto cleanup;
+		}
+
+	}
+
 	/* check DPD. Otherwise exit */
 	if (ws->udp_state == UP_ACTIVE &&
 	    now - ws->last_msg_udp > DPD_TRIES * dpd &&
@@ -959,6 +970,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 		}
 	}
 
+cleanup:
 	ws->last_periodic_check = now;
 
 	return 0;
@@ -1214,7 +1226,7 @@ static int connect_handler(worker_st * ws)
 		if (req->no_ipv4 != 0 && strchr(ws->vinfo.routes[i], '.') != 0)
 			continue;
 		oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
-		
+
 		if (ip6 != 0 && ws->full_ipv6) {
 			ret = tls_printf(ws->session,
 					 "X-CSTP-Split-Include-IP6: %s\r\n",
@@ -1253,6 +1265,17 @@ static int connect_handler(worker_st * ws)
 		       ws->config->keepalive);
 	SEND_ERR(ret);
 
+	if (ws->config->idle_timeout > 0) {
+		ret =
+		    tls_printf(ws->session,
+			     "X-CSTP-Idle-Timeout: %u\r\n", (unsigned)ws->config->idle_timeout);
+	} else {
+		ret =
+		    tls_puts(ws->session,
+			     "X-CSTP-Idle-Timeout: none\r\n");
+	}
+	SEND_ERR(ret);
+
 	ret =
 	    tls_puts(ws->session,
 		     "X-CSTP-Smartcard-Removal-Disconnect: true\r\n");
@@ -1272,7 +1295,6 @@ static int connect_handler(worker_st * ws)
 	}
 
 	ret = tls_puts(ws->session, "X-CSTP-Session-Timeout: none\r\n"
-		       "X-CSTP-Idle-Timeout: none\r\n"
 		       "X-CSTP-Disconnected-Timeout: none\r\n"
 		       "X-CSTP-Keep: true\r\n"
 		       "X-CSTP-TCP-Keepalive: true\r\n"
@@ -1458,7 +1480,7 @@ static int connect_handler(worker_st * ws)
 
 	/* start dead peer detection */
 	gettime(&tnow);
-	ws->last_msg_tcp = ws->last_msg_udp = tnow.tv_sec;
+	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = tnow.tv_sec;
 
 	bandwidth_init(&b_rx, ws->config->rx_per_sec);
 	bandwidth_init(&b_tx, ws->config->tx_per_sec);
@@ -1551,6 +1573,7 @@ static int connect_handler(worker_st * ws)
 				tls_retry = 0;
 				oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
 				if (ws->udp_state == UP_ACTIVE) {
+
 					ws->buffer[7] = AC_PKT_DATA;
 
 					ret =
@@ -1588,6 +1611,7 @@ static int connect_handler(worker_st * ws)
 						     l + 8);
 					GNUTLS_FATAL_ERR(ret);
 				}
+				ws->last_nc_msg = tnow.tv_sec;
 			}
 		}
 
@@ -1595,7 +1619,6 @@ static int connect_handler(worker_st * ws)
 			ret =
 			    tls_recv(ws->session, ws->buffer,
 					       ws->buffer_size);
-			oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", ret);
 
 			GNUTLS_FATAL_ERR(ret);
 
@@ -1606,6 +1629,7 @@ static int connect_handler(worker_st * ws)
 
 			if (ret > 0) {
 				l = ret;
+				oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", l);
 
 				if (bandwidth_update
 				    (&b_rx, l - 8, ws->conn_mtu, &tnow) != 0) {
@@ -1852,6 +1876,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 			      strerror(e));
 			return -1;
 		}
+		ws->last_nc_msg = now;
 
 		break;
 	default:

@@ -1,7 +1,7 @@
 * Version 0.3.2 (unreleased)
 - Allow a number of retries (3) in plain password authentication.
 - Added doc/profile.xml to the distribution.
-- 'ocserv -d' accepts a numeric argument (0-9) that gradualy
+- ocserv's '-d' option accepts a numeric argument (0-9) that gradualy
   increases verbosity.
 - Added the 'mobile-dpd' config option. That allows providing a
   longer DPD value to mobile clients to prevent waking them up

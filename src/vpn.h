@@ -46,8 +46,8 @@
 
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  2
-#define DEBUG_TRANSFERRED 3
-#define DEBUG_TLS   4
+#define DEBUG_TRANSFERRED 5
+#define DEBUG_TLS   9
 
 #define DEFAULT_DPD_TIME 600
 #define DEFAULT_MOBILE_DPD_TIME 1800

@@ -959,7 +959,7 @@ int main(int argc, char** argv)
 				}
 				set_cloexec_flag (fd, 1);
 
-				ret = gnutls_rnd(GNUTLS_RND_NONCE, ws.sid, sizeof(ws.sid));
+				ret = gnutls_rnd(GNUTLS_RND_RANDOM, ws.sid, sizeof(ws.sid));
 				if (ret < 0) {
 					close(fd);
 					mslog(&s, NULL, LOG_ERR, "Error generating SID");

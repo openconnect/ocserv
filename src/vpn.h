@@ -59,6 +59,9 @@
 #define AC_PKT_COMPRESSED       8	/* Compressed data */
 #define AC_PKT_TERM_SERVER      9	/* Server kick */
 
+#define REKEY_METHOD_SSL 1
+#define REKEY_METHOD_NEW_TUNNEL 2
+
 extern int syslog_open;
 
 /* the first is generic, for the methods that require a username password */
@@ -199,7 +202,10 @@ struct cfg_st {
 
 	char* socket_file_prefix;
 	time_t cookie_validity;	/* in seconds */
+
 	time_t rekey_time;	/* in seconds */
+	unsigned rekey_method; /* REKEY_METHOD_ */
+
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned idle_timeout; /* timeout when idle */
@@ -219,7 +225,7 @@ struct cfg_st {
 	                               * TCP sessions. */
 	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
-	
+
 	size_t rx_per_sec;
 	size_t tx_per_sec;
 	unsigned net_priority;

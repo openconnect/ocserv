@@ -206,6 +206,15 @@ cookie-validity = 86400
 # this amount of seconds is elapsed. Set to zero to disable.
 rekey-time = 172800
 
+# ReKey method
+# Valid options: ssl, new-tunnel
+#  ssl: Will perform an efficient rehandshake on the channel allowing
+#       a seamless connection during rekey.
+#  new-tunnel: Will instruct the client to discard and re-establish the channel.
+#       Use this option only if the connecting clients have issues with the ssl
+#       option.
+rekey-method = ssl
+
 # Script to call when a client connects and obtains an IP
 # Parameters are passed on the environment.
 # REASON, USERNAME, GROUPNAME, HOSTNAME (the hostname selected by client), 

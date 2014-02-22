@@ -1286,7 +1286,8 @@ static int connect_handler(worker_st * ws)
 			       (unsigned)(ws->config->rekey_time));
 		SEND_ERR(ret);
 
-		ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: ssl\r\n");
+		ret = tls_printf(ws->session, "X-CSTP-Rekey-Method: %s\r\n",
+			(ws->config->rekey_method == REKEY_METHOD_SSL)?"ssl":"new-tunnel");
 		SEND_ERR(ret);
 	} else {
 		ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: none\r\n");
@@ -1378,11 +1379,11 @@ static int connect_handler(worker_st * ws)
 				       (unsigned)(ws->config->rekey_time+10));
 			SEND_ERR(ret);
 
-			ret = tls_puts(ws->session, "X-DTLS-Rekey-Method: ssl\r\n");
-			SEND_ERR(ret);
-		} else {
-			ret = tls_puts(ws->session, "X-DTLS-Rekey-Method: none\r\n");
-			SEND_ERR(ret);
+			/* This is our private extension */
+			if (ws->config->rekey_method == REKEY_METHOD_SSL) {
+				ret = tls_puts(ws->session, "X-DTLS-Rekey-Method: ssl\r\n");
+				SEND_ERR(ret);
+			}
 		}
 
 		ret =

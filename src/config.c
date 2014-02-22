@@ -90,6 +90,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "rekey-method", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "idle-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "mobile-idle-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -251,6 +252,7 @@ unsigned j, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned prefix = 0;
+char *tmp;
 unsigned force_cert_auth;
 
 	pov = configFileLoad(file);
@@ -392,6 +394,18 @@ unsigned force_cert_auth;
 	if (config->rekey_time == -1) {
 		config->rekey_time = 24*60*60;
 	}
+
+	tmp = NULL;
+	READ_STRING("rekey-method", tmp);
+	if (tmp == NULL || strcmp(tmp, "ssl") == 0)
+		config->rekey_method = REKEY_METHOD_SSL;
+	else if (strcmp(tmp, "new-tunnel") == 0)
+		config->rekey_method = REKEY_METHOD_NEW_TUNNEL;
+	else {
+		fprintf(stderr, "Unknown rekey method '%s'\n", tmp);
+		exit(1);
+	}
+	free(tmp); tmp = NULL;
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("idle-timeout", config->idle_timeout);

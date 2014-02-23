@@ -581,14 +581,13 @@ void clear_lists(main_server_st *s)
 
 static void kill_children(main_server_st* s)
 {
-	struct proc_st *ctmp = NULL;
+	struct proc_st *ctmp = NULL, *cpos;
 
 	/* kill the security module server */
 	kill(s->sec_mod_pid, SIGTERM);
-	list_for_each(&s->proc_list.head, ctmp, list) {
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid != -1) {
-			kill(ctmp->pid, SIGTERM);
-			user_disconnected(s, ctmp);
+			remove_proc(s, ctmp, 1);
 		}
 	}
 }

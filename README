@@ -86,7 +86,7 @@ and under usage (i.e., clients connecting and transferring data), please
 send that information to nmav@gnutls.org.
 
 You may examine the output using:
-# perf record
+# perf report
 
 
 === How the VPN works ===

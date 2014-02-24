@@ -48,10 +48,18 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
+dbus_enabled=no
+AC_ARG_WITH(dbus,
+  AS_HELP_STRING([--without-dbus], [do not include dbus support]),
+  test_for_dbus=$withval,
+  test_for_dbus=yes)
+
+if test "$test_for_dbus" = yes;then
 PKG_CHECK_MODULES([LIBDBUS], [dbus-1 >= 1.1.1],
 dbus_enabled=yes
 AC_DEFINE([HAVE_DBUS], [], [dbus detected]),
 [dbus_enabled=no])
+fi
 
 AM_CONDITIONAL(HAVE_DBUS, test "x$dbus_enabled" != xno)
 
@@ -60,7 +68,13 @@ dbus_conf_dir=$($PKG_CONFIG dbus-1 --variable=sysconfdir)
 AC_SUBST(DBUS_CONFIG_DIR, [$dbus_conf_dir/etc/dbus-1/system.d/])
 fi
 
+AC_ARG_WITH(protobuf,
+  AS_HELP_STRING([--without-protobuf], [use the included protobuf library]),
+  test_for_protobuf=$withval,
+  test_for_protobuf=yes)
+
 with_local_protobuf_c=no
+if test "$test_for_protobuf" = yes;then
 PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
 [AC_LIB_HAVE_LINKFLAGS(protobuf-c,, [#include <google/protobuf-c/protobuf-c.h>], [protobuf_c_message_pack(0,0);])
  if test x$ac_cv_libprotobuf_c = xyes; then
@@ -74,8 +88,18 @@ PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
  fi
 ]
 )
+fi
+
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
+AC_ARG_WITH(libnl,
+  AS_HELP_STRING([--without-libnl], [do not try to use the libnl library]),
+  test_for_libnl=$withval,
+  test_for_libnl=yes)
+
+occtl_enabled=no
+
+if test "$test_for_libnl" = yes;then
 PKG_CHECK_MODULES(LIBNL3, libnl-route-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
 if test "${have_libnl3}" = "yes"; then
   AC_DEFINE(HAVE_LIBNL, 1, [have libnl])
@@ -106,6 +130,7 @@ if test "$dbus_enabled" = yes;then
 else
   occtl_enabled=no
 fi
+fi
 
 AM_CONDITIONAL(ENABLE_OCCTL, test "x$occtl_enabled" = xyes)
 
@@ -130,8 +155,32 @@ LIBS="$oldlibs"
 gl_INIT
 
 AC_LIB_HAVE_LINKFLAGS(crypt,, [#include <unistd.h>], [crypt(0,0);])
+
+AC_ARG_WITH(utmp,
+  AS_HELP_STRING([--without-utmp], [do not use libutil for utmp support]),
+  test_for_utmp=$withval,
+  test_for_utmp=yes)
+
+if test "$test_for_utmp" = yes;then
 AC_LIB_HAVE_LINKFLAGS(util,, [#include <utmpx.h>], [pututxline(0);])
+fi
+
+
+# Test for libwrap
+AC_ARG_WITH(libwrap,
+  AS_HELP_STRING([--without-libwrap], [do not use libwrap]),
+  test_for_libwrap=$withval,
+  test_for_libwrap=yes)
+
+dnl Test for PCL library
+with_local_pcl=yes
+
+if test "$test_for_libwrap" = yes;then
 AC_LIB_HAVE_LINKFLAGS(wrap,, [#include <tcpd.h>], [hosts_access(0);])
+fi
+
+# test for other types
+
 AC_CHECK_MEMBER([struct sockaddr.sa_len],
 [AC_DEFINE(HAVE_SOCKADDR_SA_LEN, 1, [Do we have sockaddr.sa_len?])], [],
 [
@@ -183,7 +232,7 @@ if [ test "$anyconnect_enabled" = "yes" ];then
 fi
 
 AC_ARG_WITH(pager,
-  AS_HELP_STRING([--with-pager], [set a specific pager for occtl]),
+  AS_HELP_STRING([--with-pager=PAGER], [set a specific pager for occtl]),
     occtl_pager=$withval)
 if [ test -z "$occtl_pager" ];then
 	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["less"], [The default pager for occtl])
@@ -191,8 +240,15 @@ else
 	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["$occtl_pager"], [The default pager for occtl])
 fi
 
+AC_ARG_WITH(http-parser,
+  AS_HELP_STRING([--without-http-parser], [use the included http parser]),
+  test_for_http_parser=$withval,
+  test_for_http_parser=yes)
+
 dnl Test for http_parser library
 with_local_http_parser=yes
+
+if test "$test_for_http_parser" = yes;then
 LIBS="$oldlibs -lhttp_parser"
 AC_MSG_CHECKING([for http_parser library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -209,6 +265,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 *** An included version of the library will be used.
 *** ]])])
 LIBS="$oldlibs"
+fi
 AM_CONDITIONAL(LOCAL_HTTP_PARSER, test "x$with_local_http_parser" != xno)
 
 
@@ -221,9 +278,15 @@ AC_CHECK_FUNCS(sigaction)
 AC_CHECK_FUNCS(longjmp setjmp)
 AC_CHECK_FUNCS(sigaltstack)
 
+AC_ARG_WITH(pcl-lib,
+  AS_HELP_STRING([--without-pcl-lib], [use the included PCL library]),
+  test_for_pcl_lib=$withval,
+  test_for_pcl_lib=yes)
 
 dnl Test for PCL library
 with_local_pcl=yes
+
+if test "$test_for_pcl_lib" = yes;then
 LIBS="$oldlibs -lpcl"
 AC_MSG_CHECKING([for pcl library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -240,6 +303,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 *** An included version of the library will be used.
 *** ]])])
 LIBS="$oldlibs"
+fi
 AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
 

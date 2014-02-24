@@ -70,6 +70,25 @@ To run the server on the foreground edit the doc/sample.config and then run:
 # src/ocserv -f -c src/sample.config
 
 
+=== Profiling ===
+
+If you use ocserv on a server with significant load and you'd like to help
+improve it, you may help by sending profiling information. That includes
+the bottlenecks in software, so future optimizations could be spent on the
+real needs. 
+
+In a Linux system you can profile ocserv using the following command.
+# perf record -g ocserv
+
+After the server is terminated, the output is placed in perf.data. It does 
+not contain any sensitive information. If you run a server for long time,
+and under usage (i.e., clients connecting and transferring data), please
+send that information to nmav@gnutls.org.
+
+You may examine the output using:
+# perf record
+
+
 === How the VPN works ===
 
 Please see:

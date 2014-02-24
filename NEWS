@@ -10,6 +10,8 @@
   options. They ensure that an idle session will be disconnected.
 - Added the 'rekey-method' config option. With this option the
   advertized rekey method to the client can be overriden.
+- Added configure options to disable checking for certain libraries,
+  and disable features on request.
 
 
 * Version 0.3.1 (released 2014-02-16)

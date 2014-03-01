@@ -462,6 +462,13 @@ unsigned force_cert_auth;
 	READ_MULTI_LINE("split-dns", config->split_dns, config->split_dns_size);
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
+	for (j=0;j<config->network.routes_size;j++) {
+		if (strstr(config->network.routes[j], "0.0.0.0/0") != 0) {
+			fprintf(stderr, "Illegal route '%s' detected; to set a default route remove all route directives\n",
+				config->network.routes[j]);
+			exit(1);
+		}
+	}
 	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);
 	if (config->network.dns_size == 0) {
 		/* try the aliases */

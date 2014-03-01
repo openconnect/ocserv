@@ -72,6 +72,7 @@ typedef struct {
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
 #define LIST_USERS_SIG "(ussssssssusssss)"
+#define LIST_SINGLE_USER_SIG "(ussssssssusssssasasasas)"
 
 #define DESC_LIST \
 		"    <method name=\"list\">\n" \
@@ -80,13 +81,13 @@ typedef struct {
 
 #define DESC_USER_INFO \
 		"    <method name=\"user_info\">\n" \
-		"      <arg name=\"user-info\" direction=\"out\" type=\"a"LIST_USERS_SIG"\"/>\n" \
+		"      <arg name=\"user-info\" direction=\"out\" type=\"a"LIST_SINGLE_USER_SIG"\"/>\n" \
 		"    </method>\n"
 
 /* ID-INFO returns an array of 0 or 1 elements */
 #define DESC_ID_INFO \
 		"    <method name=\"id_info\">\n" \
-		"      <arg name=\"id-info\" direction=\"out\" type=\"a"LIST_USERS_SIG"\"/>\n" \
+		"      <arg name=\"id-info\" direction=\"out\" type=\"a"LIST_SINGLE_USER_SIG"\"/>\n" \
 		"    </method>\n"
 
 #define DESC_DISC_NAME \
@@ -126,9 +127,9 @@ static const ctl_method_st methods[] = {
 	ENTRY("reload", "org.infradead.ocserv", DESC_RELOAD, method_reload),
 	ENTRY("stop", "org.infradead.ocserv", DESC_RELOAD, method_stop),
 	ENTRY("list", "org.infradead.ocserv", DESC_LIST, method_list_users),
-	ENTRY("user_info", "org.infradead.ocserv", DESC_USER_INFO,
+	ENTRY("user_info2", "org.infradead.ocserv", DESC_USER_INFO,
 	      method_user_info),
-	ENTRY("id_info", "org.infradead.ocserv", DESC_ID_INFO, method_id_info),
+	ENTRY("id_info2", "org.infradead.ocserv", DESC_ID_INFO, method_id_info),
 	ENTRY("disconnect_name", "org.infradead.ocserv", DESC_DISC_NAME,
 	      method_disconnect_user_name),
 	ENTRY("disconnect_id", "org.infradead.ocserv", DESC_DISC_ID,
@@ -399,11 +400,39 @@ static void method_stop(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
-static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
+static int append_list(DBusMessageIter * subs, char **list, unsigned list_size)
+{
+	DBusMessageIter suba;
+	unsigned i;
+
+	if (dbus_message_iter_open_container
+	    (subs, DBUS_TYPE_ARRAY, "s", &suba) == 0) {
+		return -1;
+	}
+
+	for (i = 0; i < list_size; i++) {
+		if (dbus_message_iter_append_basic
+		    (&suba, DBUS_TYPE_STRING, &list[i]) == 0) {
+			return -1;
+		}
+	}
+
+	if (dbus_message_iter_close_container(subs, &suba) == 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int append_user_info(main_server_st * s, DBusMessageIter * subs,
+			    struct proc_st *ctmp, unsigned single)
 {
 	dbus_uint32_t tmp;
 	char ipbuf[128];
 	const char *strtmp;
+	char **list;
+	unsigned list_size;
+	int ret;
 
 	/* ID: pid */
 	tmp = ctmp->pid;
@@ -425,7 +454,7 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 
 	strtmp =
 	    human_addr2((struct sockaddr *)&ctmp->remote_addr,
-		       ctmp->remote_addr_len, ipbuf, sizeof(ipbuf), 0);
+			ctmp->remote_addr_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -442,7 +471,7 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	if (ctmp->ipv4 != NULL)
 		strtmp =
 		    human_addr2((struct sockaddr *)&ctmp->ipv4->rip,
-			       ctmp->ipv4->rip_len, ipbuf, sizeof(ipbuf), 0);
+				ctmp->ipv4->rip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -454,7 +483,7 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	if (ctmp->ipv4 != NULL)
 		strtmp =
 		    human_addr2((struct sockaddr *)&ctmp->ipv4->lip,
-			       ctmp->ipv4->lip_len, ipbuf, sizeof(ipbuf), 0);
+				ctmp->ipv4->lip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -466,7 +495,7 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	if (ctmp->ipv6 != NULL)
 		strtmp =
 		    human_addr2((struct sockaddr *)&ctmp->ipv6->rip,
-			       ctmp->ipv6->rip_len, ipbuf, sizeof(ipbuf), 0);
+				ctmp->ipv6->rip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -478,7 +507,7 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 	if (ctmp->ipv6 != NULL)
 		strtmp =
 		    human_addr2((struct sockaddr *)&ctmp->ipv6->lip,
-			       ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf), 0);
+				ctmp->ipv6->lip_len, ipbuf, sizeof(ipbuf), 0);
 	if (strtmp == NULL)
 		strtmp = "";
 	if (dbus_message_iter_append_basic
@@ -533,6 +562,52 @@ static int append_user_info(DBusMessageIter * subs, struct proc_st *ctmp)
 		return -1;
 	}
 
+	if (single > 0) {
+		if (ctmp->config.dns_size > 0) {
+			list = ctmp->config.dns;
+			list_size = ctmp->config.dns_size;
+		} else {
+			list = s->config->network.dns;
+			list_size = s->config->network.dns_size;
+		}
+		ret = append_list(subs, list, list_size);
+		if (ret < 0)
+			return ret;
+
+		if (ctmp->config.nbns_size > 0) {
+			list = ctmp->config.nbns;
+			list_size = ctmp->config.nbns_size;
+		} else {
+			list = s->config->network.nbns;
+			list_size = s->config->network.nbns_size;
+		}
+		ret = append_list(subs, list, list_size);
+		if (ret < 0)
+			return ret;
+
+		if (ctmp->config.routes_size > 0) {
+			list = ctmp->config.routes;
+			list_size = ctmp->config.routes_size;
+		} else {
+			list = s->config->network.routes;
+			list_size = s->config->network.routes_size;
+		}
+		ret = append_list(subs, list, list_size);
+		if (ret < 0)
+			return ret;
+
+		if (ctmp->config.iroutes_size > 0) {
+			list = ctmp->config.iroutes;
+			list_size = ctmp->config.iroutes_size;
+		} else {
+			list = NULL;
+			list_size = 0;
+		}
+		ret = append_list(subs, list, list_size);
+		if (ret < 0)
+			return ret;
+	}
+
 	return 0;
 }
 
@@ -572,7 +647,7 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 			goto error;
 		}
 
-		ret = append_user_info(&subs, ctmp);
+		ret = append_user_info(s, &subs, ctmp, 0);
 		if (ret < 0) {
 			mslog(s, NULL, LOG_ERR,
 			      "error appending container to dbus reply");
@@ -603,7 +678,7 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
-static void info_common(main_server_st * s, DBusConnection * conn,
+static void single_info_common(main_server_st * s, DBusConnection * conn,
 			DBusMessage * msg, const char *user, unsigned id)
 {
 	DBusMessage *reply;
@@ -628,7 +703,7 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 
 	dbus_message_iter_init_append(reply, &args);
 	if (dbus_message_iter_open_container
-	    (&args, DBUS_TYPE_ARRAY, LIST_USERS_SIG, &suba) == 0) {
+	    (&args, DBUS_TYPE_ARRAY, LIST_SINGLE_USER_SIG, &suba) == 0) {
 		mslog(s, NULL, LOG_ERR,
 		      "error appending container to dbus reply");
 		goto error;
@@ -652,7 +727,7 @@ static void info_common(main_server_st * s, DBusConnection * conn,
 			goto error;
 		}
 
-		ret = append_user_info(&subs, ctmp);
+		ret = append_user_info(s, &subs, ctmp, 1);
 		if (ret < 0) {
 			mslog(s, NULL, LOG_ERR,
 			      "error appending to dbus reply");
@@ -716,7 +791,7 @@ static void method_user_info(main_server_st * s, DBusConnection * conn,
 
 	dbus_message_iter_get_basic(&args, &name);
 
-	info_common(s, conn, msg, name, 0);
+	single_info_common(s, conn, msg, name, 0);
 
 	return;
 }
@@ -741,7 +816,7 @@ static void method_id_info(main_server_st * s, DBusConnection * conn,
 
 	dbus_message_iter_get_basic(&args, &id);
 
-	info_common(s, conn, msg, NULL, id);
+	single_info_common(s, conn, msg, NULL, id);
 
 	return;
 }

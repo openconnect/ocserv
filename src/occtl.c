@@ -734,6 +734,37 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 	return ret;
 }
 
+int print_list_entries(FILE* out, const char* name, DBusMessageIter * subs)
+{
+	DBusMessageIter suba;
+	const char * tmp;
+	unsigned int i = 0;
+
+	if (dbus_message_iter_get_arg_type(subs) != DBUS_TYPE_ARRAY)
+		return -1;
+
+	dbus_message_iter_recurse(subs, &suba);
+
+	for (;;) {
+		if (dbus_message_iter_get_arg_type(&suba) != DBUS_TYPE_STRING)
+			break; /* empty */
+
+		dbus_message_iter_get_basic(&suba, &tmp);
+		if (tmp != NULL) {
+			if (i==0)
+				fprintf(out, "%s %s\n", name, tmp);
+			else
+				fprintf(out, "\t\t%s\n", tmp);
+		}
+
+		i++;
+		if (!dbus_message_iter_next(&suba))
+			break;
+	}
+
+	return i;
+}
+
 int common_info_cmd(DBusMessageIter * args)
 {
 	DBusMessageIter suba, subs;
@@ -751,7 +782,7 @@ int common_info_cmd(DBusMessageIter * args)
 	FILE *out;
 	unsigned at_least_one = 0;
 	const char *dtls_ciphersuite, *tls_ciphersuite;
-	int ret = 1;
+	int ret = 1, r;
 
 	out = pager_start();
 
@@ -877,6 +908,9 @@ int common_info_cmd(DBusMessageIter * args)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &dtls_ciphersuite);
 
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
 		if (username == NULL || username[0] == 0)
 			username = NO_USER;
 
@@ -919,10 +953,36 @@ int common_info_cmd(DBusMessageIter * args)
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
 			fprintf(out, "\tDTLS cipher: %s\n", dtls_ciphersuite);
 
-		at_least_one = 1;
+		/* user network info */
+		fputs("\n", out);
+		if (print_list_entries(out, "\tDNS:", &subs) < 0)
+			goto error_parse;
 
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (print_list_entries(out, "\tNBNS:", &subs) < 0)
+			goto error_parse;
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if ((r = print_list_entries(out, "\tRoutes:", &subs)) < 0)
+			goto error_parse;
+		if (r == 0) {
+			fprintf(out, "Routes: defaultroute\n");
+		}
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (print_list_entries(out, "\tiRoutes:", &subs) < 0)
+			goto error_parse;
+
+		at_least_one = 1;
 		if (!dbus_message_iter_next(&suba))
 			break;
+
 	}
 
 	ret = 0;
@@ -954,7 +1014,7 @@ int handle_show_user_cmd(DBusConnection * conn, const char *arg)
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
-			    "org.infradead.ocserv", "user_info",
+			    "org.infradead.ocserv", "user_info2",
 			    DBUS_TYPE_STRING, &arg);
 	if (msg == NULL) {
 		goto error_send;
@@ -1000,7 +1060,7 @@ int handle_show_id_cmd(DBusConnection * conn, const char *arg)
 
 	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
-			    "org.infradead.ocserv", "id_info",
+			    "org.infradead.ocserv", "id_info2",
 			    DBUS_TYPE_UINT32, &id);
 	if (msg == NULL) {
 		goto error_send;

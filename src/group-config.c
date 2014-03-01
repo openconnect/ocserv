@@ -221,4 +221,5 @@ unsigned i;
 	free(config->ipv6_network);
 	free(config->ipv4_netmask);
 	free(config->ipv6_netmask);
+	memset(config, 0, sizeof(*config));
 }

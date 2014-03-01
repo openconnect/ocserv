@@ -1,5 +1,7 @@
 Short term items:
 
+* Add support for libubus
+
 * Think for ways for ocserv to co-exist on the same system with
   an HTTPS server (while sharing the same port).
 

@@ -10,8 +10,8 @@
   options. They ensure that an idle session will be disconnected.
 - Added the 'rekey-method' config option. With this option the
   advertized rekey method to the client can be overriden.
-- occtl will now print the routes, iroutes, dns and nbns values
-  per user.
+- occtl will now print the bandwidth limits, routes, iroutes, dns
+  and nbns values per user.
 - Added configure options to disable checking for certain libraries,
   and disable features on request.
 

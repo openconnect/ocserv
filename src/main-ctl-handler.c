@@ -72,7 +72,7 @@ typedef struct {
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
 #define LIST_USERS_SIG "(ussssssssusssss)"
-#define LIST_SINGLE_USER_SIG "(ussssssssusssssasasasas)"
+#define LIST_SINGLE_USER_SIG "(ussssssssusssssuuasasasas)"
 
 #define DESC_LIST \
 		"    <method name=\"list\">\n" \
@@ -563,6 +563,24 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 	}
 
 	if (single > 0) {
+		if (ctmp->config.rx_per_sec > 0)
+			tmp = ctmp->config.rx_per_sec;
+		else
+			tmp = s->config->rx_per_sec;
+		tmp *= 1000;
+		if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+			return -1;
+		}
+
+		if (ctmp->config.tx_per_sec > 0)
+			tmp = ctmp->config.tx_per_sec;
+		else
+			tmp = s->config->tx_per_sec;
+		tmp *= 1000;
+		if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+			return -1;
+		}
+
 		if (ctmp->config.dns_size > 0) {
 			list = ctmp->config.dns;
 			list_size = ctmp->config.dns_size;

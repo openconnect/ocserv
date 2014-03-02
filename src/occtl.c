@@ -768,7 +768,7 @@ int print_list_entries(FILE* out, const char* name, DBusMessageIter * subs)
 int common_info_cmd(DBusMessageIter * args)
 {
 	DBusMessageIter suba, subs;
-	dbus_uint32_t id = 0;
+	dbus_uint32_t id = 0, rx = 0, tx = 0;
 	char *username = "";
 	dbus_uint32_t since = 0;
 	char *groupname = "", *ip = "";
@@ -911,6 +911,20 @@ int common_info_cmd(DBusMessageIter * args)
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &rx);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &tx);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
 		if (username == NULL || username[0] == 0)
 			username = NO_USER;
 
@@ -939,6 +953,25 @@ int common_info_cmd(DBusMessageIter * args)
 			fprintf(out, "User-Agent: %s\n", user_agent);
 		else
 			fprintf(out, "\n");
+
+		if (rx > 0 || tx > 0) {
+			/* print limits */
+			char buf[32];
+
+			if (rx > 0 && tx > 0) {
+				bytes2human(rx, buf, sizeof(buf), NULL);
+				fprintf(out, "\tLimit RX: %s/sec  ", buf);
+
+				bytes2human(tx, buf, sizeof(buf), NULL);
+				fprintf(out, "TX: %s/sec\n", buf);
+			} else if (tx > 0) {
+				bytes2human(tx, buf, sizeof(buf), NULL);
+				fprintf(out, "\tLimit TX: %s/sec\n", buf);
+			} else if (rx > 0) {
+				bytes2human(rx, buf, sizeof(buf), NULL);
+				fprintf(out, "\tLimit RX: %s/sec\n", buf);
+			}
+		}
 
 		print_iface_stats(device, since, out);
 
@@ -979,10 +1012,10 @@ int common_info_cmd(DBusMessageIter * args)
 		if (print_list_entries(out, "\tiRoutes:", &subs) < 0)
 			goto error_parse;
 
+
 		at_least_one = 1;
 		if (!dbus_message_iter_next(&suba))
 			break;
-
 	}
 
 	ret = 0;

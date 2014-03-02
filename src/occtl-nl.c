@@ -68,7 +68,7 @@ error:
 	return -1;
 }
 
-static void
+void
 bytes2human(unsigned long bytes, char* output, unsigned output_size, const char* suffix)
 {
 double data;

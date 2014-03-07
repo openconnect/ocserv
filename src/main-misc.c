@@ -516,6 +516,13 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	case CMD_TUN_MTU:{
 			TunMtuMsg *tmsg;
 
+			if (proc->status != PS_AUTH_COMPLETED) {
+				mslog(s, proc, LOG_ERR,
+				      "received TUN MTU in unauthenticated state.");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
 			tmsg = tun_mtu_msg__unpack(NULL, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
@@ -526,7 +533,6 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			set_tun_mtu(s, proc, tmsg->mtu);
 
 			tun_mtu_msg__free_unpacked(tmsg, NULL);
-
 		}
 
 		break;
@@ -578,7 +584,6 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 				mslog(s, proc, LOG_DEBUG,
 				      "could not store resumption data");
 			}
-
 		}
 
 		break;
@@ -753,7 +758,6 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 		break;
 
 	case AUTH_COOKIE_REQ:
-
 		if (proc->status != PS_AUTH_INACTIVE) {
 			mslog(s, proc, LOG_ERR,
 			      "received unexpected cookie authentication.");

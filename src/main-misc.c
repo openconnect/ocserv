@@ -390,12 +390,28 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 	return ret;
 }
 
+/* Performs the required steps based on the result from the 
+ * authentication function (e.g. handle_auth_init).
+ *
+ * @cmd: the command received
+ * @result: the auth result
+ */
 static int handle_auth_res(main_server_st * s, struct proc_st *proc,
-			   unsigned cmd, int result, unsigned cont, unsigned need_sid)
+			   unsigned cmd, int result)
 {
 	int ret;
+	unsigned need_sid = 0;
+	unsigned can_cont = 1;
 
-	if (cont != 0 && result == ERR_AUTH_CONTINUE) {
+	/* we use seeds only in AUTH_REINIT */
+	if (cmd == AUTH_REINIT)
+		need_sid = 1;
+
+	/* no point to allow ERR_AUTH_CONTINUE in cookie auth */
+	if (cmd == AUTH_COOKIE_REQ)
+		can_cont = 0;
+
+	if (can_cont != 0 && result == ERR_AUTH_CONTINUE) {
 		ret = send_auth_reply_msg(s, proc, need_sid);
 		if (ret < 0) {
 			proc->status = PS_AUTH_FAILED;
@@ -659,7 +675,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		proc->status = PS_AUTH_INIT;
 
-		ret = handle_auth_res(s, proc, cmd, ret, 1, 0);
+		ret = handle_auth_res(s, proc, cmd, ret);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -689,7 +705,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		proc->status = PS_AUTH_INIT;
 
-		ret = handle_auth_res(s, proc, cmd, ret, 1, 1);
+		ret = handle_auth_res(s, proc, cmd, ret);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -729,7 +745,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		proc->status = PS_AUTH_INIT;
 
-		ret = handle_auth_res(s, proc, cmd, ret, 1, 0);
+		ret = handle_auth_res(s, proc, cmd, ret);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -757,7 +773,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		auth_cookie_request_msg__free_unpacked(auth_cookie_req, NULL);
 
-		ret = handle_auth_res(s, proc, cmd, ret, 0, 0);
+		ret = handle_auth_res(s, proc, cmd, ret);
 		if (ret < 0) {
 			goto cleanup;
 		}

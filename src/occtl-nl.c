@@ -68,32 +68,6 @@ error:
 	return -1;
 }
 
-void
-bytes2human(unsigned long bytes, char* output, unsigned output_size, const char* suffix)
-{
-double data;
-
-	if (suffix == NULL)
-		suffix = "";
-
-	if (bytes > 1000 && bytes < 1000 * 1000) {
-		data = ((double) bytes) / 1000;
-		snprintf(output, output_size, "%.1f KB%s", data, suffix);
-		return;
-	} else if (bytes >= 1000 * 1000 && bytes < 1000 * 1000 * 1000) {
-		data = ((double) bytes) / (1000 * 1000);
-		snprintf(output, output_size, "%.1f MB%s", data, suffix);
-		return;
-	} else if (bytes >= 1000 * 1000 * 1000) {
-		data = ((double) bytes) / (1000 * 1000 * 1000);
-		snprintf(output, output_size, "%.1f GB%s", data, suffix);
-		return;
-	} else {
-		snprintf(output, output_size, "%lu bytes%s", bytes, suffix);
-		return;
-	}
-}
-
 static void
 value2speed(unsigned long bytes, time_t time, char* output, unsigned output_size)
 {

@@ -924,7 +924,8 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 		      (int)(now - ws->last_msg_udp), dpd);
 
 		ws->buffer[0] = AC_PKT_DPD_OUT;
-		tls_send(ws->dtls_session, ws->buffer, 1);
+		ret = tls_send(ws->dtls_session, ws->buffer, 1);
+		GNUTLS_FATAL_ERR(ret);
 
 		if (now - ws->last_msg_udp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
@@ -945,7 +946,8 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 		ws->buffer[6] = AC_PKT_DPD_OUT;
 		ws->buffer[7] = 0;
 
-		tls_send(ws->session, ws->buffer, 8);
+		ret = tls_send(ws->session, ws->buffer, 8);
+		GNUTLS_FATAL_ERR(ret);
 
 		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,

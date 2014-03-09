@@ -1619,7 +1619,7 @@ static int connect_handler(worker_st * ws)
 
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
 			ret =
-			    tls_recv(ws->session, ws->buffer,
+			    tls_recv_nb(ws->session, ws->buffer,
 					       ws->buffer_size);
 
 			GNUTLS_FATAL_ERR(ret);
@@ -1681,7 +1681,7 @@ static int connect_handler(worker_st * ws)
 			case UP_ACTIVE:
 			case UP_INACTIVE:
 				ret =
-				    tls_recv(ws->dtls_session,
+				    tls_recv_nb(ws->dtls_session,
 						       ws->buffer,
 						       ws->buffer_size);
 				oclog(ws, LOG_TRANSFER_DEBUG,

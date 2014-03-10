@@ -688,7 +688,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		if (iteration++ == 0) {
 			fprintf(out, "%8s %8s %8s %14s %14s %6s %7s %14s %9s\n",
 				"id", "user", "group", "ip", "vpn-ip", "device",
-				"since", "cipher", "status");
+				"since", "dtls-cipher", "status");
 		}
 
 		t = since;
@@ -705,10 +705,13 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 			(unsigned)id, username, groupname, ip, vpn_ip, device);
 
 		print_time_ival7(t, out);
-		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
+		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0) {
+			if (strncmp(dtls_ciphersuite, "OC-DTLS", 7) == 0 && strlen(dtls_ciphersuite) > 11)
+				dtls_ciphersuite += 11;
 			fprintf(out, " %14s %9s\n", dtls_ciphersuite, auth);
-		else
+		} else {
 			fprintf(out, " %14s %9s\n", "(no dtls)", auth);
+		}
 
 		entries_add(username, strlen(username), id);
 

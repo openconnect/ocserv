@@ -15,6 +15,7 @@
 - Added configure options to disable checking for certain libraries,
   and disable features on request.
 - Corrected issue where a client disconnection was not being detected.
+- Updated the included http-parser.
 
 
 * Version 0.3.1 (released 2014-02-16)

@@ -1,4 +1,4 @@
-* Version 0.3.2 (unreleased)
+* Version 0.3.2 (released 2014-03-13)
 - Allow a number of retries (3) in plain password authentication.
 - Added doc/profile.xml to the distribution.
 - ocserv's '-d' option accepts a numeric argument (0-9) that gradualy

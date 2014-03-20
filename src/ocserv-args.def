@@ -357,12 +357,12 @@ route = 192.168.5.0/255.255.255.0
 # be within any chroot environment.
 #binary-files = /path/to/binaries
 
-# Unless set to false it is required for clients to present their
+# Unless set to true it is required for clients to present their
 # certificate even if they are authenticating via a previously granted
 # cookie and complete their authentication in the same TCP connection.
 # Legacy CISCO clients do not do that, and thus this option should be 
-# set for them.
-#cisco-client-compat = false
+# set to true for them.
+#cisco-client-compat = true
 
 #Advanced options
 

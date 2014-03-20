@@ -173,8 +173,6 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 }
 
 
-#define CS_ESALSA20 "OC-DTLS1_2-ESALSA20-SHA"
-#define CS_SALSA20 "OC-DTLS1_2-SALSA20-SHA"
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
 
@@ -183,22 +181,6 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 static const dtls_ciphersuite_st ciphersuites[] =
 {
 #if GNUTLS_VERSION_NUMBER >= 0x030207
-	{
-		.oc_name = CS_ESALSA20,
-		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+ESTREAM-SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
-		.gnutls_version = GNUTLS_DTLS1_2,
-		.gnutls_mac = GNUTLS_MAC_SHA1,
-		.gnutls_cipher = GNUTLS_CIPHER_ESTREAM_SALSA20_256,
-		.server_prio = 100
-	},
-	{
-		.oc_name = CS_SALSA20,
-		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+SALSA20-256:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
-		.gnutls_version = GNUTLS_DTLS1_2,
-		.gnutls_mac = GNUTLS_MAC_SHA1,
-		.gnutls_cipher = GNUTLS_CIPHER_SALSA20_256,
-		.server_prio = 100
-	},
 	{
 		.oc_name = CS_AES128_GCM,
 		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",

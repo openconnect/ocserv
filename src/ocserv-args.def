@@ -265,7 +265,7 @@ cgroup = "cpuset,cpu:test"
 # Network settings
 #
 
-# The name of the tun device
+# The name to use for the tun device
 device = vpns
 
 # The default domain to be advertised
@@ -348,21 +348,22 @@ route = 192.168.5.0/255.255.255.0
 # The following options are for (experimental) AnyConnect client 
 # compatibility. 
 
+# This option must be set to true to support legacy CISCO clients.
+# A side effect of this option is that it will no longer be required 
+# for clients to present their certificate on every connection.
+# That is they may resume a cookie without presenting a certificate
+# (when certificate authentication is used).
+#cisco-client-compat = true
+
 # Client profile xml. A sample file exists in doc/profile.xml.
+# It is required by some of the CISCO clients.
 # This file must be accessible from inside the worker's chroot. 
-# It is not used by the openconnect client.
 #user-profile = /path/to/file.xml
 
 # Binary files that may be downloaded by the CISCO client. Must
-# be within any chroot environment.
+# be within any chroot environment. Normally you don't need
+# to use this option.
 #binary-files = /path/to/binaries
-
-# Unless set to true it is required for clients to present their
-# certificate even if they are authenticating via a previously granted
-# cookie and complete their authentication in the same TCP connection.
-# Legacy CISCO clients do not do that, and thus this option should be 
-# set to true for them.
-#cisco-client-compat = true
 
 #Advanced options
 

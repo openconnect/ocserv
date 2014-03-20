@@ -290,6 +290,9 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 		memcpy(req->user_agent, value, value_length);
 		req->user_agent[value_length] = 0;
+
+		if (strstr(req->user_agent, "Open Any") != NULL)
+			req->user_agent_type = AGENT_OPENCONNECT;
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
@@ -1163,6 +1166,14 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
+	/* If we are in CISCO client compatibility mode, do not send
+	 * any IPv6 information, unless the client can really handle it.
+	 */
+	if (ws->full_ipv6 == 0 && ws->config->cisco_client_compat != 0 &&
+		req->user_agent_type != AGENT_OPENCONNECT) {
+		req->no_ipv6 = 1;
+	}
+
 	if (ws->vinfo.ipv6 && req->no_ipv6 == 0) {
 		oclog(ws, LOG_DEBUG, "sending IPv6 %s", ws->vinfo.ipv6);
 		if (ws->full_ipv6 && ws->vinfo.ipv6_prefix) {
@@ -1224,7 +1235,7 @@ static int connect_handler(worker_st * ws)
 
 		if (req->no_ipv6 != 0 && ip6 != 0)
 			continue;
-		if (req->no_ipv4 != 0 && strchr(ws->vinfo.routes[i], '.') != 0)
+		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 		oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
 
@@ -1248,7 +1259,7 @@ static int connect_handler(worker_st * ws)
 
 		if (req->no_ipv6 != 0 && ip6 != 0)
 			continue;
-		if (req->no_ipv4 != 0 && strchr(ws->routes[i], '.') != 0)
+		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 		oclog(ws, LOG_DEBUG, "adding private route %s", ws->routes[i]);
 

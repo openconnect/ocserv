@@ -81,6 +81,11 @@ enum {
 	S_AUTH_COMPLETE
 };
 
+enum {
+	AGENT_UNKNOWN,
+	AGENT_OPENCONNECT
+};
+
 typedef struct dtls_ciphersuite_st {
 	const char* oc_name;
 	const char* gnutls_name; /* the gnutls priority string to set */
@@ -99,6 +104,7 @@ struct http_req_st {
 
 	char hostname[MAX_HOSTNAME_SIZE];
 	char user_agent[MAX_AGENT_NAME];
+	unsigned user_agent_type;;
 
 	unsigned int next_header;
 	unsigned char cookie[COOKIE_SIZE];

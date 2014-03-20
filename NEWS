@@ -2,6 +2,8 @@
 
 - When sending IPv6 link-local addresses to peer do not include the
   zone-info.
+- No longer send IPv6 information to CISCO clients that may not be able
+  to handle it.
 
 
 * Version 0.3.2 (released 2014-03-13)

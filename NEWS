@@ -1,3 +1,9 @@
+* Version 0.3.3 (unreleased)
+
+- When sending IPv6 link-local addresses to peer do not include the
+  zone-info.
+
+
 * Version 0.3.2 (released 2014-03-13)
 
 - Allow a number of retries (3) in plain password authentication.

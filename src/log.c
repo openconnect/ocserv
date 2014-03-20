@@ -49,6 +49,14 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) != 0)
 		return NULL;
 
+	if (salen == sizeof(struct sockaddr_in6)) {
+		char *p = strchr(buf, '%');
+		/* remove any zone info */
+		if (p != NULL) {
+			*p = 0;
+		}
+	}
+
 	if (full == 0)
 		goto finish;
 

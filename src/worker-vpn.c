@@ -1016,7 +1016,7 @@ static int connect_handler(worker_st * ws)
 {
 	struct http_req_st *req = &ws->req;
 	fd_set rfds;
-	int l, e, max, ret, overhead, t;
+	int l, e, max, ret, crypto_overhead, t;
 	unsigned tls_retry, dtls_mtu, cstp_mtu;
 	char *p;
 #ifdef HAVE_PSELECT
@@ -1027,7 +1027,7 @@ static int connect_handler(worker_st * ws)
 	unsigned tls_pending, dtls_pending = 0, i;
 	time_t udp_recv_time = 0, now;
 	struct timespec tnow;
-	unsigned mtu_overhead = 0, ip6;
+	unsigned proto_overhead = 0, ip6;
 	socklen_t sl;
 	bandwidth_st b_tx;
 	bandwidth_st b_rx;
@@ -1308,8 +1308,8 @@ static int connect_handler(worker_st * ws)
 		ws->vinfo.mtu = ws->config->default_mtu;
 	}
 
-	mtu_overhead = CSTP_OVERHEAD;
-	ws->conn_mtu = ws->vinfo.mtu - mtu_overhead;
+	proto_overhead = CSTP_OVERHEAD;
+	ws->conn_mtu = ws->vinfo.mtu - proto_overhead;
 
 	if (req->cstp_mtu > 0) {
 		oclog(ws, LOG_DEBUG, "peer's CSTP MTU is %u (ignored)", req->cstp_mtu);
@@ -1324,12 +1324,12 @@ static int connect_handler(worker_st * ws)
 	} else {
 		max -= 13;
 		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
-		if (max > 0 && max - mtu_overhead < ws->conn_mtu) {
+		if (max > 0 && max - proto_overhead < ws->conn_mtu) {
 			oclog(ws, LOG_DEBUG,
 			      "reducing MTU due to TCP MSS to %u",
-			      max - mtu_overhead);
+			      max - proto_overhead);
 		}
-		ws->conn_mtu = MIN(ws->conn_mtu, max - mtu_overhead);
+		ws->conn_mtu = MIN(ws->conn_mtu, max - proto_overhead);
 	}
 
 	/* set TCP socket options */
@@ -1395,14 +1395,13 @@ static int connect_handler(worker_st * ws)
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
 		if (ws->proto == AF_INET)
-			mtu_overhead = 20 + CSTP_DTLS_OVERHEAD;	/* ip */
+			proto_overhead = 20 + CSTP_DTLS_OVERHEAD;	/* ip */
 		else
-			mtu_overhead = 40 + CSTP_DTLS_OVERHEAD;	/* ipv6 */
-		mtu_overhead += 8;	/* udp */
-		ws->conn_mtu = MIN(ws->conn_mtu, ws->vinfo.mtu - mtu_overhead);
+			proto_overhead = 40 + CSTP_DTLS_OVERHEAD;	/* ipv6 */
+		proto_overhead += 8;	/* udp */
+		ws->conn_mtu = MIN(ws->conn_mtu, ws->vinfo.mtu - proto_overhead);
 
-
-		overhead =
+		crypto_overhead =
 		    CSTP_DTLS_OVERHEAD +
 		    tls_get_overhead(ws->req.selected_ciphersuite->gnutls_version,
 				     ws->req.selected_ciphersuite->gnutls_cipher, ws->req.selected_ciphersuite->gnutls_mac);
@@ -1410,12 +1409,12 @@ static int connect_handler(worker_st * ws)
 		if (req->dtls_mtu <= 0)
 			req->dtls_mtu = req->cstp_mtu;
 		if (req->dtls_mtu > 0) {
-			ws->conn_mtu = MIN(req->dtls_mtu+overhead+mtu_overhead, ws->conn_mtu);
+			ws->conn_mtu = MIN(req->dtls_mtu+crypto_overhead+proto_overhead, ws->conn_mtu);
 			oclog(ws, LOG_DEBUG,
-			      "peer's DTLS MTU is %u (overhead: %u)", req->dtls_mtu, mtu_overhead+overhead);
+			      "peer's DTLS MTU is %u (overhead: %u)", req->dtls_mtu, proto_overhead+crypto_overhead);
 		}
 
-		dtls_mtu = ws->conn_mtu - overhead;
+		dtls_mtu = ws->conn_mtu - crypto_overhead;
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", dtls_mtu);
 		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", dtls_mtu);
@@ -1433,22 +1432,22 @@ static int connect_handler(worker_st * ws)
 	} else
 		dtls_mtu = 0;
 
-	if (ws->buffer_size <= ws->conn_mtu + mtu_overhead) {
+	if (ws->buffer_size <= ws->conn_mtu + proto_overhead) {
 		oclog(ws, LOG_WARNING,
 		      "buffer size is smaller than MTU (%u < %u); adjusting",
 		      ws->buffer_size, ws->conn_mtu);
-		ws->buffer_size = ws->conn_mtu + mtu_overhead;
+		ws->buffer_size = ws->conn_mtu + proto_overhead;
 		ws->buffer = safe_realloc(ws->buffer, ws->buffer_size);
 		if (ws->buffer == NULL)
 			goto exit;
 	}
 
-	overhead =
+	crypto_overhead =
 	    CSTP_OVERHEAD +
 	    tls_get_overhead(gnutls_protocol_get_version(ws->session),
 			     gnutls_cipher_get(ws->session),
 			     gnutls_mac_get(ws->session));
-	cstp_mtu = ws->conn_mtu - overhead;
+	cstp_mtu = ws->conn_mtu - crypto_overhead;
 	if (dtls_mtu > 0)	/* this is a hack for openconnect which reads a single MTU value */
 		cstp_mtu = MIN(cstp_mtu, dtls_mtu);
 
@@ -1540,7 +1539,7 @@ static int connect_handler(worker_st * ws)
 		gettime(&tnow);
 		now = tnow.tv_sec;
 
-		if (periodic_check(ws, mtu_overhead, now, ws->config->dpd) < 0)
+		if (periodic_check(ws, proto_overhead, now, ws->config->dpd) < 0)
 			goto exit;
 
 		if (FD_ISSET(ws->tun_fd, &rfds)) {

@@ -95,20 +95,22 @@ static void add_listener(struct listen_list_st *list,
 	list->total++;
 }
 
-static void set_udp_socket_options(int fd)
+static void set_udp_socket_options(struct cfg_st* config, int fd)
 {
 int y;
+	if (config->try_mtu) {
 #if defined(IP_DONTFRAG)
-	y = 1;
-	if (setsockopt(fd, SOL_IP, IP_DONTFRAG,
-		       (const void *) &y, sizeof(y)) < 0)
-		perror("setsockopt(IP_DF) failed");
+		y = 1;
+		if (setsockopt(fd, SOL_IP, IP_DONTFRAG,
+			       (const void *) &y, sizeof(y)) < 0)
+			perror("setsockopt(IP_DF) failed");
 #elif defined(IP_MTU_DISCOVER)
-	y = IP_PMTUDISC_DO;
-	if (setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
+		y = IP_PMTUDISC_DO;
+		if (setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
 		       (const void *) &y, sizeof(y)) < 0)
-		perror("setsockopt(IP_DF) failed");
+			perror("setsockopt(IP_DF) failed");
 #endif
+	}
 }
 
 static void set_common_socket_options(int fd)
@@ -174,7 +176,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 		}
 
 		if (ptr->ai_socktype == SOCK_DGRAM) {
-			set_udp_socket_options(s);
+			set_udp_socket_options(config, s);
 		}
 
 
@@ -246,7 +248,7 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 			}
 
 			if (type == SOCK_DGRAM)
-				set_udp_socket_options(fd);
+				set_udp_socket_options(config, fd);
 
 			/* obtain socket params */
 			tmp_sock_len = sizeof(tmp_sock);

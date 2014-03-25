@@ -112,6 +112,9 @@ int route_del(struct main_server_st* s, const char* route, const char* dev)
 	return route_adddel(s, s->config->route_del_cmd, route, dev);
 }
 
+/* Executes the commands required to apply all the configured routes 
+ * for this client locally.
+ */
 void apply_iroutes(struct main_server_st* s, struct proc_st *proc)
 {
 unsigned i, j;
@@ -135,6 +138,9 @@ fail:
 	return;
 }
 
+/* Executes the commands required to removed all the configured routes 
+ * for this client.
+ */
 void remove_iroutes(struct main_server_st* s, struct proc_st *proc)
 {
 unsigned i;

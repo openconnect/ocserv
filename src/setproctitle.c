@@ -27,7 +27,7 @@
 
 /* This sets the proccess title as shown in top, but not in ps (*@#%@).
  * To change the ps name in Linux, one needs to do master black magic
- * trickery (set util-linux setproctitle).
+ * trickery (see util-linux setproctitle).
  */
 void setproctitle (const char *fmt, ...)
 {

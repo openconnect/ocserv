@@ -47,8 +47,7 @@ typedef enum {
 #define STR_HDR_CONNECTION "Connection"
 #define STR_HDR_MS "X-DTLS-Master-Secret"
 #define STR_HDR_CS "X-DTLS-CipherSuite"
-#define STR_HDR_DMTU "X-DTLS-MTU"
-#define STR_HDR_CMTU "X-CSTP-MTU"
+#define STR_HDR_CMTU "X-CSTP-Base-MTU"
 #define STR_HDR_ATYPE "X-CSTP-Address-Type"
 #define STR_HDR_HOST "X-CSTP-Hostname"
 #define STR_HDR_FULL_IPV6 "X-CSTP-Full-IPv6-Capability"
@@ -58,9 +57,8 @@ enum {
 	HEADER_COOKIE = 1,
 	HEADER_MASTER_SECRET,
 	HEADER_HOSTNAME,
-	HEADER_CSTP_MTU,
+	HEADER_CSTP_BASE_MTU,
 	HEADER_CSTP_ATYPE,
-	HEADER_DTLS_MTU,
 	HEADER_DEVICE_TYPE,
 	HEADER_DTLS_CIPHERSUITE,
 	HEADER_CONNECTION,
@@ -125,8 +123,7 @@ struct http_req_st {
 
 	unsigned int headers_complete;
 	unsigned int message_complete;
-	unsigned dtls_mtu;
-	unsigned cstp_mtu;
+	unsigned base_mtu;
 	
 	unsigned no_ipv4;
 	unsigned no_ipv6;
@@ -172,6 +169,11 @@ typedef struct worker_st {
 	/* for mtu trials */
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;
+
+
+	/* ws->conn_mtu: The MTU of the plaintext data we can send to the client.
+	 *  It also matches the MTU of the TUN device. Note that this is
+	 *  the same as the 'real' MTU of the connection, minus the IP+UDP+CSTP headers. */
 	unsigned conn_mtu;
 	
 	/* Indicates whether the new IPv6 headers will

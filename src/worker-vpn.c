@@ -295,8 +295,8 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 
 		break;
 
-	case HEADER_CSTP_MTU:
-		req->cstp_mtu = atoi((char *)value);
+	case HEADER_CSTP_BASE_MTU:
+		req->base_mtu = atoi((char *)value);
 		break;
 	case HEADER_CSTP_ATYPE:
 		if (memmem(value, value_length, "IPv4", 4) ==
@@ -310,9 +310,6 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		if (memmem(value, value_length, "true", 4) !=
 		    NULL)
 			ws->full_ipv6 = 1;
-		break;
-	case HEADER_DTLS_MTU:
-		req->dtls_mtu = atoi((char *)value);
 		break;
 	case HEADER_COOKIE:
 
@@ -400,14 +397,10 @@ static void header_check(struct http_req_st *req)
 		   strncmp((char *)req->header.data, STR_HDR_MS,
 			   req->header.length) == 0) {
 		req->next_header = HEADER_MASTER_SECRET;
-	} else if (req->header.length == sizeof(STR_HDR_DMTU) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_DMTU,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DTLS_MTU;
 	} else if (req->header.length == sizeof(STR_HDR_CMTU) - 1 &&
 		   strncmp((char *)req->header.data, STR_HDR_CMTU,
 			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_MTU;
+		req->next_header = HEADER_CSTP_BASE_MTU;
 	} else if (req->header.length == sizeof(STR_HDR_HOST) - 1 &&
 		   strncmp((char *)req->header.data, STR_HDR_HOST,
 			   req->header.length) == 0) {
@@ -785,7 +778,7 @@ void mtu_send(worker_st * ws, unsigned mtu)
 {
 	TunMtuMsg msg = TUN_MTU_MSG__INIT;
 
-	msg.mtu = mtu - 1;	/* account DTLS CSTP header */
+	msg.mtu = mtu;
 	send_msg_to_main(ws, CMD_TUN_MTU, &msg,
 			 (pack_size_func) tun_mtu_msg__get_packed_size,
 			 (pack_func) tun_mtu_msg__pack);
@@ -817,6 +810,11 @@ void session_info_send(worker_st * ws)
 	gnutls_free(msg.tls_ciphersuite);
 }
 
+/* mtu_set: Sets the MTU for the session
+ *
+ * @ws: a worker structure
+ * @mtu: the "plaintext" data MTU
+ */
 static
 void mtu_set(worker_st * ws, unsigned mtu)
 {
@@ -858,6 +856,11 @@ unsigned min = MIN_MTU(ws);
 	return 0;
 }
 
+/* mtu_set: initiates MTU discovery
+ *
+ * @ws: a worker structure
+ * @mtu: the current "plaintext" data MTU
+ */
 static void mtu_discovery_init(worker_st * ws, unsigned mtu)
 {
 	ws->last_good_mtu = mtu;
@@ -1308,12 +1311,15 @@ static int connect_handler(worker_st * ws)
 		ws->vinfo.mtu = ws->config->default_mtu;
 	}
 
-	proto_overhead = CSTP_OVERHEAD;
-	ws->conn_mtu = ws->vinfo.mtu - proto_overhead;
-
-	if (req->cstp_mtu > 0) {
-		oclog(ws, LOG_DEBUG, "peer's CSTP MTU is %u (ignored)", req->cstp_mtu);
+	if (req->base_mtu > 0) {
+		oclog(ws, LOG_DEBUG, "peer's base MTU is %u", req->base_mtu);
+		ws->vinfo.mtu = MIN(ws->vinfo.mtu, req->base_mtu);
 	}
+
+	proto_overhead = CSTP_OVERHEAD;
+	/* plaintext MTU is the device MTU minus the overhead
+	 * of the CSTP protocol. */
+	ws->conn_mtu = ws->vinfo.mtu - proto_overhead;
 
 	sl = sizeof(max);
 	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
@@ -1399,20 +1405,20 @@ static int connect_handler(worker_st * ws)
 		else
 			proto_overhead = 40 + CSTP_DTLS_OVERHEAD;	/* ipv6 */
 		proto_overhead += 8;	/* udp */
-		ws->conn_mtu = MIN(ws->conn_mtu, ws->vinfo.mtu - proto_overhead);
+		proto_overhead += CSTP_DTLS_OVERHEAD;
 
+		/* crypto overhead for DTLS */
 		crypto_overhead =
-		    CSTP_DTLS_OVERHEAD +
 		    tls_get_overhead(ws->req.selected_ciphersuite->gnutls_version,
 				     ws->req.selected_ciphersuite->gnutls_cipher, ws->req.selected_ciphersuite->gnutls_mac);
 
-		if (req->dtls_mtu <= 0)
-			req->dtls_mtu = req->cstp_mtu;
-		if (req->dtls_mtu > 0) {
-			ws->conn_mtu = MIN(req->dtls_mtu+crypto_overhead+proto_overhead, ws->conn_mtu);
-			oclog(ws, LOG_DEBUG,
-			      "peer's DTLS MTU is %u (overhead: %u)", req->dtls_mtu, proto_overhead+crypto_overhead);
-		}
+		oclog(ws, LOG_DEBUG,
+		      "DTLS overhead is %u", proto_overhead+crypto_overhead);
+
+		/* plaintext MTU is the device MTU minus the overhead
+		 * of the DTLS (+AnyConnect header) protocol.
+		 */
+		ws->conn_mtu = MIN(ws->conn_mtu, ws->vinfo.mtu - proto_overhead);
 
 		dtls_mtu = ws->conn_mtu - crypto_overhead;
 
@@ -1442,8 +1448,8 @@ static int connect_handler(worker_st * ws)
 			goto exit;
 	}
 
+	/* crypto overhead for TLS */
 	crypto_overhead =
-	    CSTP_OVERHEAD +
 	    tls_get_overhead(gnutls_protocol_get_version(ws->session),
 			     gnutls_cipher_get(ws->session),
 			     gnutls_mac_get(ws->session));
@@ -1453,9 +1459,11 @@ static int connect_handler(worker_st * ws)
 
 	ret = tls_printf(ws->session, "X-CSTP-MTU: %u\r\n", cstp_mtu);
 	SEND_ERR(ret);
-	oclog(ws, LOG_DEBUG, "suggesting CSTP MTU %u", cstp_mtu);
 
-	oclog(ws, LOG_DEBUG, "plaintext MTU is %u", ws->conn_mtu - 1);
+	ret = tls_printf(ws->session, "X-CSTP-Base-MTU: %u\r\n", ws->conn_mtu);
+	SEND_ERR(ret);
+
+	oclog(ws, LOG_DEBUG, "CSTP Base MTU is %u bytes", ws->conn_mtu);
 
 	mtu_send(ws, ws->conn_mtu);
 
@@ -1767,19 +1775,19 @@ static int connect_handler(worker_st * ws)
 				if (ret == 0) {
 					unsigned mtu =
 					    gnutls_dtls_get_data_mtu(ws->
-								     dtls_session);
+								     dtls_session) - proto_overhead;
 
 					/* openconnect doesn't like if we send more bytes
 					 * than the initially agreed MTU */
-					if (mtu > dtls_mtu)
-						mtu = dtls_mtu;
+					if (mtu > ws->conn_mtu)
+						mtu = ws->conn_mtu;
 
 					ws->udp_state = UP_ACTIVE;
 					mtu_discovery_init(ws, mtu);
 					mtu_set(ws, mtu);
 					oclog(ws, LOG_INFO,
 					      "DTLS handshake completed (plaintext MTU: %u)\n",
-					      ws->conn_mtu - 1);
+					      ws->conn_mtu);
 				}
 
 				break;

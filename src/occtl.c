@@ -1414,7 +1414,7 @@ void handle_sigint(int signo)
 void initialize_readline(void)
 {
 	rl_readline_name = "occtl";
-	rl_attempted_completion_function = (CPPFunction *) occtl_completion;
+	rl_attempted_completion_function = occtl_completion;
 	rl_completion_entry_function = command_generator;
 	rl_completion_query_items = 20;
 #ifdef HAVE_ORIG_READLINE

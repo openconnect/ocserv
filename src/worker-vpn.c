@@ -844,6 +844,7 @@ unsigned min = MIN_MTU(ws);
 	if (ws->last_good_mtu == min) {
 		oclog(ws, LOG_INFO,
 		      "could not calculate a sufficient MTU. Disabling DTLS.");
+		tls_close(ws->dtls_session);
 		ws->udp_state = UP_DISABLED;
 		return -1;
 	}

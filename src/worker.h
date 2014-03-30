@@ -173,7 +173,8 @@ typedef struct worker_st {
 
 	/* ws->conn_mtu: The MTU of the plaintext data we can send to the client.
 	 *  It also matches the MTU of the TUN device. Note that this is
-	 *  the same as the 'real' MTU of the connection, minus the IP+UDP+CSTP headers. */
+	 *  the same as the 'real' MTU of the connection, minus the IP+UDP+CSTP headers
+	 *  and the DTLS crypto overhead. */
 	unsigned conn_mtu;
 	
 	/* Indicates whether the new IPv6 headers will

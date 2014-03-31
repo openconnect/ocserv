@@ -368,7 +368,10 @@ route = 192.168.5.0/255.255.255.0
 #Advanced options
 
 # Option to allow sending arbitrary custom headers to the client after
-# authentication and prior to VPN tunnel establishment.
+# authentication and prior to VPN tunnel establishment. You shouldn't
+# need to use this option normally; if you do and you think that
+# this may help others, please send your settings and reason to
+# the openconnect mailing list.
 #custom-header = "X-My-Header: hi there"
 
 @end example

@@ -30,6 +30,7 @@
 #include <netdb.h>
 #include <system.h>
 #include <errno.h>
+#include <limits.h>
 #include <sys/ioctl.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>

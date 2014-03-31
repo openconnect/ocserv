@@ -23,6 +23,7 @@
 #include <string.h>
 #include <vpn.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include "common.h"
 
 const char* cmd_request_to_str(unsigned _cmd)

@@ -345,7 +345,8 @@ unsigned usage;
 		ret = gnutls_x509_crt_get_key_usage(crt, &usage, NULL);
 		if (ret >= 0) {
 			if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
-				mslog(s, NULL, LOG_WARNING, "server certificate key usage prevents key encipherment; unable to support the RSA ciphersuites\n");
+				mslog(s, NULL, LOG_WARNING, "server certificate key usage prevents key encipherment; unable to support the RSA ciphersuites; "
+					"if that is not intentional, regenerate the server certificate with the key usage flag 'key encipherment' set.");
 				if (s->config->dh_params_file != NULL)
 					mslog(s, NULL, LOG_WARNING, "no DH-params file specified; server will be limited to ECDHE ciphersuites\n");
 			}

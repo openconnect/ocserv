@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/wait.h>
 
 #include <route-add.h>
 #include <main.h>

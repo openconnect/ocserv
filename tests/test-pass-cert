@@ -26,7 +26,7 @@ PORT=4445
 
 echo "Testing local backend with username-password and certificate... "
 
-launch_server -d -f -c test-user-cert.config & PID=$!
+launch_server -d 1 -f -c test-user-cert.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "

@@ -26,7 +26,7 @@ PORT=4446
 
 echo "Testing ocserv with certificates... "
 
-launch_server -d -f -c test3.config & PID=$!
+launch_server -d 1 -f -c test3.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "

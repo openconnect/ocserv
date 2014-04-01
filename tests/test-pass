@@ -26,7 +26,7 @@ PORT=4444
 
 echo "Testing local backend with username-password... "
 
-launch_server -d -f -c test1.config & PID=$!
+launch_server -d 1 -f -c test1.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

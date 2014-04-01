@@ -27,7 +27,7 @@ PORT=4500
 echo "Testing whether cookies are being re-used... "
 rm -f ${srcdir}/pid1 ${srcdir}/pid2
 
-launch_server -d -f -c ${srcdir}/test-multi-cookie.config & PID=$!
+launch_server -d 1 -f -c ${srcdir}/test-multi-cookie.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

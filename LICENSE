@@ -1,4 +1,4 @@
-The license of ocserv is GPLv2. See COPYING for the license terms.
+The license of ocserv is GPLv2+. See COPYING for the license terms.
 
 Some individual code may be covered under other (compatible with
 GPLv2) licenses. For the CCAN components see src/ccan/licenses/

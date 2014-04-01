@@ -215,10 +215,8 @@ static int check_user_group_status(main_server_st *s, struct proc_st* proc,
 
 		if (tls_auth_ok != 0) {
 			if (proc->username[0] == 0) {
-				memcpy(proc->username, cert_user, sizeof(proc->username));
-				memcpy(proc->groupname, cert_group, sizeof(proc->groupname));
-				proc->username[sizeof(proc->username)-1] = 0;
-				proc->groupname[sizeof(proc->groupname)-1] = 0;
+				snprintf(proc->username, sizeof(proc->username), "%s", cert_user);
+				snprintf(proc->groupname, sizeof(proc->groupname), "%s", cert_group);
 			} else {
 				if (strcmp(proc->username, cert_user) != 0) {
 					mslog(s, proc, LOG_INFO, "user '%s' presented a certificate from user '%s'", proc->username, cert_user);

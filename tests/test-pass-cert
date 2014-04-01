@@ -26,7 +26,7 @@ PORT=4445
 
 echo "Testing local backend with username-password and certificate... "
 
-launch_server -d -f -c test2.config & PID=$!
+launch_server -d -f -c test-user-cert.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
@@ -38,6 +38,12 @@ echo ok
 echo -n "Connecting to obtain cookie (with certificate)... "
 ( echo "test" | openconnect -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie (with incorrect certificate)... "
+( echo "test" | openconnect -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert-wrong.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with wrong certificate!"
 
 echo ok
 

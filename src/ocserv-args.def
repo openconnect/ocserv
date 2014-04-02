@@ -543,7 +543,7 @@ $ certtool --generate-certificate --load-privkey user-key.pem \
 @subheading Revoking a client certificate
 To revoke the previous client certificate use:
 @example
-$ cat << _EOF_ >user.tmpl
+$ cat << _EOF_ >crl.tmpl
 crl_next_update = 999
 crl_number = 1
 _EOF_

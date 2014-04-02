@@ -543,10 +543,14 @@ $ certtool --generate-certificate --load-privkey user-key.pem \
 @subheading Revoking a client certificate
 To revoke the previous client certificate use:
 @example
+$ cat << _EOF_ >user.tmpl
+crl_next_update = 999
+crl_number = 1
+_EOF_
 $ cat user-cert.pem >>revoked.pem
 $ certtool --generate-crl --load-ca-privkey ca-key.pem \
 	--load-ca-certificate ca.pem --load-certificate revoked.pem \
-	--outfile crl.pem
+	--template crl.tmpl --outfile crl.pem
 @end example
 After that you may want to notify ocserv of the new CRL by using
 the HUP signal.
@@ -556,7 +560,7 @@ should be generated as follows.
 @example
 $ certtool --generate-crl --load-ca-privkey ca-key.pem \
 	--load-ca-certificate ca.pem \
-	--outfile crl.pem
+	--template crl.tmpl --outfile crl.pem
 @end example
 _EOT_;
 };

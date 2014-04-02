@@ -599,17 +599,7 @@ unsigned len;
 			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
-		if (s->config->crl != NULL) {
-			ret =
-			    gnutls_certificate_set_x509_crl_file(s->creds.xcred,
-								 s->config->crl,
-								 GNUTLS_X509_FMT_PEM);
-			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error setting the CRL (%s) file",
-					s->config->crl);
-				exit(1);
-			}
-		}
+		tls_reload_crl(s);
 
 		gnutls_certificate_set_verify_function(s->creds.xcred,
 						       verify_certificate_cb);
@@ -643,6 +633,29 @@ unsigned len;
 	}
 
 	return;
+}
+
+void tls_reload_crl(main_server_st* s)
+{
+int ret;
+
+	if (s->config->cert_req != GNUTLS_CERT_IGNORE && s->config->crl != NULL) {
+		ret =
+		    gnutls_certificate_set_x509_crl_file(s->creds.xcred,
+							 s->config->crl,
+							 GNUTLS_X509_FMT_PEM);
+		if (ret < 0) {
+			/* ignore the CRL file when empty */
+			if (ret == GNUTLS_E_BASE64_DECODING_ERROR) {
+				mslog(s, NULL, LOG_ERR, "empty or unreadable CRL file (%s); check documentation to generate an empty CRL",
+					s->config->crl);
+			} else {
+				mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
+					s->config->crl, gnutls_strerror(ret));
+			}
+			exit(1);
+		}
+	}
 }
 
 void tls_cork(gnutls_session_t session)

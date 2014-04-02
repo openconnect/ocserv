@@ -41,6 +41,7 @@ ssize_t tls_send_nowait(gnutls_session_t session, const void *data,
 void tls_cork(gnutls_session_t session);
 int tls_uncork(gnutls_session_t session);
 
+void tls_reload_crl(struct main_server_st* s);
 void tls_global_init(struct main_server_st* s);
 void tls_global_deinit(struct main_server_st* s);
 void tls_global_init_certs(struct main_server_st* s);

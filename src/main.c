@@ -715,6 +715,7 @@ unsigned total = 10;
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "reloading configuration");
 		reload_cfg_file(s->config);
+		tls_reload_crl(s);
 		reload_conf = 0;
 	}
 

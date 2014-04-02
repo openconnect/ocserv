@@ -172,6 +172,7 @@ server-key = /path/to/key.pem
 #cert-group-oid = 2.5.4.11
 
 # The revocation list of the certificates issued by the 'ca-cert' above.
+# See the manual to generate an empty CRL initially.
 #crl = /path/to/crl.pem
 
 # GnuTLS priority string
@@ -550,6 +551,13 @@ $ certtool --generate-crl --load-ca-privkey ca-key.pem \
 After that you may want to notify ocserv of the new CRL by using
 the HUP signal.
 
+When there are no revoked certificates an empty revocation list
+should be generated as follows.
+@example
+$ certtool --generate-crl --load-ca-privkey ca-key.pem \
+	--load-ca-certificate ca.pem \
+	--outfile crl.pem
+@end example
 _EOT_;
 };
 

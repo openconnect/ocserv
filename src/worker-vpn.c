@@ -1612,7 +1612,7 @@ static int connect_handler(worker_st * ws)
 			}
 		}
 
-		/* read pending data from network */
+		/* read pending data from TCP channel */
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
 			ret =
 			    tls_recv_nb(ws->session, ws->buffer,
@@ -1670,6 +1670,7 @@ static int connect_handler(worker_st * ws)
 			}
 		}
 
+		/* read data from UDP channel */
 		if (ws->udp_state > UP_WAIT_FD
 		    && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
 
@@ -1794,6 +1795,7 @@ static int connect_handler(worker_st * ws)
 			}
 		}
 
+		/* read commands from command fd */
 		if (FD_ISSET(ws->cmd_fd, &rfds)) {
 			ret = handle_worker_commands(ws);
 			if (ret < 0) {

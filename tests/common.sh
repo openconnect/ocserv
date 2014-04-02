@@ -52,6 +52,10 @@ launch_server() {
        fi
 }
 
+launch_simple_server() {
+       $SERV $* >/dev/null 2>&1 &
+}
+
 launch_debug_server() {
        valgrind --leak-check=full $SERV $* >out.txt 2>&1 &
        LOCALPID="$!";

@@ -26,7 +26,20 @@ PORT=4446
 
 echo "Testing ocserv with certificates... "
 
-launch_server -d 1 -f -c test3.config & PID=$!
+echo crl_next_update = 999 >crl.tmpl
+echo crl_number = 1 >>crl.tmpl
+
+rm -f crl.pem
+certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
+	--outfile crl.pem --template crl.tmpl >/dev/null 2>&1
+if test $? != 0;then
+	kill $PID
+	exit 77
+fi
+
+launch_simple_server -d 1 -f -c test3.config
+PID=$!
+
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
@@ -42,9 +55,29 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 echo ok
 
 
+#revoking the certificate
+certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
+	--load-certificate ./user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
+if test $? != 0;then
+	kill $PID
+	exit 77
+fi
+
+echo "Reloading server"
+kill -HUP $PID
+sleep 5
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( openconnect -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+	fail $PID "Connected with revoked certificate!"
+
+echo ok
+
 #echo "Normal connection... "
 #( echo "test" | openconnect -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
+
+rm -f crl.pem crl.tmpl
 
 kill $PID
 wait

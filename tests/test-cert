@@ -55,7 +55,7 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 echo ok
 
 
-#revoking the certificate
+#revoke the certificate
 certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
 	--load-certificate ./user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
 if test $? != 0;then
@@ -67,7 +67,7 @@ echo "Reloading server"
 kill -HUP $PID
 sleep 5
 
-echo -n "Connecting to obtain cookie (with certificate)... "
+echo -n "Connecting to obtain cookie (with revoked certificate)... "
 ( openconnect -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected with revoked certificate!"
 

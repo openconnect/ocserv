@@ -241,7 +241,7 @@ int ret;
 struct stored_cookie_st sc;
 time_t now = time(0);
 
-	if (req->cookie.len == 0 || req->cookie.len > sizeof(proc->cookie))
+	if (req->cookie.len == 0 || req->cookie.len != sizeof(proc->cookie))
 		return -1;
 
 	ret = decrypt_cookie(s, req->cookie.data, req->cookie.len, &sc);
@@ -282,7 +282,7 @@ const char* ip;
 	ip = human_addr((void*)&proc->remote_addr, proc->remote_addr_len,
 			ipbuf, sizeof(ipbuf));
 
-	if (req->user_name == NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (req->user_name == NULL && (s->config->auth_types & AUTH_TYPE_USERNAME_PASS)) {
 		mslog(s, proc, LOG_DEBUG, "auth init from '%s' with no username present", ip);
 		return -1;
         }
@@ -291,7 +291,8 @@ const char* ip;
 		snprintf(proc->hostname, sizeof(proc->hostname), "%s", req->hostname);
 	}
 
-	if (req->user_name != NULL && s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		/* req->username is non-null at this point */
 		ret = module->auth_init(&proc->auth_ctx, req->user_name, ip, s->auth_extra);
 		if (ret < 0)
 			return ret;

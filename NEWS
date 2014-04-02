@@ -6,6 +6,7 @@
   reasonable value that doesn't depend on the negotiated ciphersuite.
 - No longer send IPv6 information to CISCO clients that may not be able
   to handle it.
+- Updated CRL support and documentation.
 
 
 * Version 0.3.2 (released 2014-03-13)

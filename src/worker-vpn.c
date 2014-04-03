@@ -73,11 +73,17 @@
 #define CSTP_DTLS_OVERHEAD 1
 #define CSTP_OVERHEAD 8
 
+typedef struct {
+	unsigned dtls_writable;
+	unsigned tls_writable;
+	unsigned tun_writable;
+} fd_status_st;
+
 static int terminate = 0;
 static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
-			   time_t);
+			   time_t, fd_status_st *);
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
-			   time_t);
+			   time_t, fd_status_st *);
 
 static void handle_alarm(int signo)
 {
@@ -291,8 +297,8 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
 					if (req->selected_ciphersuite == NULL ||
-					    req->selected_ciphersuite->
-					    server_prio <
+					    req->
+					    selected_ciphersuite->server_prio <
 					    ciphersuites[i].server_prio) {
 						req->selected_ciphersuite =
 						    &ciphersuites[i];
@@ -535,8 +541,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 
 	ret =
 	    gnutls_priority_set_direct(session,
-				       ws->req.selected_ciphersuite->
-				       gnutls_name, NULL);
+				       ws->req.
+				       selected_ciphersuite->gnutls_name, NULL);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s",
 		      gnutls_strerror(ret));
@@ -544,13 +550,14 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
-					   ws->req.selected_ciphersuite->
-					   gnutls_version, GNUTLS_KX_RSA,
-					   ws->req.selected_ciphersuite->
-					   gnutls_cipher,
-					   ws->req.selected_ciphersuite->
-					   gnutls_mac, GNUTLS_COMP_NULL,
-					   &master, &sid);
+					   ws->req.
+					   selected_ciphersuite->gnutls_version,
+					   GNUTLS_KX_RSA,
+					   ws->req.
+					   selected_ciphersuite->gnutls_cipher,
+					   ws->req.
+					   selected_ciphersuite->gnutls_mac,
+					   GNUTLS_COMP_NULL, &master, &sid);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s",
 		      gnutls_strerror(ret));
@@ -1024,7 +1031,8 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 
 #define SEND_ERR(x) if (x<0) goto send_error
 
-static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
+static int dtls_mainloop(worker_st * ws, struct timespec *tnow,
+			 fd_status_st * fds)
 {
 	int ret, l;
 
@@ -1056,8 +1064,8 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 
 			do {
 				ret = gnutls_handshake(ws->dtls_session);
-			} while (ret == GNUTLS_E_AGAIN
-				 || ret == GNUTLS_E_INTERRUPTED);
+			} while (ret == GNUTLS_E_AGAIN ||
+				 ret == GNUTLS_E_INTERRUPTED);
 
 			GNUTLS_FATAL_ERR(ret);
 			oclog(ws, LOG_INFO, "DTLS rehandshake completed");
@@ -1071,7 +1079,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			    (&ws->b_rx, l - 1, ws->conn_mtu, tnow) != 0) {
 				ret =
 				    parse_dtls_data(ws, ws->buffer, l,
-						    tnow->tv_sec);
+						    tnow->tv_sec, fds);
 				if (ret < 0) {
 					oclog(ws, LOG_INFO,
 					      "error parsing CSTP data");
@@ -1145,7 +1153,8 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 	return 0;
 }
 
-static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
+static int tls_mainloop(struct worker_st *ws, struct timespec *tnow,
+			fd_status_st * fds)
 {
 	int ret, l;
 
@@ -1160,7 +1169,10 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", l);
 
 		if (bandwidth_update(&ws->b_rx, l - 8, ws->conn_mtu, tnow) != 0) {
-			ret = parse_cstp_data(ws, ws->buffer, l, tnow->tv_sec);
+
+			ret =
+			    parse_cstp_data(ws, ws->buffer, l, tnow->tv_sec,
+					    fds);
 			if (ret < 0) {
 				oclog(ws, LOG_ERR, "error parsing CSTP data");
 				return ret;
@@ -1199,7 +1211,8 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	return 0;
 }
 
-static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
+static int tun_mainloop(struct worker_st *ws, struct timespec *tnow,
+			fd_status_st * fds)
 {
 	int ret, l, e;
 	unsigned tls_retry;
@@ -1226,15 +1239,13 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	/* only transmit if allowed */
 	if (bandwidth_update(&ws->b_tx, l, ws->conn_mtu, tnow)
 	    != 0) {
-		tls_retry = 0;
+		tls_retry = 1;
 		oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
-		if (ws->udp_state == UP_ACTIVE) {
 
+		if (fds->dtls_writable && ws->udp_state == UP_ACTIVE) {
 			ws->buffer[7] = AC_PKT_DATA;
 
-			ret =
-			    tls_send_nowait(ws->dtls_session,
-					    ws->buffer + 7, l + 1);
+			ret = tls_send(ws->dtls_session, ws->buffer + 7, l + 1);
 			GNUTLS_FATAL_ERR(ret);
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {
@@ -1242,14 +1253,16 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 				oclog(ws, LOG_TRANSFER_DEBUG,
 				      "retrying (TLS) %d\n", l);
-				tls_retry = 1;
-			} else if (ret >= ws->conn_mtu &&
-				   ws->config->try_mtu != 0) {
-				mtu_ok(ws);
+			} else {
+				tls_retry = 0;
+				if (ret >= ws->conn_mtu
+				    && ws->config->try_mtu != 0)
+					mtu_ok(ws);
 			}
 		}
 
-		if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
+		if (fds->tls_writable
+		    && (ws->udp_state != UP_ACTIVE || tls_retry != 0)) {
 			ws->buffer[0] = 'S';
 			ws->buffer[1] = 'T';
 			ws->buffer[2] = 'F';
@@ -1284,6 +1297,7 @@ static int connect_handler(worker_st * ws)
 {
 	struct http_req_st *req = &ws->req;
 	fd_set rfds;
+	fd_set wfds;
 	int e, max, ret, t;
 	char *p;
 #ifdef HAVE_PSELECT
@@ -1291,6 +1305,7 @@ static int connect_handler(worker_st * ws)
 #else
 	struct timeval tv;
 #endif
+	fd_status_st fd_status;
 	unsigned tls_pending, dtls_pending = 0, i;
 	struct timespec tnow;
 	unsigned proto_overhead = 0, ip6;
@@ -1691,10 +1706,10 @@ static int connect_handler(worker_st * ws)
 
 		/* crypto overhead for DTLS */
 		ws->crypto_overhead =
-		    tls_get_overhead(ws->req.selected_ciphersuite->
-				     gnutls_version,
-				     ws->req.selected_ciphersuite->
-				     gnutls_cipher,
+		    tls_get_overhead(ws->req.
+				     selected_ciphersuite->gnutls_version,
+				     ws->req.
+				     selected_ciphersuite->gnutls_cipher,
 				     ws->req.selected_ciphersuite->gnutls_mac);
 		ws->crypto_overhead += CSTP_DTLS_OVERHEAD;
 
@@ -1766,15 +1781,19 @@ static int connect_handler(worker_st * ws)
 	/* worker main loop  */
 	for (;;) {
 		FD_ZERO(&rfds);
+		FD_ZERO(&wfds);
 
 		FD_SET(ws->conn_fd, &rfds);
 		FD_SET(ws->cmd_fd, &rfds);
 		FD_SET(ws->tun_fd, &rfds);
+		FD_SET(ws->tun_fd, &wfds);
+		FD_SET(ws->conn_fd, &wfds);
 		max = MAX(ws->cmd_fd, ws->conn_fd);
 		max = MAX(max, ws->tun_fd);
 
 		if (ws->udp_state > UP_WAIT_FD) {
 			FD_SET(ws->udp_fd, &rfds);
+			FD_SET(ws->udp_fd, &wfds);
 			max = MAX(max, ws->udp_fd);
 		}
 
@@ -1805,12 +1824,13 @@ static int connect_handler(worker_st * ws)
 			tv.tv_nsec = 0;
 			tv.tv_sec = 10;
 			ret =
-			    pselect(max + 1, &rfds, NULL, NULL, &tv, &emptyset);
+			    pselect(max + 1, &rfds, &wfds, NULL, &tv,
+				    &emptyset);
 #else
 			tv.tv_usec = 0;
 			tv.tv_sec = 10;
 			sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-			ret = select(max + 1, &rfds, NULL, NULL, &tv);
+			ret = select(max + 1, &rfds, &wfds, NULL, &tv);
 			sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 			if (ret == -1) {
@@ -1826,9 +1846,13 @@ static int connect_handler(worker_st * ws)
 		     ws->config->dpd) < 0)
 			goto exit;
 
-		/* send pending data from tun device */
+		fd_status.dtls_writable = FD_ISSET(ws->udp_fd, &wfds);
+		fd_status.tls_writable = FD_ISSET(ws->conn_fd, &wfds);
+		fd_status.tun_writable = FD_ISSET(ws->tun_fd, &wfds);
+
+		/* read pending data from tun device */
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
-			ret = tun_mainloop(ws, &tnow);
+			ret = tun_mainloop(ws, &tnow, &fd_status);
 			if (ret < 0)
 				goto exit;
 
@@ -1836,8 +1860,7 @@ static int connect_handler(worker_st * ws)
 
 		/* read pending data from TCP channel */
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
-
-			ret = tls_mainloop(ws, &tnow);
+			ret = tls_mainloop(ws, &tnow, &fd_status);
 			if (ret < 0)
 				goto exit;
 
@@ -1846,8 +1869,7 @@ static int connect_handler(worker_st * ws)
 		/* read data from UDP channel */
 		if (ws->udp_state > UP_WAIT_FD
 		    && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
-
-			ret = dtls_mainloop(ws, &tnow);
+			ret = dtls_mainloop(ws, &tnow, &fd_status);
 			if (ret < 0)
 				goto exit;
 		}
@@ -1882,7 +1904,8 @@ static int connect_handler(worker_st * ws)
 }
 
 static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interface of recv */
-		      uint8_t head, uint8_t * buf, size_t buf_size, time_t now)
+		      uint8_t head, uint8_t * buf, size_t buf_size, time_t now,
+		      fd_status_st * fds)
 {
 	int ret, e;
 
@@ -1928,12 +1951,16 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 	case AC_PKT_DATA:
 		oclog(ws, LOG_TRANSFER_DEBUG, "writing %d byte(s) to TUN",
 		      (int)buf_size);
-		ret = force_write(ws->tun_fd, buf, buf_size);
-		if (ret == -1) {
-			e = errno;
-			oclog(ws, LOG_ERR, "could not write data to tun: %s",
-			      strerror(e));
-			return -1;
+
+		if (fds->tun_writable != 0) {
+			ret = force_write(ws->tun_fd, buf, buf_size);
+			if (ret == -1) {
+				e = errno;
+				oclog(ws, LOG_ERR,
+				      "could not write data to tun: %s",
+				      strerror(e));
+				return -1;
+			}
 		}
 		ws->last_nc_msg = now;
 
@@ -1947,7 +1974,8 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 }
 
 static int parse_cstp_data(struct worker_st *ws,
-			   uint8_t * buf, size_t buf_size, time_t now)
+			   uint8_t * buf, size_t buf_size, time_t now,
+			   fd_status_st * fds)
 {
 	int pktlen, ret;
 
@@ -1970,7 +1998,7 @@ static int parse_cstp_data(struct worker_st *ws,
 		return -1;
 	}
 
-	ret = parse_data(ws, ws->session, buf[6], buf + 8, pktlen, now);
+	ret = parse_data(ws, ws->session, buf[6], buf + 8, pktlen, now, fds);
 	/* whatever we received treat it as DPD response.
 	 * it indicates that the channel is alive */
 	ws->last_msg_tcp = now;
@@ -1979,7 +2007,8 @@ static int parse_cstp_data(struct worker_st *ws,
 }
 
 static int parse_dtls_data(struct worker_st *ws,
-			   uint8_t * buf, size_t buf_size, time_t now)
+			   uint8_t * buf, size_t buf_size, time_t now,
+			   fd_status_st * fds)
 {
 	int ret;
 
@@ -1992,7 +2021,7 @@ static int parse_dtls_data(struct worker_st *ws,
 
 	ret =
 	    parse_data(ws, ws->dtls_session, buf[0], buf + 1, buf_size - 1,
-		       now);
+		       now, fds);
 	ws->last_msg_udp = now;
 	return ret;
 }

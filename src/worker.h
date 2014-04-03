@@ -32,6 +32,7 @@
 #include <tlslib.h>
 #include <common.h>
 #include <str.h>
+#include <worker-bandwidth.h>
 
 typedef enum {
 	UP_DISABLED,
@@ -161,6 +162,7 @@ typedef struct worker_st {
 	/* set after authentication */
 	int udp_fd;
 	udp_port_state_t udp_state;
+	time_t udp_recv_time; /* time last udp packet was received */
 
 	/* protection from multiple rehandshakes */
 	time_t last_tls_rehandshake;
@@ -170,12 +172,16 @@ typedef struct worker_st {
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;
 
+	/* bandwidth stats */
+	bandwidth_st b_tx;
+	bandwidth_st b_rx;
 
 	/* ws->conn_mtu: The MTU of the plaintext data we can send to the client.
 	 *  It also matches the MTU of the TUN device. Note that this is
 	 *  the same as the 'real' MTU of the connection, minus the IP+UDP+CSTP headers
 	 *  and the DTLS crypto overhead. */
 	unsigned conn_mtu;
+	unsigned crypto_overhead; /* estimated overhead of DTLS ciphersuite + DTLS CSTP HEADER */
 	
 	/* Indicates whether the new IPv6 headers will
 	 * be sent or the old */

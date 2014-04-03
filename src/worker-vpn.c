@@ -175,48 +175,49 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
 
 /* Consider switching to gperf when this table grows significantly.
  */
-static const dtls_ciphersuite_st ciphersuites[] =
-{
+static const dtls_ciphersuite_st ciphersuites[] = {
 #if GNUTLS_VERSION_NUMBER >= 0x030207
 	{
-		.oc_name = CS_AES128_GCM,
-		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
-		.gnutls_version = GNUTLS_DTLS1_2,
-		.gnutls_mac = GNUTLS_MAC_AEAD,
-		.gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
-		.server_prio = 90
-	},
+	 .oc_name = CS_AES128_GCM,
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
+	 .server_prio = 90},
 	{
-		.oc_name = CS_AES256_GCM,
-		.gnutls_name = "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
-		.gnutls_version = GNUTLS_DTLS1_2,
-		.gnutls_mac = GNUTLS_MAC_AEAD,
-		.gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
-		.server_prio = 80,
-	},
+	 .oc_name = CS_AES256_GCM,
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
+	 .server_prio = 80,
+	 },
 #endif
 	{
-		.oc_name = "AES128-SHA",
-		.gnutls_name = "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
-		.gnutls_version = GNUTLS_DTLS0_9,
-		.gnutls_mac = GNUTLS_MAC_SHA1,
-		.gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
-		.server_prio = 50,
-	},
+	 .oc_name = "AES128-SHA",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+	 .gnutls_version = GNUTLS_DTLS0_9,
+	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
+	 .server_prio = 50,
+	 },
 	{
-		.oc_name = "DES-CBC3-SHA",
-		.gnutls_name = "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
-		.gnutls_version = GNUTLS_DTLS0_9,
-		.gnutls_mac = GNUTLS_MAC_SHA1,
-		.gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
-		.server_prio = 1,
-	},
+	 .oc_name = "DES-CBC3-SHA",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+	 .gnutls_version = GNUTLS_DTLS0_9,
+	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
+	 .server_prio = 1,
+	 },
 };
 
 static void value_check(struct worker_st *ws, struct http_req_st *req)
@@ -285,11 +286,16 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 
 		str = (char *)value;
 		while ((token = strtok(str, ":")) != NULL) {
-			for (i=0;i<sizeof(ciphersuites)/sizeof(ciphersuites[0]);i++) {
+			for (i = 0;
+			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
+			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
-					if (req->selected_ciphersuite == NULL || 
-						req->selected_ciphersuite->server_prio < ciphersuites[i].server_prio) {
-						req->selected_ciphersuite = &ciphersuites[i];
+					if (req->selected_ciphersuite == NULL ||
+					    req->selected_ciphersuite->
+					    server_prio <
+					    ciphersuites[i].server_prio) {
+						req->selected_ciphersuite =
+						    &ciphersuites[i];
 					}
 				}
 			}
@@ -302,16 +308,13 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		req->base_mtu = atoi((char *)value);
 		break;
 	case HEADER_CSTP_ATYPE:
-		if (memmem(value, value_length, "IPv4", 4) ==
-		    NULL)
+		if (memmem(value, value_length, "IPv4", 4) == NULL)
 			req->no_ipv4 = 1;
-		if (memmem(value, value_length, "IPv6", 4) ==
-		    NULL)
+		if (memmem(value, value_length, "IPv6", 4) == NULL)
 			req->no_ipv6 = 1;
 		break;
 	case HEADER_FULL_IPV6:
-		if (memmem(value, value_length, "true", 4) !=
-		    NULL)
+		if (memmem(value, value_length, "true", 4) != NULL)
 			ws->full_ipv6 = 1;
 		break;
 	case HEADER_COOKIE:
@@ -319,7 +322,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		str = (char *)value;
 		while ((token = strtok(str, ";")) != NULL) {
 			p = token;
-			while(c_isspace(*p)) {
+			while (c_isspace(*p)) {
 				p++;
 			}
 			tmplen = strlen(p);
@@ -328,14 +331,18 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 				tmplen -= 7;
 				p += 7;
 
-				while(tmplen > 1 && c_isspace(p[tmplen-1])) {
+				while (tmplen > 1 && c_isspace(p[tmplen - 1])) {
 					tmplen--;
 				}
 
 				nlen = sizeof(req->cookie);
-				ret = base64_decode((char*)p, tmplen, (char*)req->cookie, &nlen);
+				ret =
+				    base64_decode((char *)p, tmplen,
+						  (char *)req->cookie, &nlen);
 				if (ret == 0 || nlen != COOKIE_SIZE) {
-					oclog(ws, LOG_DEBUG, "could not decode cookie: %.*s", tmplen, p);
+					oclog(ws, LOG_DEBUG,
+					      "could not decode cookie: %.*s",
+					      tmplen, p);
 					req->cookie_set = 0;
 				} else {
 					req->cookie_set = 1;
@@ -344,18 +351,24 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 				p += 14;
 				tmplen -= 14;
 
-				while(tmplen > 1 && c_isspace(p[tmplen-1])) {
+				while (tmplen > 1 && c_isspace(p[tmplen - 1])) {
 					tmplen--;
 				}
 
 				nlen = sizeof(req->sid_cookie);
-				ret = base64_decode((char*)p, tmplen, (char*)req->sid_cookie, &nlen);
+				ret =
+				    base64_decode((char *)p, tmplen,
+						  (char *)req->sid_cookie,
+						  &nlen);
 				if (ret == 0 || nlen != sizeof(req->sid_cookie)) {
-					oclog(ws, LOG_DEBUG, "could not decode sid: %.*s", tmplen, p);
+					oclog(ws, LOG_DEBUG,
+					      "could not decode sid: %.*s",
+					      tmplen, p);
 					req->sid_cookie_set = 0;
 				} else {
 					req->sid_cookie_set = 1;
-					oclog(ws, LOG_DEBUG, "received sid: %.*s", tmplen, p);
+					oclog(ws, LOG_DEBUG,
+					      "received sid: %.*s", tmplen, p);
 				}
 			}
 
@@ -364,7 +377,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 	}
 
-cleanup:
+ cleanup:
 	free(value);
 }
 
@@ -521,8 +534,9 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	ret =
-	    gnutls_priority_set_direct(session, ws->req.selected_ciphersuite->gnutls_name,
-				       NULL);
+	    gnutls_priority_set_direct(session,
+				       ws->req.selected_ciphersuite->
+				       gnutls_name, NULL);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s",
 		      gnutls_strerror(ret));
@@ -530,9 +544,12 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
-					   ws->req.selected_ciphersuite->gnutls_version,
-					   GNUTLS_KX_RSA, ws->req.selected_ciphersuite->gnutls_cipher,
-					   ws->req.selected_ciphersuite->gnutls_mac, GNUTLS_COMP_NULL,
+					   ws->req.selected_ciphersuite->
+					   gnutls_version, GNUTLS_KX_RSA,
+					   ws->req.selected_ciphersuite->
+					   gnutls_cipher,
+					   ws->req.selected_ciphersuite->
+					   gnutls_mac, GNUTLS_COMP_NULL,
 					   &master, &sid);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s",
@@ -702,7 +719,8 @@ void vpn_server(struct worker_st *ws)
 			if (nrecvd == 0)
 				goto finish;
 			if (nrecvd != GNUTLS_E_PREMATURE_TERMINATION)
-				oclog(ws, LOG_ERR, "error receiving client data");
+				oclog(ws, LOG_ERR,
+				      "error receiving client data");
 			exit_worker(ws);
 		}
 
@@ -799,7 +817,8 @@ void session_info_send(worker_st * ws)
 	}
 
 	if (ws->udp_state != UP_DISABLED) {
-		msg.dtls_ciphersuite = (char*)ws->req.selected_ciphersuite->oc_name;
+		msg.dtls_ciphersuite =
+		    (char *)ws->req.selected_ciphersuite->oc_name;
 	}
 
 	if (ws->req.user_agent[0] != 0) {
@@ -824,7 +843,8 @@ void mtu_set(worker_st * ws, unsigned mtu)
 	ws->conn_mtu = mtu;
 
 	if (ws->dtls_session)
-		gnutls_dtls_set_data_mtu(ws->dtls_session, ws->conn_mtu+CSTP_DTLS_OVERHEAD);
+		gnutls_dtls_set_data_mtu(ws->dtls_session,
+					 ws->conn_mtu + CSTP_DTLS_OVERHEAD);
 
 	mtu_send(ws, ws->conn_mtu);
 }
@@ -837,7 +857,7 @@ void mtu_set(worker_st * ws, unsigned mtu)
 static
 int mtu_not_ok(worker_st * ws)
 {
-unsigned min = MIN_MTU(ws);
+	unsigned min = MIN_MTU(ws);
 
 	ws->last_bad_mtu = ws->conn_mtu;
 
@@ -888,7 +908,8 @@ void mtu_ok(worker_st * ws)
 }
 
 static
-int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned dpd)
+int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
+		   unsigned dpd)
 {
 	socklen_t sl;
 	int max, e, ret;
@@ -909,8 +930,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 
 	/* check DPD. Otherwise exit */
 	if (ws->udp_state == UP_ACTIVE &&
-	    now - ws->last_msg_udp > DPD_TRIES * dpd &&
-	    dpd > 0) {
+	    now - ws->last_msg_udp > DPD_TRIES * dpd && dpd > 0) {
 		oclog(ws, LOG_ERR,
 		      "have not received UDP any message or DPD for long (%d secs, DPD is %d)",
 		      (int)(now - ws->last_msg_udp), dpd);
@@ -956,7 +976,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 		      strerror(e));
 	} else {
 		max -= 13;
-		/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);*/
+		/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max); */
 		if (max > 0 && max - mtu_overhead < ws->conn_mtu) {
 			oclog(ws, LOG_INFO, "reducing MTU due to TCP MSS to %u",
 			      max - mtu_overhead);
@@ -964,7 +984,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now, unsigned d
 		}
 	}
 
-cleanup:
+ cleanup:
 	ws->last_periodic_check = now;
 
 	return 0;
@@ -1004,6 +1024,250 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 
 #define SEND_ERR(x) if (x<0) goto send_error
 
+static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
+{
+	int ret, l;
+
+	switch (ws->udp_state) {
+	case UP_ACTIVE:
+	case UP_INACTIVE:
+		ret =
+		    tls_recv_nb(ws->dtls_session, ws->buffer, ws->buffer_size);
+		oclog(ws, LOG_TRANSFER_DEBUG,
+		      "received %d byte(s) (DTLS)", ret);
+
+		GNUTLS_FATAL_ERR(ret);
+
+		if (ret == GNUTLS_E_REHANDSHAKE) {
+
+			if (ws->last_dtls_rehandshake > 0 &&
+			    tnow->tv_sec - ws->last_dtls_rehandshake <
+			    ws->config->rekey_time / 2) {
+				oclog(ws, LOG_ERR,
+				      "client requested DTLS rehandshake too soon");
+				return -1;
+			}
+
+			/* there is not much we can rehandshake on the DTLS channel,
+			 * at least not the way AnyConnect sets it up.
+			 */
+			oclog(ws, LOG_INFO,
+			      "client requested rehandshake on DTLS channel");
+
+			do {
+				ret = gnutls_handshake(ws->dtls_session);
+			} while (ret == GNUTLS_E_AGAIN
+				 || ret == GNUTLS_E_INTERRUPTED);
+
+			GNUTLS_FATAL_ERR(ret);
+			oclog(ws, LOG_INFO, "DTLS rehandshake completed");
+
+			ws->last_dtls_rehandshake = tnow->tv_sec;
+		} else if (ret > 0) {
+			l = ret;
+			ws->udp_state = UP_ACTIVE;
+
+			if (bandwidth_update
+			    (&ws->b_rx, l - 1, ws->conn_mtu, tnow) != 0) {
+				ret =
+				    parse_dtls_data(ws, ws->buffer, l,
+						    tnow->tv_sec);
+				if (ret < 0) {
+					oclog(ws, LOG_INFO,
+					      "error parsing CSTP data");
+					return ret;
+				}
+			}
+		} else
+			oclog(ws, LOG_TRANSFER_DEBUG,
+			      "no data received (%d)", ret);
+
+		ws->udp_recv_time = tnow->tv_sec;
+		break;
+	case UP_SETUP:
+		ret = setup_dtls_connection(ws);
+		if (ret < 0)
+			return -1;
+
+		gnutls_dtls_set_mtu(ws->dtls_session,
+				    ws->conn_mtu + ws->crypto_overhead);
+		mtu_discovery_init(ws, ws->conn_mtu);
+		break;
+
+	case UP_HANDSHAKE:
+ hsk_restart:
+		ret = gnutls_handshake(ws->dtls_session);
+		if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
+			if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED)
+				oclog(ws, LOG_ERR,
+				      "error in DTLS handshake: %s: %s\n",
+				      gnutls_strerror(ret),
+				      gnutls_alert_get_name
+				      (gnutls_alert_get(ws->dtls_session)));
+			else
+				oclog(ws, LOG_ERR,
+				      "error in DTLS handshake: %s\n",
+				      gnutls_strerror(ret));
+			ws->udp_state = UP_DISABLED;
+			break;
+		}
+
+		if (ret == GNUTLS_E_LARGE_PACKET) {
+			/* adjust mtu */
+			mtu_not_ok(ws);
+			goto hsk_restart;
+		} else if (ret == 0) {
+			unsigned mtu;
+
+			/* gnutls_dtls_get_data_mtu() already subtracts the crypto overhead */
+			mtu =
+			    gnutls_dtls_get_data_mtu(ws->dtls_session) -
+			    CSTP_DTLS_OVERHEAD;
+
+			/* openconnect doesn't like if we send more bytes
+			 * than the initially agreed MTU */
+			if (mtu > ws->conn_mtu)
+				mtu = ws->conn_mtu;
+
+			ws->udp_state = UP_ACTIVE;
+			mtu_discovery_init(ws, mtu);
+			mtu_set(ws, mtu);
+			oclog(ws, LOG_INFO,
+			      "DTLS handshake completed (plaintext MTU: %u)\n",
+			      ws->conn_mtu);
+		}
+
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
+{
+	int ret, l;
+
+	ret = tls_recv_nb(ws->session, ws->buffer, ws->buffer_size);
+	GNUTLS_FATAL_ERR(ret);
+
+	if (ret == 0) {		/* disconnect */
+		oclog(ws, LOG_INFO, "client disconnected");
+		return -1;
+	} else if (ret > 0) {
+		l = ret;
+		oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", l);
+
+		if (bandwidth_update(&ws->b_rx, l - 8, ws->conn_mtu, tnow) != 0) {
+			ret = parse_cstp_data(ws, ws->buffer, l, tnow->tv_sec);
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "error parsing CSTP data");
+				return ret;
+			}
+
+			if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) {
+				/* client switched to TLS for some reason */
+				if (tnow->tv_sec - ws->udp_recv_time >
+				    UDP_SWITCH_TIME)
+					ws->udp_state = UP_INACTIVE;
+			}
+		}
+
+		if (ret == GNUTLS_E_REHANDSHAKE) {
+			/* rekey? */
+			if (ws->last_tls_rehandshake > 0 &&
+			    tnow->tv_sec - ws->last_tls_rehandshake <
+			    ws->config->rekey_time / 2) {
+				oclog(ws, LOG_ERR,
+				      "client requested TLS rehandshake too soon");
+				return -1;
+			}
+
+			oclog(ws, LOG_INFO,
+			      "client requested rehandshake on TLS channel");
+			do {
+				ret = gnutls_handshake(ws->session);
+			} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+			GNUTLS_FATAL_ERR(ret);
+
+			ws->last_tls_rehandshake = tnow->tv_sec;
+			oclog(ws, LOG_INFO, "TLS rehandshake completed");
+		}
+	}
+
+	return 0;
+}
+
+static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
+{
+	int ret, l, e;
+	unsigned tls_retry;
+
+	l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
+	if (l < 0) {
+		e = errno;
+
+		if (e != EAGAIN && e != EINTR) {
+			oclog(ws, LOG_ERR,
+			      "received corrupt data from tun (%d): %s",
+			      l, strerror(e));
+			return -1;
+		}
+
+		return 0;
+	}
+
+	if (l == 0) {
+		oclog(ws, LOG_INFO, "TUN device returned zero");
+		return 0;
+	}
+
+	/* only transmit if allowed */
+	if (bandwidth_update(&ws->b_tx, l, ws->conn_mtu, tnow)
+	    != 0) {
+		tls_retry = 0;
+		oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
+		if (ws->udp_state == UP_ACTIVE) {
+
+			ws->buffer[7] = AC_PKT_DATA;
+
+			ret =
+			    tls_send_nowait(ws->dtls_session,
+					    ws->buffer + 7, l + 1);
+			GNUTLS_FATAL_ERR(ret);
+
+			if (ret == GNUTLS_E_LARGE_PACKET) {
+				mtu_not_ok(ws);
+
+				oclog(ws, LOG_TRANSFER_DEBUG,
+				      "retrying (TLS) %d\n", l);
+				tls_retry = 1;
+			} else if (ret >= ws->conn_mtu &&
+				   ws->config->try_mtu != 0) {
+				mtu_ok(ws);
+			}
+		}
+
+		if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
+			ws->buffer[0] = 'S';
+			ws->buffer[1] = 'T';
+			ws->buffer[2] = 'F';
+			ws->buffer[3] = 1;
+			ws->buffer[4] = l >> 8;
+			ws->buffer[5] = l & 0xff;
+			ws->buffer[6] = AC_PKT_DATA;
+			ws->buffer[7] = 0;
+
+			ret = tls_send(ws->session, ws->buffer, l + 8);
+			GNUTLS_FATAL_ERR(ret);
+		}
+		ws->last_nc_msg = tnow->tv_sec;
+	}
+
+	return 0;
+}
+
 /* connect_handler:
  * @ws: an initialized worker structure
  *
@@ -1020,8 +1284,7 @@ static int connect_handler(worker_st * ws)
 {
 	struct http_req_st *req = &ws->req;
 	fd_set rfds;
-	int l, e, max, ret, crypto_overhead = 0, t;
-	unsigned tls_retry;
+	int e, max, ret, t;
 	char *p;
 #ifdef HAVE_PSELECT
 	struct timespec tv;
@@ -1029,12 +1292,9 @@ static int connect_handler(worker_st * ws)
 	struct timeval tv;
 #endif
 	unsigned tls_pending, dtls_pending = 0, i;
-	time_t udp_recv_time = 0, now;
 	struct timespec tnow;
 	unsigned proto_overhead = 0, ip6;
 	socklen_t sl;
-	bandwidth_st b_tx;
-	bandwidth_st b_rx;
 	sigset_t emptyset, blockset;
 
 	sigemptyset(&blockset);
@@ -1118,7 +1378,9 @@ static int connect_handler(worker_st * ws)
 
 	oclog(ws, LOG_DEBUG, "suggesting DPD of %d secs", ws->config->dpd);
 	if (ws->config->dpd > 0) {
-		ret = tls_printf(ws->session, "X-CSTP-DPD: %u\r\n", ws->config->dpd);
+		ret =
+		    tls_printf(ws->session, "X-CSTP-DPD: %u\r\n",
+			       ws->config->dpd);
 		SEND_ERR(ret);
 	}
 
@@ -1156,7 +1418,7 @@ static int connect_handler(worker_st * ws)
 	 * any IPv6 information, unless the client can really handle it.
 	 */
 	if (ws->full_ipv6 == 0 && ws->config->cisco_client_compat != 0 &&
-		req->user_agent_type != AGENT_OPENCONNECT) {
+	    req->user_agent_type != AGENT_OPENCONNECT) {
 		req->no_ipv6 = 1;
 	}
 
@@ -1164,18 +1426,20 @@ static int connect_handler(worker_st * ws)
 		oclog(ws, LOG_DEBUG, "sending IPv6 %s", ws->vinfo.ipv6);
 		if (ws->full_ipv6 && ws->vinfo.ipv6_prefix) {
 			ret =
-			    tls_printf(ws->session, "X-CSTP-Address-IP6: %s/%u\r\n",
-			       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
+			    tls_printf(ws->session,
+				       "X-CSTP-Address-IP6: %s/%u\r\n",
+				       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
 			SEND_ERR(ret);
 		} else {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-Address: %s\r\n",
-			       ws->vinfo.ipv6);
+				       ws->vinfo.ipv6);
 			SEND_ERR(ret);
 
 			if (ws->vinfo.ipv6_netmask) {
 				ret =
-				    tls_printf(ws->session, "X-CSTP-Netmask: %s\r\n",
+				    tls_printf(ws->session,
+					       "X-CSTP-Netmask: %s\r\n",
 					       ws->vinfo.ipv6_netmask);
 				SEND_ERR(ret);
 			}
@@ -1207,9 +1471,11 @@ static int connect_handler(worker_st * ws)
 	}
 
 	for (i = 0; i < ws->config->split_dns_size; i++) {
-		oclog(ws, LOG_DEBUG, "adding split DNS %s", ws->config->split_dns[i]);
-		ret = tls_printf(ws->session,
-				 "X-CSTP-Split-DNS: %s\r\n", ws->config->split_dns[i]);
+		oclog(ws, LOG_DEBUG, "adding split DNS %s",
+		      ws->config->split_dns[i]);
+		ret =
+		    tls_printf(ws->session, "X-CSTP-Split-DNS: %s\r\n",
+			       ws->config->split_dns[i]);
 		SEND_ERR(ret);
 	}
 
@@ -1251,10 +1517,12 @@ static int connect_handler(worker_st * ws)
 
 		if (ip6 != 0 && ws->full_ipv6) {
 			ret = tls_printf(ws->session,
-					 "X-CSTP-Split-Include-IP6: %s\r\n", ws->routes[i]);
+					 "X-CSTP-Split-Include-IP6: %s\r\n",
+					 ws->routes[i]);
 		} else {
 			ret = tls_printf(ws->session,
-					 "X-CSTP-Split-Include: %s\r\n", ws->routes[i]);
+					 "X-CSTP-Split-Include: %s\r\n",
+					 ws->routes[i]);
 		}
 		SEND_ERR(ret);
 	}
@@ -1266,11 +1534,10 @@ static int connect_handler(worker_st * ws)
 	if (ws->config->idle_timeout > 0) {
 		ret =
 		    tls_printf(ws->session,
-			     "X-CSTP-Idle-Timeout: %u\r\n", (unsigned)ws->config->idle_timeout);
+			       "X-CSTP-Idle-Timeout: %u\r\n",
+			       (unsigned)ws->config->idle_timeout);
 	} else {
-		ret =
-		    tls_puts(ws->session,
-			     "X-CSTP-Idle-Timeout: none\r\n");
+		ret = tls_puts(ws->session, "X-CSTP-Idle-Timeout: none\r\n");
 	}
 	SEND_ERR(ret);
 
@@ -1286,7 +1553,8 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 
 		ret = tls_printf(ws->session, "X-CSTP-Rekey-Method: %s\r\n",
-			(ws->config->rekey_method == REKEY_METHOD_SSL)?"ssl":"new-tunnel");
+				 (ws->config->rekey_method ==
+				  REKEY_METHOD_SSL) ? "ssl" : "new-tunnel");
 		SEND_ERR(ret);
 	} else {
 		ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: none\r\n");
@@ -1302,9 +1570,11 @@ static int connect_handler(worker_st * ws)
 	SEND_ERR(ret);
 
 	for (i = 0; i < ws->config->custom_header_size; i++) {
-		oclog(ws, LOG_DEBUG, "adding custom header '%s'", ws->config->custom_header[i]);
-		ret = tls_printf(ws->session,
-				 "%s\r\n", ws->config->custom_header[i]);
+		oclog(ws, LOG_DEBUG, "adding custom header '%s'",
+		      ws->config->custom_header[i]);
+		ret =
+		    tls_printf(ws->session, "%s\r\n",
+			       ws->config->custom_header[i]);
 		SEND_ERR(ret);
 	}
 
@@ -1339,15 +1609,14 @@ static int connect_handler(worker_st * ws)
 	oclog(ws, LOG_DEBUG, "CSTP Base MTU is %u bytes", ws->vinfo.mtu);
 
 	/* calculate TLS channel MTU */
-	crypto_overhead = CSTP_OVERHEAD +
+	ws->crypto_overhead = CSTP_OVERHEAD +
 	    tls_get_overhead(gnutls_protocol_get_version(ws->session),
 			     gnutls_cipher_get(ws->session),
 			     gnutls_mac_get(ws->session));
 
 	/* plaintext MTU is the device MTU minus the overhead
 	 * of the CSTP protocol. */
-	ws->conn_mtu = ws->vinfo.mtu - crypto_overhead;
-
+	ws->conn_mtu = ws->vinfo.mtu - ws->crypto_overhead;
 
 	/* set TCP socket options */
 	if (ws->config->output_buffer > 0) {
@@ -1357,8 +1626,7 @@ static int connect_handler(worker_st * ws)
 			       sizeof(t));
 		if (ret == -1)
 			oclog(ws, LOG_DEBUG,
-			      "setsockopt(TCP, SO_SNDBUF) to %u, failed.",
-			      t);
+			      "setsockopt(TCP, SO_SNDBUF) to %u, failed.", t);
 	}
 
 	set_net_priority(ws, ws->conn_fd, ws->config->net_priority);
@@ -1376,7 +1644,9 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 
 		if (ws->config->dpd > 0) {
-			ret = tls_printf(ws->session, "X-DTLS-DPD: %u\r\n", ws->config->dpd);
+			ret =
+			    tls_printf(ws->session, "X-DTLS-DPD: %u\r\n",
+				       ws->config->dpd);
 			SEND_ERR(ret);
 		}
 
@@ -1388,12 +1658,14 @@ static int connect_handler(worker_st * ws)
 		if (ws->config->rekey_time > 0) {
 			ret =
 			    tls_printf(ws->session, "X-DTLS-Rekey-Time: %u\r\n",
-				       (unsigned)(ws->config->rekey_time+10));
+				       (unsigned)(ws->config->rekey_time + 10));
 			SEND_ERR(ret);
 
 			/* This is our private extension */
 			if (ws->config->rekey_method == REKEY_METHOD_SSL) {
-				ret = tls_puts(ws->session, "X-DTLS-Rekey-Method: ssl\r\n");
+				ret =
+				    tls_puts(ws->session,
+					     "X-DTLS-Rekey-Method: ssl\r\n");
 				SEND_ERR(ret);
 			}
 		}
@@ -1412,24 +1684,30 @@ static int connect_handler(worker_st * ws)
 
 		/* assume that if IPv6 is used over TCP then the same would be used over UDP */
 		if (ws->proto == AF_INET)
-			proto_overhead = 20; /* ip */
+			proto_overhead = 20;	/* ip */
 		else
-			proto_overhead = 40; /* ipv6 */
+			proto_overhead = 40;	/* ipv6 */
 		proto_overhead += 8;	/* udp */
 
 		/* crypto overhead for DTLS */
-		crypto_overhead =
-		    tls_get_overhead(ws->req.selected_ciphersuite->gnutls_version,
-				     ws->req.selected_ciphersuite->gnutls_cipher, ws->req.selected_ciphersuite->gnutls_mac);
-		crypto_overhead += CSTP_DTLS_OVERHEAD;
+		ws->crypto_overhead =
+		    tls_get_overhead(ws->req.selected_ciphersuite->
+				     gnutls_version,
+				     ws->req.selected_ciphersuite->
+				     gnutls_cipher,
+				     ws->req.selected_ciphersuite->gnutls_mac);
+		ws->crypto_overhead += CSTP_DTLS_OVERHEAD;
 
 		oclog(ws, LOG_DEBUG,
-		      "DTLS overhead is %u", proto_overhead+crypto_overhead);
+		      "DTLS overhead is %u",
+		      proto_overhead + ws->crypto_overhead);
 
 		/* plaintext MTU is the device MTU minus the overhead
 		 * of the DTLS (+AnyConnect header) protocol.
 		 */
-		ws->conn_mtu = MIN(ws->conn_mtu, ws->vinfo.mtu - proto_overhead - crypto_overhead);
+		ws->conn_mtu =
+		    MIN(ws->conn_mtu,
+			ws->vinfo.mtu - proto_overhead - ws->crypto_overhead);
 
 		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
 		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", ws->conn_mtu);
@@ -1440,7 +1718,8 @@ static int connect_handler(worker_st * ws)
 				   sizeof(t));
 			if (ret == -1)
 				oclog(ws, LOG_DEBUG,
-				      "setsockopt(UDP, SO_SNDBUF) to %u, failed.", t);
+				      "setsockopt(UDP, SO_SNDBUF) to %u, failed.",
+				      t);
 		}
 
 		set_net_priority(ws, ws->udp_fd, ws->config->net_priority);
@@ -1479,12 +1758,12 @@ static int connect_handler(worker_st * ws)
 	gettime(&tnow);
 	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = tnow.tv_sec;
 
-	bandwidth_init(&b_rx, ws->config->rx_per_sec);
-	bandwidth_init(&b_tx, ws->config->tx_per_sec);
+	bandwidth_init(&ws->b_rx, ws->config->rx_per_sec);
+	bandwidth_init(&ws->b_tx, ws->config->tx_per_sec);
 
 	session_info_send(ws);
 
-	/* main loop  */
+	/* worker main loop  */
 	for (;;) {
 		FD_ZERO(&rfds);
 
@@ -1525,7 +1804,8 @@ static int connect_handler(worker_st * ws)
 #ifdef HAVE_PSELECT
 			tv.tv_nsec = 0;
 			tv.tv_sec = 10;
-			ret = pselect(max + 1, &rfds, NULL, NULL, &tv, &emptyset);
+			ret =
+			    pselect(max + 1, &rfds, NULL, NULL, &tv, &emptyset);
 #else
 			tv.tv_usec = 0;
 			tv.tv_sec = 10;
@@ -1540,259 +1820,36 @@ static int connect_handler(worker_st * ws)
 			}
 		}
 		gettime(&tnow);
-		now = tnow.tv_sec;
 
-		if (periodic_check(ws, proto_overhead+crypto_overhead, now, ws->config->dpd) < 0)
+		if (periodic_check
+		    (ws, proto_overhead + ws->crypto_overhead, tnow.tv_sec,
+		     ws->config->dpd) < 0)
 			goto exit;
 
 		/* send pending data from tun device */
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
-			l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
-			if (l < 0) {
-				e = errno;
+			ret = tun_mainloop(ws, &tnow);
+			if (ret < 0)
+				goto exit;
 
-				if (e != EAGAIN && e != EINTR) {
-					oclog(ws, LOG_ERR,
-					      "received corrupt data from tun (%d): %s",
-					      l, strerror(e));
-					goto exit;
-				}
-				continue;
-			}
-
-			if (l == 0) {
-				oclog(ws, LOG_INFO, "TUN device returned zero");
-				continue;
-			}
-
-			/* only transmit if allowed */
-			if (bandwidth_update(&b_tx, l, ws->conn_mtu, &tnow)
-			    != 0) {
-				tls_retry = 0;
-				oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
-				if (ws->udp_state == UP_ACTIVE) {
-
-					ws->buffer[7] = AC_PKT_DATA;
-
-					ret =
-					    tls_send_nowait(ws->dtls_session,
-							    ws->buffer + 7,
-							    l + 1);
-					GNUTLS_FATAL_ERR(ret);
-
-					if (ret == GNUTLS_E_LARGE_PACKET) {
-						mtu_not_ok(ws);
-
-						oclog(ws, LOG_TRANSFER_DEBUG,
-						      "retrying (TLS) %d\n", l);
-						tls_retry = 1;
-					} else if (ret >= ws->conn_mtu &&
-						   ws->config->try_mtu != 0) {
-						mtu_ok(ws);
-					}
-				}
-
-				if (ws->udp_state != UP_ACTIVE
-				    || tls_retry != 0) {
-					ws->buffer[0] = 'S';
-					ws->buffer[1] = 'T';
-					ws->buffer[2] = 'F';
-					ws->buffer[3] = 1;
-					ws->buffer[4] = l >> 8;
-					ws->buffer[5] = l & 0xff;
-					ws->buffer[6] = AC_PKT_DATA;
-					ws->buffer[7] = 0;
-
-					ret =
-					    tls_send(ws->session, ws->buffer,
-						     l + 8);
-					GNUTLS_FATAL_ERR(ret);
-				}
-				ws->last_nc_msg = tnow.tv_sec;
-			}
 		}
 
 		/* read pending data from TCP channel */
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
-			ret =
-			    tls_recv_nb(ws->session, ws->buffer,
-					       ws->buffer_size);
 
-			GNUTLS_FATAL_ERR(ret);
-
-			if (ret == 0) {	/* disconnect */
-				oclog(ws, LOG_INFO, "client disconnected");
+			ret = tls_mainloop(ws, &tnow);
+			if (ret < 0)
 				goto exit;
-			}
 
-			if (ret > 0) {
-				l = ret;
-				oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", l);
-
-				if (bandwidth_update
-				    (&b_rx, l - 8, ws->conn_mtu, &tnow) != 0) {
-					ret =
-					    parse_cstp_data(ws, ws->buffer, l,
-							    now);
-					if (ret < 0) {
-						oclog(ws, LOG_ERR,
-						      "error parsing CSTP data");
-						goto exit;
-					}
-
-					if (ret == AC_PKT_DATA
-					    && ws->udp_state == UP_ACTIVE) {
-						/* client switched to TLS for some reason */
-						if (now - udp_recv_time >
-						    UDP_SWITCH_TIME)
-							ws->udp_state =
-							    UP_INACTIVE;
-					}
-				}
-			}
-
-			if (ret == GNUTLS_E_REHANDSHAKE) {
-				/* rekey? */
-				if (ws->last_tls_rehandshake > 0 &&
-					now-ws->last_tls_rehandshake < ws->config->rekey_time/2) {
-					oclog(ws, LOG_ERR, "client requested TLS rehandshake too soon");
-					goto exit;
-				}
-
-				oclog(ws, LOG_INFO, "client requested rehandshake on TLS channel");
-				do {
-					ret = gnutls_handshake(ws->session);
-				} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-				GNUTLS_FATAL_ERR(ret);
-
-				ws->last_tls_rehandshake = now;
-				oclog(ws, LOG_INFO, "TLS rehandshake completed");
-			}
 		}
 
 		/* read data from UDP channel */
 		if (ws->udp_state > UP_WAIT_FD
 		    && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
 
-			switch (ws->udp_state) {
-			case UP_ACTIVE:
-			case UP_INACTIVE:
-				ret =
-				    tls_recv_nb(ws->dtls_session,
-						       ws->buffer,
-						       ws->buffer_size);
-				oclog(ws, LOG_TRANSFER_DEBUG,
-				      "received %d byte(s) (DTLS)", ret);
-
-				GNUTLS_FATAL_ERR(ret);
-
-				if (ret == GNUTLS_E_REHANDSHAKE) {
-
-					if (ws->last_dtls_rehandshake > 0 &&
-						now-ws->last_dtls_rehandshake < ws->config->rekey_time/2) {
-						oclog(ws, LOG_ERR, "client requested DTLS rehandshake too soon");
-						goto exit;
-					}
-
-					/* there is not much we can rehandshake on the DTLS channel,
-					 * at least not the way AnyConnect sets it up.
-					 */
-					oclog(ws, LOG_INFO, "client requested rehandshake on DTLS channel");
-
-					do {
-						ret = gnutls_handshake(ws->dtls_session);
-					} while (ret == GNUTLS_E_AGAIN || ret == GNUTLS_E_INTERRUPTED);
-
-					GNUTLS_FATAL_ERR(ret);
-					oclog(ws, LOG_INFO, "DTLS rehandshake completed");
-
-					ws->last_dtls_rehandshake = now;
-				} else if (ret > 0) {
-					l = ret;
-					ws->udp_state = UP_ACTIVE;
-
-					if (bandwidth_update
-					    (&b_rx, l - 1, ws->conn_mtu,
-					     &tnow) != 0) {
-						ret =
-						    parse_dtls_data(ws,
-								    ws->buffer,
-								    l, now);
-						if (ret < 0) {
-							oclog(ws, LOG_INFO,
-							      "error parsing CSTP data");
-							goto exit;
-						}
-					}
-
-				} else
-					oclog(ws, LOG_TRANSFER_DEBUG,
-					      "no data received (%d)", ret);
-
-				udp_recv_time = now;
-				break;
-			case UP_SETUP:
-				ret = setup_dtls_connection(ws);
-				if (ret < 0)
-					goto exit;
-
-				gnutls_dtls_set_mtu(ws->dtls_session,
-						    	 ws->conn_mtu + crypto_overhead);
-				mtu_discovery_init(ws, ws->conn_mtu);
-
-				break;
-			case UP_HANDSHAKE:
- hsk_restart:
-				ret = gnutls_handshake(ws->dtls_session);
-				if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
-					if (ret ==
-					    GNUTLS_E_FATAL_ALERT_RECEIVED)
-						oclog(ws, LOG_ERR,
-						      "error in DTLS handshake: %s: %s\n",
-						      gnutls_strerror(ret),
-						      gnutls_alert_get_name
-						      (gnutls_alert_get
-						       (ws->dtls_session)));
-					else
-						oclog(ws, LOG_ERR,
-						      "error in DTLS handshake: %s\n",
-						      gnutls_strerror(ret));
-					ws->udp_state = UP_DISABLED;
-					break;
-				}
-
-				if (ret == GNUTLS_E_LARGE_PACKET) {
-					/* adjust mtu */
-					mtu_not_ok(ws);
-					if (ret == 0) {
-						goto hsk_restart;
-					}
-				}
-
-				if (ret == 0) {
-					unsigned mtu;
-
-					/* gnutls_dtls_get_data_mtu() already subtracts the crypto overhead */
-					mtu = gnutls_dtls_get_data_mtu(ws->
-							     dtls_session) - CSTP_DTLS_OVERHEAD;
-
-					/* openconnect doesn't like if we send more bytes
-					 * than the initially agreed MTU */
-					if (mtu > ws->conn_mtu)
-						mtu = ws->conn_mtu;
-
-					ws->udp_state = UP_ACTIVE;
-					mtu_discovery_init(ws, mtu);
-					mtu_set(ws, mtu);
-					oclog(ws, LOG_INFO,
-					      "DTLS handshake completed (plaintext MTU: %u)\n",
-					      ws->conn_mtu);
-				}
-
-				break;
-			default:
-				break;
-			}
+			ret = dtls_mainloop(ws, &tnow);
+			if (ret < 0)
+				goto exit;
 		}
 
 		/* read commands from command fd */

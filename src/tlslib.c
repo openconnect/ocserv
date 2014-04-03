@@ -64,6 +64,32 @@ ssize_t tls_send(gnutls_session_t session, const void *data,
 	return data_size;
 }
 
+/* Note that data will be modified and must have one byte
+ * available before its start address.
+ */
+ssize_t dtls_send_data(gnutls_session_t session, void *data,
+			size_t data_size, size_t mtu)
+{
+	int ret;
+	int left = data_size;
+	uint8_t* p = data;
+
+	while(left > 0) {
+		*(p-1) = AC_PKT_DATA;
+		ret = gnutls_record_send(session, p-1, MIN(mtu, left+1));
+		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
+			return ret;
+		}
+
+		if (ret > 0) {
+			left -= ret-1;
+			p += ret-1;
+		}
+	}
+
+	return data_size;
+}
+
 /* Same as tls_send() but will not retry on EAGAIN errors */
 ssize_t tls_send_nowait(gnutls_session_t session, const void *data,
 			size_t data_size)

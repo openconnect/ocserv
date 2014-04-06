@@ -1204,7 +1204,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	int ret, l, e;
 	unsigned tls_retry;
 
-	l = read(ws->tun_fd, ws->buffer + 8, ws->buffer_size-8);
+	l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
 	if (l < 0) {
 		e = errno;
 
@@ -1232,7 +1232,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 			ws->buffer[7] = AC_PKT_DATA;
 
-			ret = dtls_send_data(ws->dtls_session, ws->buffer + 7, l, ws->conn_mtu+1);
+			ret = tls_send(ws->dtls_session, ws->buffer + 7, l + 1);
 			GNUTLS_FATAL_ERR(ret);
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {

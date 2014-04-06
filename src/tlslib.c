@@ -72,12 +72,11 @@ ssize_t dtls_send_data(gnutls_session_t session, void *data,
 {
 	int ret;
 	int left = data_size;
-	uint8_t* p = data, *p1;
+	uint8_t* p = data;
 
 	while(left > 0) {
-		p1 = p-1;
-		*(p1) = AC_PKT_DATA;
-		ret = gnutls_record_send(session, p1, MIN(mtu, left+1));
+		*(p-1) = AC_PKT_DATA;
+		ret = gnutls_record_send(session, p-1, MIN(mtu, left+1));
 		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
 			return ret;
 		}

@@ -1230,7 +1230,9 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 		oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
 		if (ws->udp_state == UP_ACTIVE) {
 
-			ret = dtls_send_data(ws->dtls_session, ws->buffer + 8, l, ws->conn_mtu+1);
+			ws->buffer[7] = AC_PKT_DATA;
+
+			ret = dtls_send_data(ws->dtls_session, ws->buffer + 7, l, ws->conn_mtu+1);
 			GNUTLS_FATAL_ERR(ret);
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {

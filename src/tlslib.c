@@ -65,7 +65,7 @@ ssize_t tls_send(gnutls_session_t session, const void *data,
 }
 
 /* Same as tls_send() but will not retry on EAGAIN errors */
-ssize_t tls_send_nowait(gnutls_session_t session, const void *data,
+ssize_t tls_send_nb(gnutls_session_t session, const void *data,
 			size_t data_size)
 {
 	int ret;

@@ -1,4 +1,4 @@
-* Version 0.3.3 (unreleased)
+* Version 0.3.3 (released 2014-04-08)
 
 - When sending IPv6 link-local addresses to peer do not include the
   zone-info.

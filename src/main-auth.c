@@ -415,7 +415,7 @@ unsigned int entries = 1; /* that one */
 				/* steal its leases */
 				proc->ipv4 = ctmp->ipv4;
 				proc->ipv6 = ctmp->ipv6;
-				ctmp->ipv4 = ctmp->ipv6 = NULL;
+				ctmp->leases_in_use = 1;
 
 				kill(ctmp->pid, SIGTERM);
 			} else if (strcmp(proc->username, ctmp->username) == 0) {

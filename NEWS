@@ -2,6 +2,9 @@
 
 - Execute disconnect script for users that their IP was hijacked by a
   cookie reconnection.
+- If a disconnect script is set, the tun device will be closed only after
+  the disconnect script has been called. This allows gathering statistics
+  from it.
 
 
 * Version 0.3.3 (released 2014-04-08)

@@ -87,6 +87,7 @@ struct proc_st {
 	struct tun_lease_st tun_lease;
 	struct ip_lease_st *ipv4;
 	struct ip_lease_st *ipv6;
+	unsigned leases_in_use; /* someone else got our IP leases */
 
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;

@@ -312,8 +312,10 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	if (proc->auth_ctx != NULL)
 		proc_auth_deinit(s, proc);
 
-	if (proc->ipv4 || proc->ipv6)
-		remove_ip_leases(s, proc);
+	if (!proc->leases_in_use) {
+		if (proc->ipv4 || proc->ipv6)
+			remove_ip_leases(s, proc);
+	}
 
 	if (proc->tun_lease.fd >= 0)
 		close(proc->tun_lease.fd);

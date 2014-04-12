@@ -121,9 +121,12 @@ int handle_script_exit(main_server_st * s, struct proc_st *proc, int code, unsig
 
  fail:
 	/* we close the lease tun fd both on success and failure.
-	 * The parent doesn't need to keep the tunfd.
+	 * The parent doesn't need to keep the tunfd. Note that
+	 * the reason we don't close the tun_fd when there is a
+	 * disconnect script set, is so that it can gather statistics
+	 * from it.
 	 */
-	if (proc->tun_lease.name[0] != 0) {
+	if (proc->tun_lease.name[0] != 0 && s->config->disconnect_script == NULL) {
 		if (proc->tun_lease.fd >= 0)
 			close(proc->tun_lease.fd);
 		proc->tun_lease.fd = -1;
@@ -311,6 +314,9 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 
 	if (proc->ipv4 || proc->ipv6)
 		remove_ip_leases(s, proc);
+
+	if (proc->tun_lease.fd >= 0)
+		close(proc->tun_lease.fd);
 
 	free(proc);
 }

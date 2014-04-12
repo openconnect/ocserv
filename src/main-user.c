@@ -62,44 +62,57 @@ const char* script;
 
 	pid = fork();
 	if (pid == 0) {
-		char real[64];
-		char local[64];
-		char remote[64];
+		char real[64] = "";
+		char local[64] = "";
+		char remote[64] = "";
 
 		snprintf(real, sizeof(real), "%u", (unsigned)proc->pid);
 		setenv("ID", real, 1);
 
-		if (proc->ipv4 == NULL && proc->ipv6 == NULL) {
-			mslog(s, proc, LOG_DEBUG, "no IP configured; script failed");
-			exit(1);
-		}
-		
-		if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0) {
-			mslog(s, proc, LOG_DEBUG, "cannot determine peer address; script failed");
-			exit(1);
+		if (proc->remote_addr_len > 0) {
+			if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine peer address; script failed");
+				exit(1);
+			}
+			setenv("IP_REAL", real, 1);
 		}
 
-		if (proc->ipv4 && proc->ipv4->lip_len > 0) {
-			if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
-				exit(1);
-			}
-		} else {
-			if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
-				exit(1);
-			}
-		}
+		if (proc->ipv4 != NULL || proc->ipv6 != NULL) {
+			mslog(s, proc, LOG_DEBUG, "no IP for this user (probably re-used by a cookie reconnection)");
 
-		if (proc->ipv4 && proc->ipv4->rip_len > 0) {
-			if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
-				exit(1);
+			if (proc->ipv4 && proc->ipv4->lip_len > 0) {
+				if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
+					exit(1);
+				}
+				setenv("IP_LOCAL", local, 1);
 			}
-		} else {
-			if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
-				exit(1);
+
+			if (proc->ipv6 && proc->ipv6->lip_len > 0) {
+				if (getnameinfo((void*)&proc->ipv6->lip, proc->ipv6->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
+					exit(1);
+				}
+				if (local[0] == 0)
+					setenv("IP_LOCAL", local, 1);
+				setenv("IPV6_LOCAL", local, 1);
+			}
+
+			if (proc->ipv4 && proc->ipv4->rip_len > 0) {
+				if (getnameinfo((void*)&proc->ipv4->rip, proc->ipv4->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
+					exit(1);
+				}
+				setenv("IP_REMOTE", remote, 1);
+			}
+			if (proc->ipv6 && proc->ipv6->rip_len > 0) {
+				if (getnameinfo((void*)&proc->ipv6->rip, proc->ipv6->rip_len, remote, sizeof(remote), NULL, 0, NI_NUMERICHOST) != 0) {
+					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN PtP address; script failed");
+					exit(1);
+				}
+				if (remote[0] == 0)
+					setenv("IP_REMOTE", remote, 1);
+				setenv("IP_REMOTE", remote, 1);
 			}
 		}
 
@@ -107,9 +120,6 @@ const char* script;
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
 		setenv("DEVICE", proc->tun_lease.name, 1);
-		setenv("IP_REAL", real, 1);
-		setenv("IP_LOCAL", local, 1);
-		setenv("IP_REMOTE", remote, 1);
 		if (up)
 			setenv("REASON", "connect", 1);
 		else

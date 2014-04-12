@@ -294,7 +294,8 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 		kill(proc->pid, SIGTERM);
 
 	remove_from_script_list(s, proc);
-	user_disconnected(s, proc);
+	if (proc->username[0] != 0)
+		user_disconnected(s, proc);
 
 	/* close the intercomm fd */
 	if (proc->fd >= 0)

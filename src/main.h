@@ -69,7 +69,9 @@ enum {
 	PS_AUTH_FAILED, /* no tried authenticated but failed */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
 	PS_AUTH_ZOMBIE, /* in INIT state but worker has disconnected! - only present when cisco-client-compat is set */
-	PS_AUTH_DEAD, /* it was created but subsequently the client revived a zombie proc. - only present when cisco-client-compat is set */
+	PS_AUTH_DEAD, /* 1. it was created but subsequently the client revived a zombie proc. - only present when cisco-client-compat is set 
+		       * 2. in case a disconnect script is set, the proc_st stays unreleased as DEAD to allow the script to gather statistics from the device
+		       */
 	PS_AUTH_COMPLETED, /* successful authentication */
 };
 

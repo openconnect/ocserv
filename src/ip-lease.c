@@ -425,6 +425,9 @@ char buf[128];
 
 void remove_ip_leases(main_server_st* s, struct proc_st* proc)
 {
+	if (proc->leases_in_use != 0)
+		return;
+
 	if (proc->ipv4) {
 		htable_del(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4);
 		free(proc->ipv4);

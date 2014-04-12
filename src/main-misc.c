@@ -290,21 +290,32 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 {
 	mslog(s, proc, LOG_DEBUG, "removing client '%s' with id '%d'", proc->username, (int)proc->pid);
 
-	list_del(&proc->list);
-	s->active_clients--;
-
-	if (k && proc->pid != -1 && proc->pid != 0)
-		kill(proc->pid, SIGTERM);
-
 	remove_from_script_list(s, proc);
-	if (proc->username[0] != 0)
-		user_disconnected(s, proc);
+
+	if (k && proc->pid != -1 && proc->pid != 0) {
+		kill(proc->pid, SIGTERM);
+	}
 
 	/* close the intercomm fd */
 	if (proc->fd >= 0)
 		close(proc->fd);
+
 	proc->fd = -1;
 	proc->pid = -1;
+
+	if (proc->status == PS_AUTH_COMPLETED) {
+		user_disconnected(s, proc);
+
+		if (s->config->disconnect_script) {
+			/* give time to disconnect script to gather
+			 * statistics from the device or so */
+			proc->status = PS_AUTH_DEAD;
+			return;
+		}
+	}
+
+	list_del(&proc->list);
+	s->active_clients--;
 
 	remove_iroutes(s, proc);
 	del_additional_config(&proc->config);
@@ -312,10 +323,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	if (proc->auth_ctx != NULL)
 		proc_auth_deinit(s, proc);
 
-	if (!proc->leases_in_use) {
-		if (proc->ipv4 || proc->ipv6)
-			remove_ip_leases(s, proc);
-	}
+	remove_ip_leases(s, proc);
 
 	if (proc->tun_lease.fd >= 0)
 		close(proc->tun_lease.fd);
@@ -878,9 +886,6 @@ void expire_zombies(main_server_st * s)
 {
 	time_t now = time(0);
 	struct proc_st *ctmp = NULL, *cpos;
-
-	if (s->config->cisco_client_compat == 0)
-		return;
 
 	/* In CISCO compatibility mode we could have proc_st in
 	 * mode INACTIVE or ZOMBIE that need to be cleaned up.

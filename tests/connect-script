@@ -1,0 +1,19 @@
+#!/bin/sh
+
+#echo $USERNAME : $REASON : $DEVICE
+
+case "$REASON" in
+  connect)
+	echo > connect.ok
+	;;
+  disconnect)
+  	if ! test -z "$DEVICE";then
+	  	ifconfig $DEVICE
+	  	if test "$?" = "0";then
+		  	echo > disconnect.ok
+		fi
+	fi
+	;;
+esac
+
+exit 0

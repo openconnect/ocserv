@@ -20,9 +20,13 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
+builddir=${builddir:-.}
 PORT=4448
 
 . `dirname $0`/common.sh
+
+rm -f ${builddir}/connect.ok
+rm -f ${builddir}/disconnect.ok
 
 echo "Testing local backend with username-password... "
 
@@ -33,13 +37,31 @@ echo "Connecting to obtain cookie with wrong username... "
 ( echo "tost" | openconnect -q localhost:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
+rm -f ${builddir}/connect.ok
+rm -f ${builddir}/disconnect.ok
 #test special characters
 
 echo "Connecting to obtain cookie... "
 ( echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u special --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
+
 kill $PID
 wait
+
+sleep 5
+
+if ! test -f ${builddir}/connect.ok;then
+	echo "Connect script was not run"
+	exit 1
+fi
+
+if ! test -f ${builddir}/disconnect.ok;then
+	echo "Disconnect script was not run properly"
+	exit 1
+fi
+
+rm -f ${builddir}/connect.ok
+rm -f ${builddir}/disconnect.ok
 
 exit 0

@@ -225,6 +225,11 @@ rekey-method = ssl
 # IPV6_LOCAL (the IPv6 local address if there are both IPv4 and IPv6
 # assigned), IPV6_REMOVE (the IPv6 remote address), and
 # ID (a unique numeric ID); REASON may be "connect" or "disconnect".
+#
+# Note that a "disconnect" call will not contain the IP information
+# of the client, if the client has reconnected with a cookie (and thus
+# re-used its IP addresses).
+
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript
 

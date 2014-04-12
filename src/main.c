@@ -558,6 +558,8 @@ void clear_lists(main_server_st *s)
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
+		if (ctmp->tun_lease.fd >= 0)
+			close(ctmp->tun_lease.fd);
 		if (ctmp->auth_ctx != NULL)
 			proc_auth_deinit(s, ctmp);
 		list_del(&ctmp->list);

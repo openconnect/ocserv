@@ -1,3 +1,9 @@
+* Version 0.3.4 (unreleased)
+
+- Execute disconnect script for users that their IP was hijacked by a
+  cookie reconnection.
+
+
 * Version 0.3.3 (released 2014-04-08)
 
 - When sending IPv6 link-local addresses to peer do not include the

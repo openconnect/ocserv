@@ -71,8 +71,8 @@ typedef struct {
 #define ENTRY(name, iface, desc, func) \
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
-#define LIST_USERS_SIG "(ussssssssusssss)"
-#define LIST_SINGLE_USER_SIG "(ussssssssusssssuuasasasas)"
+#define LIST_USERS_SIG "(issssssssusssss)"
+#define LIST_SINGLE_USER_SIG "(issssssssusssssuuasasasas)"
 
 #define DESC_LIST \
 		"    <method name=\"list\">\n" \
@@ -428,6 +428,7 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 			    struct proc_st *ctmp, unsigned single)
 {
 	dbus_uint32_t tmp;
+	dbus_int32_t stmp;
 	char ipbuf[128];
 	const char *strtmp;
 	char **list;
@@ -435,8 +436,8 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 	int ret;
 
 	/* ID: pid */
-	tmp = ctmp->pid;
-	if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+	stmp = ctmp->pid;
+	if (dbus_message_iter_append_basic(subs, DBUS_TYPE_INT32, &stmp) == 0) {
 		return -1;
 	}
 

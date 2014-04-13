@@ -536,7 +536,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args, suba, subs;
-	dbus_uint32_t id = 0;
+	dbus_int32_t id = 0;
 	char *username = "";
 	dbus_uint32_t since = 0;
 	char *groupname = "", *ip = "";
@@ -577,7 +577,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 			goto cleanup;
 		dbus_message_iter_recurse(&suba, &subs);
 
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_INT32)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &id);
 
@@ -701,8 +701,8 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 		if (username == NULL || username[0] == 0)
 			username = NO_USER;
 
-		fprintf(out, "%8u %8s %8s %14s %14s %6s ",
-			(unsigned)id, username, groupname, ip, vpn_ip, device);
+		fprintf(out, "%8d %8s %8s %14s %14s %6s ",
+			(int)id, username, groupname, ip, vpn_ip, device);
 
 		print_time_ival7(t, out);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0) {
@@ -798,7 +798,8 @@ double data;
 int common_info_cmd(DBusMessageIter * args)
 {
 	DBusMessageIter suba, subs;
-	dbus_uint32_t id = 0, rx = 0, tx = 0;
+	dbus_int32_t id = 0;
+	dbus_uint32_t rx = 0, tx = 0;
 	char *username = "";
 	dbus_uint32_t since = 0;
 	char *groupname = "", *ip = "";
@@ -828,13 +829,13 @@ int common_info_cmd(DBusMessageIter * args)
 		}
 		dbus_message_iter_recurse(&suba, &subs);
 
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_INT32)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &id);
 
 		if (at_least_one > 0)
 			fprintf(out, "\n");
-		fprintf(out, "ID: %u\n", (unsigned)id);
+		fprintf(out, "ID: %d\n", (int)id);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;

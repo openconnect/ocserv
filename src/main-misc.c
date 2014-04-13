@@ -310,6 +310,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 			/* give time to disconnect script to gather
 			 * statistics from the device or so */
 			proc->status = PS_AUTH_DEAD;
+			proc->conn_time = time(0);
 			return;
 		}
 	}

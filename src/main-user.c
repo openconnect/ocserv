@@ -78,8 +78,6 @@ const char* script;
 		}
 
 		if (proc->ipv4 != NULL || proc->ipv6 != NULL) {
-			mslog(s, proc, LOG_DEBUG, "no IP for this user (probably re-used by a cookie reconnection)");
-
 			if (proc->ipv4 && proc->ipv4->lip_len > 0) {
 				if (getnameinfo((void*)&proc->ipv4->lip, proc->ipv4->lip_len, local, sizeof(local), NULL, 0, NI_NUMERICHOST) != 0) {
 					mslog(s, proc, LOG_DEBUG, "cannot determine local VPN address; script failed");
@@ -114,6 +112,9 @@ const char* script;
 					setenv("IP_REMOTE", remote, 1);
 				setenv("IP_REMOTE", remote, 1);
 			}
+		} else {
+			mslog(s, proc, LOG_DEBUG, "no IP for this user; script failed");
+			exit(1);
 		}
 
 		setenv("USERNAME", proc->username, 1);

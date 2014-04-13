@@ -558,6 +558,8 @@ void clear_lists(main_server_st *s)
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->fd >= 0)
 			close(ctmp->fd);
+		if (ctmp->tun_lease.fd >= 0)
+			close(ctmp->tun_lease.fd);
 		if (ctmp->auth_ctx != NULL)
 			proc_auth_deinit(s, ctmp);
 		list_del(&ctmp->list);
@@ -1036,6 +1038,7 @@ fork_failed:
 					memcpy(&ctmp->sid, &ws.sid, sizeof(ws.sid));
 
 					ctmp->pid = pid;
+					ctmp->tun_lease.fd = -1;
 					ctmp->conn_time = time(0);
 					ctmp->fd = cmd_fd[0];
 					set_cloexec_flag (cmd_fd[0], 1);

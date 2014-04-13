@@ -315,7 +315,7 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 
 			if (msg->ipv6_netmask != NULL) {
 				free(ws->config->network.ipv6_netmask);
-				ws->config->network.ipv4_netmask =
+				ws->config->network.ipv6_netmask =
 				    strdup(msg->ipv6_netmask);
 			}
 

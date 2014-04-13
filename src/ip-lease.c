@@ -176,7 +176,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in_addr));
 			max_loops--;
 
-        		if (SA_IN_U8_P(&rnd)[3] == 255) /* broadcast */
+        		if (SA_IN_U8_P(&rnd)[3] == 255 || SA_IN_U8_P(&rnd)[3] == 254) /* avoid broadcast */
 	        		bignum_add(SA_IN_U8_P(&rnd), sizeof(struct in_addr), 1);
 
 			/* Mask the random number with the netmask */

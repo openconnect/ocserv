@@ -138,115 +138,19 @@ int handle_script_exit(main_server_st * s, struct proc_st *proc, int code, unsig
 static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
 				       const char *file, const char *type)
 {
-	struct group_cfg_st cfg;
 	int ret;
-	unsigned i;
 
 	if (access(file, R_OK) == 0) {
 		mslog(s, proc, LOG_DEBUG, "Loading %s configuration '%s'", type,
 		      file);
 
-		ret = parse_group_cfg_file(s, file, &cfg);
+		ret = parse_group_cfg_file(s, file, &proc->config);
 		if (ret < 0)
 			return ERR_READ_CONFIG;
-
-		if (cfg.routes_size > 0) {
-			if (proc->config.routes == NULL) {
-				proc->config.routes = cfg.routes;
-				proc->config.routes_size = cfg.routes_size;
-
-				cfg.routes = NULL;
-				cfg.routes_size = 0;
-			} else {
-				proc->config.routes =
-				    safe_realloc(proc->config.routes,
-						 (proc->config.routes_size +
-						  cfg.routes_size) *
-						 sizeof(proc->config.
-							routes[0]));
-				if (proc->config.routes == NULL)
-					return ERR_MEM;
-
-				for (i = 0; i < cfg.routes_size; i++) {
-					proc->config.routes[proc->config.
-							    routes_size] =
-					    cfg.routes[i];
-					cfg.routes[i] = NULL;
-					proc->config.routes_size++;
-				}
-			}
-		}
-
-		if (proc->config.iroutes == NULL) {
-			proc->config.iroutes = cfg.iroutes;
-			proc->config.iroutes_size = cfg.iroutes_size;
-
-			cfg.iroutes = NULL;
-			cfg.iroutes_size = 0;
-		}
-
-		if (proc->config.dns == NULL) {
-			proc->config.dns = cfg.dns;
-			proc->config.dns_size = cfg.dns_size;
-
-			cfg.dns = NULL;
-			cfg.dns_size = 0;
-		}
-
-		if (proc->config.nbns == NULL) {
-			proc->config.nbns = cfg.nbns;
-			proc->config.nbns_size = cfg.nbns_size;
-
-			cfg.nbns = NULL;
-			cfg.nbns_size = 0;
-		}
-
-		if (proc->config.ipv4_network == NULL) {
-			proc->config.ipv4_network = cfg.ipv4_network;
-			cfg.ipv4_network = NULL;
-		}
-
-		if (proc->config.ipv6_network == NULL) {
-			proc->config.ipv6_network = cfg.ipv6_network;
-			cfg.ipv6_network = NULL;
-		}
-
-		if (proc->config.ipv4_netmask == NULL) {
-			proc->config.ipv4_netmask = cfg.ipv4_netmask;
-			cfg.ipv4_netmask = NULL;
-		}
-
-		if (proc->config.ipv6_netmask == NULL) {
-			proc->config.ipv6_netmask = cfg.ipv6_netmask;
-			cfg.ipv6_netmask = NULL;
-		}
-
-		if (proc->config.ipv6_prefix != 0) {
-			proc->config.ipv6_prefix = cfg.ipv6_prefix;
-		}
-
-		if (proc->config.cgroup == NULL) {
-			proc->config.cgroup = cfg.cgroup;
-			cfg.cgroup = NULL;
-		}
-
-		if (proc->config.rx_per_sec == 0) {
-			proc->config.rx_per_sec = cfg.rx_per_sec;
-		}
-
-		if (proc->config.tx_per_sec == 0) {
-			proc->config.tx_per_sec = cfg.tx_per_sec;
-		}
-
-		if (proc->config.net_priority == 0) {
-			proc->config.net_priority = cfg.net_priority;
-		}
-
-		del_additional_config(&cfg);
-
-	} else
+	} else {
 		mslog(s, proc, LOG_DEBUG, "No %s configuration for '%s'", type,
 		      proc->username);
+	}
 
 	return 0;
 }
@@ -259,20 +163,20 @@ static int read_additional_config(struct main_server_st *s,
 
 	memset(&proc->config, 0, sizeof(proc->config));
 
-	if (s->config->per_user_dir != NULL) {
-		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir,
-			 proc->username);
-
-		ret = read_additional_config_file(s, proc, file, "user");
-		if (ret < 0)
-			return ret;
-	}
-
 	if (s->config->per_group_dir != NULL && proc->groupname[0] != 0) {
 		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir,
 			 proc->groupname);
 
 		ret = read_additional_config_file(s, proc, file, "group");
+		if (ret < 0)
+			return ret;
+	}
+
+	if (s->config->per_user_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir,
+			 proc->username);
+
+		ret = read_additional_config_file(s, proc, file, "user");
 		if (ret < 0)
 			return ret;
 	}

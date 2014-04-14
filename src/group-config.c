@@ -66,12 +66,12 @@ static struct cfg_options available_options[] = {
 			s_name = malloc(sizeof(char*)*MAX_CONFIG_ENTRIES); \
 		} \
 		do { \
+		        if (num >= MAX_CONFIG_ENTRIES) \
+			        break; \
 		        if (val && !strcmp(val->pzName, name)==0) \
 				continue; \
 		        s_name[num] = strdup(val->v.strVal); \
 		        num++; \
-		        if (num>=MAX_CONFIG_ENTRIES) \
-		        break; \
 	      } while((val = optionNextValue(pov, val)) != NULL); \
 	      s_name[num] = NULL; \
 	}
@@ -79,6 +79,8 @@ static struct cfg_options available_options[] = {
 #define READ_RAW_STRING(name, s_name) \
 	val = optionGetValue(pov, name); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
+		if (s_name != NULL) \
+			free(s_name); \
 		s_name = strdup(val->v.strVal); \
 	}
 
@@ -119,13 +121,15 @@ unsigned j;
 	return 0;
 }
 
+/* This will parse the configuration file and append/replace data into
+ * config. The provided config must either be memset to zero, or be
+ * already allocated using this function.
+ */
 int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_st *config)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
 unsigned prefix = 0;
-
-	memset(config, 0, sizeof(*config));
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {

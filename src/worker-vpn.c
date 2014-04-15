@@ -1544,14 +1544,20 @@ static int connect_handler(worker_st * ws)
 	SEND_ERR(ret);
 
 	if (ws->config->rekey_time > 0) {
+		unsigned method;
+
 		ret =
 		    tls_printf(ws->session, "X-CSTP-Rekey-Time: %u\r\n",
 			       (unsigned)(ws->config->rekey_time));
 		SEND_ERR(ret);
 
+		if (gnutls_safe_renegotiation_status(ws->session) != 0)
+			method = ws->config->rekey_method;
+		else
+			method = REKEY_METHOD_NEW_TUNNEL;
+
 		ret = tls_printf(ws->session, "X-CSTP-Rekey-Method: %s\r\n",
-				 (ws->config->rekey_method ==
-				  REKEY_METHOD_SSL) ? "ssl" : "new-tunnel");
+				 (method == REKEY_METHOD_SSL) ? "ssl" : "new-tunnel");
 		SEND_ERR(ret);
 	} else {
 		ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: none\r\n");

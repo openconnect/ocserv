@@ -548,17 +548,11 @@ struct key_cb_data * cdata;
 	return 0;
 }
 
-/* Allow clients to rehandshake even if they don't support safe
- * renegotiation */
-#define ADDITIONAL_FLAGS ":%UNSAFE_RENEGOTIATION"
-
 /* reload key files etc. */
 void tls_global_init_certs(main_server_st* s)
 {
 int ret;
 const char* perr;
-char *tmp;
-unsigned len;
 
 	if (s->config->debug >= DEBUG_TLS) {
 		gnutls_global_set_log_function(tls_log_func);
@@ -607,26 +601,10 @@ unsigned len;
 						       verify_certificate_cb);
 	}
 
-	if (s->config->cisco_client_compat) {
-		len = strlen(s->config->priorities);
-		tmp = malloc(len+sizeof(ADDITIONAL_FLAGS));
-		if (tmp == NULL) {
-			mslog(s, NULL, LOG_ERR, "memory error");
-			exit(1);
-		}
-
-		memcpy(tmp, s->config->priorities, len);
-		memcpy(&tmp[len], ADDITIONAL_FLAGS, sizeof(ADDITIONAL_FLAGS)); /* includes terminating zero */
-	} else {
-		tmp = strdup(s->config->priorities);
-	}
-
-	ret = gnutls_priority_init(&s->creds.cprio, tmp, &perr);
+	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
 		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
-
-	free(tmp);
 
 	if (s->config->ocsp_response != NULL) {
 		ret = gnutls_certificate_set_ocsp_status_request_file(s->creds.xcred,

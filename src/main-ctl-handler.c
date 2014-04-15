@@ -847,7 +847,7 @@ static void method_disconnect_user_name(main_server_st * s,
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_bool_t status = 0;
-	struct proc_st *ctmp = NULL;
+	struct proc_st *ctmp = NULL, *cpos;
 	char *name = "";
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_name");
@@ -867,7 +867,7 @@ static void method_disconnect_user_name(main_server_st * s,
 	dbus_message_iter_get_basic(&args, &name);
 
 	/* got the name. Try to disconnect */
-	list_for_each(&s->proc_list.head, ctmp, list) {
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (strcmp(ctmp->username, name) == 0) {
 			remove_proc(s, ctmp, 1);
 			status = 1;
@@ -906,7 +906,7 @@ static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
 	DBusMessage *reply;
 	DBusMessageIter args;
 	dbus_bool_t status = 0;
-	struct proc_st *ctmp = NULL;
+	struct proc_st *ctmp = NULL, *cpos;
 	dbus_uint32_t id = 0;
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_id");
@@ -926,7 +926,7 @@ static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
 	dbus_message_iter_get_basic(&args, &id);
 
 	/* got the ID. Try to disconnect */
-	list_for_each(&s->proc_list.head, ctmp, list) {
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid == id) {
 			remove_proc(s, ctmp, 1);
 			status = 1;

@@ -97,6 +97,8 @@ ssize_t len, total = 0;
 int ret;
 
 	fp = fopen(file, "r");
+	if (fp == NULL)
+		return GNUTLS_E_FILE_ERROR;
 
 	while (	(len = fread( buf, 1, sizeof(buf), fp)) > 0) {
 		ret = tls_send(session, buf, len);
@@ -411,7 +413,7 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		e = errno;
 		syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s", 
 			cdata->sa.sun_path, strerror(e));
-		return GNUTLS_E_INTERNAL_ERROR;
+		goto error;
 	}
 
 	header[0] = cdata->idx;

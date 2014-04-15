@@ -1174,26 +1174,25 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 			}
 		}
 
-		if (ret == GNUTLS_E_REHANDSHAKE) {
-			/* rekey? */
-			if (ws->last_tls_rehandshake > 0 &&
-			    tnow->tv_sec - ws->last_tls_rehandshake <
-			    ws->config->rekey_time / 2) {
-				oclog(ws, LOG_ERR,
-				      "client requested TLS rehandshake too soon");
-				return -1;
-			}
-
-			oclog(ws, LOG_INFO,
-			      "client requested rehandshake on TLS channel");
-			do {
-				ret = gnutls_handshake(ws->session);
-			} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-			GNUTLS_FATAL_ERR(ret);
-
-			ws->last_tls_rehandshake = tnow->tv_sec;
-			oclog(ws, LOG_INFO, "TLS rehandshake completed");
+	} else if (ret == GNUTLS_E_REHANDSHAKE) {
+		/* rekey? */
+		if (ws->last_tls_rehandshake > 0 &&
+		    tnow->tv_sec - ws->last_tls_rehandshake <
+		    ws->config->rekey_time / 2) {
+			oclog(ws, LOG_ERR,
+			      "client requested TLS rehandshake too soon");
+			return -1;
 		}
+
+		oclog(ws, LOG_INFO,
+		      "client requested rehandshake on TLS channel");
+		do {
+			ret = gnutls_handshake(ws->session);
+		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
+		GNUTLS_FATAL_ERR(ret);
+
+		ws->last_tls_rehandshake = tnow->tv_sec;
+		oclog(ws, LOG_INFO, "TLS rehandshake completed");
 	}
 
 	return 0;
@@ -1707,7 +1706,8 @@ static int connect_handler(worker_st * ws)
 		    MIN(ws->conn_mtu,
 			ws->vinfo.mtu - proto_overhead - ws->crypto_overhead);
 
-		tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
+		ret = tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
+		SEND_ERR(ret);
 		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", ws->conn_mtu);
 
 		if (ws->config->output_buffer > 0) {

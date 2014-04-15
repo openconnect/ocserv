@@ -152,6 +152,7 @@ lock_user(const char *fpasswd, const char *username)
 	unsigned fpasswd_len = strlen(fpasswd);
 	unsigned tmp_passwd_len;
 	unsigned username_len = strlen(username);
+	int ret;
 	ssize_t len, l;
 	size_t line_size;
 	struct stat st;
@@ -203,7 +204,11 @@ lock_user(const char *fpasswd, const char *username)
 	fclose(fd);
 	fclose(fd2);
 
-	rename(tmp_passwd, fpasswd);
+	ret = rename(tmp_passwd, fpasswd);
+	if (ret == -1) {
+		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
+		exit(1);
+	}
 	free(tmp_passwd);
 }
 
@@ -216,6 +221,7 @@ unlock_user(const char *fpasswd, const char *username)
 	unsigned fpasswd_len = strlen(fpasswd);
 	unsigned tmp_passwd_len;
 	unsigned username_len = strlen(username);
+	int ret;
 	ssize_t len, l;
 	size_t line_size;
 	struct stat st;
@@ -269,7 +275,11 @@ unlock_user(const char *fpasswd, const char *username)
 	fclose(fd);
 	fclose(fd2);
 
-	rename(tmp_passwd, fpasswd);
+	ret = rename(tmp_passwd, fpasswd);
+	if (ret == -1) {
+		fprintf(stderr, "Cannot write to '%s'.\n", fpasswd);
+		exit(1);
+	}
 	free(tmp_passwd);
 }
 

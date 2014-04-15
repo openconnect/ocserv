@@ -122,7 +122,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 			return -1;
 		}
 
-		ret = read(fd, s->srk_pin, sizeof(s->srk_pin));
+		ret = read(fd, s->srk_pin, sizeof(s->srk_pin)-1);
 		close(fd);
 		if (ret <= 1) {
 			syslog(LOG_ERR, "could not read from PIN file '%s'",
@@ -143,7 +143,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 			return -1;
 		}
 
-		ret = read(fd, s->pin, sizeof(s->pin));
+		ret = read(fd, s->pin, sizeof(s->pin)-1);
 		close(fd);
 		if (ret <= 1) {
 			syslog(LOG_ERR, "could not read from PIN file '%s'",

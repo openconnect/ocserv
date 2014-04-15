@@ -189,6 +189,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 		if (ptr->ai_socktype == SOCK_STREAM) {
 			if (listen(s, 10) < 0) {
 				perror("listen() failed");
+				close(s);
 				return -1;
 			}
 		}
@@ -426,9 +427,11 @@ struct script_wait_st *stmp = NULL, *spos;
 				mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
 				list_del(&stmp->list);
 				ret = handle_script_exit(s, stmp->proc, estatus, 0);
-				if (ret < 0)
+				if (ret < 0) {
 					remove_proc(s, stmp->proc, 1);
-				free(stmp);
+				} else {
+					free(stmp);
+				}
 				break;
 			}
 		}
@@ -698,7 +701,7 @@ time_t now;
 
 fail:
 	if (connected == 0) {
-		/* received packet from unknown host */
+		/* received packet from unknown host. Ignore it. */
 		recv(listener->fd, buffer, buffer_size, 0);
 
 		return -1;

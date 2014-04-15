@@ -8,10 +8,10 @@ case "$REASON" in
 	;;
   disconnect)
   	if ! test -z "$DEVICE";then
-	  	ifconfig $DEVICE
-	  	if test "$?" = "0";then
+	  	#ifconfig $DEVICE
+	  	#if test "$?" = "0";then
 		  	echo > disconnect.ok
-		fi
+		#fi
 	fi
 	;;
 esac

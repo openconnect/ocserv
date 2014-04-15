@@ -176,7 +176,7 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 	       struct sockaddr_in *addr2)
 {
 	struct icmp *pkt;
-	int pingsock, c;
+	int pingsock, c, e;
 	char packet1[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
 	char packet2[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
 	char buf1[64], buf2[64];
@@ -191,6 +191,12 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1,
 	gnutls_rnd(GNUTLS_RND_NONCE, &id2, sizeof(id2));
 
 	pingsock = socket(AF_INET, SOCK_RAW, 1);
+	if (pingsock == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_INFO,
+		      "could not open raw socket for ping: %s", strerror(e));
+		return 0;
+	}
 
 	pkt = (struct icmp *) packet1;
 	memset(pkt, 0, sizeof(packet1));
@@ -283,7 +289,7 @@ int icmp_ping6(main_server_st * s,
 {
 	struct icmp6_hdr *pkt;
 	char buf1[64], buf2[64];
-	int pingsock, c;
+	int pingsock, c, e;
 	int sockopt;
 	char packet1[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
 	char packet2[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
@@ -298,6 +304,12 @@ int icmp_ping6(main_server_st * s,
 	gnutls_rnd(GNUTLS_RND_NONCE, &id2, sizeof(id2));
 
 	pingsock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	if (pingsock == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_INFO,
+		      "could not open raw socket for ping: %s", strerror(e));
+		return 0;
+	}
 
 	pkt = (struct icmp6_hdr *) packet1;
 	memset(pkt, 0, sizeof(packet1));

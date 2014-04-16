@@ -885,7 +885,7 @@ int main(int argc, char** argv)
 	run_sec_mod(&s);
 
 	/* Initialize certificates */
-	tls_global_init_certs(&s);
+	tls_load_certs(&s);
 
 	mslog(&s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
 

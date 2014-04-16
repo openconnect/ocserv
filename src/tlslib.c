@@ -483,7 +483,7 @@ static void key_cb_deinit_func(gnutls_privkey_t key, void* userdata)
 }
 
 static
-int load_key_files(main_server_st *s)
+int load_cert_files(main_server_st *s)
 {
 int ret;
 gnutls_pcert_st *pcert_list;
@@ -549,7 +549,7 @@ struct key_cb_data * cdata;
 }
 
 /* reload key files etc. */
-void tls_global_init_certs(main_server_st* s)
+void tls_load_certs(main_server_st* s)
 {
 int ret;
 const char* perr;
@@ -574,7 +574,7 @@ const char* perr;
 
 	certificate_check(s);
 
-	ret = load_key_files(s);
+	ret = load_cert_files(s);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file");
 		exit(1);

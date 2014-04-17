@@ -19,7 +19,6 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 srcdir=${srcdir:-.}
-PORT=4444
 
 #this test can only be run as root
 id|grep root >/dev/null 2>&1
@@ -28,17 +27,23 @@ if [ $? != 0 ];then
 fi
 
 if test -x /usr/bin/docker;then
+DOCKER=/usr/bin/docker
+else
+DOCKER=/usr/bin/docker.io
+fi
+
+if ! test -x $DOCKER;then
 	echo "The docker program is needed to perform this test"
 	exit 77
 fi
 
 stop() {
-	docker stop test_ocserv
-	docker rm test_ocserv
+	$DOCKER stop test_ocserv
+	$DOCKER rm test_ocserv
 	exit 1
 }
 
-docker pull tianon/debian:jessie
+$DOCKER pull tianon/debian:jessie
 if test $? != 0;then
 	echo "Cannot pull docker image"
 	exit 1
@@ -46,15 +51,16 @@ fi
 
 cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
 
-#docker build -t ocserv-test1 docker-ocserv/
-#if test $? != 0;then
-#	echo "Cannot build docker image"
-#	exit 1
-#fi
+$DOCKER build -t ocserv-test1 docker-ocserv/
+if test $? != 0;then
+	echo "Cannot build docker image"
+	exit 1
+fi
 
-docker stop test_ocserv
-docker rm test_ocserv
-docker run -P --privileged=true -p 5000:5000/udp -p 5001:5001/udp -p 22 -p 5551:5551/udp --tty=false -d -n --name test_ocserv ocserv-test1
+$DOCKER stop test_ocserv >/dev/null 2>&1
+$DOCKER rm test_ocserv >/dev/null 2>&1
+
+$DOCKER run -P --privileged=true -p 5000:5000/udp -p 5001:5001/udp -p 22 -p 5551:5551/udp --tty=false -d -n --name test_ocserv ocserv-test1
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
@@ -63,7 +69,7 @@ fi
 #wait for ocserv to server
 sleep 5
 
-IP=`docker inspect test_ocserv | grep IPAddress | cut -d '"' -f 4`
+IP=`$DOCKER inspect test_ocserv | grep IPAddress | cut -d '"' -f 4`
 
 printf "test\ntest\n" >pass.tmp
 openconnect $IP:5551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &
@@ -106,8 +112,8 @@ fi
 #	stop
 #fi
 
-docker stop test_ocserv
-docker rm test_ocserv
+$DOCKER stop test_ocserv
+$DOCKER rm test_ocserv
 
 kill $PID
 

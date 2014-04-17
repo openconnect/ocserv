@@ -37,6 +37,10 @@ if ! test -x $DOCKER;then
 	exit 77
 fi
 
+echo "****************************************************************"
+echo "This test requires compiling ocserv using --enable-local-libopts"
+echo "****************************************************************"
+
 stop() {
 	$DOCKER stop test_ocserv
 	$DOCKER rm test_ocserv

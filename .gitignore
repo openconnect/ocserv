@@ -56,3 +56,6 @@ src/occtl
 .dirstamp
 config.h.in
 doc/occtl.8
+tests/docker-ocserv/ocpasswd
+tests/docker-ocserv/occtl
+tests/docker-ocserv/ocserv

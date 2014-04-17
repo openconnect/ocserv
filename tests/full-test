@@ -1,0 +1,114 @@
+#!/bin/sh
+#
+# Copyright (C) 2014 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ocserv; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+srcdir=${srcdir:-.}
+PORT=4444
+
+#this test can only be run as root
+id|grep root >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+if test -x /usr/bin/docker;then
+	echo "The docker program is needed to perform this test"
+	exit 77
+fi
+
+stop() {
+	docker stop test_ocserv
+	docker rm test_ocserv
+	exit 1
+}
+
+docker pull tianon/debian:jessie
+if test $? != 0;then
+	echo "Cannot pull docker image"
+	exit 1
+fi
+
+cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
+
+#docker build -t ocserv-test1 docker-ocserv/
+#if test $? != 0;then
+#	echo "Cannot build docker image"
+#	exit 1
+#fi
+
+docker stop test_ocserv
+docker rm test_ocserv
+docker run -P --privileged=true -p 5000:5000/udp -p 5001:5001/udp -p 22 -p 5551:5551/udp --tty=false -d -n --name test_ocserv ocserv-test1
+if test $? != 0;then
+	echo "Cannot run docker image"
+	exit 1
+fi
+
+#wait for ocserv to server
+sleep 5
+
+IP=`docker inspect test_ocserv | grep IPAddress | cut -d '"' -f 4`
+
+printf "test\ntest\n" >pass.tmp
+openconnect $IP:5551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &
+PID=$!
+
+rm -f pass.tmp
+
+#wait for openconnect
+sleep 5
+
+# The client IP depends on the username so it shouldn't change.
+ping -w 3 192.168.1.190
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+ping -w 3 192.168.1.190 -s 1500
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+# There is an issue in nuttcp that makes it crash under docker if
+# /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
+
+#nuttcp -T 10 -t 192.168.1.190
+#if test $? != 0;then
+#	kill $PID
+#	echo "Cannot send to ocserv"
+#	stop
+#fi
+
+#nuttcp -T 10 -r 192.168.1.190
+#if test $? != 0;then
+#	kill $PID
+#	echo "Cannot recv from ocserv"
+#	stop
+#fi
+
+docker stop test_ocserv
+docker rm test_ocserv
+
+kill $PID
+
+exit 0

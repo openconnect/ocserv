@@ -624,6 +624,7 @@ struct sockaddr_storage cli_addr;
 struct proc_st *ctmp = NULL;
 socklen_t cli_addr_size;
 uint8_t buffer[1024];
+char tbuf[64];
 uint8_t  *session_id;
 int session_id_size;
 ssize_t buffer_size;
@@ -645,8 +646,10 @@ time_t now;
 		goto fail;
 
 	/* check version */
-	mslog(s, NULL, LOG_DEBUG, "DTLS record version: %u.%u", (unsigned int)buffer[1], (unsigned int)buffer[2]);
-	mslog(s, NULL, LOG_DEBUG, "DTLS hello version: %u.%u", (unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
+	mslog(s, NULL, LOG_DEBUG, "new DTLS session from %s (record v%u.%u, hello v%u.%u)", 
+		human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
+		(unsigned int)buffer[1], (unsigned int)buffer[2],
+		(unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
 	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
 		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
 		mslog(s, NULL, LOG_INFO, "unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);

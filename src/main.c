@@ -621,7 +621,7 @@ static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
 {
 int ret, e;
 struct sockaddr_storage cli_addr;
-struct proc_st *ctmp = NULL;
+struct proc_st *ctmp = NULL, *proc_to_send = NULL;
 socklen_t cli_addr_size;
 uint8_t buffer[1024];
 char tbuf[64];
@@ -629,6 +629,7 @@ uint8_t  *session_id;
 int session_id_size;
 ssize_t buffer_size;
 int connected = 0;
+int match_ip_only = 0, matching_ips;
 time_t now;
 
 	/* first receive from the correct client and connect socket */
@@ -650,6 +651,7 @@ time_t now;
 		human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
 		(unsigned int)buffer[1], (unsigned int)buffer[2],
 		(unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
+
 	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
 		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
 		mslog(s, NULL, LOG_INFO, "unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
@@ -657,49 +659,75 @@ time_t now;
 	}
 	if (buffer[0] != 22) {
 		mslog(s, NULL, LOG_INFO, "unexpected DTLS content type: %u", (unsigned int)buffer[0]);
-		goto fail;
+		/* Here we received a non-client hello packet. It may be that
+		 * the client's NAT changed it's UDP source port and the previous
+		 * connection is invalidated. Try to see if we can simply match
+		 * the IP address and forward the socket.
+		 */
+		match_ip_only = 1;
+	} else {
+		/* read session_id */
+		session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
+		session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 	}
-
-	/* read session_id */
-	session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
-	session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 
 	/* search for the IP and the session ID in all procs */
 	now = time(0);
+	matching_ips = 0;
 
 	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (session_id_size == ctmp->dtls_session_id_size &&
+		if (match_ip_only == 0 && session_id_size == ctmp->dtls_session_id_size &&
 			memcmp(session_id, ctmp->dtls_session_id, session_id_size) == 0) {
-			UdpFdMsg msg = UDP_FD_MSG__INIT;
 
-			if (now - ctmp->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
-				mslog(s, ctmp, LOG_INFO, "received UDP connection too soon");
-				break;
-			}
-
-			ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
-			if (ret == -1) {
-				e = errno;
-				mslog(s, ctmp, LOG_ERR, "connect UDP socket: %s", strerror(e));
-				break;
-			}
-
-			ret = send_socket_msg_to_worker(s, ctmp, CMD_UDP_FD,
-				listener->fd,
-				&msg, 
-				(pack_size_func)udp_fd_msg__get_packed_size,
-				(pack_func)udp_fd_msg__pack);
-			if (ret < 0) {
-				mslog(s, ctmp, LOG_ERR, "error passing UDP socket");
-				break;
-			}
-			mslog(s, ctmp, LOG_DEBUG, "passed UDP socket");
-			ctmp->udp_fd_receive_time = now;
-			connected = 1;
-			
-			reopen_udp_port(listener);
+			proc_to_send = ctmp;
 			break;
+		} else if (match_ip_only != 0 && cli_addr_size == ctmp->remote_addr_len &&
+			memcmp(SA_IN_P_GENERIC(&cli_addr, cli_addr_size), 
+				SA_IN_P_GENERIC(&ctmp->remote_addr, ctmp->remote_addr_len),
+				SA_IN_SIZE(ctmp->remote_addr_len)) == 0) {
+			matching_ips++;
+			proc_to_send = ctmp;
 		}
+	}
+
+	if (proc_to_send != 0) {
+		UdpFdMsg msg = UDP_FD_MSG__INIT;
+
+		if (matching_ips > 1) {
+			mslog(s, proc_to_send, LOG_INFO, "cannot associate with a client; more than a single clients from this IP");
+			goto fail;
+		}
+
+		if (now - proc_to_send->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
+			mslog(s, proc_to_send, LOG_INFO, "received UDP connection too soon");
+			goto fail;
+		}
+
+		ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
+		if (ret == -1) {
+			e = errno;
+			mslog(s, proc_to_send, LOG_ERR, "connect UDP socket: %s", strerror(e));
+			goto fail;
+		}
+
+		if (match_ip_only != 0) {
+			msg.hello = 0;
+		}
+
+		ret = send_socket_msg_to_worker(s, proc_to_send, CMD_UDP_FD,
+			listener->fd,
+			&msg, 
+			(pack_size_func)udp_fd_msg__get_packed_size,
+			(pack_func)udp_fd_msg__pack);
+		if (ret < 0) {
+			mslog(s, proc_to_send, LOG_ERR, "error passing UDP socket");
+			goto fail;
+		}
+		mslog(s, proc_to_send, LOG_DEBUG, "passed UDP socket");
+		proc_to_send->udp_fd_receive_time = now;
+		connected = 1;
+
+		reopen_udp_port(listener);
 	}
 
 fail:
@@ -709,7 +737,7 @@ fail:
 
 		return -1;
 	}
-	
+
 	return 0;
 
 }
@@ -771,14 +799,14 @@ unsigned total = 10;
 static int check_tcp_wrapper(int fd)
 {
 	struct request_info req;
-	
+
 	if (request_init(&req, RQ_FILE, fd, RQ_DAEMON, PACKAGE_NAME, 0) == NULL)
 		return -1;
-	
+
 	sock_host(&req);
 	if (hosts_access(&req) == 0)
 		return -1;
-		
+
 	return 0;
 }
 #else
@@ -831,7 +859,7 @@ int main(int argc, char** argv)
 
 	/* Initialize GnuTLS */
 	tls_global_init(&s);
-	
+
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, s.cookie_key, sizeof(s.cookie_key));
 	if (ret < 0) {
 		fprintf(stderr, "Error in cookie key generation\n");

@@ -50,10 +50,7 @@ int handle_worker_commands(struct worker_st *ws)
 	uint16_t length;
 	int e;
 	struct msghdr hdr;
-	union {
-		char x[32];
-		struct sockaddr_storage ss;
-	} cmd_data;
+	uint8_t cmd_data[32];
 	union {
 		struct cmsghdr    cm;
 		char              control[CMSG_SPACE(sizeof(int))];
@@ -70,7 +67,7 @@ int handle_worker_commands(struct worker_st *ws)
 	iov[1].iov_base = &length;
 	iov[1].iov_len = 2;
 
-	iov[2].iov_base = &cmd_data;
+	iov[2].iov_base = cmd_data;
 	iov[2].iov_len = sizeof(cmd_data);
 	
 	memset(&hdr, 0, sizeof(hdr));
@@ -92,16 +89,31 @@ int handle_worker_commands(struct worker_st *ws)
 		exit(0);
 	}
 
-	oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
+	if (length > ret - 3) {
+		oclog(ws, LOG_DEBUG, "worker received invalid message %s of %u bytes that claims to be %u\n", cmd_request_to_str(cmd), (unsigned)ret-3, (unsigned)length);
+		exit(1);
+	} else {
+		oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
+	}
 
 	/*cmd_data_len = ret - 1;*/
 	
 	switch(cmd) {
 		case CMD_TERMINATE:
 			exit(0);
-		case CMD_UDP_FD:
+		case CMD_UDP_FD: {
+			UdpFdMsg *tmsg;
+			unsigned hello = 1;
+			int fd;
+
 			if (ws->udp_state != UP_WAIT_FD) {
 				oclog(ws, LOG_INFO, "received another a UDP fd!");
+			}
+
+			tmsg = udp_fd_msg__unpack(NULL, length, cmd_data);
+			if (tmsg) {
+				hello = tmsg->hello;
+				udp_fd_msg__free_unpacked(tmsg, NULL);
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
@@ -110,18 +122,32 @@ int handle_worker_commands(struct worker_st *ws)
 					goto udp_fd_fail;
 				}
 
+				memcpy(&fd, CMSG_DATA(cmptr), sizeof(int));
+
+				if (hello == 0) {
+					/* only replace our session if we are inactive for more than 60 secs */
+					if ((ws->udp_state != UP_ACTIVE && ws->udp_state != UP_INACTIVE) ||
+						time(0) - ws->last_msg_udp < 60) {
+						oclog(ws, LOG_INFO, "received UDP fd message but our session is active!");
+						close(fd);
+						return 0;
+					}
+				} else { /* received client hello */
+					ws->udp_state = UP_SETUP;
+				}
+
 				if (ws->udp_fd != -1) {
 					close(ws->udp_fd);
 				}
-
-				memcpy(&ws->udp_fd, CMSG_DATA(cmptr), sizeof(int));
-				ws->udp_state = UP_SETUP;
+				ws->udp_fd = fd;
 
 				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
 				return 0;
 			} else {
 				oclog(ws, LOG_ERR, "could not receive peer's UDP fd");
 				return -1;
+			}
+
 			}
 			break;
 		default:

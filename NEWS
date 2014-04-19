@@ -3,6 +3,8 @@
 - Execute disconnect script for users that their IP was hijacked by a
   cookie reconnection.
 - Several small bug fixes found by coverity.
+- When receiving unexpected UDP packets, check if they match a known IP and
+  forward them.
 
 
 * Version 0.3.3 (released 2014-04-08)

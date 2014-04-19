@@ -75,6 +75,10 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(sendto, 0);
 	ADD_SYSCALL(recvfrom, 0);
 
+	/* allow returning from the signal handler */
+	ADD_SYSCALL(sigreturn, 0);
+	ADD_SYSCALL(rt_sigreturn, 0);
+
 	/* we use it in select */
 	ADD_SYSCALL(sigprocmask, 0);
 	ADD_SYSCALL(rt_sigprocmask, 0);

@@ -75,6 +75,10 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(sendto, 0);
 	ADD_SYSCALL(recvfrom, 0);
 
+	/* we use it in select */
+	ADD_SYSCALL(sigprocmask, 0);
+	ADD_SYSCALL(rt_sigprocmask, 0);
+
 	ADD_SYSCALL(select, 0);
 	ADD_SYSCALL(pselect6, 0);
 	ADD_SYSCALL(close, 0);

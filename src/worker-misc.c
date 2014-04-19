@@ -235,7 +235,7 @@ void ocsigaltstack(struct worker_st *ws)
 		      "could not allocate memory for signal stack");
 		exit(1);
 	}
-	if (mprotect(ss.ss_sp, SIGSTKSZ, PROT_EXEC) == -1) {
+	if (mprotect(ss.ss_sp, SIGSTKSZ, PROT_READ|PROT_WRITE) == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "mprotect: %s\n", strerror(e));
 		exit(1);

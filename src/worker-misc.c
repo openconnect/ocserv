@@ -43,6 +43,11 @@
 #include <cookies.h>
 #include <tlslib.h>
 
+#ifdef HAVE_SIGALTSTACK
+# include <signal.h>
+# include <sys/mman.h>
+#endif
+
 int handle_worker_commands(struct worker_st *ws)
 {
 	struct iovec iov[3];
@@ -216,4 +221,31 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 	}
 
 	return 0;
+}
+
+void ocsigaltstack(struct worker_st *ws)
+{
+#ifdef HAVE_SIGALTSTACK
+	stack_t ss;
+	int e;
+
+	/* setup the stack for signal handlers */
+	if (posix_memalign(&ss.ss_sp, getpagesize(), SIGSTKSZ) < 0) {
+		oclog(ws, LOG_ERR,
+		      "could not allocate memory for signal stack");
+		exit(1);
+	}
+	if (mprotect(ss.ss_sp, SIGSTKSZ, PROT_EXEC) == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "mprotect: %s\n", strerror(e));
+		exit(1);
+	}
+	ss.ss_size = SIGSTKSZ;
+	ss.ss_flags = 0;
+	if (sigaltstack(&ss, NULL) == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "sigaltstack: %s\n", strerror(e));
+		exit(1);
+	}
+#endif
 }

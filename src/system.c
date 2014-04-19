@@ -23,12 +23,15 @@
 # include <sys/prctl.h>
 #endif
 
+#include <signal.h>
+
 void kill_on_parent_kill(int sig)
 {
 #ifdef __linux__
 	prctl(PR_SET_PDEATHSIG, sig);
 #endif
 }
+
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 {

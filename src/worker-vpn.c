@@ -642,6 +642,8 @@ void vpn_server(struct worker_st *ws)
 	url_handler_fn fn;
 	int requests_left = MAX_HTTP_REQUESTS;
 
+	ocsigaltstack(ws);
+
 	ocsignal(SIGTERM, handle_term);
 	ocsignal(SIGINT, handle_term);
 	ocsignal(SIGHUP, SIG_IGN);

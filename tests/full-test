@@ -37,9 +37,13 @@ if ! test -x $DOCKER;then
 	exit 77
 fi
 
-echo "****************************************************************"
-echo "This test requires compiling ocserv using --enable-local-libopts"
-echo "****************************************************************"
+grep lo_cv_test_autoopts $srcdir/../config.log|grep lopts >/dev/null 2>&1
+if test $? = 0;then
+	echo "****************************************************************"
+	echo "This test requires compiling ocserv using --enable-local-libopts"
+	echo "****************************************************************"
+	exit 77
+fi
 
 stop() {
 	$DOCKER stop test_ocserv
@@ -74,6 +78,10 @@ fi
 sleep 5
 
 IP=`$DOCKER inspect test_ocserv | grep IPAddress | cut -d '"' -f 4`
+if test -z "$IP";then
+	echo "Detected IP is null!"
+	stop
+fi
 
 printf "test\ntest\n" >pass.tmp
 openconnect $IP:5551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &

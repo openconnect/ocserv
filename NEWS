@@ -5,6 +5,9 @@
 - Several small bug fixes found by coverity.
 - When receiving unexpected UDP packets, check if they match a known IP and
   forward them.
+- The disconnect script will now receive the STATS_BYTES_IN and
+  STATS_BYTES_OUT variables that contain the number of bytes transferred
+  from the TUN device.
 
 
 * Version 0.3.3 (released 2014-04-08)

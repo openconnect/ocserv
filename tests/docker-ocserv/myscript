@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "$REASON" != "connect" ];then
+	if test "$STATS_BYTES_IN" != "0";then
+		echo $STATS_BYTES_IN >/tmp/disconnect/ok
+	else
+		echo $STATS_BYTES_IN >/tmp/disconnect/not-ok
+	fi
+fi
+
+exit 0

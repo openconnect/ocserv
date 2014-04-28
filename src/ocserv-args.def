@@ -230,6 +230,10 @@ rekey-method = ssl
 # assigned), IPV6_REMOVE (the IPv6 remote address), and
 # ID (a unique numeric ID); REASON may be "connect" or "disconnect".
 
+# The disconnect script will received the additional values: STATS_BYTES_IN,
+# STATS_BYTES_OUT, that contain a 64-bit counter of the bytes output from the
+# tun device.
+
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript
 

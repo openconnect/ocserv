@@ -73,14 +73,20 @@
 #define CSTP_DTLS_OVERHEAD 1
 #define CSTP_OVERHEAD 8
 
+struct worker_st *global_ws = NULL;
+
 static int terminate = 0;
 static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
+static void exit_worker(worker_st * ws);
 
 static void handle_alarm(int signo)
 {
+	if (global_ws)
+		exit_worker(global_ws);
+
 	exit(1);
 }
 
@@ -613,6 +619,21 @@ static void http_req_deinit(worker_st * ws)
 static
 void exit_worker(worker_st * ws)
 {
+	/* send statistics to parent */
+	if (ws->auth_state == S_AUTH_COMPLETE) {
+		CliStatsMsg msg = CLI_STATS_MSG__INIT;
+
+		msg.bytes_in = ws->tun_bytes_in;
+		msg.bytes_out = ws->tun_bytes_out;
+
+		send_msg_to_main(ws, CMD_CLI_STATS, &msg,
+			 (pack_size_func) cli_stats_msg__get_packed_size,
+			 (pack_func) cli_stats_msg__pack);
+
+		oclog(ws, LOG_DEBUG, "sending stats (in: %lu, out: %lu) to main",
+			(unsigned long)msg.bytes_in,
+			(unsigned long)msg.bytes_out);
+	}
 	closelog();
 	exit(1);
 }
@@ -649,6 +670,7 @@ void vpn_server(struct worker_st *ws)
 	ocsignal(SIGHUP, SIG_IGN);
 	ocsignal(SIGALRM, handle_alarm);
 
+	global_ws = ws;
 	if (ws->config->auth_timeout)
 		alarm(ws->config->auth_timeout);
 
@@ -1218,7 +1240,6 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 		return 0;
 	}
-
 	if (l == 0) {
 		oclog(ws, LOG_INFO, "TUN device returned zero");
 		return 0;
@@ -1228,6 +1249,8 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	if (bandwidth_update(&ws->b_tx, l, ws->conn_mtu, tnow)
 	    != 0) {
 		tls_retry = 0;
+
+		ws->tun_bytes_out += l;
 		oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
 		if (ws->udp_state == UP_ACTIVE) {
 
@@ -1941,6 +1964,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 			      strerror(e));
 			return -1;
 		}
+		ws->tun_bytes_in += buf_size;
 		ws->last_nc_msg = now;
 
 		break;

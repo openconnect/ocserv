@@ -127,6 +127,11 @@ struct proc_st {
 	void * auth_ctx; /* the context of authentication */
 	unsigned status; /* PS_AUTH_ */
 	unsigned auth_reqs; /* the number of requests received */
+
+	/* these are filled in after the worker process dies, using the
+	 * Cli stats message. */
+	uint64_t bytes_in;
+	uint64_t bytes_out;
 	
 	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
 	struct group_cfg_st config; /* custom user/group config */

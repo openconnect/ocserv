@@ -108,6 +108,7 @@ typedef enum {
 	CMD_TERMINATE = 12,
 	CMD_SESSION_INFO = 13,
 	AUTH_REINIT = 14,
+	CMD_CLI_STATS = 15,
 } cmd_request_t;
 
 typedef struct 

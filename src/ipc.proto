@@ -135,6 +135,12 @@ message tun_mtu_msg
 	required uint32 mtu = 1;
 }
 
+message cli_stats_msg
+{
+	required uint64 bytes_in = 1;
+	required uint64 bytes_out = 2;
+}
+
 /* UDP_FD */
 message udp_fd_msg
 {

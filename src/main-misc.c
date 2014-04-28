@@ -445,6 +445,30 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 		}
 
 		break;
+	case CMD_CLI_STATS:{
+			CliStatsMsg *tmsg;
+
+			if (proc->status != PS_AUTH_COMPLETED) {
+				mslog(s, proc, LOG_ERR,
+				      "received CLI STATS in unauthenticated state.");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
+			tmsg = cli_stats_msg__unpack(NULL, raw_len, raw);
+			if (tmsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
+			proc->bytes_in = tmsg->bytes_in;
+			proc->bytes_out = tmsg->bytes_out;
+
+			cli_stats_msg__free_unpacked(tmsg, NULL);
+		}
+
+		break;
 	case CMD_SESSION_INFO:{
 			SessionInfoMsg *tmsg;
 

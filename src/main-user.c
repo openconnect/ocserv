@@ -123,8 +123,14 @@ const char* script;
 		setenv("DEVICE", proc->tun_lease.name, 1);
 		if (up)
 			setenv("REASON", "connect", 1);
-		else
+		else {
+			/* use remote as temp buffer */
+			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_in);
+			setenv("STATS_BYTES_IN", remote, 1);
+			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_out);
+			setenv("STATS_BYTES_OUT", remote, 1);
 			setenv("REASON", "disconnect", 1);
+		}
 
 		mslog(s, proc, LOG_DEBUG, "executing script %s", script);
 		ret = execl(script, script, NULL);

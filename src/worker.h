@@ -202,6 +202,10 @@ typedef struct worker_st {
 	unsigned cert_auth_ok;
 	int tun_fd;
 
+	/* tun device stats */
+	uint64_t tun_bytes_in;
+	uint64_t tun_bytes_out;
+
 	/* information on the tun device addresses and network */
 	struct vpn_st vinfo;
 	

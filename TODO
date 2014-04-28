@@ -6,11 +6,6 @@ Short term items:
   requires the reload of all certificates/parameters on the worker
   process, and imposes a quite high penalty (see the 'exec' branch).
 
-* On worker process exit, send the main process the packet/bytes statistics
-  of the tun device. That would allow the main process to report them 
-  to the disconnect script. That will most probably require ocserv to
-  be linked with libnl3, and more system calls to be allowed by seccomp.
-
 * Think for ways for ocserv to co-exist on the same system with
   an HTTPS server (while sharing the same port).
 

@@ -8,6 +8,8 @@
 - The disconnect script will now receive the STATS_BYTES_IN and
   STATS_BYTES_OUT variables that contain the number of bytes transferred
   from the TUN device.
+- Fix segmentation fault during worker process exit when seccomp
+  is enabled.
 
 
 * Version 0.3.3 (released 2014-04-08)

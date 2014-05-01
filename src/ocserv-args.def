@@ -114,7 +114,7 @@ keepalive = 32400
 # Note that when the client is behind a NAT this value
 # needs to be short enough to prevent the NAT disassociating
 # his UDP session from the port number. Otherwise the client
-# could have his UDP stalled, for several minutes.
+# could have his UDP connection stalled, for several minutes.
 dpd = 90
 
 # Dead peer detection for mobile clients. The needs to
@@ -132,8 +132,11 @@ try-mtu-discovery = false
 # tpmkey:uuid=xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx;storage=user
 # or pkcs11:object=my-vpn-key;object-type=private)
 #
-# There may be multiple certificate and key pairs and each key
-# should correspond to the preceding certificate.
+# The server-cert file may contain a single certificate, or
+# a sorted certificate chain.
+#
+# There may be multiple server-cert and server-key directives,
+# but each key should correspond to the preceding certificate.
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 

@@ -227,7 +227,7 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 
 void ocsigaltstack(struct worker_st *ws)
 {
-#ifdef HAVE_SIGALTSTACK
+#if defined(HAVE_SIGALTSTACK) && defined(HAVE_POSIX_MEMALIGN)
 	stack_t ss;
 	int e;
 

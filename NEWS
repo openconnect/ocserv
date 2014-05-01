@@ -1,4 +1,4 @@
-* Version 0.3.4 (unreleased)
+* Version 0.3.4 (released 2014-05-01)
 
 - Execute disconnect script for users that their IP was hijacked by a
   cookie reconnection.

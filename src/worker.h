@@ -158,6 +158,7 @@ typedef struct worker_st {
 	time_t last_nc_msg; /* last message that wasn't control, on any channel */
 
 	time_t last_periodic_check;
+	time_t last_stats_sent;
 
 	/* set after authentication */
 	int udp_fd;

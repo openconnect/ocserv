@@ -204,6 +204,11 @@ auth-timeout = 40
 # a failed authentication attempt.
 #min-reauth-time = 2
 
+# The time (in seconds) that a worker process will send usage statistics
+# to the main process. Enable that option if you rely on the accuracy of
+# STATS_BYTES_IN/OUT environment variables in the disconnect script.
+#stats-send-time = 900
+
 # Cookie validity time (in seconds)
 # Once a client is authenticated he's provided a cookie with
 # which he can reconnect. This option sets the maximum lifetime

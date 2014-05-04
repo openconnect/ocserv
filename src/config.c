@@ -90,6 +90,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "stats-send-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-method", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "idle-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -388,6 +389,8 @@ unsigned force_cert_auth;
 	config->tx_per_sec /= 1000;
 
 	READ_NUMERIC("cookie-validity", config->cookie_validity);
+
+	READ_NUMERIC("stats-send-time", config->stats_send_time);
 
 	config->rekey_time = -1;
 	READ_NUMERIC("rekey-time", config->rekey_time);

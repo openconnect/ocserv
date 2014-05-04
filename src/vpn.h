@@ -202,6 +202,7 @@ struct cfg_st {
 	unsigned split_dns_size;;
 
 	char* socket_file_prefix;
+	time_t stats_send_time;	/* in seconds */
 	time_t cookie_validity;	/* in seconds */
 
 	time_t rekey_time;	/* in seconds */

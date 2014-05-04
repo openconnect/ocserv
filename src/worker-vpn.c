@@ -616,23 +616,28 @@ static void http_req_deinit(worker_st * ws)
 	ws->req.body = NULL;
 }
 
+static void send_stats(worker_st * ws)
+{
+	CliStatsMsg msg = CLI_STATS_MSG__INIT;
+
+	msg.bytes_in = ws->tun_bytes_in;
+	msg.bytes_out = ws->tun_bytes_out;
+
+	send_msg_to_main(ws, CMD_CLI_STATS, &msg,
+		 (pack_size_func) cli_stats_msg__get_packed_size,
+		 (pack_func) cli_stats_msg__pack);
+
+	oclog(ws, LOG_DEBUG, "sending stats (in: %lu, out: %lu) to main",
+		(unsigned long)msg.bytes_in,
+		(unsigned long)msg.bytes_out);
+}
+
 static
 void exit_worker(worker_st * ws)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		CliStatsMsg msg = CLI_STATS_MSG__INIT;
-
-		msg.bytes_in = ws->tun_bytes_in;
-		msg.bytes_out = ws->tun_bytes_out;
-
-		send_msg_to_main(ws, CMD_CLI_STATS, &msg,
-			 (pack_size_func) cli_stats_msg__get_packed_size,
-			 (pack_func) cli_stats_msg__pack);
-
-		oclog(ws, LOG_DEBUG, "sending stats (in: %lu, out: %lu) to main",
-			(unsigned long)msg.bytes_in,
-			(unsigned long)msg.bytes_out);
+		send_stats(ws);
 	}
 	closelog();
 	exit(1);
@@ -950,6 +955,14 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 			goto cleanup;
 		}
 
+	}
+
+	/* periodically sent our usage stats */
+	if (ws->config->stats_send_time != 0 && 
+		now - ws->last_stats_sent > ws->config->stats_send_time) {
+
+		send_stats(ws);
+		ws->last_stats_sent = now;
 	}
 
 	/* check DPD. Otherwise exit */
@@ -1786,7 +1799,8 @@ static int connect_handler(worker_st * ws)
 
 	/* start dead peer detection */
 	gettime(&tnow);
-	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = tnow.tv_sec;
+	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = 
+		ws->last_stats_sent = tnow.tv_sec;
 
 	bandwidth_init(&ws->b_rx, ws->config->rx_per_sec);
 	bandwidth_init(&ws->b_tx, ws->config->tx_per_sec);

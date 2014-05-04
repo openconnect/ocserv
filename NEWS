@@ -1,9 +1,11 @@
 * Version 0.3.5 (unreleased)
 
-- Corrected issue in the stats reporting for resumed processes.
+- Corrected issue in the stats reporting for resumed processes and
+  modified its sending to be periodically, in addition to the worker
+  process termination time (adds the new config file variable
+  stats-send-time).
 - Added the STATS_DURATION script environment variable which reports
   the duration of the session in seconds.
-
 
 * Version 0.3.4 (released 2014-05-01)
 

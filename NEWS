@@ -1,3 +1,8 @@
+* Version 0.3.5 (unreleased)
+
+- Corrected issue in the stats reporting for resumed processes.
+
+
 * Version 0.3.4 (released 2014-05-01)
 
 - Execute disconnect script for users that their IP was hijacked by a

@@ -1353,6 +1353,7 @@ static int connect_handler(worker_st * ws)
 			tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 			exit_worker(ws);
 		}
+		ws->auth_state= S_AUTH_COMPLETE;
 	}
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {

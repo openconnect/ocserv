@@ -961,7 +961,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 		ret = tls_send(ws->dtls_session, ws->buffer, 1);
-		GNUTLS_FATAL_ERR(ret);
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 		if (now - ws->last_msg_udp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
@@ -983,7 +983,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		ws->buffer[7] = 0;
 
 		ret = tls_send(ws->session, ws->buffer, 8);
-		GNUTLS_FATAL_ERR(ret);
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
@@ -1060,7 +1060,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);
 
-		GNUTLS_FATAL_ERR(ret);
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 		if (ret == GNUTLS_E_REHANDSHAKE) {
 
@@ -1083,7 +1083,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			} while (ret == GNUTLS_E_AGAIN
 				 || ret == GNUTLS_E_INTERRUPTED);
 
-			GNUTLS_FATAL_ERR(ret);
+			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 			oclog(ws, LOG_INFO, "DTLS rehandshake completed");
 
 			ws->last_dtls_rehandshake = tnow->tv_sec;
@@ -1174,7 +1174,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	int ret, l;
 
 	ret = tls_recv_nb(ws->session, ws->buffer, ws->buffer_size);
-	GNUTLS_FATAL_ERR(ret);
+	GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 	if (ret == 0) {		/* disconnect */
 		oclog(ws, LOG_INFO, "client disconnected");
@@ -1213,7 +1213,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		do {
 			ret = gnutls_handshake(ws->session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-		GNUTLS_FATAL_ERR(ret);
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 		ws->last_tls_rehandshake = tnow->tv_sec;
 		oclog(ws, LOG_INFO, "TLS rehandshake completed");
@@ -1257,7 +1257,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			ws->buffer[7] = AC_PKT_DATA;
 
 			ret = tls_send(ws->dtls_session, ws->buffer + 7, l + 1);
-			GNUTLS_FATAL_ERR(ret);
+			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {
 				mtu_not_ok(ws);
@@ -1282,7 +1282,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			ws->buffer[7] = 0;
 
 			ret = tls_send(ws->session, ws->buffer, l + 8);
-			GNUTLS_FATAL_ERR(ret);
+			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 		}
 		ws->last_nc_msg = tnow->tv_sec;
 	}
@@ -1821,7 +1821,7 @@ static int connect_handler(worker_st * ws)
 			oclog(ws, LOG_TRANSFER_DEBUG,
 			      "sending disconnect message in TLS channel");
 			ret = tls_send(ws->session, ws->buffer, 8);
-			GNUTLS_FATAL_ERR(ret);
+			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 			goto exit;
 		}
 

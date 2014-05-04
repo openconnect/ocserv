@@ -52,10 +52,19 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 #define GNUTLS_FATAL_ERR(x) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
                 if (syslog_open) \
-       			syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+                	syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
                 else \
                         fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
                 exit(1); \
+        }
+
+#define GNUTLS_FATAL_ERR_CMD(x, CMD) \
+        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+                if (syslog_open) \
+                	syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+                else \
+                        fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+                CMD; \
         }
 
 #define GNUTLS_S_FATAL_ERR(session, x) \

@@ -60,6 +60,8 @@ static char tmp[32];
 		return "terminate";
 	case CMD_SESSION_INFO:
 		return "session info";
+	case CMD_CLI_STATS:
+		return "cli stats";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

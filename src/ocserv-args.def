@@ -234,8 +234,8 @@ rekey-method = ssl
 # ID (a unique numeric ID); REASON may be "connect" or "disconnect".
 
 # The disconnect script will received the additional values: STATS_BYTES_IN,
-# STATS_BYTES_OUT, that contain a 64-bit counter of the bytes output from the
-# tun device.
+# STATS_BYTES_OUT, STATS_DURATION that contain a 64-bit counter of the bytes 
+# output from the tun device, and the duration of the session in seconds.
 
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript

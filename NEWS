@@ -1,6 +1,8 @@
 * Version 0.3.5 (unreleased)
 
 - Corrected issue in the stats reporting for resumed processes.
+- Added the STATS_DURATION script environment variable which reports
+  the duration of the session in seconds.
 
 
 * Version 0.3.4 (released 2014-05-01)

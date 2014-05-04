@@ -8,7 +8,7 @@ if [ "$REASON" = "connect" ];then
 else
 	iptables -D INPUT -i $DEVICE -j ACCEPT
 
-	echo "User '$USERNAME' from '$IP_REAL' disconnected (in: $STATS_BYTES_IN, out: $STATS_BYTES_OUT)."
+	echo "User '$USERNAME' from '$IP_REAL' disconnected (in: $STATS_BYTES_IN, out: $STATS_BYTES_OUT, time: $STATS_DURATION)."
 fi
 
 exit 0

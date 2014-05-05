@@ -482,7 +482,7 @@ $ cat << _EOF_ >ca.tmpl
 cn = "VPN CA"
 organization = "Big Corp"
 serial = 1
-expiration_days = 9999
+expiration_days = -1
 ca
 signing_key
 cert_signing_key
@@ -503,7 +503,7 @@ $ cat << _EOF_ >server.tmpl
 cn = "www.example.com"
 o = "MyCompany"
 serial = 2
-expiration_days = 9999
+expiration_days = -1
 signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
@@ -527,7 +527,7 @@ $ cat << _EOF_ >server.tmpl
 cn = "www.example.com"
 o = "MyCompany"
 serial = 2
-expiration_days = 9999
+expiration_days = -1
 signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
@@ -549,7 +549,7 @@ $ cat << _EOF_ >user.tmpl
 cn = "user"
 ou = "admins"
 serial = 1824
-expiration_days = 9999
+expiration_days = -1
 signing_key
 tls_www_client
 _EOF_
@@ -563,7 +563,7 @@ $ certtool --generate-certificate --load-privkey user-key.pem \
 To revoke the previous client certificate use:
 @example
 $ cat << _EOF_ >crl.tmpl
-crl_next_update = 999
+crl_next_update = 600
 crl_number = 1
 _EOF_
 $ cat user-cert.pem >>revoked.pem

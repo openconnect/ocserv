@@ -4,7 +4,8 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBGNUTLS_CFLAGS) \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS) \
-	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS)
+	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS) \
+	$(LIBTALLOC_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
@@ -38,6 +39,12 @@ CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
 	ccan/container_of/container_of.h ccan/hash/hash.c ccan/hash/hash.h \
 	ccan/htable/htable.c ccan/htable/htable.h ccan/htable/htable_type.h \
 	ccan/list/list.c ccan/list/list.h
+
+if LOCAL_TALLOC
+CCAN_SOURCES += ccan/talloc/talloc.c ccan/talloc/talloc.h ccan/compiler/compiler.h \
+	ccan/typesafe_cb/typesafe_cb.h
+endif
+
 
 noinst_LIBRARIES = libcmd-ocserv.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h

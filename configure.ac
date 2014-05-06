@@ -92,6 +92,32 @@ fi
 
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
+
+AC_ARG_WITH(talloc,
+  AS_HELP_STRING([--without-talloc], [use the included talloc library]),
+  test_for_talloc=$withval,
+  test_for_talloc=yes)
+
+with_local_talloc=no
+if test "$test_for_talloc" = yes;then
+PKG_CHECK_MODULES([LIBPROTOBUF_C], [libtalloc-c],,
+[AC_LIB_HAVE_LINKFLAGS(talloc,, [#include <talloc.h>], [talloc_size(0,0);])
+ if test x$ac_cv_libtalloc = xyes; then
+  AC_SUBST([LIBTALLOC_LIBS], [$LIBTALLOC])
+ else
+  AC_MSG_WARN([[***
+*** libtalloc-c was not found.
+***]])
+  AC_SUBST([LIBTALLOC_CFLAGS], [-Iccan/talloc/ -Iccan/typedef_cb/ -Iccan/compiler/])
+  with_local_talloc=yes
+ fi
+]
+)
+fi
+
+AM_CONDITIONAL(LOCAL_TALLOC, test "x$with_local_talloc" != xno)
+
+
 AC_ARG_WITH(libnl,
   AS_HELP_STRING([--without-libnl], [do not try to use the libnl library]),
   test_for_libnl=$withval,
@@ -349,6 +375,7 @@ Summary of build options:
   dbus:                 ${dbus_enabled}
   readline:             ${have_readline}
   libnl3:               ${have_libnl3}
+  local talloc:         ${with_local_talloc}
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}

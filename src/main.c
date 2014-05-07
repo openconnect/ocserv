@@ -46,6 +46,7 @@
 # include <systemd/sd-daemon.h>
 #endif
 #include <main.h>
+#include <main-ctl.h>
 #include <route-add.h>
 #include <main-auth.h>
 #include <worker.h>
@@ -818,7 +819,6 @@ int main(int argc, char** argv)
 	int fd, pid, e;
 	struct listener_st *ltmp = NULL;
 	struct proc_st *ctmp = NULL, *cpos;
-	struct ctl_handler_st* ctl_tmp = NULL, *ctl_pos;
 	fd_set rd_set, wr_set;
 	int n = 0, ret, flags;
 #ifdef HAVE_PSELECT
@@ -838,7 +838,6 @@ int main(int argc, char** argv)
 	list_head_init(&s.proc_list.head);
 	list_head_init(&s.ban_list.head);
 	list_head_init(&s.script_list.head);
-	list_head_init(&s.ctl_list.head);
 	tls_cache_init(&s.tls_db);
 	ip_lease_init(&s.ip_leases);
 
@@ -950,15 +949,8 @@ int main(int argc, char** argv)
 			}
 		}
 
-		list_for_each(&s.ctl_list.head, ctl_tmp, list) {
-			if (ctl_tmp->enabled) {
-				if (ctl_tmp->type == CTL_READ)
-					FD_SET(ctl_tmp->fd, &rd_set);
-				else
-					FD_SET(ctl_tmp->fd, &wr_set);
-				n = MAX(n, ctl_tmp->fd);
-			}
-		}
+		ret = ctl_handler_set_fds(&s, &rd_set, &wr_set);
+		n = MAX(n, ret);
 
 #ifdef HAVE_PSELECT
 		ts.tv_nsec = 0;
@@ -1114,18 +1106,7 @@ fork_failed:
 		}
 
 		/* Check for pending control commands */
-		list_for_each_safe(&s.ctl_list.head, ctl_tmp, ctl_pos, list) {
-			if (ctl_tmp->enabled == 0)
-				continue;
-
-			if (ctl_tmp->type == CTL_READ) {
-				if (FD_ISSET(ctl_tmp->fd, &rd_set))
-					ctl_handle_commands(&s, ctl_tmp);
-			} else {
-				if (FD_ISSET(ctl_tmp->fd, &wr_set))
-					ctl_handle_commands(&s, ctl_tmp);
-			}
-		}
+		ctl_handler_run_pending(&s, &rd_set, &wr_set);
 	}
 
 	return 0;

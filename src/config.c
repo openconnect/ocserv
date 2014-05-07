@@ -80,7 +80,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
-	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 1 },
+	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },

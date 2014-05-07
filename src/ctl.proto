@@ -1,0 +1,54 @@
+/* STATUS */
+message status_rep
+{
+	required bool status = 1;
+	required uint32 pid = 2;
+	required uint32 sec_mod_pid = 3;
+	required uint32 active_clients = 4;
+}
+
+message bool_msg
+{
+	required bool status = 1 [default = false];
+}
+
+message user_info_rep
+{
+	required sint32 id = 1;
+	required string username = 2;
+	optional string groupname = 3;
+	required string ip = 4;
+	optional string tun = 5;
+	optional string remote_ip = 6;
+	optional string local_ip = 7;
+	optional string remote_ip6 = 8;
+	optional string local_ip6 = 9;
+	required uint32 conn_time = 10;
+	optional string hostname = 11;
+	optional string user_agent = 12;
+	required string status = 13;
+	optional string tls_ciphersuite = 14;
+	optional string dtls_ciphersuite = 15;
+
+	optional uint32 rx_per_sec = 16;
+	optional uint32 tx_per_sec = 17;
+	repeated string dns = 18;
+	repeated string nbns = 19;
+	repeated string routes = 20;
+	repeated string iroutes = 21;
+}
+
+message user_list_rep
+{
+	repeated user_info_rep user = 1;
+}
+
+message username_req
+{
+	required string username = 1;
+}
+
+message id_req
+{
+	required sint32 id = 1;
+}

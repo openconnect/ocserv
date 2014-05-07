@@ -29,34 +29,53 @@
 #include <ip-lease.h>
 
 #include <errno.h>
-
-#ifdef HAVE_DBUS
-
+#include <main-ctl.h>
 #include <dbus/dbus.h>
 #include <str.h>
 
-static void method_status(main_server_st * s, DBusConnection * conn,
+#define OCSERV_DBUS_NAME "org.infradead.ocserv"
+
+struct ctl_list_st {
+	struct list_head head;
+};
+
+struct dbus_ctx {
+	struct ctl_list_st ctl_list;
+	DBusConnection *conn;
+};
+
+static void method_status(main_server_st * s, struct dbus_ctx *ctx,
 			  DBusMessage * msg);
-static void method_list_users(main_server_st * s, DBusConnection * conn,
+static void method_list_users(main_server_st * s, struct dbus_ctx *ctx,
 			      DBusMessage * msg);
 static void method_disconnect_user_name(main_server_st * s,
-					DBusConnection * conn,
+					struct dbus_ctx *ctx,
 					DBusMessage * msg);
-static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
+static void method_disconnect_user_id(main_server_st * s, struct dbus_ctx *ctx,
 				      DBusMessage * msg);
-static void method_introspect(main_server_st * s, DBusConnection * conn,
+static void method_introspect(main_server_st * s, struct dbus_ctx *ctx,
 			      DBusMessage * msg);
-static void method_stop(main_server_st * s, DBusConnection * conn,
+static void method_stop(main_server_st * s, struct dbus_ctx *ctx,
 			DBusMessage * msg);
-static void method_reload(main_server_st * s, DBusConnection * conn,
+static void method_reload(main_server_st * s, struct dbus_ctx *ctx,
 			  DBusMessage * msg);
-static void method_user_info(main_server_st * s, DBusConnection * conn,
+static void method_user_info(main_server_st * s, struct dbus_ctx *ctx,
 			     DBusMessage * msg);
-static void method_id_info(main_server_st * s, DBusConnection * conn,
+static void method_id_info(main_server_st * s, struct dbus_ctx *ctx,
 			   DBusMessage * msg);
 
-typedef void (*method_func) (main_server_st * s, DBusConnection * conn,
+typedef void (*method_func) (main_server_st * s, struct dbus_ctx *ctx,
 			     DBusMessage * msg);
+#define CTL_READ 1
+#define CTL_WRITE 2
+
+struct ctl_handler_st {
+	struct list_node list;
+	int fd;
+	unsigned type;		/* CTL_READ/WRITE */
+	unsigned enabled;
+	void *watch;
+};
 
 typedef struct {
 	char *name;
@@ -137,7 +156,7 @@ static const ctl_method_st methods[] = {
 	{NULL, 0, NULL, 0, NULL}
 };
 
-static void add_ctl_fd(main_server_st * s, int fd, void *watch, unsigned type)
+static void add_ctl_fd(struct dbus_ctx *ctx, int fd, void *watch, unsigned type)
 {
 	struct ctl_handler_st *tmp;
 
@@ -153,25 +172,25 @@ static void add_ctl_fd(main_server_st * s, int fd, void *watch, unsigned type)
 	tmp->watch = watch;
 	tmp->type = type;
 
-	mslog(s, NULL, LOG_DEBUG, "dbus: adding %s %swatch for fd: %d",
+	syslog(LOG_DEBUG, "dbus: adding %s %swatch for fd: %d",
 	      (type == CTL_READ) ? "read" : "write",
 	      (tmp->enabled) ? "" : "(disabled) ", fd);
 
-	list_add(&s->ctl_list.head, &(tmp->list));
+	list_add(&ctx->ctl_list.head, &(tmp->list));
 }
 
 static dbus_bool_t add_watch(DBusWatch * watch, void *data)
 {
 	int fd = dbus_watch_get_unix_fd(watch);
-	main_server_st *s = data;
+	struct dbus_ctx *ctx = data;
 	unsigned flags;
 
 	flags = dbus_watch_get_flags(watch);
 
 	if (flags & DBUS_WATCH_READABLE) {
-		add_ctl_fd(s, fd, watch, CTL_READ);
+		add_ctl_fd(ctx, fd, watch, CTL_READ);
 	} else {
-		add_ctl_fd(s, fd, watch, CTL_WRITE);
+		add_ctl_fd(ctx, fd, watch, CTL_WRITE);
 	}
 
 	return 1;
@@ -179,12 +198,12 @@ static dbus_bool_t add_watch(DBusWatch * watch, void *data)
 
 static void remove_watch(DBusWatch * watch, void *data)
 {
-	main_server_st *s = data;
+	struct dbus_ctx *ctx = data;
 	struct ctl_handler_st *btmp = NULL, *bpos;
 
-	list_for_each_safe(&s->ctl_list.head, btmp, bpos, list) {
+	list_for_each_safe(&ctx->ctl_list.head, btmp, bpos, list) {
 		if (btmp->watch == watch) {
-			mslog(s, NULL, LOG_DEBUG,
+			syslog(LOG_DEBUG,
 			      "dbus: removing %s watch for fd: %d",
 			      (btmp->type == CTL_READ) ? "read" : "write",
 			      btmp->fd);
@@ -198,17 +217,17 @@ static void remove_watch(DBusWatch * watch, void *data)
 
 static void toggle_watch(DBusWatch * watch, void *data)
 {
-	main_server_st *s = data;
+	struct dbus_ctx *ctx = data;
 	struct ctl_handler_st *btmp = NULL;
 
-	list_for_each(&s->ctl_list.head, btmp, list) {
+	list_for_each(&ctx->ctl_list.head, btmp, list) {
 		if (btmp->watch == watch) {
 			if (dbus_watch_get_enabled(watch)) {
 				btmp->enabled = 1;
 			} else
 				btmp->enabled = 0;
 
-			mslog(s, NULL, LOG_DEBUG,
+			syslog(LOG_DEBUG,
 			      "dbus: %s %s watch for fd: %d",
 			      (btmp->enabled) ? "enabling" : "disabling",
 			      (btmp->type == CTL_READ) ? "read" : "write",
@@ -218,61 +237,8 @@ static void toggle_watch(DBusWatch * watch, void *data)
 	}
 }
 
-#define OCSERV_DBUS_NAME "org.infradead.ocserv"
 
-void ctl_handler_deinit(main_server_st * s)
-{
-	if (s->config->use_dbus != 0 && s->ctl_ctx != NULL) {
-		mslog(s, NULL, LOG_DEBUG, "closing DBUS connection");
-		dbus_connection_close(s->ctl_ctx);
-		dbus_bus_release_name(s->ctl_ctx, OCSERV_DBUS_NAME, NULL);
-		dbus_connection_unref(s->ctl_ctx);
-	}
-}
-
-/* Initializes unix socket and stores the fd.
- */
-int ctl_handler_init(main_server_st * s)
-{
-	int ret;
-	DBusError err;
-	DBusConnection *conn;
-
-	if (s->config->use_dbus == 0)
-		return 0;
-
-	dbus_error_init(&err);
-
-	conn = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
-	if (conn == NULL)
-		goto error;
-
-	ret = dbus_bus_request_name(conn, OCSERV_DBUS_NAME,
-				    DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
-	if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
-		goto error;
-
-	s->ctl_ctx = conn;
-
-	if (!dbus_connection_set_watch_functions(conn,
-						 add_watch, remove_watch,
-						 toggle_watch, s, NULL)) {
-		goto error;
-	}
-
-	return 0;
-
- error:
-	if (dbus_error_is_set(&err)) {
-		fprintf(stderr, "DBUS connection error (%s)", err.message);
-		dbus_error_free(&err);
-	}
-	ctl_handler_deinit(s);
-
-	return ERR_CTL;
-}
-
-static void method_status(main_server_st * s, DBusConnection * conn,
+static void method_status(main_server_st * s, struct dbus_ctx *ctx,
 			  DBusMessage * msg)
 {
 	DBusMessage *reply;
@@ -315,7 +281,7 @@ static void method_status(main_server_st * s, DBusConnection * conn,
 		goto error;
 	}
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -326,7 +292,7 @@ static void method_status(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
-static void method_reload(main_server_st * s, DBusConnection * conn,
+static void method_reload(main_server_st * s, struct dbus_ctx *ctx,
 			  DBusMessage * msg)
 {
 	DBusMessage *reply;
@@ -352,7 +318,7 @@ static void method_reload(main_server_st * s, DBusConnection * conn,
 
 	request_reload(0);
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -363,7 +329,7 @@ static void method_reload(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
-static void method_stop(main_server_st * s, DBusConnection * conn,
+static void method_stop(main_server_st * s, struct dbus_ctx *ctx,
 			DBusMessage * msg)
 {
 	DBusMessage *reply;
@@ -389,7 +355,7 @@ static void method_stop(main_server_st * s, DBusConnection * conn,
 
 	request_stop(0);
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -569,7 +535,8 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 		else
 			tmp = s->config->rx_per_sec;
 		tmp *= 1000;
-		if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+		if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp)
+		    == 0) {
 			return -1;
 		}
 
@@ -578,7 +545,8 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 		else
 			tmp = s->config->tx_per_sec;
 		tmp *= 1000;
-		if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+		if (dbus_message_iter_append_basic(subs, DBUS_TYPE_UINT32, &tmp)
+		    == 0) {
 			return -1;
 		}
 
@@ -630,7 +598,7 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 	return 0;
 }
 
-static void method_list_users(main_server_st * s, DBusConnection * conn,
+static void method_list_users(main_server_st * s, struct dbus_ctx *ctx,
 			      DBusMessage * msg)
 {
 	DBusMessage *reply;
@@ -686,7 +654,7 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 		goto error;
 	}
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -697,8 +665,8 @@ static void method_list_users(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
-static void single_info_common(main_server_st * s, DBusConnection * conn,
-			DBusMessage * msg, const char *user, unsigned id)
+static void single_info_common(main_server_st * s, struct dbus_ctx *ctx,
+			       DBusMessage * msg, const char *user, unsigned id)
 {
 	DBusMessage *reply;
 	DBusMessageIter args;
@@ -779,7 +747,7 @@ static void single_info_common(main_server_st * s, DBusConnection * conn,
 			mslog(s, NULL, LOG_INFO, "could not find ID '%u'", id);
 	}
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -790,7 +758,7 @@ static void single_info_common(main_server_st * s, DBusConnection * conn,
 	return;
 }
 
-static void method_user_info(main_server_st * s, DBusConnection * conn,
+static void method_user_info(main_server_st * s, struct dbus_ctx *ctx,
 			     DBusMessage * msg)
 {
 	DBusMessageIter args;
@@ -810,12 +778,12 @@ static void method_user_info(main_server_st * s, DBusConnection * conn,
 
 	dbus_message_iter_get_basic(&args, &name);
 
-	single_info_common(s, conn, msg, name, 0);
+	single_info_common(s, ctx, msg, name, 0);
 
 	return;
 }
 
-static void method_id_info(main_server_st * s, DBusConnection * conn,
+static void method_id_info(main_server_st * s, struct dbus_ctx *ctx,
 			   DBusMessage * msg)
 {
 	DBusMessageIter args;
@@ -835,13 +803,13 @@ static void method_id_info(main_server_st * s, DBusConnection * conn,
 
 	dbus_message_iter_get_basic(&args, &id);
 
-	single_info_common(s, conn, msg, NULL, id);
+	single_info_common(s, ctx, msg, NULL, id);
 
 	return;
 }
 
 static void method_disconnect_user_name(main_server_st * s,
-					DBusConnection * conn,
+					struct dbus_ctx *ctx,
 					DBusMessage * msg)
 {
 	DBusMessage *reply;
@@ -889,7 +857,7 @@ static void method_disconnect_user_name(main_server_st * s,
 		goto error;
 	}
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -900,7 +868,7 @@ static void method_disconnect_user_name(main_server_st * s,
 	return;
 }
 
-static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
+static void method_disconnect_user_id(main_server_st * s, struct dbus_ctx *ctx,
 				      DBusMessage * msg)
 {
 	DBusMessage *reply;
@@ -950,7 +918,7 @@ static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
 		goto error;
 	}
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -971,7 +939,7 @@ static void method_disconnect_user_id(main_server_st * s, DBusConnection * conn,
 	"</interface>" \
 	"</node>\n"
 
-static void method_introspect(main_server_st * s, DBusConnection * conn,
+static void method_introspect(main_server_st * s, struct dbus_ctx *ctx,
 			      DBusMessage * msg)
 {
 	DBusMessage *reply = NULL;
@@ -1020,7 +988,7 @@ static void method_introspect(main_server_st * s, DBusConnection * conn,
 		goto error;
 	}
 
-	if (!dbus_connection_send(conn, reply, NULL)) {
+	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
 		mslog(s, NULL, LOG_ERR, "error sending dbus reply");
 		goto error;
 	}
@@ -1034,18 +1002,19 @@ static void method_introspect(main_server_st * s, DBusConnection * conn,
 
 }
 
-void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
+static void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 {
-	DBusConnection *conn = s->ctl_ctx;
+	struct dbus_ctx *ctx = s->ctl_ctx;
+	DBusConnection *conn;
 	DBusMessage *msg;
 	int ret;
 	unsigned flags, i;
 
-	if (s->config->use_dbus == 0) {
-		mslog(s, NULL, LOG_ERR, "%s called when D-BUS is disabled!",
-		      __func__);
+	if (s->config->use_dbus == 0 || ctx == NULL) {
 		return;
 	}
+
+	conn = ctx->conn;
 
 	if (ctl->type == CTL_READ)
 		flags = DBUS_WATCH_READABLE;
@@ -1083,7 +1052,7 @@ void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 			}
 			if (dbus_message_is_method_call
 			    (msg, methods[i].iface, methods[i].name)) {
-				methods[i].func(s, conn, msg);
+				methods[i].func(s, ctx, msg);
 				break;
 			}
 		}
@@ -1091,23 +1060,109 @@ void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 		dbus_message_unref(msg);
 	} while (msg != NULL);
 }
-#else
+
+int ctl_handler_set_fds(main_server_st * s, fd_set * rd_set, fd_set * wr_set)
+{
+	struct ctl_handler_st *ctl_tmp = NULL;
+	struct dbus_ctx *ctx = s->ctl_ctx;
+	int n = -1;
+
+	if (ctx == NULL)
+		return -1;
+
+	list_for_each(&ctx->ctl_list.head, ctl_tmp, list) {
+		if (ctl_tmp->enabled) {
+			if (ctl_tmp->type == CTL_READ)
+				FD_SET(ctl_tmp->fd, rd_set);
+			else
+				FD_SET(ctl_tmp->fd, wr_set);
+			n = MAX(n, ctl_tmp->fd);
+		}
+	}
+
+	return n;
+}
+
+void ctl_handler_run_pending(main_server_st* s, fd_set *rd_set, fd_set *wr_set)
+{
+	struct ctl_handler_st *ctl_tmp = NULL, *ctl_pos;
+	struct dbus_ctx *ctx = s->ctl_ctx;
+
+	if (ctx == NULL)
+		return;
+
+	list_for_each_safe(&ctx->ctl_list.head, ctl_tmp, ctl_pos, list) {
+		if (ctl_tmp->enabled == 0)
+			continue;
+		if (ctl_tmp->type == CTL_READ) {
+			if (FD_ISSET(ctl_tmp->fd, rd_set))
+				ctl_handle_commands(s, ctl_tmp);
+		} else {
+			if (FD_ISSET(ctl_tmp->fd, wr_set))
+				ctl_handle_commands(s, ctl_tmp);
+		}
+	}
+}
 
 void ctl_handler_deinit(main_server_st * s)
 {
-	return;
+	struct dbus_ctx *ctx = s->ctl_ctx;
+
+	if (s->config->use_dbus != 0 && ctx != NULL && ctx->conn != NULL) {
+		mslog(s, NULL, LOG_DEBUG, "closing DBUS connection");
+		dbus_connection_close(ctx->conn);
+		dbus_bus_release_name(ctx->conn, OCSERV_DBUS_NAME, NULL);
+		dbus_connection_unref(ctx->conn);
+	}
 }
 
 /* Initializes unix socket and stores the fd.
  */
 int ctl_handler_init(main_server_st * s)
 {
+	int ret;
+	DBusError err;
+	DBusConnection *conn;
+	struct dbus_ctx *ctx;
+
+	if (s->config->use_dbus == 0)
+		return 0;
+
+	ctx = calloc(1, sizeof(struct dbus_ctx));
+	if (ctx == NULL)
+		return ERR_CTL;
+
+	list_head_init(&ctx->ctl_list.head);
+	dbus_error_init(&err);
+
+	conn = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
+	if (conn == NULL)
+		goto error;
+
+	ret = dbus_bus_request_name(conn, OCSERV_DBUS_NAME,
+				    DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+	if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
+		goto error;
+
+	ctx->conn = conn;
+	s->ctl_ctx = ctx;
+
+	if (!dbus_connection_set_watch_functions(conn,
+						 add_watch, remove_watch,
+						 toggle_watch, ctx, NULL)) {
+		goto error;
+	}
+
+
 	return 0;
+
+ error:
+	if (dbus_error_is_set(&err)) {
+		fprintf(stderr, "DBUS connection error (%s)", err.message);
+		dbus_error_free(&err);
+	}
+	ctl_handler_deinit(s);
+
+	return ERR_CTL;
 }
 
-void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
-{
-	return;
-}
-
-#endif

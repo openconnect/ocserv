@@ -52,6 +52,8 @@ src/libcmd-ocpasswd.a
 src/libcmd-ocserv.a
 src/ipc.pb-c.c
 src/ipc.pb-c.h
+src/ctl.pb-c.c
+src/ctl.pb-c.h
 src/occtl
 .dirstamp
 config.h.in

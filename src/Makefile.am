@@ -3,12 +3,13 @@ SUBDIRS =
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBGNUTLS_CFLAGS) \
-	$(LIBPROTOBUF_C_CFLAGS) $(LIBDBUS_CFLAGS) \
+	$(LIBPROTOBUF_C_CFLAGS) \
 	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS) \
-	$(LIBTALLOC_CFLAGS)
+	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
-	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h
+	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
+	ctl.pb-c.c ctl.pb-c.h
 
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/
@@ -28,10 +29,7 @@ EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
 	occtl-args.def ipc.proto
 
-bin_PROGRAMS = ocpasswd
-if ENABLE_OCCTL
-bin_PROGRAMS += occtl
-endif
+bin_PROGRAMS = ocpasswd occtl
 
 sbin_PROGRAMS = ocserv
 
@@ -54,18 +52,18 @@ ocserv-args.c: $(srcdir)/ocserv-args.def
 ocserv-args.h: ocserv-args.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	cookies.c main-misc.c main-ctl-handler.c \
-	group-config.c ip-lease.c ip-lease.h \
+	cookies.c main-misc.c group-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
 	worker-extras.c main-auth.h html.c html.h \
 	main-user.c worker-misc.c setproctitle.h route-add.c route-add.h \
 	setproctitle.c worker-privs.c plain.c plain.h common.h common.c \
 	sec-mod.c sec-mod.h script-list.h system.c system.h icmp-ping.c icmp-ping.h \
-	worker-bandwidth.c worker-bandwidth.h \
+	worker-bandwidth.c worker-bandwidth.h ctl.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES)
 
-ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
+
+ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
 
 if LOCAL_PROTOBUF_C
 ocserv_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
@@ -74,7 +72,8 @@ endif
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
-	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON) $(LIBDBUS_LIBS)
+	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON) $(LIBTALLOC_LIBS)
+
 
 if PCL
 ocserv_LDADD += $(PCL_LIBS)
@@ -97,11 +96,26 @@ ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 ocpasswd-args.h: ocpasswd-args.c
 
 occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c \
-	occtl-nl.c
-occtl_LDADD = ../gl/libgnu.a $(LIBDBUS_LIBS) $(LIBREADLINE_LIBS) \
-	$(LIBNL3_LIBS)
+	occtl-nl.c ctl.h common.h common.c ctl.pb-c.c ctl.pb-c.h
+occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
+	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS)
+
+if HAVE_DBUS
+ocserv_SOURCES += main-ctl-dbus.c
+occtl_SOURCES += occtl-dbus.c
+ocserv_LDADD += $(LIBDBUS_LIBS)
+occtl_LDADD += $(LIBDBUS_LIBS)
+else
+ocserv_SOURCES += main-ctl-unix.c
+occtl_SOURCES += occtl-unix.c
+endif
 
 ipc.pb-c.c: ipc.proto
 	protoc-c --c_out=. $<
 
 ipc.pb-c.h: ipc.pb-c.c
+
+ctl.pb-c.c: ctl.proto
+	protoc-c --c_out=. $<
+
+ctl.pb-c.h: ctl.pb-c.c

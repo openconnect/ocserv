@@ -161,21 +161,6 @@ struct ban_list_st {
 	struct list_head head;
 };
 
-#define CTL_READ 1
-#define CTL_WRITE 2
-
-struct ctl_handler_st {
-	struct list_node list;
-	int fd;
-	unsigned type; /* CTL_READ/WRITE */
-	unsigned enabled;
-	void* watch;
-};
-
-struct ctl_list_st {
-	struct list_head head;
-};
-
 typedef struct main_server_st {
 	struct cfg_st *config;
 	
@@ -200,8 +185,11 @@ typedef struct main_server_st {
 
 	void * auth_extra;
 
-	struct ctl_list_st ctl_list;
+#ifdef HAVE_DBUS
 	void * ctl_ctx;
+#else
+	int ctl_fd;
+#endif
 } main_server_st;
 
 void clear_lists(main_server_st *s);
@@ -294,9 +282,6 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 	return send_socket_msg(proc->fd, cmd, socketfd, msg, get_size, pack);
 }
 
-void ctl_handle_commands(main_server_st* s, struct ctl_handler_st* ctl);
-int ctl_handler_init(main_server_st* s);
-void ctl_handler_deinit(main_server_st* s);
 void request_reload(int signo);
 void request_stop(int signo);
 

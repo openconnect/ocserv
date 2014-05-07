@@ -159,6 +159,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 	return 0;
 }
 
+
 /* sec_mod_server:
  * @config: server configuration
  * @socket_file: the name of the socket
@@ -205,10 +206,6 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 	uint16_t length;
 	struct iovec iov[2];
 	int sd;
-#if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
-	struct ucred cr;
-	socklen_t cr_len;
-#endif
 
 	ocsignal(SIGHUP, SIG_IGN);
 	ocsignal(SIGINT, SIG_DFL);
@@ -320,56 +317,14 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 			       strerror(e));
 			continue;
 		}
-#if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
-		/* This check is superfluous in Linux and mostly for debugging
-		 * purposes. The socket permissions set with umask should
-		 * be sufficient already for access control, but not all
-		 * UNIXes support that. */
-		cr_len = sizeof(cr);
-		ret = getsockopt(cfd, SOL_SOCKET, SO_PEERCRED, &cr, &cr_len);
-		if (ret == -1) {
-			e = errno;
+
+		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid);
+		if (ret < 0) {
 			syslog(LOG_ERR,
-			       "sec-mod error obtaining peer credentials: %s",
-			       strerror(e));
+			       "sec-mod: unauthorized connection");
 			goto cont;
 		}
 
-		syslog(LOG_DEBUG,
-		       "sec-mod received request from pid %u and uid %u",
-		       (unsigned)cr.pid, (unsigned)cr.uid);
-		if (cr.uid != config->uid || cr.gid != config->gid) {
-			syslog(LOG_ERR,
-			       "sec-mod received unauthorized request from pid %u and uid %u",
-			       (unsigned)cr.pid, (unsigned)cr.uid);
-			goto cont;
-		}
-#elif defined(HAVE_GETPEEREID)
-		{
-			pid_t euid;
-			gid_t egid;
-			ret = getpeereid(cfd, &euid, &egid);
-
-			if (ret == -1) {
-				e = errno;
-				syslog(LOG_ERR, "sec-mod getpeereid error: %s",
-				       strerror(e));
-				goto cont;
-			}
-
-			syslog(LOG_DEBUG,
-			       "sec-mod received request from a processes with uid %u",
-			       (unsigned)euid);
-			if (euid != config->uid || egid != config->gid) {
-				syslog(LOG_ERR,
-				       "sec-mod received unauthorized request from a process with uid %u",
-				       (unsigned)euid);
-				goto cont;
-			}
-		}
-#else
-#error "Unsupported UNIX variant"
-#endif
 		/* read request */
 		ret = recv(cfd, buffer, buffer_size, 0);
 		if (ret == 0)

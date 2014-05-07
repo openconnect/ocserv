@@ -50,9 +50,9 @@ AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 
 dbus_enabled=no
 AC_ARG_WITH(dbus,
-  AS_HELP_STRING([--without-dbus], [do not include dbus support]),
+  AS_HELP_STRING([--with-dbus], [use dbus instead of unix sockets]),
   test_for_dbus=$withval,
-  test_for_dbus=yes)
+  test_for_dbus=no)
 
 if test "$test_for_dbus" = yes;then
 PKG_CHECK_MODULES([LIBDBUS], [dbus-1 >= 1.1.1],
@@ -123,19 +123,15 @@ AC_ARG_WITH(libnl,
   test_for_libnl=$withval,
   test_for_libnl=yes)
 
-occtl_enabled=no
-
 if test "$test_for_libnl" = yes;then
-PKG_CHECK_MODULES(LIBNL3, libnl-route-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
-if test "${have_libnl3}" = "yes"; then
-  AC_DEFINE(HAVE_LIBNL, 1, [have libnl])
+  PKG_CHECK_MODULES(LIBNL3, libnl-route-3.0 >= 3.1, [have_libnl3=yes], [have_libnl3=no])
+  if test "${have_libnl3}" = "yes"; then
+    AC_DEFINE(HAVE_LIBNL, 1, [have libnl])
+  fi
 fi
 
-if test "$dbus_enabled" = yes;then
-  occtl_enabled=yes
-
-  have_readline=no
-  AC_LIB_HAVE_LINKFLAGS(readline,, [
+have_readline=no
+AC_LIB_HAVE_LINKFLAGS(readline,, [
 #include <stdio.h>
 #include <readline/readline.h>], [rl_replace_line(0,0);])
   if test x$ac_cv_libreadline = xyes; then
@@ -145,7 +141,6 @@ if test "$dbus_enabled" = yes;then
   else
     PKG_CHECK_MODULES(LIBREADLINE, libedit, [have_libedit=yes], [have_libedit=no])
     if test "${have_libedit}" = "no"; then
-      occtl_enabled=no
       AC_MSG_WARN([[***
 *** libreadline or editline was not found. occtl will not be built.
 ***]])
@@ -153,12 +148,6 @@ if test "$dbus_enabled" = yes;then
       have_readline=editline
     fi
   fi
-else
-  occtl_enabled=no
-fi
-fi
-
-AM_CONDITIONAL(ENABLE_OCCTL, test "x$occtl_enabled" = xyes)
 
 pam_enabled=no
 LIBS="$oldlibs -lpam"
@@ -380,9 +369,6 @@ Summary of build options:
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}
-
-Optional programs:
-  occtl:                ${occtl_enabled}
 ])
 
 if test "$occtl_enabled" = no;then

@@ -80,6 +80,9 @@ static const ctl_method_st methods[] = {
 
 void ctl_handler_deinit(main_server_st * s)
 {
+	if (s->config->use_occtl == 0)
+		return;
+
 	if (s->ctl_fd >= 0) {
 		mslog(s, NULL, LOG_DEBUG, "closing unix socket connection");
 		close(s->ctl_fd);
@@ -94,6 +97,9 @@ int ctl_handler_init(main_server_st * s)
 	int ret;
 	struct sockaddr_un sa;
 	int sd, e;
+
+	if (s->config->use_occtl == 0)
+		return 0;
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
@@ -651,12 +657,18 @@ static void ctl_handle_commands(main_server_st * s)
 
 int ctl_handler_set_fds(main_server_st * s, fd_set * rd_set, fd_set * wr_set)
 {
+	if (s->config->use_occtl == 0)
+		return -1;
+
 	FD_SET(s->ctl_fd, rd_set);
 	return s->ctl_fd;
 }
 
 void ctl_handler_run_pending(main_server_st* s, fd_set *rd_set, fd_set *wr_set)
 {
+	if (s->config->use_occtl == 0)
+		return;
+
 	if (FD_ISSET(s->ctl_fd, rd_set)) {
 		ctl_handle_commands(s);
 	}

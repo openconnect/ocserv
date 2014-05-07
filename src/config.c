@@ -81,6 +81,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "use-occtl", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
@@ -370,6 +371,13 @@ unsigned force_cert_auth;
 
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);
+	if (config->use_dbus != 0)
+		fprintf(stderr, "note that 'use-dbus' was replaced by 'use-occtl'\n");
+
+	READ_TF("use-occtl", config->use_occtl, 0);
+	if (config->use_occtl == 0)
+		config->use_dbus = 0;
+
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);
 	READ_TF("ping-leases", config->ping_leases, 0);
 

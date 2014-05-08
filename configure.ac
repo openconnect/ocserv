@@ -149,7 +149,14 @@ AC_LIB_HAVE_LINKFLAGS(readline,, [
     fi
   fi
 
+AC_ARG_WITH(pam,
+  AS_HELP_STRING([--without-pam], [do not include PAM support]),
+  test_for_pam=$withval,
+  test_for_pam=yes)
+
 pam_enabled=no
+
+if test "$test_for_pam" = yes;then
 LIBS="$oldlibs -lpam"
 AC_MSG_CHECKING([for pam library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -166,6 +173,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 *** libpam was not found. PAM support will be disabled.
 *** ]])])
 LIBS="$oldlibs"
+fi
 
 gl_INIT
 
@@ -191,7 +199,7 @@ dnl Test for PCL library
 with_local_pcl=yes
 
 if test "$test_for_libwrap" = yes;then
-AC_LIB_HAVE_LINKFLAGS(wrap,, [#include <tcpd.h>], [hosts_access(0);])
+AC_LIB_HAVE_LINKFLAGS(wrap,, [#include <tcpd.h>], [hosts_access(allow_severity);])
 fi
 
 # test for other types

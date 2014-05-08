@@ -1,4 +1,4 @@
-* Version 0.3.5 (unreleased)
+* Version 0.3.5 (released 2014-05-08)
 
 - Corrected issue in the stats reporting for resumed processes and
   modified its sending to be periodically, in addition to the worker

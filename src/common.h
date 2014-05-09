@@ -23,12 +23,19 @@
 
 #include <sys/socket.h>
 #include <ipc.pb-c.h>
+#include <talloc.h>
+
+void _talloc_free2(void *ctx, void *ptr);
+void *_talloc_size2(void *ctx, size_t size);
+
+#define PROTOBUF_ALLOCATOR(name, pool) \
+	ProtobufCAllocator name = {.alloc = _talloc_size2, .free = _talloc_free2, .allocator_data = pool}
 
 ssize_t force_write(int sockfd, const void *buf, size_t len);
 ssize_t force_read(int sockfd, void *buf, size_t len);
 ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n);
-char* ipv6_prefix_to_mask(unsigned prefix);
+char* ipv6_prefix_to_mask(void *pool, unsigned prefix);
 
 typedef size_t (*pack_func)(const void*, uint8_t *);
 typedef size_t (*pack_size_func)(const void*);
@@ -37,17 +44,17 @@ typedef void* (*unpack_func)(ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
 
-int send_msg(int fd, uint8_t cmd, 
+int send_msg(void *pool, int fd, uint8_t cmd, 
 	    const void* msg, pack_size_func get_size, pack_func pack);
 
-int send_socket_msg(int fd, uint8_t cmd, 
+int send_socket_msg(void *pool, int fd, uint8_t cmd, 
 		    int socketfd,
 		    const void* msg, pack_size_func get_size, pack_func pack);
 
-int recv_msg(int fd, uint8_t cmd, 
+int recv_msg(void *pool, int fd, uint8_t cmd, 
 	     void** msg, unpack_func);
 
-int recv_socket_msg(int fd, uint8_t cmd, 
+int recv_socket_msg(void *pool, int fd, uint8_t cmd, 
 			int *socketfd, void** msg, unpack_func);
 
 const char* cmd_request_to_str(unsigned cmd);

@@ -55,7 +55,7 @@ struct htable_iter iter;
 
 	cache = htable_first(&db->ht, &iter);
 	while(cache != NULL) {
-		free(cache);
+		talloc_free(cache);
 		
 		cache = htable_next(&db->ht, &iter);
 	}
@@ -102,6 +102,11 @@ struct ip_lease_st t;
 	return 0;
 }
 
+void steal_ip_leases(struct proc_st* proc, struct proc_st *thief)
+{
+	thief->ipv4 = talloc_move(thief, &proc->ipv4);
+	thief->ipv6 = talloc_move(thief, &proc->ipv6);
+}
 
 #define MAX_IP_TRIES 16
 
@@ -141,9 +146,10 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 			return -1;
 		}
 
-		proc->ipv4 = calloc(1, sizeof(*proc->ipv4));
+		proc->ipv4 = talloc_zero(proc, struct ip_lease_st);
 		if (proc->ipv4 == NULL)
 			return ERR_MEM;
+		proc->ipv4->db = &s->ip_leases;
 
 		/* mask the network (just in case it is wrong) */
 		for (i=0;i<sizeof(struct in_addr);i++)
@@ -236,7 +242,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 	return 0;
 
 fail:
-	free(proc->ipv4);
+	talloc_free(proc->ipv4);
 	proc->ipv4 = NULL;
 
 	return ret;
@@ -277,9 +283,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			return -1;
 		}
 		
-		proc->ipv6 = calloc(1, sizeof(*proc->ipv6));
+		proc->ipv6 = talloc_zero(proc, struct ip_lease_st);
 		if (proc->ipv6 == NULL)
 			return ERR_MEM;
+		proc->ipv6->db = &s->ip_leases;
 
 		/* mask the network */
 		for (i=0;i<sizeof(struct in6_addr);i++)
@@ -369,11 +376,18 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 	return 0;
 fail:
-	free(proc->ipv6);
+	talloc_free(proc->ipv6);
 	proc->ipv6 = NULL;
 
 	return ret;
 
+}
+
+static
+int unref_ip_lease(struct ip_lease_st * lease)
+{
+	htable_del(&lease->db->ht, rehash(lease, NULL), lease);
+	return 0;
 }
 
 int get_ip_leases(main_server_st* s, struct proc_st* proc)
@@ -391,6 +405,7 @@ char buf[128];
 				mslog(s, proc, LOG_ERR, "could not add IPv4 lease to hash table.");
 				return -1;
 			}
+			talloc_set_destructor(proc->ipv4, unref_ip_lease);
 		}
 	}
 
@@ -404,6 +419,7 @@ char buf[128];
 				mslog(s, proc, LOG_ERR, "could not add IPv6 lease to hash table.");
 				return -1;
 			}
+			talloc_set_destructor(proc->ipv6, unref_ip_lease);
 		}
 	}
 
@@ -426,19 +442,16 @@ char buf[128];
 void remove_ip_leases(main_server_st* s, struct proc_st* proc)
 {
 	if (proc->ipv4) {
-		htable_del(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4);
-		free(proc->ipv4);
+		talloc_free(proc->ipv4);
 		proc->ipv4 = NULL;
 	}
 	if (proc->ipv6) {
-		htable_del(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6);
-		free(proc->ipv6);
+		talloc_free(proc->ipv6);
 		proc->ipv6 = NULL;
 	}
 }
 
 void remove_ip_lease(main_server_st* s, struct ip_lease_st * lease)
 {
-	htable_del(&s->ip_leases.ht, rehash(lease, NULL), lease);
-	free(lease);
+	talloc_free(lease);
 }

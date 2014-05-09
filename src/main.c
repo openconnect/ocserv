@@ -77,13 +77,13 @@ static void ms_sleep(unsigned ms)
   nanosleep(&tv, NULL);
 }
 
-static void add_listener(struct listen_list_st *list,
+static void add_listener(void *pool, struct listen_list_st *list,
 	int fd, int family, int socktype, int protocol,
 	struct sockaddr* addr, socklen_t addr_len)
 {
 	struct listener_st *tmp;
 
-	tmp = calloc(1, sizeof(struct listener_st));
+	tmp = talloc_zero(pool, struct listener_st);
 	tmp->fd = fd;
 	tmp->family = family;
 	tmp->socktype = socktype;
@@ -130,7 +130,8 @@ int val;
 }
 
 static 
-int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_list_st *list)
+int _listen_ports(void *pool, struct cfg_st* config, 
+		struct addrinfo *res, struct listen_list_st *list)
 {
 	struct addrinfo *ptr;
 	int s, y;
@@ -197,7 +198,7 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 
 		set_common_socket_options(s);
 		
-		add_listener(list, s, ptr->ai_family, ptr->ai_socktype,
+		add_listener(pool, list, s, ptr->ai_family, ptr->ai_socktype,
 			ptr->ai_protocol, ptr->ai_addr, ptr->ai_addrlen);
 
 	}
@@ -210,7 +211,8 @@ int _listen_ports(struct cfg_st* config, struct addrinfo *res, struct listen_lis
 /* Returns 0 on success or negative value on error.
  */
 static int
-listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *node)
+listen_ports(void *pool, struct cfg_st* config, 
+		struct listen_list_st *list)
 {
 	struct addrinfo hints, *res;
 	char portname[6];
@@ -274,7 +276,7 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 					config->udp_port = ntohs(((struct sockaddr_in6*)&tmp_sock)->sin6_port);
 			}
 
-			add_listener(list, fd, family, type, 0, (struct sockaddr*)&tmp_sock, tmp_sock_len);
+			add_listener(pool, list, fd, family, type, 0, (struct sockaddr*)&tmp_sock, tmp_sock_len);
 		}
 
 		if (list->total == 0) {
@@ -304,14 +306,14 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 #endif
 	    ;
 
-	ret = getaddrinfo(node, portname, &hints, &res);
+	ret = getaddrinfo(config->name, portname, &hints, &res);
 	if (ret != 0) {
 		fprintf(stderr, "getaddrinfo() failed: %s\n",
 			gai_strerror(ret));
 		return -1;
 	}
 
-	ret = _listen_ports(config, res, list);
+	ret = _listen_ports(pool, config, res, list);
 	if (ret < 0) {
 		return -1;
 	}
@@ -334,14 +336,14 @@ listen_ports(struct cfg_st* config, struct listen_list_st *list, const char *nod
 #endif
 		    ;
 
-		ret = getaddrinfo(node, portname, &hints, &res);
+		ret = getaddrinfo(config->name, portname, &hints, &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo() failed: %s\n",
 				gai_strerror(ret));
 			return -1;
 		}
 
-		ret = _listen_ports(config, res, list);
+		ret = _listen_ports(pool, config, res, list);
 		if (ret < 0) {
 			return -1;
 		}
@@ -431,7 +433,7 @@ struct script_wait_st *stmp = NULL, *spos;
 				if (ret < 0) {
 					remove_proc(s, stmp->proc, 1);
 				} else {
-					free(stmp);
+					talloc_free(stmp);
 				}
 				break;
 			}
@@ -555,7 +557,7 @@ void clear_lists(main_server_st *s)
 	list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
 		close(ltmp->fd);
 		list_del(&ltmp->list);
-		free(ltmp);
+		talloc_free(ltmp);
 		s->listen_list.total--;
 	}
 
@@ -568,18 +570,18 @@ void clear_lists(main_server_st *s)
 			proc_auth_deinit(s, ctmp);
 		list_del(&ctmp->list);
 		memset(ctmp, 0, sizeof(*ctmp));
-		free(ctmp);
+		talloc_free(ctmp);
 		s->proc_list.total--;
 	}
 
 	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
 		list_del(&btmp->list);
-		free(btmp);
+		talloc_free(btmp);
 	}
 
 	list_for_each_safe(&s->script_list.head, script_tmp, script_pos, list) {
 		list_del(&script_tmp->list);
-		free(script_tmp);
+		talloc_free(script_tmp);
 	}
 
 	tls_cache_deinit(s->tls_db);
@@ -751,8 +753,8 @@ unsigned total = 10;
 
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "reloading configuration");
-		reload_cfg_file(s->config);
-		tls_reload_crl(s);
+		reload_cfg_file(s->main_pool, &s->config);
+		tls_reload_crl(s, s->creds);
 		reload_conf = 0;
 	}
 
@@ -779,8 +781,10 @@ unsigned total = 10;
 		 * for memory leaks.
 		 */
 		clear_lists(s);
-		tls_global_deinit(s);
-		clear_cfg_file(s->config);
+		tls_global_deinit(s->creds);
+		clear_cfg_file(&s->config);
+		talloc_free(s->worker_pool);
+		talloc_free(s->main_pool);
 		closelog();
 		exit(0);
 	}
@@ -827,19 +831,50 @@ int main(int argc, char** argv)
 	struct timeval ts;
 #endif
 	int cmd_fd[2];
-	struct worker_st ws;
-	struct cfg_st config;
+	struct worker_st *ws;
+	void *worker_pool;
+	void *main_pool;
 	unsigned set;
-	main_server_st s;
+	main_server_st *s;
 	sigset_t emptyset, blockset;
+	/* tls credentials */
+	struct tls_st creds;
 
-	memset(&s, 0, sizeof(s));
+	memset(&creds, 0, sizeof(creds));
 
-	list_head_init(&s.proc_list.head);
-	list_head_init(&s.ban_list.head);
-	list_head_init(&s.script_list.head);
-	tls_cache_init(&s.tls_db);
-	ip_lease_init(&s.ip_leases);
+	worker_pool = talloc_init("worker");
+	if (worker_pool == NULL) {
+		fprintf(stderr, "talloc init error\n");
+		exit(1);
+	}
+
+	/* main pool */
+	main_pool = talloc_init("main");
+	if (main_pool == NULL) {
+		fprintf(stderr, "talloc init error\n");
+		exit(1);
+	}
+
+	ws = talloc_zero(worker_pool, struct worker_st);
+	if (ws == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
+	}
+
+	s = talloc_zero(main_pool, main_server_st);
+	if (s == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
+	}
+	s->main_pool = main_pool;
+	s->worker_pool = worker_pool;
+	s->creds = &creds;
+
+	list_head_init(&s->proc_list.head);
+	list_head_init(&s->ban_list.head);
+	list_head_init(&s->script_list.head);
+	tls_cache_init(s, &s->tls_db);
+	ip_lease_init(&s->ip_leases);
 
 	sigemptyset(&blockset);
 	sigemptyset(&emptyset);
@@ -857,16 +892,16 @@ int main(int argc, char** argv)
 	ocsignal(SIGALRM, handle_alarm);
 
 	/* Initialize GnuTLS */
-	tls_global_init(&s);
+	tls_global_init(&creds);
 
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, s.cookie_key, sizeof(s.cookie_key));
+	ret = gnutls_rnd(GNUTLS_RND_RANDOM, s->cookie_key, sizeof(s->cookie_key));
 	if (ret < 0) {
 		fprintf(stderr, "Error in cookie key generation\n");
 		exit(1);
 	}
 
 	/* load configuration */
-	ret = cmd_parser(argc, argv, &config);
+	ret = cmd_parser(main_pool, argc, argv, &s->config);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
@@ -879,12 +914,10 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	s.config = &config;
-
-	main_auth_init(&s);
+	main_auth_init(s);
 
 	/* Listen to network ports */
-	ret = listen_ports(&config, &s.listen_list, config.name);
+	ret = listen_ports(s, s->config, &s->listen_list);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -892,7 +925,7 @@ int main(int argc, char** argv)
 
 	flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR
-	if (config.debug != 0)
+	if (s->config->debug != 0)
 		flags |= LOG_PERROR;
 #endif
 	openlog("ocserv", flags, LOG_DAEMON);
@@ -902,7 +935,7 @@ int main(int argc, char** argv)
 	deny_severity = LOG_DAEMON|LOG_WARNING;
 #endif	
 
-	if (config.foreground == 0) {
+	if (s->config->foreground == 0) {
 		if (daemon(0, 0) == -1) {
 			e = errno;
 			fprintf(stderr, "daemon failed: %s\n", strerror(e));
@@ -912,44 +945,44 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 	
-	run_sec_mod(&s);
+	run_sec_mod(s);
 
 	/* Initialize certificates */
-	tls_load_certs(&s);
+	tls_load_certs(s, &creds);
 
-	mslog(&s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
+	mslog(s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
 
-	ret = ctl_handler_init(&s);
+	ret = ctl_handler_init(s);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot create command handler\n");
 		exit(1);
 	}
 
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
-	alarm(MAINTAINANCE_TIME(&s));
+	alarm(MAINTAINANCE_TIME(s));
 
 	for (;;) {
-		check_other_work(&s);
+		check_other_work(s);
 
 		/* initialize select */
 		FD_ZERO(&rd_set);
 		FD_ZERO(&wr_set);
 
-		list_for_each(&s.listen_list.head, ltmp, list) {
+		list_for_each(&s->listen_list.head, ltmp, list) {
 			if (ltmp->fd == -1) continue;
 
 			FD_SET(ltmp->fd, &rd_set);
 			n = MAX(n, ltmp->fd);
 		}
 
-		list_for_each(&s.proc_list.head, ctmp, list) {
+		list_for_each(&s->proc_list.head, ctmp, list) {
 			if (ctmp->fd > 0) {
 				FD_SET(ctmp->fd, &rd_set);
 				n = MAX(n, ctmp->fd);
 			}
 		}
 
-		ret = ctl_handler_set_fds(&s, &rd_set, &wr_set);
+		ret = ctl_handler_set_fds(s, &rd_set, &wr_set);
 		n = MAX(n, ret);
 
 #ifdef HAVE_PSELECT
@@ -968,59 +1001,59 @@ int main(int argc, char** argv)
 
 		if (ret < 0) {
 			e = errno;
-			mslog(&s, NULL, LOG_ERR, "Error in pselect(): %s",
+			mslog(s, NULL, LOG_ERR, "Error in pselect(): %s",
 			       strerror(e));
 			exit(1);
 		}
 
 		/* Check for new connections to accept */
-		list_for_each(&s.listen_list.head, ltmp, list) {
+		list_for_each(&s->listen_list.head, ltmp, list) {
 			set = FD_ISSET(ltmp->fd, &rd_set);
 			if (set && ltmp->socktype == SOCK_STREAM) {
 				/* connection on TCP port */
-				memset(&ws, 0, sizeof(ws));
+				memset(ws, 0, sizeof(*ws));
 
-				ws.remote_addr_len = sizeof(ws.remote_addr);
-				fd = accept(ltmp->fd, (void*)&ws.remote_addr, &ws.remote_addr_len);
+				ws->remote_addr_len = sizeof(ws->remote_addr);
+				fd = accept(ltmp->fd, (void*)&ws->remote_addr, &ws->remote_addr_len);
 				if (fd < 0) {
-					mslog(&s, NULL, LOG_ERR,
+					mslog(s, NULL, LOG_ERR,
 					       "Error in accept(): %s", strerror(errno));
 					continue;
 				}
 				set_cloexec_flag (fd, 1);
 
-				ret = gnutls_rnd(GNUTLS_RND_RANDOM, ws.sid, sizeof(ws.sid));
+				ret = gnutls_rnd(GNUTLS_RND_RANDOM, ws->sid, sizeof(ws->sid));
 				if (ret < 0) {
 					close(fd);
-					mslog(&s, NULL, LOG_ERR, "Error generating SID");
+					mslog(s, NULL, LOG_ERR, "Error generating SID");
 					break;
 				}
 
 				/* Check if the client is on the banned list */
-				ret = check_if_banned(&s, &ws.remote_addr, ws.remote_addr_len);
+				ret = check_if_banned(s, &ws->remote_addr, ws->remote_addr_len);
 				if (ret < 0) {
 					/* banned */
 					close(fd);
-					mslog(&s, NULL, LOG_INFO, "dropping client connection due to a previous failed authentication attempt");
+					mslog(s, NULL, LOG_INFO, "dropping client connection due to a previous failed authentication attempt");
 					break;
 				}
 
-				if (config.max_clients > 0 && s.active_clients >= config.max_clients) {
+				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
 					close(fd);
-					mslog(&s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", s.active_clients);
+					mslog(s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", s->active_clients);
 					break;
 				}
 
 				if (check_tcp_wrapper(fd) < 0) {
 					close(fd);
-					mslog(&s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts.[allow|deny])");
+					mslog(s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts->[allow|deny])");
 					break;
 				}
 
 				/* Create a command socket */
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
 				if (ret < 0) {
-					mslog(&s, NULL, LOG_ERR, "Error creating command socket");
+					mslog(s, NULL, LOG_ERR, "Error creating command socket");
 					close(fd);
 					break;
 				}
@@ -1031,82 +1064,75 @@ int main(int argc, char** argv)
 					 * sensitive data before running the worker
 					 */
 					close(cmd_fd[0]);
-					clear_lists(&s);
+					clear_lists(s);
 
 					setproctitle(PACKAGE_NAME"-worker");
 					kill_on_parent_kill(SIGTERM);
 					
-					ws.config = &config;
-					ws.cmd_fd = cmd_fd[1];
-					ws.tun_fd = -1;
-					ws.udp_fd = -1;
-					ws.conn_fd = fd;
-					ws.creds = &s.creds;
+					ws->config = s->config;
+					ws->cmd_fd = cmd_fd[1];
+					ws->tun_fd = -1;
+					ws->udp_fd = -1;
+					ws->conn_fd = fd;
+					ws->creds = &creds;
 
 					/* Drop privileges after this point */
 					sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-					drop_privileges(&s);
+					drop_privileges(s);
 
-					vpn_server(&ws);
+					/* creds and config are not allocated
+					 * under s.
+					 */
+					talloc_free(s);
+
+					vpn_server(ws);
 					exit(0);
 				} else if (pid == -1) {
 fork_failed:
 					close(cmd_fd[0]);
 				} else { /* parent */
 					/* add_proc */
-					ctmp = calloc(1, sizeof(struct proc_st));
+					ctmp = new_proc(s, pid, cmd_fd[0], 
+							&ws->remote_addr, ws->remote_addr_len,
+							ws->sid, sizeof(ws->sid));
 					if (ctmp == NULL) {
 						kill(pid, SIGTERM);
 						goto fork_failed;
 					}
-					memcpy(&ctmp->remote_addr, &ws.remote_addr, ws.remote_addr_len);
-					ctmp->remote_addr_len = ws.remote_addr_len;
-					memcpy(&ctmp->sid, &ws.sid, sizeof(ws.sid));
 
-					ctmp->pid = pid;
-					ctmp->tun_lease.fd = -1;
-					ctmp->conn_time = time(0);
-					ctmp->fd = cmd_fd[0];
-					set_cloexec_flag (cmd_fd[0], 1);
-
-					list_add(&s.proc_list.head, &(ctmp->list));
-
-					put_into_cgroup(&s, s.config->cgroup, pid);
-
-					s.active_clients++;
 				}
 				close(cmd_fd[1]);
 				close(fd);
 
-				if (config.rate_limit_ms > 0)
-					ms_sleep(config.rate_limit_ms);
+				if (s->config->rate_limit_ms > 0)
+					ms_sleep(s->config->rate_limit_ms);
 			} else if (set && ltmp->socktype == SOCK_DGRAM) {
 				/* connection on UDP port */
-				ret = forward_udp_to_owner(&s, ltmp);
+				ret = forward_udp_to_owner(s, ltmp);
 				if (ret < 0) {
-					mslog(&s, NULL, LOG_INFO, "could not determine the owner of received UDP packet");
+					mslog(s, NULL, LOG_INFO, "could not determine the owner of received UDP packet");
 				}
 
-				if (config.rate_limit_ms > 0)
-					ms_sleep(config.rate_limit_ms);
+				if (s->config->rate_limit_ms > 0)
+					ms_sleep(s->config->rate_limit_ms);
 			}
 		}
 
 		/* Check for any pending commands */
-		list_for_each_safe(&s.proc_list.head, ctmp, cpos, list) {
+		list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 			if (ctmp->fd >= 0 && FD_ISSET(ctmp->fd, &rd_set)) {
-				ret = handle_commands(&s, ctmp);
+				ret = handle_commands(s, ctmp);
 				if (ret == ERR_WORKER_TERMINATED && ctmp->status == PS_AUTH_INIT &&
-					s.config->cisco_client_compat != 0) {
-					proc_to_zombie(&s, ctmp);
+					s->config->cisco_client_compat != 0) {
+					proc_to_zombie(s, ctmp);
 				} else if (ret < 0) {
-					remove_proc(&s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
+					remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
 				}
 			}
 		}
 
 		/* Check for pending control commands */
-		ctl_handler_run_pending(&s, &rd_set, &wr_set);
+		ctl_handler_run_pending(s, &rd_set, &wr_set);
 	}
 
 	return 0;

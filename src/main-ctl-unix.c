@@ -27,7 +27,6 @@
 #include <sys/un.h>
 #include <main.h>
 #include <vpn.h>
-#include <talloc.h>
 #include <ip-lease.h>
 
 #include <errno.h>
@@ -37,24 +36,29 @@
 #include <ctl.pb-c.h>
 #include <str.h>
 
-static void method_status(main_server_st * s, int cfd, uint8_t * msg,
+typedef struct method_ctx {
+	main_server_st *s;
+	void *pool;
+} method_ctx;
+
+static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 			  unsigned msg_size);
-static void method_list_users(main_server_st * s, int cfd, uint8_t * msg,
+static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 			      unsigned msg_size);
-static void method_disconnect_user_name(main_server_st * s, int cfd,
+static void method_disconnect_user_name(method_ctx *ctx, int cfd,
 					uint8_t * msg, unsigned msg_size);
-static void method_disconnect_user_id(main_server_st * s, int cfd,
+static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 				      uint8_t * msg, unsigned msg_size);
-static void method_stop(main_server_st * s, int cfd, uint8_t * msg,
+static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 			unsigned msg_size);
-static void method_reload(main_server_st * s, int cfd, uint8_t * msg,
+static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 			  unsigned msg_size);
-static void method_user_info(main_server_st * s, int cfd, uint8_t * msg,
+static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
 			     unsigned msg_size);
-static void method_id_info(main_server_st * s, int cfd, uint8_t * msg,
+static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
 			   unsigned msg_size);
 
-typedef void (*method_func) (main_server_st * s, int cfd, uint8_t * msg,
+typedef void (*method_func) (method_ctx *ctx, int cfd, uint8_t * msg,
 			     unsigned msg_size);
 
 typedef struct {
@@ -142,75 +146,75 @@ int ctl_handler_init(main_server_st * s)
 	return sd;
 }
 
-static void method_status(main_server_st * s, int cfd, uint8_t * msg,
+static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 			  unsigned msg_size)
 {
 	StatusRep rep = STATUS_REP__INIT;
 	int ret;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: status");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: status");
 
 	rep.status = 1;
 	rep.pid = getpid();
-	rep.sec_mod_pid = s->sec_mod_pid;
-	rep.active_clients = s->active_clients;
+	rep.sec_mod_pid = ctx->s->sec_mod_pid;
+	rep.active_clients = ctx->s->active_clients;
 
-	ret = send_msg(cfd, CTL_CMD_STATUS_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,
 		       (pack_func) status_rep__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
 	return;
 }
 
-static void method_reload(main_server_st * s, int cfd, uint8_t * msg,
+static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 			  unsigned msg_size)
 {
 	BoolMsg rep = BOOL_MSG__INIT;
 	int ret;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: reload");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: reload");
 
 	request_reload(0);
 
 	rep.status = 1;
 
-	ret = send_msg(cfd, CTL_CMD_RELOAD_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_RELOAD_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
 	return;
 }
 
-static void method_stop(main_server_st * s, int cfd, uint8_t * msg,
+static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 			unsigned msg_size)
 {
 	BoolMsg rep = BOOL_MSG__INIT;
 	int ret;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: stop");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: stop");
 
 	request_stop(0);
 
 	rep.status = 1;
 
-	ret = send_msg(cfd, CTL_CMD_STOP_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_STOP_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
 	return;
 }
 
 #define IPBUF_SIZE 64
-static int append_user_info(main_server_st * s, void *pool,
+static int append_user_info(method_ctx *ctx,
 			    UserListRep * list,
 			    struct proc_st *ctmp, unsigned single)
 {
@@ -220,11 +224,11 @@ static int append_user_info(main_server_st * s, void *pool,
 	UserInfoRep *rep;
 
 	list->user =
-	    talloc_realloc(pool, list->user, UserInfoRep *, (1 + list->n_user));
+	    talloc_realloc(ctx->pool, list->user, UserInfoRep *, (1 + list->n_user));
 	if (list->user == NULL)
 		return -1;
 
-	rep = list->user[list->n_user] = talloc(pool, UserInfoRep);
+	rep = list->user[list->n_user] = talloc(ctx->pool, UserInfoRep);
 	if (rep == NULL)
 		return -1;
 	list->n_user++;
@@ -236,7 +240,7 @@ static int append_user_info(main_server_st * s, void *pool,
 	rep->username = ctmp->username;
 	rep->groupname = ctmp->groupname;
 
-	ipbuf = talloc_size(pool, IPBUF_SIZE);
+	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
 	if (ipbuf == NULL)
 		return -1;
 
@@ -249,7 +253,7 @@ static int append_user_info(main_server_st * s, void *pool,
 
 	rep->tun = ctmp->tun_lease.name;
 
-	ipbuf = talloc_size(pool, IPBUF_SIZE);
+	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
 	if (ipbuf == NULL)
 		return -1;
 
@@ -262,7 +266,7 @@ static int append_user_info(main_server_st * s, void *pool,
 		strtmp = "";
 	rep->local_ip = strtmp;
 
-	ipbuf = talloc_size(pool, IPBUF_SIZE);
+	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
 	if (ipbuf == NULL)
 		return -1;
 
@@ -277,7 +281,7 @@ static int append_user_info(main_server_st * s, void *pool,
 
 	/* IPv6 */
 
-	ipbuf = talloc_size(pool, IPBUF_SIZE);
+	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
 	if (ipbuf == NULL)
 		return -1;
 
@@ -290,7 +294,7 @@ static int append_user_info(main_server_st * s, void *pool,
 		strtmp = "";
 	rep->local_ip6 = strtmp;
 
-	ipbuf = talloc_size(pool, IPBUF_SIZE);
+	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
 	if (ipbuf == NULL)
 		return -1;
 
@@ -330,14 +334,14 @@ static int append_user_info(main_server_st * s, void *pool,
 		if (ctmp->config.rx_per_sec > 0)
 			tmp = ctmp->config.rx_per_sec;
 		else
-			tmp = s->config->rx_per_sec;
+			tmp = ctx->s->config->rx_per_sec;
 		tmp *= 1000;
 		rep->rx_per_sec = tmp;
 
 		if (ctmp->config.tx_per_sec > 0)
 			tmp = ctmp->config.tx_per_sec;
 		else
-			tmp = s->config->tx_per_sec;
+			tmp = ctx->s->config->tx_per_sec;
 		tmp *= 1000;
 		rep->tx_per_sec = tmp;
 
@@ -345,24 +349,24 @@ static int append_user_info(main_server_st * s, void *pool,
 			rep->dns = ctmp->config.dns;
 			rep->n_dns = ctmp->config.dns_size;
 		} else {
-			rep->dns = s->config->network.dns;
-			rep->n_dns = s->config->network.dns_size;
+			rep->dns = ctx->s->config->network.dns;
+			rep->n_dns = ctx->s->config->network.dns_size;
 		}
 
 		if (ctmp->config.nbns_size > 0) {
 			rep->nbns = ctmp->config.nbns;
 			rep->n_nbns = ctmp->config.nbns_size;
 		} else {
-			rep->nbns = s->config->network.nbns;
-			rep->n_nbns = s->config->network.nbns_size;
+			rep->nbns = ctx->s->config->network.nbns;
+			rep->n_nbns = ctx->s->config->network.nbns_size;
 		}
 
 		if (ctmp->config.routes_size > 0) {
 			rep->routes = ctmp->config.routes;
 			rep->n_routes = ctmp->config.routes_size;
 		} else {
-			rep->routes = s->config->network.routes;
-			rep->n_routes = s->config->network.routes_size;
+			rep->routes = ctx->s->config->network.routes;
+			rep->n_routes = ctx->s->config->network.routes_size;
 		}
 
 		if (ctmp->config.iroutes_size > 0) {
@@ -374,63 +378,50 @@ static int append_user_info(main_server_st * s, void *pool,
 	return 0;
 }
 
-static void method_list_users(main_server_st * s, int cfd, uint8_t * msg,
+static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 			      unsigned msg_size)
 {
 	UserListRep rep = USER_LIST_REP__INIT;
 	struct proc_st *ctmp = NULL;
 	int ret;
-	void *pool = talloc_init("list-users");
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: list-users");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-users");
 
-	if (pool == NULL) {
-		mslog(s, NULL, LOG_ERR, "memory allocation error");
-		return;
-	}
 
-	list_for_each(&s->proc_list.head, ctmp, list) {
-		ret = append_user_info(s, pool, &rep, ctmp, 0);
+	list_for_each(&ctx->s->proc_list.head, ctmp, list) {
+		ret = append_user_info(ctx, &rep, ctmp, 0);
 		if (ret < 0) {
-			mslog(s, NULL, LOG_ERR,
+			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending user info to reply");
 			goto error;
 		}
 	}
 
-	ret = send_msg(cfd, CTL_CMD_LIST_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
 		       (pack_size_func) user_list_rep__get_packed_size,
 		       (pack_func) user_list_rep__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
  error:
-	talloc_free(pool);
-
 	return;
 }
 
-static void single_info_common(main_server_st * s, int cfd, uint8_t * msg,
+static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 			       unsigned msg_size, const char *user, unsigned id)
 {
 	UserListRep rep = USER_LIST_REP__INIT;
 	int ret;
 	unsigned found_user = 0;
 	struct proc_st *ctmp = NULL;
-	void *pool = talloc_init("info-common");
 
 	if (user != NULL)
-		mslog(s, NULL, LOG_INFO, "providing info for user '%s'", user);
+		mslog(ctx->s, NULL, LOG_INFO, "providing info for user '%s'", user);
 	else
-		mslog(s, NULL, LOG_INFO, "providing info for ID '%u'", id);
+		mslog(ctx->s, NULL, LOG_INFO, "providing info for ID '%u'", id);
 
-	if (pool == NULL) {
-		mslog(s, NULL, LOG_ERR, "memory allocation error");
-		return;
-	}
-
-	list_for_each(&s->proc_list.head, ctmp, list) {
+	list_for_each(&ctx->s->proc_list.head, ctmp, list) {
 		if (user == NULL) {	/* id */
 			if (id == 0 || id == -1 || id != ctmp->pid) {
 				continue;
@@ -441,9 +432,9 @@ static void single_info_common(main_server_st * s, int cfd, uint8_t * msg,
 			}
 		}
 
-		ret = append_user_info(s, pool, &rep, ctmp, 1);
+		ret = append_user_info(ctx, &rep, ctmp, 1);
 		if (ret < 0) {
-			mslog(s, NULL, LOG_ERR,
+			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending user info to reply");
 			goto error;
 		}
@@ -456,64 +447,62 @@ static void single_info_common(main_server_st * s, int cfd, uint8_t * msg,
 
 	if (found_user == 0) {
 		if (user != NULL)
-			mslog(s, NULL, LOG_INFO, "could not find user '%s'",
+			mslog(ctx->s, NULL, LOG_INFO, "could not find user '%s'",
 			      user);
 		else
-			mslog(s, NULL, LOG_INFO, "could not find ID '%u'", id);
+			mslog(ctx->s, NULL, LOG_INFO, "could not find ID '%u'", id);
 	}
 
-	ret = send_msg(cfd, CTL_CMD_LIST_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
 		       (pack_size_func) user_list_rep__get_packed_size,
 		       (pack_func) user_list_rep__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
  error:
-	talloc_free(pool);
-
 	return;
 }
 
-static void method_user_info(main_server_st * s, int cfd, uint8_t * msg,
+static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
 			     unsigned msg_size)
 {
 	UsernameReq *req;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: user_info (name)");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: user_info (name)");
 
 	req = username_req__unpack(NULL, msg_size, msg);
 	if (req == NULL) {
-		mslog(s, NULL, LOG_ERR, "error parsing user_info request");
+		mslog(ctx->s, NULL, LOG_ERR, "error parsing user_info request");
 		return;
 	}
 
-	single_info_common(s, cfd, msg, msg_size, req->username, 0);
+	single_info_common(ctx, cfd, msg, msg_size, req->username, 0);
 	username_req__free_unpacked(req, NULL);
 
 	return;
 }
 
-static void method_id_info(main_server_st * s, int cfd, uint8_t * msg,
+static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
 			   unsigned msg_size)
 {
 	IdReq *req;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: user_info (id)");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: user_info (id)");
 
 	req = id_req__unpack(NULL, msg_size, msg);
 	if (req == NULL) {
-		mslog(s, NULL, LOG_ERR, "error parsing id_info request");
+		mslog(ctx->s, NULL, LOG_ERR, "error parsing id_info request");
 		return;
 	}
 
-	single_info_common(s, cfd, msg, msg_size, NULL, req->id);
+	single_info_common(ctx, cfd, msg, msg_size, NULL, req->id);
 	id_req__free_unpacked(req, NULL);
 
 	return;
 }
 
-static void method_disconnect_user_name(main_server_st * s,
+static void method_disconnect_user_name(method_ctx *ctx,
 					int cfd, uint8_t * msg,
 					unsigned msg_size)
 {
@@ -523,36 +512,36 @@ static void method_disconnect_user_name(main_server_st * s,
 	struct proc_st *ctmp = NULL;
 	int ret;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_name");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: disconnect_name");
 
 	req = username_req__unpack(NULL, msg_size, msg);
 	if (req == NULL) {
-		mslog(s, NULL, LOG_ERR,
+		mslog(ctx->s, NULL, LOG_ERR,
 		      "error parsing disconnect_name request");
 		return;
 	}
 
 	/* got the name. Try to disconnect */
-	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
+	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
 		if (strcmp(ctmp->username, req->username) == 0) {
-			remove_proc(s, ctmp, 1);
+			remove_proc(ctx->s, ctmp, 1);
 			rep.status = 1;
 		}
 	}
 
 	username_req__free_unpacked(req, NULL);
 
-	ret = send_msg(cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
 	return;
 }
 
-static void method_disconnect_user_id(main_server_st * s, int cfd,
+static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 				      uint8_t * msg, unsigned msg_size)
 {
 	IdReq *req;
@@ -561,18 +550,18 @@ static void method_disconnect_user_id(main_server_st * s, int cfd,
 	struct proc_st *ctmp = NULL;
 	int ret;
 
-	mslog(s, NULL, LOG_DEBUG, "ctl: disconnect_id");
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: disconnect_id");
 
 	req = id_req__unpack(NULL, msg_size, msg);
 	if (req == NULL) {
-		mslog(s, NULL, LOG_ERR, "error parsing disconnect_id request");
+		mslog(ctx->s, NULL, LOG_ERR, "error parsing disconnect_id request");
 		return;
 	}
 
 	/* got the ID. Try to disconnect */
-	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
+	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid == req->id) {
-			remove_proc(s, ctmp, 1);
+			remove_proc(ctx->s, ctmp, 1);
 			rep.status = 1;
 			if (req->id != -1)
 				break;
@@ -582,11 +571,11 @@ static void method_disconnect_user_id(main_server_st * s, int cfd,
 	/* reply */
 	id_req__free_unpacked(req, NULL);
 
-	ret = send_msg(cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ctl reply");
 	}
 
 	return;
@@ -594,13 +583,23 @@ static void method_disconnect_user_id(main_server_st * s, int cfd,
 
 static void ctl_handle_commands(main_server_st * s)
 {
-	int cfd, e, ret;
+	int cfd = -1, e, ret;
 	unsigned i;
 	struct sockaddr_un sa;
 	socklen_t sa_len;
 	uint16_t length;
 	uint8_t buffer[256];
 	unsigned buffer_size;
+	method_ctx ctx;
+	void *pool = talloc_new(s);
+
+	if (pool == NULL) {
+		mslog(s, NULL, LOG_ERR, "memory allocation error");
+		return;
+	}
+
+	ctx.s = s;
+	ctx.pool = pool;
 
 	sa_len = sizeof(sa);
 	cfd = accept(s->ctl_fd, (struct sockaddr *)&sa, &sa_len);
@@ -608,7 +607,7 @@ static void ctl_handle_commands(main_server_st * s)
 		e = errno;
 		mslog(s, NULL, LOG_ERR,
 		      "error accepting control connection: %s", strerror(e));
-		return;
+		goto cleanup;
 	}
 
 	ret = check_upeer_id("ctl", cfd, 0, 0);
@@ -647,12 +646,14 @@ static void ctl_handle_commands(main_server_st * s)
 			      (unsigned)buffer[0]);
 			break;
 		} else if (methods[i].cmd == buffer[0]) {
-			methods[i].func(s, cfd, buffer + 3, buffer_size);
+			methods[i].func(&ctx, cfd, buffer + 3, buffer_size);
 			break;
 		}
 	}
  cleanup:
-	close(cfd);
+ 	talloc_free(pool);
+	if (cfd != -1)
+		close(cfd);
 }
 
 int ctl_handler_set_fds(main_server_st * s, fd_set * rd_set, fd_set * wr_set)

@@ -217,8 +217,9 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 	int ret;
 	int socketfd = -1;
 	AuthReplyMsg *msg = NULL;
+	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_socket_msg(ws->cmd_fd, AUTH_REP, &socketfd,
+	ret = recv_socket_msg(ws, ws->cmd_fd, AUTH_REP, &socketfd,
 			      (void *)&msg,
 			      (unpack_func) auth_reply_msg__unpack);
 	if (ret < 0) {
@@ -275,48 +276,48 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			       msg->session_id.len);
 
 			if (msg->ipv4 != NULL) {
-				free(ws->vinfo.ipv4);
+				talloc_free(ws->vinfo.ipv4);
 				if (strcmp(msg->ipv4, "0.0.0.0") == 0)
 					ws->vinfo.ipv4 = NULL;
 				else
-					ws->vinfo.ipv4 = strdup(msg->ipv4);
+					ws->vinfo.ipv4 = talloc_strdup(ws, msg->ipv4);
 			}
 
 			if (msg->ipv6 != NULL) {
-				free(ws->vinfo.ipv6);
+				talloc_free(ws->vinfo.ipv6);
 				if (strcmp(msg->ipv6, "::") == 0)
 					ws->vinfo.ipv6 = NULL;
 				else
-					ws->vinfo.ipv6 = strdup(msg->ipv6);
+					ws->vinfo.ipv6 = talloc_strdup(ws, msg->ipv6);
 			}
 
 			if (msg->ipv4_local != NULL) {
-				free(ws->vinfo.ipv4_local);
+				talloc_free(ws->vinfo.ipv4_local);
 				if (strcmp(msg->ipv4_local, "0.0.0.0") == 0)
 					ws->vinfo.ipv4_local = NULL;
 				else
-					ws->vinfo.ipv4_local = strdup(msg->ipv4_local);
+					ws->vinfo.ipv4_local = talloc_strdup(ws, msg->ipv4_local);
 			}
 
 			if (msg->ipv6_local != NULL) {
-				free(ws->vinfo.ipv6_local);
+				talloc_free(ws->vinfo.ipv6_local);
 				if (strcmp(msg->ipv6_local, "::") == 0)
 					ws->vinfo.ipv6_local = NULL;
 				else
-					ws->vinfo.ipv6_local = strdup(msg->ipv6_local);
+					ws->vinfo.ipv6_local = talloc_strdup(ws, msg->ipv6_local);
 			}
 
 			/* Read any additional data */
 			if (msg->ipv4_netmask != NULL) {
-				free(ws->config->network.ipv4_netmask);
+				talloc_free(ws->config->network.ipv4_netmask);
 				ws->config->network.ipv4_netmask =
-				    strdup(msg->ipv4_netmask);
+				    talloc_strdup(ws, msg->ipv4_netmask);
 			}
 
 			if (msg->ipv6_netmask != NULL) {
-				free(ws->config->network.ipv6_netmask);
+				talloc_free(ws->config->network.ipv6_netmask);
 				ws->config->network.ipv6_netmask =
-				    strdup(msg->ipv6_netmask);
+				    talloc_strdup(ws, msg->ipv6_netmask);
 			}
 
 			ws->config->network.ipv6_prefix = msg->ipv6_prefix;
@@ -334,19 +335,19 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			ws->routes_size = msg->n_routes;
 
 			for (i = 0; i < ws->routes_size; i++) {
-				ws->routes[i] = strdup(msg->routes[i]);
+				ws->routes[i] = talloc_strdup(ws, msg->routes[i]);
 			}
 
 			ws->dns_size = msg->n_dns;
 
 			for (i = 0; i < ws->dns_size; i++) {
-				ws->dns[i] = strdup(msg->dns[i]);
+				ws->dns[i] = talloc_strdup(ws, msg->dns[i]);
 			}
 
 			ws->nbns_size = msg->n_nbns;
 
 			for (i = 0; i < ws->nbns_size; i++) {
-				ws->nbns[i] = strdup(msg->nbns[i]);
+				ws->nbns[i] = talloc_strdup(ws, msg->nbns[i]);
 			}
 		} else {
 			oclog(ws, LOG_ERR, "error in received message");
@@ -366,7 +367,7 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 	ret = 0;
  cleanup:
 	if (msg != NULL)
-		auth_reply_msg__free_unpacked(msg, NULL);
+		auth_reply_msg__free_unpacked(msg, &pa);
 	return ret;
 }
 
@@ -597,7 +598,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*username =
-			    unescape_html(*username, strlen(*username), NULL);
+			    unescape_html(ws, *username, strlen(*username), NULL);
 		}
 
 		if (password != NULL) {
@@ -616,7 +617,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*password =
-			    unescape_html(*password, strlen(*password), NULL);
+			    unescape_html(ws, *password, strlen(*password), NULL);
 		}
 
 	} else {		/* non-xml version */
@@ -657,7 +658,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*username =
-			    unescape_url(*username, strlen(*username), NULL);
+			    unescape_url(ws, *username, strlen(*username), NULL);
 		}
 
 		if (password != NULL) {
@@ -671,7 +672,7 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*password =
-			    unescape_url(*password, strlen(*password), NULL);
+			    unescape_url(ws, *password, strlen(*password), NULL);
 		}
 	}
 
@@ -738,7 +739,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					ret = send_msg_to_main(ws, AUTH_REINIT, &rreq,
 					       (pack_size_func)auth_reinit_msg__get_packed_size,
 					       (pack_func)auth_reinit_msg__pack);
-					free(username);
+					talloc_free(username);
 
 					if (ret < 0) {
 						oclog(ws, LOG_ERR,
@@ -755,7 +756,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			snprintf(tmp_user, sizeof(tmp_user), "%s", username);
-			free(username);
+			talloc_free(username);
 			ireq.user_name = tmp_user;
 		}
 
@@ -814,7 +815,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					       (pack_func)
 					       auth_request_msg__pack);
 
-			free(password);
+			talloc_free(password);
 
 			if (ret < 0) {
 				oclog(ws, LOG_ERR,

@@ -57,7 +57,7 @@ int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,
 			cache->session_id_size = 0;
 
 			htable_delval(&s->tls_db->ht, &iter);
-			free(cache);
+			talloc_free(cache);
 			s->tls_db->entries--;
 			return 0;
 		}
@@ -138,7 +138,7 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = malloc(sizeof(*cache));
+	cache = talloc(s, tls_cache_st);
 	if (cache == NULL)
 		return -1;
 
@@ -183,7 +183,7 @@ void expire_tls_sessions(main_server_st * s)
 			cache->session_id_size = 0;
 
 			htable_delval(&s->tls_db->ht, &iter);
-			free(cache);
+			talloc_free(cache);
 			s->tls_db->entries--;
 		}
 		cache = htable_next(&s->tls_db->ht, &iter);

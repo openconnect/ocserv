@@ -31,9 +31,9 @@
 #include <cookies.h>
 #include <common.h>
 
-int cmd_parser (int argc, char **argv, struct cfg_st* config);
-void reload_cfg_file(struct cfg_st* config);
-void clear_cfg_file(struct cfg_st* config);
+int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config);
+void reload_cfg_file(void *pool, struct cfg_st** config);
+void clear_cfg_file(struct cfg_st** config);
 void write_pid_file(void);
 void remove_pid_file(void);
 
@@ -167,11 +167,9 @@ typedef struct main_server_st {
 	struct ip_lease_db_st ip_leases;
 
 	hash_db_st *tls_db;
+	tls_st *creds;
 	
 	uint8_t cookie_key[16];
-
-	/* tls credentials */
-	struct tls_st creds;
 
 	struct listen_list_st listen_list;
 	struct proc_list_st proc_list;
@@ -190,6 +188,8 @@ typedef struct main_server_st {
 #else
 	int ctl_fd;
 #endif
+	void *main_pool; /* talloc main pool */
+	void *worker_pool; /* talloc worker pool */
 } main_server_st;
 
 void clear_lists(main_server_st *s);
@@ -258,9 +258,13 @@ int handle_script_exit(main_server_st *s, struct proc_st* proc, int code, unsign
 
 void run_sec_mod(main_server_st * s);
 
-int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_st *config);
+int parse_group_cfg_file(main_server_st* s, struct proc_st *proc, const char* file);
 
 void del_additional_config(struct group_cfg_st* config);
+
+struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
+			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
+			uint8_t *sid, size_t sid_size);
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k);
 void proc_to_zombie(main_server_st* s, struct proc_st *proc);
 
@@ -271,7 +275,7 @@ int send_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd,
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
 	mslog(s, proc, LOG_DEBUG, "sending message '%s' to worker", cmd_request_to_str(cmd));
-	return send_msg(proc->fd, cmd, msg, get_size, pack);
+	return send_msg(proc, proc->fd, cmd, msg, get_size, pack);
 }
 
 inline static
@@ -279,7 +283,7 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 		int socketfd, const void* msg, pack_size_func get_size, pack_func pack)
 {
 	mslog(s, proc, LOG_DEBUG, "sending (socket) message %u to worker", (unsigned)cmd);
-	return send_socket_msg(proc->fd, cmd, socketfd, msg, get_size, pack);
+	return send_socket_msg(proc, proc->fd, cmd, socketfd, msg, get_size, pack);
 }
 
 void request_reload(int signo);

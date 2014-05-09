@@ -22,18 +22,19 @@
 #include <string.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <common.h>
 #include <c-strcase.h>
 #include <c-ctype.h>
 
 #include "html.h"
 
-char *unescape_html(const char *html, unsigned len, unsigned *out_len)
+char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_len)
 {
 	char *msg;
 	int pos;
 	unsigned i;
 
-	msg = malloc(len + 1);
+	msg = talloc_size(pool, len + 1);
 	if (msg == NULL)
 		return NULL;
 
@@ -70,13 +71,13 @@ char *unescape_html(const char *html, unsigned len, unsigned *out_len)
 	return msg;
 }
 
-char *unescape_url(const char *url, unsigned len, unsigned *out_len)
+char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 {
 	char *msg;
 	int pos;
 	unsigned i;
 
-	msg = malloc(len + 1);
+	msg = talloc_size(pool, len + 1);
 	if (msg == NULL)
 		return NULL;
 
@@ -90,7 +91,7 @@ char *unescape_url(const char *url, unsigned len, unsigned *out_len)
 			b[2] = 0;
 
 			if (sscanf(b, "%02x", &u) <= 0) {
-				free(msg);
+				talloc_free(msg);
 				syslog(LOG_ERR, "%s: error parsing URL: %s", __func__, url);
 				return NULL;
 			}
@@ -108,13 +109,13 @@ char *unescape_url(const char *url, unsigned len, unsigned *out_len)
 	return msg;
 }
 
-char *escape_url(const char *url, unsigned len, unsigned *out_len)
+char *escape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 {
 	char *msg;
 	int pos;
 	unsigned i;
 
-	msg = malloc(3*len + 1);
+	msg = talloc_size(pool, 3*len + 1);
 	if (msg == NULL)
 		return NULL;
 

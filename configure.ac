@@ -83,7 +83,8 @@ PKG_CHECK_MODULES([LIBPROTOBUF_C], [libprotobuf-c],,
   AC_MSG_WARN([[***
 *** libprotobuf-c was not found.
 ***]])
-  AC_SUBST([LIBPROTOBUF_C_CFLAGS], [-Iprotobuf/])
+  FLAGS='-Iprotobuf'
+  AC_SUBST([LIBPROTOBUF_C_CFLAGS], [$FLAGS])
   with_local_protobuf_c=yes
  fi
 ]
@@ -93,26 +94,30 @@ fi
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
 
-AC_ARG_WITH(talloc,
-  AS_HELP_STRING([--without-talloc], [use the included talloc library]),
-  test_for_talloc=$withval,
-  test_for_talloc=yes)
+AC_ARG_WITH(local-talloc,
+  AS_HELP_STRING([--with-local-talloc], [use the included talloc library]),
+  no_test_for_talloc=$withval,
+  no_test_for_talloc=no)
 
-with_local_talloc=no
-if test "$test_for_talloc" = yes;then
-PKG_CHECK_MODULES([LIBPROTOBUF_C], [libtalloc-c],,
+with_local_talloc=yes
+if test "$no_test_for_talloc" != yes;then
+PKG_CHECK_MODULES([LIBTALLOC], [talloc],,
 [AC_LIB_HAVE_LINKFLAGS(talloc,, [#include <talloc.h>], [talloc_size(0,0);])
  if test x$ac_cv_libtalloc = xyes; then
   AC_SUBST([LIBTALLOC_LIBS], [$LIBTALLOC])
+  with_local_talloc=no
  else
   AC_MSG_WARN([[***
-*** libtalloc-c was not found.
+*** libtalloc was not found.
 ***]])
-  AC_SUBST([LIBTALLOC_CFLAGS], [-Iccan/talloc/ -Iccan/typedef_cb/ -Iccan/compiler/])
-  with_local_talloc=yes
  fi
 ]
 )
+fi
+
+if test "$with_local_talloc" != no;then
+FLAGS='-Iccan/talloc/ -Iccan/typedef_cb/ -Iccan/compiler/'
+AC_SUBST([LIBTALLOC_CFLAGS], [$FLAGS])
 fi
 
 AM_CONDITIONAL(LOCAL_TALLOC, test "x$with_local_talloc" != xno)

@@ -160,7 +160,7 @@ static void add_ctl_fd(struct dbus_ctx *ctx, int fd, void *watch, unsigned type)
 {
 	struct ctl_handler_st *tmp;
 
-	tmp = malloc(sizeof(*tmp));
+	tmp = talloc_zero(ctx, struct ctl_handler_st);
 	if (tmp == NULL)
 		return;
 
@@ -209,7 +209,7 @@ static void remove_watch(DBusWatch * watch, void *data)
 			      btmp->fd);
 
 			list_del(&btmp->list);
-			free(btmp);
+			talloc_free(btmp);
 			return;
 		}
 	}
@@ -1128,7 +1128,7 @@ int ctl_handler_init(main_server_st * s)
 	if (s->config->use_dbus == 0)
 		return 0;
 
-	ctx = calloc(1, sizeof(struct dbus_ctx));
+	ctx = talloc_zero(s, struct dbus_ctx);
 	if (ctx == NULL)
 		return ERR_CTL;
 

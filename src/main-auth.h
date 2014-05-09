@@ -27,7 +27,7 @@
 
 struct auth_mod_st {
 	unsigned int type;
-	int (*auth_init)(void** ctx, const char* username, const char* ip, void* additional);
+	int (*auth_init)(void** ctx, void *pool, const char* username, const char* ip, void* additional);
 	int (*auth_msg)(void* ctx, char* msg, size_t msg_size);
 	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
 	int (*auth_group)(void* ctx, char *groupname, int groupname_size);

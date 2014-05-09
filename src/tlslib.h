@@ -41,10 +41,16 @@ ssize_t tls_send_nb(gnutls_session_t session, const void *data,
 void tls_cork(gnutls_session_t session);
 int tls_uncork(gnutls_session_t session);
 
-void tls_reload_crl(struct main_server_st* s);
-void tls_global_init(struct main_server_st* s);
-void tls_global_deinit(struct main_server_st* s);
-void tls_load_certs(struct main_server_st* s);
+typedef struct tls_st {
+	gnutls_certificate_credentials_t xcred;
+	gnutls_priority_t cprio;
+	gnutls_dh_params_t dh_params;
+} tls_st;
+
+void tls_reload_crl(struct main_server_st* s, struct tls_st *creds);
+void tls_global_init(struct tls_st *creds);
+void tls_global_deinit(struct tls_st *creds);
+void tls_load_certs(struct main_server_st* s, struct tls_st *creds);
 
 ssize_t tls_send_file(gnutls_session_t session, const char *file);
 size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
@@ -87,12 +93,6 @@ unsigned tls_has_session_cert(struct worker_st * ws);
 void tls_fatal_close(gnutls_session_t session,
 			    gnutls_alert_description_t a);
 
-struct tls_st {
-	gnutls_certificate_credentials_t xcred;
-	gnutls_priority_t cprio;
-	gnutls_dh_params_t dh_params;
-};
-
 typedef struct
 {
   /* does not allow resumption from different address
@@ -110,8 +110,8 @@ typedef struct
 #define TLS_SESSION_EXPIRATION_TIME 600
 #define DEFAULT_MAX_CACHED_TLS_SESSIONS 64
 
-void tls_cache_init(hash_db_st** db);
+void tls_cache_init(void *pool, hash_db_st** db);
 void tls_cache_deinit(hash_db_st* db);
-void *calc_sha1_hash(char* file, unsigned cert);
+void *calc_sha1_hash(void *pool, char* file, unsigned cert);
 
 #endif

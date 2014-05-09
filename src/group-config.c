@@ -63,14 +63,14 @@ static struct cfg_options available_options[] = {
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
 			num = 0; \
-			s_name = malloc(sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			s_name = talloc_size(proc, sizeof(char*)*MAX_CONFIG_ENTRIES); \
 		} \
 		do { \
 		        if (num >= MAX_CONFIG_ENTRIES) \
 			        break; \
 		        if (val && !strcmp(val->pzName, name)==0) \
 				continue; \
-		        s_name[num] = strdup(val->v.strVal); \
+		        s_name[num] = talloc_strdup(proc, val->v.strVal); \
 		        num++; \
 	      } while((val = optionNextValue(pov, val)) != NULL); \
 	      s_name[num] = NULL; \
@@ -80,8 +80,8 @@ static struct cfg_options available_options[] = {
 	val = optionGetValue(pov, name); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name != NULL) \
-			free(s_name); \
-		s_name = strdup(val->v.strVal); \
+			talloc_free(s_name); \
+		s_name = talloc_strdup(proc, val->v.strVal); \
 	}
 
 #define READ_RAW_NUMERIC(name, s_name) \
@@ -125,11 +125,12 @@ unsigned j;
  * config. The provided config must either be memset to zero, or be
  * already allocated using this function.
  */
-int parse_group_cfg_file(main_server_st* s, const char* file, struct group_cfg_st *config)
+int parse_group_cfg_file(main_server_st* s, struct proc_st *proc, const char* file)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
 unsigned prefix = 0;
+struct group_cfg_st *config = &proc->config;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
@@ -174,7 +175,7 @@ unsigned prefix = 0;
 
 	READ_RAW_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) {
-		config->ipv6_netmask = ipv6_prefix_to_mask(prefix);
+		config->ipv6_netmask = ipv6_prefix_to_mask(proc, prefix);
 		config->ipv6_prefix = prefix;
 
 		if (config->ipv6_netmask == NULL) {
@@ -201,29 +202,29 @@ void del_additional_config(struct group_cfg_st* config)
 unsigned i;
 
 	for(i=0;i<config->routes_size;i++) {
-		free(config->routes[i]);
+		talloc_free(config->routes[i]);
 	}
-	free(config->routes);
+	talloc_free(config->routes);
 
 	for(i=0;i<config->iroutes_size;i++) {
-		free(config->iroutes[i]);
+		talloc_free(config->iroutes[i]);
 	}
-	free(config->iroutes);
+	talloc_free(config->iroutes);
 
 	for(i=0;i<config->dns_size;i++) {
-		free(config->dns[i]);
+		talloc_free(config->dns[i]);
 	}
-	free(config->dns);
+	talloc_free(config->dns);
 
 	for(i=0;i<config->nbns_size;i++) {
-		free(config->nbns[i]);
+		talloc_free(config->nbns[i]);
 	}
-	free(config->nbns);
+	talloc_free(config->nbns);
 
-	free(config->cgroup);
-	free(config->ipv4_network);
-	free(config->ipv6_network);
-	free(config->ipv4_netmask);
-	free(config->ipv6_netmask);
+	talloc_free(config->cgroup);
+	talloc_free(config->ipv4_network);
+	talloc_free(config->ipv6_network);
+	talloc_free(config->ipv4_netmask);
+	talloc_free(config->ipv6_netmask);
 	memset(config, 0, sizeof(*config));
 }

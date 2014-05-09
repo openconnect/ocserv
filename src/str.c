@@ -35,23 +35,11 @@ void str_clear(str_st * str)
 {
 	if (str == NULL || str->allocd == NULL)
 		return;
-	free(str->allocd);
+	talloc_free(str->allocd);
 
 	str->data = str->allocd = NULL;
 	str->max_length = 0;
 	str->length = 0;
-}
-
-void *safe_realloc(void *ptr, size_t size)
-{
-	void* tmp, *ret;
-	
-	tmp = ptr;
-	ret = realloc(ptr, size);
-	if (ret == NULL) {
-		free(tmp);
-	}
-	return ret;
 }
 
 #define MIN_CHUNK 64
@@ -82,7 +70,7 @@ int str_append_size(str_st * dest, size_t data_size)
 		    MAX(data_size, MIN_CHUNK) + MAX(dest->max_length,
 						    MIN_CHUNK);
 
-		dest->allocd = safe_realloc(dest->allocd, new_len+1);
+		dest->allocd = talloc_realloc_size(dest->pool, dest->allocd, new_len+1);
 		if (dest->allocd == NULL)
 			return ERR_MEM;
 		dest->max_length = new_len;

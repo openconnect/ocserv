@@ -30,8 +30,12 @@
 #include <occtl.h>
 #include <c-strcase.h>
 
+typedef struct dbus_ctx {
+	DBusConnection *conn;
+} dbus_ctx;
+
 /* sends a message and returns the reply */
-DBusMessage *send_dbus_cmd(DBusConnection * conn,
+DBusMessage *send_dbus_cmd(dbus_ctx *ctx,
 			   const char *bus_name, const char *path,
 			   const char *interface, const char *method,
 			   unsigned type, const void *arg)
@@ -52,14 +56,14 @@ DBusMessage *send_dbus_cmd(DBusConnection * conn,
 	}
 
 	if (!dbus_connection_send_with_reply
-	    (conn, msg, &pending, DEFAULT_TIMEOUT)) {
+	    (ctx->conn, msg, &pending, DEFAULT_TIMEOUT)) {
 		goto error;
 	}
 
 	if (pending == NULL)
 		goto error;
 
-	dbus_connection_flush(conn);
+	dbus_connection_flush(ctx->conn);
 	dbus_message_unref(msg);
 
 	/* wait for reply */
@@ -79,7 +83,7 @@ DBusMessage *send_dbus_cmd(DBusConnection * conn,
 
 }
 
-int handle_status_cmd(DBusConnection * conn, const char *arg)
+int handle_status_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -88,7 +92,7 @@ int handle_status_cmd(DBusConnection * conn, const char *arg)
 	dbus_uint32_t sec_mod_pid;
 	dbus_uint32_t clients;
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "status", 0, NULL);
 	if (msg == NULL) {
@@ -154,13 +158,13 @@ int handle_status_cmd(DBusConnection * conn, const char *arg)
 	return 1;
 }
 
-int handle_reload_cmd(DBusConnection * conn, const char *arg)
+int handle_reload_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
 	dbus_bool_t status;
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "reload", 0, NULL);
 	if (msg == NULL) {
@@ -199,7 +203,7 @@ int handle_reload_cmd(DBusConnection * conn, const char *arg)
 	return 1;
 }
 
-int handle_stop_cmd(DBusConnection * conn, const char *arg)
+int handle_stop_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -210,7 +214,7 @@ int handle_stop_cmd(DBusConnection * conn, const char *arg)
 		return 1;
 	}
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "stop", 0, NULL);
 	if (msg == NULL) {
@@ -249,7 +253,7 @@ int handle_stop_cmd(DBusConnection * conn, const char *arg)
 	return 1;
 }
 
-int handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
+int handle_disconnect_user_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -260,7 +264,7 @@ int handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 		return 1;
 	}
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv",
 			    "disconnect_name", DBUS_TYPE_STRING, &arg);
@@ -293,7 +297,7 @@ int handle_disconnect_user_cmd(DBusConnection * conn, const char *arg)
 	return 1;
 }
 
-int handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
+int handle_disconnect_id_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -309,7 +313,7 @@ int handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 		return 1;
 	}
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv",
 			    "disconnect_id", DBUS_TYPE_UINT32, &id);
@@ -344,7 +348,7 @@ int handle_disconnect_id_cmd(DBusConnection * conn, const char *arg)
 	return 1;
 }
 
-int handle_list_users_cmd(DBusConnection * conn, const char *arg)
+int handle_list_users_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args, suba, subs;
@@ -369,7 +373,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 
 	out = pager_start();
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "list", 0, NULL);
 	if (msg == NULL) {
@@ -525,7 +529,7 @@ int handle_list_users_cmd(DBusConnection * conn, const char *arg)
 			fprintf(out, " %14s %9s\n", "(no dtls)", auth);
 		}
 
-		entries_add(username, strlen(username), id);
+		entries_add(ctx, username, strlen(username), id);
 
 		if (!dbus_message_iter_next(&suba))
 			break;
@@ -850,7 +854,7 @@ int common_info_cmd(DBusMessageIter * args)
 	return ret;
 }
 
-int handle_show_user_cmd(DBusConnection * conn, const char *arg)
+int handle_show_user_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -861,7 +865,7 @@ int handle_show_user_cmd(DBusConnection * conn, const char *arg)
 		return 1;
 	}
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "user_info2",
 			    DBUS_TYPE_STRING, &arg);
@@ -892,7 +896,7 @@ int handle_show_user_cmd(DBusConnection * conn, const char *arg)
 	return ret;
 }
 
-int handle_show_id_cmd(DBusConnection * conn, const char *arg)
+int handle_show_id_cmd(dbus_ctx *ctx, const char *arg)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -907,7 +911,7 @@ int handle_show_id_cmd(DBusConnection * conn, const char *arg)
 		return 1;
 	}
 
-	msg = send_dbus_cmd(conn, "org.infradead.ocserv",
+	msg = send_dbus_cmd(ctx->conn, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
 			    "org.infradead.ocserv", "id_info2",
 			    DBUS_TYPE_UINT32, &id);
@@ -938,10 +942,15 @@ int handle_show_id_cmd(DBusConnection * conn, const char *arg)
 	return ret;
 }
 
-DBusConnection *conn_init(void)
+dbus_ctx *conn_init(void *pool)
 {
 	DBusError err;
+	dbus_ctx *ctx;
 	DBusConnection *conn;
+
+	ctx = talloc(pool, dbus_ctx);
+	if (ctx == NULL)
+		return NULL;
 
 	dbus_error_init(&err);
 
@@ -954,20 +963,22 @@ DBusConnection *conn_init(void)
 	if (conn == NULL)
 		exit(1);
 
-	return conn;
+	ctx->conn = conn;
+
+	return ctx;
 }
 
-void conn_close(DBusConnection* conn)
+void conn_close(dbus_ctx *ctx)
 {
-	dbus_connection_close(conn);
+	dbus_connection_close(ctx->conn);
 }
 
-int conn_prehandle(DBusConnection *ctx)
+int conn_prehandle(dbus_ctx *ctx)
 {
 	return 0;
 }
 
-void conn_posthandle(DBusConnection *ctx)
+void conn_posthandle(dbus_ctx *ctx)
 {
 	return;
 }

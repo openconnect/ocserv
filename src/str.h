@@ -31,14 +31,16 @@ typedef struct {
 	uint8_t *data;		/* API: pointer to data to copy from */
 	size_t max_length;
 	size_t length;		/* API: current length */
+	void *pool;
 } str_st;
 
 /* Initialize a buffer */
-inline static void str_init(str_st * str)
+inline static void str_init(str_st * str, void *pool)
 {
 	str->data = str->allocd = NULL;
 	str->max_length = 0;
 	str->length = 0;
+	str->pool = pool;
 }
 
 /* Free the data in a buffer */
@@ -55,7 +57,6 @@ int str_append_str(str_st *, const char *str);
 int str_append_data(str_st *, const void *data, size_t data_size);
 int str_append_size(str_st *, size_t data_size);
 int str_append_data_prefix1(str_st *, const void *data, size_t data_size);
-void *safe_realloc(void *ptr, size_t size);
 
 #define str_append_str_prefix1(s, str) (((str)==NULL)?str_append_data_prefix1(s, NULL, 0):str_append_data_prefix1(s, str, strlen(str)))
 

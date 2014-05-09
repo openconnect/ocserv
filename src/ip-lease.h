@@ -33,10 +33,14 @@ struct ip_lease_st {
 
         struct sockaddr_storage lip;
         socklen_t lip_len;
+
+        struct ip_lease_db_st* db;
 };
 
 void ip_lease_deinit(struct ip_lease_db_st* db);
 void ip_lease_init(struct ip_lease_db_st* db);
+
+void steal_ip_leases(struct proc_st* proc, struct proc_st *thief);
 
 int get_ip_leases(struct main_server_st* s, struct proc_st* proc);
 void remove_ip_leases(struct main_server_st* s, struct proc_st* proc);

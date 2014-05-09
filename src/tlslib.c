@@ -181,11 +181,11 @@ const tls_cache_st *e = _e;
 	return hash_any(e->session_id, e->session_id_size, 0);
 }
 
-void tls_cache_init(hash_db_st** _db)
+void tls_cache_init(void *pool, hash_db_st** _db)
 {
 hash_db_st * db;
 
-	db = malloc(sizeof(*db));
+	db = talloc(pool, hash_db_st);
 	if (db == NULL)
 		exit(1);
 
@@ -207,13 +207,13 @@ struct htable_iter iter;
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
 		}
-          	free(cache);
+          	talloc_free(cache);
 
           	cache = htable_next(&db->ht, &iter);
         }
         htable_clear(&db->ht);
 	db->entries = 0;
-	free(db);
+	talloc_free(db);
 
         return;
 }
@@ -292,7 +292,7 @@ fail:
 
 }
 
-void tls_global_init(main_server_st* s)
+void tls_global_init(tls_st *creds)
 {
 int ret;
 
@@ -304,12 +304,12 @@ int ret;
 	return;
 }
 
-void tls_global_deinit(main_server_st* s)
+void tls_global_deinit(tls_st *creds)
 {
-	if (s->creds.xcred != NULL)
-		gnutls_certificate_free_credentials(s->creds.xcred);
-	if (s->creds.cprio != NULL)
-		gnutls_priority_deinit(s->creds.cprio);
+	if (creds->xcred != NULL)
+		gnutls_certificate_free_credentials(creds->xcred);
+	if (creds->cprio != NULL)
+		gnutls_priority_deinit(creds->cprio);
 
 	gnutls_global_deinit();
 
@@ -362,24 +362,24 @@ cleanup:
 	return;
 }
 
-static void set_dh_params(main_server_st* s, gnutls_certificate_credentials_t cred)
+static void set_dh_params(main_server_st* s, tls_st *creds)
 {
 gnutls_datum_t data;
 int ret;
 
 	if (s->config->dh_params_file != NULL) {
-		ret = gnutls_dh_params_init (&s->creds.dh_params);
+		ret = gnutls_dh_params_init (&creds->dh_params);
 		GNUTLS_FATAL_ERR(ret);
 
 		ret = gnutls_load_file(s->config->dh_params_file, &data);
 		GNUTLS_FATAL_ERR(ret);
 
-		ret = gnutls_dh_params_import_pkcs3(s->creds.dh_params, &data, GNUTLS_X509_FMT_PEM);
+		ret = gnutls_dh_params_import_pkcs3(creds->dh_params, &data, GNUTLS_X509_FMT_PEM);
 		GNUTLS_FATAL_ERR(ret);
 
 		gnutls_free(data.data);
 
-		gnutls_certificate_set_dh_params(cred, s->creds.dh_params);
+		gnutls_certificate_set_dh_params(creds->xcred, creds->dh_params);
 	}
 }
 
@@ -479,11 +479,11 @@ static int key_cb_decrypt_func(gnutls_privkey_t key, void* userdata, const gnutl
 
 static void key_cb_deinit_func(gnutls_privkey_t key, void* userdata)
 {
-	free(userdata);
+	talloc_free(userdata);
 }
 
 static
-int load_cert_files(main_server_st *s)
+int load_cert_files(main_server_st *s, tls_st *creds)
 {
 int ret;
 gnutls_pcert_st *pcert_list;
@@ -521,7 +521,10 @@ struct key_cb_data * cdata;
 		ret = gnutls_privkey_init(&key);
 		GNUTLS_FATAL_ERR(ret);
 
-		cdata = malloc(sizeof(*cdata));
+		/* use use the main pool rather than main, to allow usage of the credentials
+		 * after freeing s.
+		 */
+		cdata = talloc(s->main_pool, struct key_cb_data);
 		if (cdata == NULL) {
 			mslog(s, NULL, LOG_ERR, "error allocating memory");
 			return -1;
@@ -540,7 +543,7 @@ struct key_cb_data * cdata;
 			key_cb_deinit_func, GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE);
 		GNUTLS_FATAL_ERR(ret);
 
-		ret = gnutls_certificate_set_key(s->creds.xcred, NULL, 0, pcert_list,
+		ret = gnutls_certificate_set_key(creds->xcred, NULL, 0, pcert_list,
 				pcert_list_size, key);
 		GNUTLS_FATAL_ERR(ret);
 	}
@@ -549,7 +552,7 @@ struct key_cb_data * cdata;
 }
 
 /* reload key files etc. */
-void tls_load_certs(main_server_st* s)
+void tls_load_certs(main_server_st *s, tls_st *creds)
 {
 int ret;
 const char* perr;
@@ -559,13 +562,13 @@ const char* perr;
 		gnutls_global_set_log_level(9);
 	}
 
-	if (s->creds.xcred != NULL)
-		gnutls_certificate_free_credentials(s->creds.xcred);
+	if (creds->xcred != NULL)
+		gnutls_certificate_free_credentials(creds->xcred);
 
-	ret = gnutls_certificate_allocate_credentials(&s->creds.xcred);
+	ret = gnutls_certificate_allocate_credentials(&creds->xcred);
 	GNUTLS_FATAL_ERR(ret);
 
-	set_dh_params(s, s->creds.xcred);
+	set_dh_params(s, creds);
 
 	if (s->config->key_size == 0 || s->config->cert_size == 0) {
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified"); 
@@ -574,7 +577,7 @@ const char* perr;
 
 	certificate_check(s);
 
-	ret = load_cert_files(s);
+	ret = load_cert_files(s, creds);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "error loading the certificate or key file");
 		exit(1);
@@ -583,7 +586,7 @@ const char* perr;
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
 		if (s->config->ca != NULL) {
 			ret =
-			    gnutls_certificate_set_x509_trust_file(s->creds.xcred,
+			    gnutls_certificate_set_x509_trust_file(creds->xcred,
 								   s->config->ca,
 								   GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
@@ -595,19 +598,19 @@ const char* perr;
 			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
-		tls_reload_crl(s);
+		tls_reload_crl(s, creds);
 
-		gnutls_certificate_set_verify_function(s->creds.xcred,
+		gnutls_certificate_set_verify_function(creds->xcred,
 						       verify_certificate_cb);
 	}
 
-	ret = gnutls_priority_init(&s->creds.cprio, s->config->priorities, &perr);
+	ret = gnutls_priority_init(&creds->cprio, s->config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)
 		mslog(s, NULL, LOG_ERR, "error in TLS priority string: %s", perr);
 	GNUTLS_FATAL_ERR(ret);
 
 	if (s->config->ocsp_response != NULL) {
-		ret = gnutls_certificate_set_ocsp_status_request_file(s->creds.xcred,
+		ret = gnutls_certificate_set_ocsp_status_request_file(creds->xcred,
 			s->config->ocsp_response, 0);
 		GNUTLS_FATAL_ERR(ret);
 	}
@@ -615,13 +618,13 @@ const char* perr;
 	return;
 }
 
-void tls_reload_crl(main_server_st* s)
+void tls_reload_crl(main_server_st* s, tls_st *creds)
 {
 int ret;
 
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE && s->config->crl != NULL) {
 		ret =
-		    gnutls_certificate_set_x509_crl_file(s->creds.xcred,
+		    gnutls_certificate_set_x509_crl_file(creds->xcred,
 							 s->config->crl,
 							 GNUTLS_X509_FMT_PEM);
 		if (ret < 0) {
@@ -648,7 +651,7 @@ int tls_uncork(gnutls_session_t session)
 	return gnutls_record_uncork(session, GNUTLS_RECORD_WAIT);
 }
 
-void *calc_sha1_hash(char* file, unsigned cert)
+void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 {
 int ret;
 gnutls_datum_t data;
@@ -687,7 +690,7 @@ unsigned i;
 	}
 
 	size_t ret_size = sizeof(digest)*2+1;
-	retval = malloc(ret_size);
+	retval = talloc_size(pool, ret_size);
 	if (retval == NULL) {
 		fprintf(stderr, "memory error");
 		exit(1);

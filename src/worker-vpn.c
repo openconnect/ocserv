@@ -240,7 +240,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length,
 	      req->header.data, (int)req->value.length, req->value.data);
 
-	value = malloc(req->value.length + 1);
+	value = talloc_size(ws, req->value.length + 1);
 	if (value == NULL)
 		return;
 
@@ -384,7 +384,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	}
 
  cleanup:
-	free(value);
+	talloc_free(value);
 }
 
 int header_field_cb(http_parser * parser, const char *at, size_t length)
@@ -503,7 +503,7 @@ int body_cb(http_parser * parser, const char *at, size_t length)
 	struct http_req_st *req = &ws->req;
 	char *tmp;
 
-	tmp = safe_realloc(req->body, req->body_length + length + 1);
+	tmp = talloc_realloc_size(ws, req->body, req->body_length + length + 1);
 	if (tmp == NULL)
 		return 1;
 
@@ -591,8 +591,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 
 static void http_req_init(worker_st * ws)
 {
-	str_init(&ws->req.header);
-	str_init(&ws->req.value);
+	str_init(&ws->req.header, ws);
+	str_init(&ws->req.value, ws);
 }
 
 static void http_req_reset(worker_st * ws)
@@ -612,7 +612,7 @@ static void http_req_deinit(worker_st * ws)
 	http_req_reset(ws);
 	str_clear(&ws->req.header);
 	str_clear(&ws->req.value);
-	free(ws->req.body);
+	talloc_free(ws->req.body);
 	ws->req.body = NULL;
 }
 
@@ -1324,7 +1324,7 @@ static int connect_handler(worker_st * ws)
 	sigaddset(&blockset, SIGTERM);
 
 	ws->buffer_size = 16 * 1024;
-	ws->buffer = malloc(ws->buffer_size);
+	ws->buffer = talloc_size(ws, ws->buffer_size);
 	if (ws->buffer == NULL) {
 		oclog(ws, LOG_INFO, "memory error");
 		tls_puts(ws->session,
@@ -1764,7 +1764,7 @@ static int connect_handler(worker_st * ws)
 		      "buffer size is smaller than MTU (%u < %u); adjusting",
 		      ws->buffer_size, ws->conn_mtu);
 		ws->buffer_size = ws->conn_mtu + CSTP_OVERHEAD;
-		ws->buffer = safe_realloc(ws->buffer, ws->buffer_size);
+		ws->buffer = talloc_realloc_size(ws, ws->buffer, ws->buffer_size);
 		if (ws->buffer == NULL)
 			goto exit;
 	}

@@ -63,7 +63,7 @@ struct cmd_reply_st {
 
 static void free_reply(struct cmd_reply_st *rep)
 {
-	free(rep->data);
+	talloc_free(rep->data);
 }
 
 static void init_reply(struct cmd_reply_st *rep)
@@ -74,7 +74,7 @@ static void init_reply(struct cmd_reply_st *rep)
 
 /* sends a message and returns the reply */
 static
-int send_cmd(int fd, unsigned cmd, const void *data,
+int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 		 pack_size_func get_size, pack_func pack,
 		 struct cmd_reply_st *rep)
 {
@@ -96,7 +96,7 @@ int send_cmd(int fd, unsigned cmd, const void *data,
 	iov[0].iov_len = 3;
 
 	if (data != NULL) {
-		packed = malloc(length);
+		packed = talloc_size(ctx, length);
 		if (packed == NULL) {
 			fprintf(stderr, "memory error\n");
 			return -1;
@@ -113,7 +113,7 @@ int send_cmd(int fd, unsigned cmd, const void *data,
 		iov_len++;
 	}
 
-	ret = writev(fd, iov, iov_len);
+	ret = writev(ctx->fd, iov, iov_len);
 	if (ret < 0) {
 		e = errno;
 		fprintf(stderr, "writev: %s\n", strerror(e));
@@ -122,7 +122,7 @@ int send_cmd(int fd, unsigned cmd, const void *data,
 	}
 
 	if (rep != NULL) {
-		ret = force_read_timeout(fd, header, 3, DEFAULT_TIMEOUT);
+		ret = force_read_timeout(ctx->fd, header, 3, DEFAULT_TIMEOUT);
 		if (ret == -1) {
 			/*e = errno;
 			fprintf(stderr, "read: %s\n", strerror(e));*/
@@ -147,17 +147,17 @@ int send_cmd(int fd, unsigned cmd, const void *data,
 		length = (header[2] << 8) | header[1];
 
 		rep->data_size = length;
-		rep->data = malloc(length);
+		rep->data = talloc_size(ctx, length);
 		if (rep->data == NULL) {
 			fprintf(stderr, "memory error\n");
 			ret = -1;
 			goto fail;
 		}
 
-		ret = force_read_timeout(fd, rep->data, length, DEFAULT_TIMEOUT);
+		ret = force_read_timeout(ctx->fd, rep->data, length, DEFAULT_TIMEOUT);
 		if (ret == -1) {
 			e = errno;
-			free(rep->data);
+			talloc_free(rep->data);
 			rep->data = NULL;
 			fprintf(stderr, "read: %s\n", strerror(e));
 			ret = -1;
@@ -167,7 +167,7 @@ int send_cmd(int fd, unsigned cmd, const void *data,
 
 	ret = 0;
  fail:
-	free(packed);
+	talloc_free(packed);
 	return ret;
 }
 
@@ -212,7 +212,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 
 	init_reply(&raw);
 
-	ret = send_cmd(ctx->fd, CTL_CMD_STATUS, NULL, NULL, NULL, &raw);
+	ret = send_cmd(ctx, CTL_CMD_STATUS, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
 		goto error_status;
 	}
@@ -252,7 +252,7 @@ int handle_reload_cmd(struct unix_ctx *ctx, const char *arg)
 	
 	init_reply(&raw);
 
-	ret = send_cmd(ctx->fd, CTL_CMD_RELOAD, NULL, NULL, NULL, &raw);
+	ret = send_cmd(ctx, CTL_CMD_RELOAD, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
 		goto error_status;
 	}
@@ -291,7 +291,7 @@ int handle_stop_cmd(struct unix_ctx *ctx, const char *arg)
 	
 	init_reply(&raw);
 
-	ret = send_cmd(ctx->fd, CTL_CMD_STOP, NULL, NULL, NULL, &raw);
+	ret = send_cmd(ctx, CTL_CMD_STOP, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
 		goto error_status;
 	}
@@ -338,7 +338,7 @@ int handle_disconnect_user_cmd(struct unix_ctx *ctx, const char *arg)
 
 	req.username = (void*)arg;
 
-	ret = send_cmd(ctx->fd, CTL_CMD_DISCONNECT_NAME, &req, 
+	ret = send_cmd(ctx, CTL_CMD_DISCONNECT_NAME, &req, 
 		(pack_size_func)username_req__get_packed_size, 
 		(pack_func)username_req__pack, &raw);
 	if (ret < 0) {
@@ -391,7 +391,7 @@ int handle_disconnect_id_cmd(struct unix_ctx *ctx, const char *arg)
 
 	req.id = id;
 
-	ret = send_cmd(ctx->fd, CTL_CMD_DISCONNECT_ID, &req, 
+	ret = send_cmd(ctx, CTL_CMD_DISCONNECT_ID, &req, 
 		(pack_size_func)id_req__get_packed_size, 
 		(pack_func)id_req__pack, &raw);
 	if (ret < 0) {
@@ -443,7 +443,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 
 	out = pager_start();
 
-	ret = send_cmd(ctx->fd, CTL_CMD_LIST, NULL, NULL, NULL, &raw);
+	ret = send_cmd(ctx, CTL_CMD_LIST, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
 		goto error;
 	}
@@ -491,7 +491,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 			fprintf(out, " %14s %9s\n", "(no dtls)", rep->user[i]->status);
 		}
 
-		entries_add(username, strlen(username), rep->user[i]->id);
+		entries_add(ctx, username, strlen(username), rep->user[i]->id);
 	}
 
 	ret = 0;
@@ -666,7 +666,7 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg)
 
 	req.username = (void*)arg;
 
-	ret = send_cmd(ctx->fd, CTL_CMD_USER_INFO, &req, 
+	ret = send_cmd(ctx, CTL_CMD_USER_INFO, &req, 
 		(pack_size_func)username_req__get_packed_size, 
 		(pack_func)username_req__pack, &raw);
 	if (ret < 0) {
@@ -715,7 +715,7 @@ int handle_show_id_cmd(struct unix_ctx *ctx, const char *arg)
 
 	req.id = id;
 
-	ret = send_cmd(ctx->fd, CTL_CMD_ID_INFO, &req, 
+	ret = send_cmd(ctx, CTL_CMD_ID_INFO, &req, 
 		(pack_size_func)id_req__get_packed_size, 
 		(pack_func)id_req__pack, &raw);
 	if (ret < 0) {
@@ -761,12 +761,12 @@ void conn_posthandle(struct unix_ctx *ctx)
 	}
 }
 
-struct unix_ctx *conn_init(void)
+struct unix_ctx *conn_init(void *pool)
 {
-	return calloc(1, sizeof(struct unix_ctx));
+	return talloc_zero(pool, struct unix_ctx);
 }
 
 void conn_close(struct unix_ctx* conn)
 {
-	free(conn);
+	talloc_free(conn);
 }

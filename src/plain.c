@@ -101,17 +101,17 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 	ret = 0;
  exit:
 	fclose(fp);
-	free(line);
+	free(line); /* no talloc_free, as it is provided by getline */
 	return ret;
 }
 
-static int plain_auth_init(void **ctx, const char *username, const char *ip,
+static int plain_auth_init(void **ctx, void *pool, const char *username, const char *ip,
 			   void *additional)
 {
 	struct plain_ctx_st *pctx;
 	int ret;
 
-	pctx = malloc(sizeof(*pctx));
+	pctx = talloc_zero(pool, struct plain_ctx_st);
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
@@ -124,7 +124,7 @@ static int plain_auth_init(void **ctx, const char *username, const char *ip,
 
 	ret = read_auth_pass(pctx);
 	if (ret < 0) {
-		free(pctx);
+		talloc_free(pctx);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -180,7 +180,7 @@ static int plain_auth_msg(void *ctx, char *msg, size_t msg_size)
 
 static void plain_auth_deinit(void *ctx)
 {
-	free(ctx);
+	talloc_free(ctx);
 }
 
 const struct auth_mod_st plain_auth_funcs = {

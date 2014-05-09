@@ -96,9 +96,9 @@ ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 ocpasswd-args.h: ocpasswd-args.c
 
 occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c \
-	occtl-nl.c ctl.h common.h common.c ctl.pb-c.c ctl.pb-c.h
+	occtl-nl.c ctl.h common.h common.c ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES)
 occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
-	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS)
+	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 
 if HAVE_DBUS
 ocserv_SOURCES += main-ctl-dbus.c

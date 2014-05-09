@@ -28,7 +28,7 @@ void add_to_script_list(main_server_st* s, pid_t pid, unsigned up, struct proc_s
 {
 struct script_wait_st *stmp;
 
-	stmp = malloc(sizeof(*stmp));
+	stmp = talloc(s, struct script_wait_st);
 	if (stmp == NULL)
 		return;
 	
@@ -46,7 +46,7 @@ struct script_wait_st *stmp = NULL, *spos;
 	list_for_each_safe(&s->script_list.head, stmp, spos, list) {
 		if (stmp->proc == proc) {
 			list_del(&stmp->list);
-			free(stmp);
+			talloc_free(stmp);
 			break;
 		}
 	}

@@ -141,7 +141,7 @@ static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
 		mslog(s, proc, LOG_DEBUG, "Loading %s configuration '%s'", type,
 		      file);
 
-		ret = parse_group_cfg_file(s, file, &proc->config);
+		ret = parse_group_cfg_file(s, proc, file);
 		if (ret < 0)
 			return ERR_READ_CONFIG;
 	} else {
@@ -185,6 +185,32 @@ static int read_additional_config(struct main_server_st *s,
 	return 0;
 }
 
+struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
+			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
+			uint8_t *sid, size_t sid_size)
+{
+struct proc_st *ctmp;
+
+	ctmp = talloc_zero(s, struct proc_st);
+	if (ctmp == NULL)
+		return NULL;
+
+	ctmp->pid = pid;
+	ctmp->tun_lease.fd = -1;
+	ctmp->fd = cmd_fd;
+	set_cloexec_flag (cmd_fd, 1);
+
+	memcpy(&ctmp->remote_addr, remote_addr, remote_addr_len);
+	ctmp->remote_addr_len = remote_addr_len;
+	memcpy(ctmp->sid, sid, sid_size);
+
+	list_add(&s->proc_list.head, &(ctmp->list));
+	put_into_cgroup(s, s->config->cgroup, pid);
+	s->active_clients++;
+
+	return ctmp;
+}
+
 /* k: whether to kill the process
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
@@ -213,12 +239,10 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	if (proc->auth_ctx != NULL)
 		proc_auth_deinit(s, proc);
 
-	if (!proc->leases_in_use) {
-		if (proc->ipv4 || proc->ipv6)
-			remove_ip_leases(s, proc);
-	}
+	if (proc->ipv4 || proc->ipv6)
+		remove_ip_leases(s, proc);
 
-	free(proc);
+	talloc_free(proc);
 }
 
 void proc_to_zombie(main_server_st * s, struct proc_st *proc)
@@ -372,6 +396,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	uint16_t length;
 	uint8_t *raw;
 	int ret, raw_len, e;
+	PROTOBUF_ALLOCATOR(pa, proc);
 
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
@@ -405,7 +430,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	mslog(s, proc, LOG_DEBUG, "main received message '%s' of %u bytes\n",
 	      cmd_request_to_str(cmd), (unsigned)length);
 
-	raw = malloc(length);
+	raw = talloc_size(proc, length);
 	if (raw == NULL) {
 		mslog(s, proc, LOG_ERR, "memory error");
 		return ERR_MEM;
@@ -432,7 +457,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 				goto cleanup;
 			}
 
-			tmsg = tun_mtu_msg__unpack(NULL, raw_len, raw);
+			tmsg = tun_mtu_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
 				ret = ERR_BAD_COMMAND;
@@ -441,7 +466,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 			set_tun_mtu(s, proc, tmsg->mtu);
 
-			tun_mtu_msg__free_unpacked(tmsg, NULL);
+			tun_mtu_msg__free_unpacked(tmsg, &pa);
 		}
 
 		break;
@@ -455,7 +480,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 				goto cleanup;
 			}
 
-			tmsg = cli_stats_msg__unpack(NULL, raw_len, raw);
+			tmsg = cli_stats_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
 				ret = ERR_BAD_COMMAND;
@@ -465,14 +490,14 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			proc->bytes_in = tmsg->bytes_in;
 			proc->bytes_out = tmsg->bytes_out;
 
-			cli_stats_msg__free_unpacked(tmsg, NULL);
+			cli_stats_msg__free_unpacked(tmsg, &pa);
 		}
 
 		break;
 	case CMD_SESSION_INFO:{
 			SessionInfoMsg *tmsg;
 
-			tmsg = session_info_msg__unpack(NULL, raw_len, raw);
+			tmsg = session_info_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
 				ret = ERR_BAD_COMMAND;
@@ -492,7 +517,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 					 sizeof(proc->user_agent), "%s",
 					 tmsg->user_agent);
 
-			session_info_msg__free_unpacked(tmsg, NULL);
+			session_info_msg__free_unpacked(tmsg, &pa);
 
 		}
 
@@ -501,7 +526,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			SessionResumeStoreReqMsg *smsg;
 
 			smsg =
-			    session_resume_store_req_msg__unpack(NULL, raw_len,
+			    session_resume_store_req_msg__unpack(&pa, raw_len,
 								 raw);
 			if (smsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
@@ -511,7 +536,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 			ret = handle_resume_store_req(s, proc, smsg);
 
-			session_resume_store_req_msg__free_unpacked(smsg, NULL);
+			session_resume_store_req_msg__free_unpacked(smsg, &pa);
 
 			if (ret < 0) {
 				mslog(s, proc, LOG_DEBUG,
@@ -525,7 +550,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			SessionResumeFetchMsg *fmsg;
 
 			fmsg =
-			    session_resume_fetch_msg__unpack(NULL, raw_len,
+			    session_resume_fetch_msg__unpack(&pa, raw_len,
 							     raw);
 			if (fmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
@@ -535,7 +560,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 			ret = handle_resume_delete_req(s, proc, fmsg);
 
-			session_resume_fetch_msg__free_unpacked(fmsg, NULL);
+			session_resume_fetch_msg__free_unpacked(fmsg, &pa);
 
 			if (ret < 0) {
 				mslog(s, proc, LOG_DEBUG,
@@ -551,7 +576,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			SessionResumeFetchMsg *fmsg;
 
 			fmsg =
-			    session_resume_fetch_msg__unpack(NULL, raw_len,
+			    session_resume_fetch_msg__unpack(&pa, raw_len,
 							     raw);
 			if (fmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
@@ -561,7 +586,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 			ret = handle_resume_fetch_req(s, proc, fmsg, &msg);
 
-			session_resume_fetch_msg__free_unpacked(fmsg, NULL);
+			session_resume_fetch_msg__free_unpacked(fmsg, &pa);
 
 			if (ret < 0) {
 				msg.reply =
@@ -600,7 +625,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			goto cleanup;
 		}
 
-		auth_init = auth_init_msg__unpack(NULL, raw_len, raw);
+		auth_init = auth_init_msg__unpack(&pa, raw_len, raw);
 		if (auth_init == NULL) {
 			mslog(s, proc, LOG_ERR, "error unpacking data");
 			ret = ERR_BAD_COMMAND;
@@ -609,7 +634,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		ret = handle_auth_init(s, proc, auth_init);
 
-		auth_init_msg__free_unpacked(auth_init, NULL);
+		auth_init_msg__free_unpacked(auth_init, &pa);
 
 		proc->status = PS_AUTH_INIT;
 
@@ -629,7 +654,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			goto cleanup;
 		}
 
-		auth_reinit = auth_reinit_msg__unpack(NULL, raw_len, raw);
+		auth_reinit = auth_reinit_msg__unpack(&pa, raw_len, raw);
 		if (auth_reinit == NULL) {
 			mslog(s, proc, LOG_ERR, "error unpacking data");
 			ret = ERR_BAD_COMMAND;
@@ -639,7 +664,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 		/* note that it may replace proc on success */
 		ret = handle_auth_reinit(s, &proc, auth_reinit);
 
-		auth_reinit_msg__free_unpacked(auth_reinit, NULL);
+		auth_reinit_msg__free_unpacked(auth_reinit, &pa);
 
 		proc->status = PS_AUTH_INIT;
 
@@ -670,7 +695,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			goto cleanup;
 		}
 
-		auth_req = auth_request_msg__unpack(NULL, raw_len, raw);
+		auth_req = auth_request_msg__unpack(&pa, raw_len, raw);
 		if (auth_req == NULL) {
 			mslog(s, proc, LOG_ERR, "error unpacking data");
 			ret = ERR_BAD_COMMAND;
@@ -679,7 +704,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		ret = handle_auth_req(s, proc, auth_req);
 
-		auth_request_msg__free_unpacked(auth_req, NULL);
+		auth_request_msg__free_unpacked(auth_req, &pa);
 
 		proc->status = PS_AUTH_INIT;
 
@@ -699,7 +724,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 		}
 
 		auth_cookie_req =
-		    auth_cookie_request_msg__unpack(NULL, raw_len, raw);
+		    auth_cookie_request_msg__unpack(&pa, raw_len, raw);
 		if (auth_cookie_req == NULL) {
 			mslog(s, proc, LOG_ERR, "error unpacking data");
 			ret = ERR_BAD_COMMAND;
@@ -708,7 +733,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
 
-		auth_cookie_request_msg__free_unpacked(auth_cookie_req, NULL);
+		auth_cookie_request_msg__free_unpacked(auth_cookie_req, &pa);
 
 		ret = handle_auth_res(s, proc, cmd, ret);
 		if (ret < 0) {
@@ -725,7 +750,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 	ret = 0;
  cleanup:
-	free(raw);
+	talloc_free(raw);
 
 	return ret;
 }
@@ -743,7 +768,7 @@ int check_if_banned(main_server_st * s, struct sockaddr_storage *addr,
 		if (now - btmp->failed_time > s->config->min_reauth_time) {
 			/* invalid entry. Clean it up */
 			list_del(&btmp->list);
-			free(btmp);
+			talloc_free(btmp);
 		} else {
 			if (SA_IN_SIZE(btmp->addr_len) == SA_IN_SIZE(addr_len)
 			    &&
@@ -770,7 +795,7 @@ void expire_banned(main_server_st * s)
 		if (now - btmp->failed_time > s->config->min_reauth_time) {
 			/* invalid entry. Clean it up */
 			list_del(&btmp->list);
-			free(btmp);
+			talloc_free(btmp);
 		}
 	}
 
@@ -785,7 +810,7 @@ void add_to_ip_ban_list(main_server_st * s, struct sockaddr_storage *addr,
 	if (s->config->min_reauth_time == 0)
 		return;
 
-	btmp = malloc(sizeof(*btmp));
+	btmp = talloc(s, struct banned_st);
 	if (btmp == NULL)
 		return;
 

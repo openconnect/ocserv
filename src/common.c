@@ -164,32 +164,32 @@ int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2,
 
 /* returns an allocated string with the mask to apply for the prefix
  */
-char* ipv6_prefix_to_mask(unsigned prefix)
+char* ipv6_prefix_to_mask(void *pool, unsigned prefix)
 {
 	switch (prefix) {
 		case 16:
-			return strdup("ffff::");
+			return talloc_strdup(pool, "ffff::");
 		case 32:
-			return strdup("ffff:ffff::");
+			return talloc_strdup(pool, "ffff:ffff::");
 		case 48:
-			return strdup("ffff:ffff:ffff::");
+			return talloc_strdup(pool, "ffff:ffff:ffff::");
 		case 64:
-			return strdup("ffff:ffff:ffff:ffff::");
+			return talloc_strdup(pool, "ffff:ffff:ffff:ffff::");
 		case 80:
-			return strdup("ffff:ffff:ffff:ffff:ffff::");
+			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff::");
 		case 96:
-			return strdup("ffff:ffff:ffff:ffff:ffff:ffff::");
+			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff:ffff::");
 		case 112:
-			return strdup("ffff:ffff:ffff:ffff:ffff:ffff:ffff::");
+			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff:ffff:ffff::");
 		case 128:
-			return strdup("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
+			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
 		default:
 			return NULL;
 	}
 }
 
 /* Sends message + socketfd */
-int send_socket_msg(int fd, uint8_t cmd, 
+int send_socket_msg(void *pool, int fd, uint8_t cmd, 
 		    int socketfd,
 		    const void* msg, pack_size_func get_size, pack_func pack)
 {
@@ -218,7 +218,7 @@ int send_socket_msg(int fd, uint8_t cmd,
 	hdr.msg_iovlen = 2;
 
 	if (length > 0) {
-		packed = malloc(length);
+		packed = talloc_size(pool, length);
 		if (packed == NULL) {
 			syslog(LOG_ERR, "%s:%u: memory error", __FILE__, __LINE__);
 			return -1;
@@ -255,18 +255,18 @@ int send_socket_msg(int fd, uint8_t cmd,
 	}
 
 cleanup:
-	free(packed);
+	talloc_free(packed);
 	return ret;
 
 }
 
-int send_msg(int fd, uint8_t cmd, 
+int send_msg(void *pool, int fd, uint8_t cmd, 
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
-	return send_socket_msg(fd, cmd, -1, msg, get_size, pack);
+	return send_socket_msg(pool, fd, cmd, -1, msg, get_size, pack);
 }
 
-int recv_socket_msg(int fd, uint8_t cmd, 
+int recv_socket_msg(void *pool, int fd, uint8_t cmd, 
 		     int* socketfd, void** msg, unpack_func unpack)
 {
 	struct iovec iov[3];
@@ -280,6 +280,7 @@ int recv_socket_msg(int fd, uint8_t cmd,
 	} control_un;
 	struct cmsghdr  *cmptr;
 	int ret;
+	PROTOBUF_ALLOCATOR(pa, pool);
 
 	iov[0].iov_base = &rcmd;
 	iov[0].iov_len = 1;
@@ -327,7 +328,7 @@ int recv_socket_msg(int fd, uint8_t cmd,
 	}
 
 	if (length > 0) {
-		data = malloc(length);
+		data = talloc_size(pool, length);
 		if (data == NULL) {
 			ret = ERR_MEM;
 			goto cleanup;
@@ -341,7 +342,7 @@ int recv_socket_msg(int fd, uint8_t cmd,
 			goto cleanup;
 		}
 
-		*msg = unpack(NULL, length, data);
+		*msg = unpack(&pa, length, data);
 		if (*msg == NULL) {
 			syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__, __LINE__);
 			ret = ERR_MEM;
@@ -352,14 +353,24 @@ int recv_socket_msg(int fd, uint8_t cmd,
 	ret = 0;
 
 cleanup:
-	free(data);
+	talloc_free(data);
 	if (ret < 0 && socketfd != NULL && *socketfd != -1)
 		close(*socketfd);
 	return ret;
 }
 
-int recv_msg(int fd, uint8_t cmd, 
+int recv_msg(void *pool, int fd, uint8_t cmd, 
 		void** msg, unpack_func unpack)
 {
-	return recv_socket_msg(fd, cmd, NULL, msg, unpack);
+	return recv_socket_msg(pool, fd, cmd, NULL, msg, unpack);
+}
+
+void _talloc_free2(void *ctx, void *ptr)
+{
+	talloc_free(ptr);
+}
+
+void *_talloc_size2(void *ctx, size_t size)
+{
+	return talloc_size(ctx, size);
 }

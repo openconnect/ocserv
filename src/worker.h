@@ -258,7 +258,7 @@ int send_msg_to_main(worker_st *ws, uint8_t cmd,
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
 	oclog(ws, LOG_DEBUG, "sending message '%s' to main", cmd_request_to_str(cmd));
-	return send_msg(ws->cmd_fd, cmd, msg, get_size, pack);
+	return send_msg(ws, ws->cmd_fd, cmd, msg, get_size, pack);
 }
 
 #endif

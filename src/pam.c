@@ -77,7 +77,7 @@ unsigned i;
 	if (msg_size == 0)
 		return PAM_SUCCESS;
 
-	pctx->replies = calloc(1, msg_size*sizeof(*pctx->replies));
+	pctx->replies = talloc_zero_size(pctx, msg_size*sizeof(*pctx->replies));
 	if (pctx->replies == NULL)
 		return PAM_BUF_ERR;
 
@@ -104,7 +104,7 @@ unsigned i;
 				co_resume();
 				pctx->state = PAM_S_INIT;
 
-				pctx->replies[i].resp = strdup(pctx->password);
+				pctx->replies[i].resp = talloc_strdup(pctx, pctx->password);
 				pctx->sent_msg = 0;
 				break;
                 }
@@ -151,7 +151,7 @@ wait:
 	}
 }
 
-static int pam_auth_init(void** ctx, const char* user, const char* ip, void* additional)
+static int pam_auth_init(void** ctx, void *pool, const char* user, const char* ip, void* additional)
 {
 int pret;
 struct pam_ctx_st * pctx;
@@ -159,11 +159,11 @@ struct pam_ctx_st * pctx;
 	if (user == NULL)
 		return -1;
 
-	pctx = calloc(1, sizeof(*pctx));
+	pctx = talloc_zero(pool, struct pam_ctx_st);
 	if (pctx == NULL)
 		return -1;
 
-	str_init(&pctx->msg);
+	str_init(&pctx->msg, pctx);
 
 	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
@@ -189,7 +189,7 @@ struct pam_ctx_st * pctx;
 fail2:
 	pam_end(pctx->ph, pret);
 fail1:
-	free(pctx);
+	talloc_free(pctx);
 	return -1;
 }
 
@@ -307,11 +307,11 @@ static void pam_auth_deinit(void* ctx)
 struct pam_ctx_st * pctx = ctx;
 
 	pam_end(pctx->ph, pctx->cr_ret);
-	free(pctx->replies);
+	talloc_free(pctx->replies);
 	str_clear(&pctx->msg);
 	if (pctx->cr != NULL)
 		co_delete(pctx->cr);
-	free(pctx);
+	talloc_free(pctx);
 }
 
 const struct auth_mod_st pam_auth_funcs = {

@@ -293,7 +293,7 @@ const char* ip;
 
 	if (s->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* req->username is non-null at this point */
-		ret = module->auth_init(&proc->auth_ctx, req->user_name, ip, s->auth_extra);
+		ret = module->auth_init(&proc->auth_ctx, proc, req->user_name, ip, s->auth_extra);
 		if (ret < 0)
 			return ret;
 
@@ -413,9 +413,7 @@ unsigned int entries = 1; /* that one */
 				mslog(s, ctmp, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", ctmp->username);
 
 				/* steal its leases */
-				proc->ipv4 = ctmp->ipv4;
-				proc->ipv6 = ctmp->ipv6;
-				ctmp->leases_in_use = 1;
+				steal_ip_leases(ctmp, proc);
 
 				kill(ctmp->pid, SIGTERM);
 			} else if (strcmp(proc->username, ctmp->username) == 0) {

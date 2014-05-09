@@ -144,12 +144,12 @@ unsigned j;
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
 			num = 0; \
-			s_name = malloc(sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			s_name = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
 		} \
 		do { \
 		        if (val && !strcmp(val->pzName, name)==0) \
 				continue; \
-		        s_name[num] = strdup(val->v.strVal); \
+		        s_name[num] = talloc_strdup(config, val->v.strVal); \
 		        num++; \
 		        if (num>=MAX_CONFIG_ENTRIES) \
 		        break; \
@@ -163,7 +163,7 @@ unsigned j;
 #define READ_STRING(name, s_name) \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
-		s_name = strdup(val->v.strVal); \
+		s_name = talloc_strdup(config, val->v.strVal); \
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
@@ -188,7 +188,7 @@ unsigned j;
 			else \
 				s_name = 0; \
 		} \
-		free(tmp_tf); \
+		talloc_free(tmp_tf); \
 	}
 
 #define READ_NUMERIC(name, s_name) \
@@ -301,7 +301,7 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 
-			config->plain_passwd = strdup(auth[j]+6);
+			config->plain_passwd = talloc_strdup(config, auth[j]+6);
 			p = strchr(config->plain_passwd, ']');
 			if (p == NULL) {
 				fprintf(stderr, "Format error in %s\n", auth[j]);
@@ -315,9 +315,9 @@ unsigned force_cert_auth;
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
 			exit(1);
 		}
-		free(auth[j]);
+		talloc_free(auth[j]);
 	}
-	free(auth);
+	talloc_free(auth);
 
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
@@ -413,7 +413,7 @@ unsigned force_cert_auth;
 		fprintf(stderr, "Unknown rekey method '%s'\n", tmp);
 		exit(1);
 	}
-	free(tmp); tmp = NULL;
+	talloc_free(tmp); tmp = NULL;
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("idle-timeout", config->idle_timeout);
@@ -457,7 +457,7 @@ unsigned force_cert_auth;
 
 	READ_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) {
-		config->network.ipv6_netmask = ipv6_prefix_to_mask(prefix);
+		config->network.ipv6_netmask = ipv6_prefix_to_mask(config, prefix);
 		config->network.ipv6_prefix = prefix;
 
 		if (config->network.ipv6_netmask == NULL) {
@@ -508,7 +508,7 @@ unsigned force_cert_auth;
 
 
 /* sanity checks on config */
-static void check_cfg( struct cfg_st *config)
+static void check_cfg(struct cfg_st *config)
 {
 	if (config->network.ipv4 == NULL && config->network.ipv6 == NULL) {
 		fprintf(stderr, "No ipv4-network or ipv6-network options set.\n");
@@ -551,16 +551,16 @@ static void check_cfg( struct cfg_st *config)
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	if (config->cert) {
-		config->cert_hash = calc_sha1_hash(config->cert[0], 1);
+		config->cert_hash = calc_sha1_hash(config, config->cert[0], 1);
 	}
 
 	if (config->xml_config_file) {
-		config->xml_config_hash = calc_sha1_hash(config->xml_config_file, 0);
+		config->xml_config_hash = calc_sha1_hash(config, config->xml_config_file, 0);
 		if (config->xml_config_hash == NULL && config->chroot_dir != NULL) {
 			char path[_POSIX_PATH_MAX];
 
 			snprintf(path, sizeof(path), "%s/%s", config->chroot_dir, config->xml_config_file);
-			config->xml_config_hash = calc_sha1_hash(path, 0);
+			config->xml_config_hash = calc_sha1_hash(config, path, 0);
 
 			if (config->xml_config_hash == NULL) {
 				fprintf(stderr, "Cannot open file '%s'\n", path);
@@ -584,21 +584,21 @@ static void check_cfg( struct cfg_st *config)
 		config->priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT";
 }
 
-int cmd_parser (int argc, char **argv, struct cfg_st* config)
+int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 {
 
-	memset(config, 0, sizeof(*config));
+	*config = talloc_zero(pool, struct cfg_st);
 
 	optionProcess( &ocservOptions, argc, argv);
   
 	if (HAVE_OPT(FOREGROUND))
-		config->foreground = 1;
+		(*config)->foreground = 1;
 
 	if (HAVE_OPT(PID_FILE))
 		pid_file = OPT_ARG(PID_FILE);
 
 	if (HAVE_OPT(DEBUG))
-		config->debug = OPT_VALUE_DEBUG;
+		(*config)->debug = OPT_VALUE_DEBUG;
 
 	if (HAVE_OPT(CONFIG)) {
 		cfg_file = OPT_ARG(CONFIG);
@@ -607,85 +607,85 @@ int cmd_parser (int argc, char **argv, struct cfg_st* config)
 		exit(1);
 	}
 
-	parse_cfg_file(cfg_file, config);
+	parse_cfg_file(cfg_file, *config);
 
-	check_cfg(config);
+	check_cfg(*config);
 
 	return 0;
 
 }
 
-#define DEL(x) {free(x);x=NULL;}
-void clear_cfg_file(struct cfg_st* config)
+#define DEL(x) {talloc_free(x);x=NULL;}
+void clear_cfg_file(struct cfg_st** config)
 {
 unsigned i;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	DEL(config->xml_config_file);
-	DEL(config->xml_config_hash);
-	DEL(config->cert_hash);
+	DEL((*config)->xml_config_file);
+	DEL((*config)->xml_config_hash);
+	DEL((*config)->cert_hash);
 #endif
-	DEL(config->cgroup);
-	DEL(config->route_add_cmd);
-	DEL(config->route_del_cmd);
-	DEL(config->per_user_dir);
-	DEL(config->per_group_dir);
-	DEL(config->socket_file_prefix);
-	DEL(config->default_domain);
-	DEL(config->plain_passwd);
-	DEL(config->ocsp_response);
-	DEL(config->banner);
-	DEL(config->dh_params_file);
-	DEL(config->name);
-	DEL(config->pin_file);
-	DEL(config->srk_pin_file);
-	DEL(config->ca);
-	DEL(config->crl);
-	DEL(config->cert_user_oid);
-	DEL(config->cert_group_oid);
-	DEL(config->priorities);
-	DEL(config->chroot_dir);
-	DEL(config->connect_script);
-	DEL(config->disconnect_script);
+	DEL((*config)->cgroup);
+	DEL((*config)->route_add_cmd);
+	DEL((*config)->route_del_cmd);
+	DEL((*config)->per_user_dir);
+	DEL((*config)->per_group_dir);
+	DEL((*config)->socket_file_prefix);
+	DEL((*config)->default_domain);
+	DEL((*config)->plain_passwd);
+	DEL((*config)->ocsp_response);
+	DEL((*config)->banner);
+	DEL((*config)->dh_params_file);
+	DEL((*config)->name);
+	DEL((*config)->pin_file);
+	DEL((*config)->srk_pin_file);
+	DEL((*config)->ca);
+	DEL((*config)->crl);
+	DEL((*config)->cert_user_oid);
+	DEL((*config)->cert_group_oid);
+	DEL((*config)->priorities);
+	DEL((*config)->chroot_dir);
+	DEL((*config)->connect_script);
+	DEL((*config)->disconnect_script);
 
-	DEL(config->network.ipv4);
-	DEL(config->network.ipv4_netmask);
-	DEL(config->network.ipv6);
-	DEL(config->network.ipv6_netmask);
-	for (i=0;i<config->network.routes_size;i++)
-		DEL(config->network.routes[i]);
-	DEL(config->network.routes);
-	for (i=0;i<config->network.dns_size;i++)
-		DEL(config->network.dns[i]);
-	DEL(config->network.dns);
-	for (i=0;i<config->network.nbns_size;i++)
-		DEL(config->network.nbns[i]);
-	DEL(config->network.nbns);
-	for (i=0;i<config->key_size;i++)
-		DEL(config->key[i]);
-	DEL(config->key);
-	for (i=0;i<config->cert_size;i++)
-		DEL(config->cert[i]);
-	DEL(config->cert);
-	for (i=0;i<config->custom_header_size;i++)
-		DEL(config->custom_header[i]);
-	DEL(config->custom_header);
-	for (i=0;i<config->split_dns_size;i++)
-		DEL(config->split_dns[i]);
-	DEL(config->split_dns);
+	DEL((*config)->network.ipv4);
+	DEL((*config)->network.ipv4_netmask);
+	DEL((*config)->network.ipv6);
+	DEL((*config)->network.ipv6_netmask);
+	for (i=0;i<(*config)->network.routes_size;i++)
+		DEL((*config)->network.routes[i]);
+	DEL((*config)->network.routes);
+	for (i=0;i<(*config)->network.dns_size;i++)
+		DEL((*config)->network.dns[i]);
+	DEL((*config)->network.dns);
+	for (i=0;i<(*config)->network.nbns_size;i++)
+		DEL((*config)->network.nbns[i]);
+	DEL((*config)->network.nbns);
+	for (i=0;i<(*config)->key_size;i++)
+		DEL((*config)->key[i]);
+	DEL((*config)->key);
+	for (i=0;i<(*config)->cert_size;i++)
+		DEL((*config)->cert[i]);
+	DEL((*config)->cert);
+	for (i=0;i<(*config)->custom_header_size;i++)
+		DEL((*config)->custom_header[i]);
+	DEL((*config)->custom_header);
+	for (i=0;i<(*config)->split_dns_size;i++)
+		DEL((*config)->split_dns[i]);
+	DEL((*config)->split_dns);
+	talloc_free(*config);
+	*config = NULL;
 
 	return;
 }
 
-void reload_cfg_file(struct cfg_st* config)
+void reload_cfg_file(void *pool, struct cfg_st** config)
 {
 	clear_cfg_file(config);
 
-	memset(config, 0, sizeof(*config));
+	parse_cfg_file(cfg_file, *config);
 
-	parse_cfg_file(cfg_file, config);
-
-	check_cfg(config);
+	check_cfg(*config);
 
 	return;
 }

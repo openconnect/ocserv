@@ -32,6 +32,9 @@
 #include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <cloexec.h>
+#ifdef HAVE_MALLOC_TRIM
+# include <malloc.h> /* for malloc_trim() */
+#endif
 #include <script-list.h>
 
 #include <gnutls/x509.h>
@@ -1077,14 +1080,20 @@ int main(int argc, char** argv)
 					ws->creds = &creds;
 
 					/* Drop privileges after this point */
-					sigprocmask(SIG_UNBLOCK, &blockset, NULL);
 					drop_privileges(s);
 
 					/* creds and config are not allocated
 					 * under s.
 					 */
 					talloc_free(s);
-
+#ifdef HAVE_MALLOC_TRIM
+					/* try to return all the pages we've freed to
+					 * the operating system, to prevent the child from
+					 * accessing them. That's totally unreliable, so
+					 * sensitive data have to be overwritten anyway. */
+					malloc_trim(0);
+#endif
+					sigprocmask(SIG_UNBLOCK, &blockset, NULL);
 					vpn_server(ws);
 					exit(0);
 				} else if (pid == -1) {

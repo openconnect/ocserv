@@ -55,11 +55,12 @@ struct htable_iter iter;
 
 	cache = htable_first(&db->ht, &iter);
 	while(cache != NULL) {
+		/* disable the destructor */
+		cache->db = NULL;
 		talloc_free(cache);
 		
 		cache = htable_next(&db->ht, &iter);
 	}
-	
 	htable_clear(&db->ht);
 	
 	return;
@@ -386,7 +387,9 @@ fail:
 static
 int unref_ip_lease(struct ip_lease_st * lease)
 {
-	htable_del(&lease->db->ht, rehash(lease, NULL), lease);
+	if (lease->db) {
+		htable_del(&lease->db->ht, rehash(lease, NULL), lease);
+	}
 	return 0;
 }
 

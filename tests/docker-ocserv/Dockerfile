@@ -6,6 +6,8 @@ RUN apt-get install -y libwrap0 libpam0g libseccomp2 libdbus-1-3 libreadline5 li
 RUN apt-get install -y libprotobuf-c0 libhttp-parser2.1 libpcl1 libopts25 autogen
 RUN apt-get install -y libsystemd-daemon0 valgrind nuttcp openssh-server bash
 #RUN apt-get install -y inotify-tools
+RUN apt-get update
+RUN apt-get install -y libtalloc2
 
 RUN echo 'root:root' |chpasswd
 RUN useradd -m -d /home/admin -s /bin/bash admin

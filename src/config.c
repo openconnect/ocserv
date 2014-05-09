@@ -371,12 +371,14 @@ unsigned force_cert_auth;
 
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);
-	if (config->use_dbus != 0)
+	if (config->use_dbus != 0) {
 		fprintf(stderr, "note that 'use-dbus' was replaced by 'use-occtl'\n");
-
-	READ_TF("use-occtl", config->use_occtl, 0);
-	if (config->use_occtl == 0)
-		config->use_dbus = 0;
+		config->use_occtl = config->use_dbus;
+	} else {
+		READ_TF("use-occtl", config->use_occtl, 0);
+		if (config->use_occtl == 0)
+			config->use_dbus = 0;
+	}
 
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);
 	READ_TF("ping-leases", config->ping_leases, 0);

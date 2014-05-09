@@ -33,9 +33,6 @@ static int handle_reset_cmd(CONN_TYPE * conn, const char *arg);
 static int handle_help_cmd(CONN_TYPE * conn, const char *arg);
 static int handle_exit_cmd(CONN_TYPE * conn, const char *arg);
 
-/* global talloc pool */
-static void *gl_pool = NULL;
-
 typedef struct {
 	char *name;
 	unsigned name_size;
@@ -176,12 +173,12 @@ void version(void)
 }
 
 /* Read a string, and return a pointer to it.  Returns NULL on EOF. */
-char *rl_gets(char *line_read)
+static char *rl_gets(char *line_read)
 {
 	/* If the buffer has already been allocated, return the memory
 	   to the free pool. */
 	if (line_read) {
-		talloc_free(line_read);
+		free(line_read); /* this is allocated using readline() not talloc */
 	}
 
 	/* Get a line from the user. */
@@ -348,7 +345,10 @@ int handle_cmd(CONN_TYPE * conn, char *line)
 	return 1;
 }
 
-char *merge_args(void *pool, int argc, char **argv)
+/* returns an allocated string using malloc(), not talloc,
+ * to be compatible with readline() return.
+ */
+static char *merge_args(int argc, char **argv)
 {
 	unsigned size = 0;
 	char *data, *p;
@@ -359,7 +359,7 @@ char *merge_args(void *pool, int argc, char **argv)
 	}
 	size++;
 
-	data = talloc_size(pool, size);
+	data = malloc(size);
 	if (data == NULL) {
 		fprintf(stderr, "memory error\n");
 		exit(1);
@@ -417,11 +417,11 @@ static char *command_generator(const char *text, int state)
 					ret = NULL;
 					if (strcmp(arg, "[NAME]") == 0)
 						ret =
-						    search_for_user(gl_pool, entries_idx,
+						    search_for_user(entries_idx,
 								    text, len);
 					else if (strcmp(arg, "[ID]") == 0)
 						ret =
-						    search_for_id(gl_pool, entries_idx,
+						    search_for_id(entries_idx,
 								  text, len);
 					if (ret != NULL) {
 						entries_idx++;
@@ -443,7 +443,7 @@ static char *command_generator(const char *text, int state)
 
 		name += cmd_start;
 		if (c_strncasecmp(name, text, len) == 0) {
-			return (talloc_strdup(gl_pool, name));
+			return (strdup(name));
 		}
 	}
 
@@ -483,6 +483,7 @@ int main(int argc, char **argv)
 {
 	char *line = NULL;
 	CONN_TYPE *conn;
+	void *gl_pool;
 
 	gl_pool = talloc_init("occtl");
 	if (gl_pool == NULL) {
@@ -507,10 +508,10 @@ int main(int argc, char **argv)
 			exit(0);
 		}
 
-		line = merge_args(conn, argc, argv);
+		line = merge_args(argc, argv);
 		ret = handle_cmd(conn, line);
 
-		talloc_free(line);
+		free(line);
 		return ret;
 	}
 

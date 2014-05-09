@@ -66,7 +66,7 @@ void entries_add(void *pool, const char* user, unsigned user_size, unsigned id)
 	return;
 }
 
-char* search_for_user(void *pool, unsigned idx, const char* match, int match_size)
+char* search_for_user(unsigned idx, const char* match, int match_size)
 {
 unsigned i;
 
@@ -76,14 +76,14 @@ unsigned i;
 	for (i=idx;i<entries_size;i++) {
 		if (match_size <= entries[i].user_size) {
 			if (c_strncasecmp(match, entries[i].user, match_size) == 0)
-				return talloc_strdup(pool, entries[i].user);
+				return strdup(entries[i].user);
 		}
 	}
 	
 	return NULL;
 }
 
-char* search_for_id(void *pool, unsigned idx, const char* match, int match_size)
+char* search_for_id(unsigned idx, const char* match, int match_size)
 {
 unsigned i;
 
@@ -93,7 +93,7 @@ unsigned i;
 	for (i=idx;i<entries_size;i++) {
 		if (match_size <= entries[i].id_size) {
 			if (c_strncasecmp(match, entries[i].id, match_size) == 0) {
-				return talloc_strdup(pool, entries[i].id);
+				return strdup(entries[i].id);
 			}
 		}
 	}

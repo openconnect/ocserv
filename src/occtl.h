@@ -20,8 +20,8 @@ void print_iface_stats(const char *iface, time_t since, FILE * out);
 void
 bytes2human(unsigned long bytes, char* output, unsigned output_size, const char* suffix);
 
-char* search_for_id(void *pool, unsigned idx, const char* match, int match_size);
-char* search_for_user(void *pool, unsigned idx, const char* match, int match_size);
+char* search_for_id(unsigned idx, const char* match, int match_size);
+char* search_for_user(unsigned idx, const char* match, int match_size);
 void entries_add(void *pool, const char* user, unsigned user_size, unsigned id);
 void entries_clear(void);
 

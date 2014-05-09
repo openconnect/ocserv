@@ -199,6 +199,7 @@ struct proc_st *ctmp;
 	ctmp->tun_lease.fd = -1;
 	ctmp->fd = cmd_fd;
 	set_cloexec_flag (cmd_fd, 1);
+	ctmp->conn_time = time(0);
 
 	memcpy(&ctmp->remote_addr, remote_addr, remote_addr_len);
 	ctmp->remote_addr_len = remote_addr_len;

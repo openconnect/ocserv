@@ -209,6 +209,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 	int ret;
 	struct cmd_reply_st raw;
 	StatusRep *rep;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	init_reply(&raw);
 
@@ -217,7 +218,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error_status;
 	}
 
-	rep = status_rep__unpack(NULL, raw.data_size, raw.data);
+	rep = status_rep__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error_status;
 
@@ -228,7 +229,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 	printf(" Server PID: %u\n", (unsigned)rep->pid);
 	printf("Sec-mod PID: %u\n", (unsigned)rep->sec_mod_pid);
 
-	status_rep__free_unpacked(rep, NULL);
+	status_rep__free_unpacked(rep, &pa);
 
 	ret = 0;
 	goto cleanup;
@@ -249,6 +250,7 @@ int handle_reload_cmd(struct unix_ctx *ctx, const char *arg)
 	struct cmd_reply_st raw;
 	BoolMsg *rep;
 	unsigned status;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 	
 	init_reply(&raw);
 
@@ -257,12 +259,12 @@ int handle_reload_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error_status;
 	}
 
-	rep = bool_msg__unpack(NULL, raw.data_size, raw.data);
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error_status;
 
 	status = rep->status;
-	bool_msg__free_unpacked(rep, NULL);
+	bool_msg__free_unpacked(rep, &pa);
 
 	if (status != 0)
         	printf("Server scheduled to reload\n");
@@ -288,6 +290,7 @@ int handle_stop_cmd(struct unix_ctx *ctx, const char *arg)
 	struct cmd_reply_st raw;
 	BoolMsg *rep;
 	unsigned status;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 	
 	init_reply(&raw);
 
@@ -296,12 +299,12 @@ int handle_stop_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error_status;
 	}
 
-	rep = bool_msg__unpack(NULL, raw.data_size, raw.data);
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error_status;
 
 	status = rep->status;
-	bool_msg__free_unpacked(rep, NULL);
+	bool_msg__free_unpacked(rep, &pa);
 
 	if (status != 0)
         	printf("Server scheduled to stop\n");
@@ -328,6 +331,7 @@ int handle_disconnect_user_cmd(struct unix_ctx *ctx, const char *arg)
 	BoolMsg *rep;
 	unsigned status;
 	UsernameReq req = USERNAME_REQ__INIT;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	if (arg == NULL || need_help(arg)) {
 		check_cmd_help(rl_line_buffer);
@@ -345,12 +349,12 @@ int handle_disconnect_user_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error;
 	}
 
-	rep = bool_msg__unpack(NULL, raw.data_size, raw.data);
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error;
 
 	status = rep->status;
-	bool_msg__free_unpacked(rep, NULL);
+	bool_msg__free_unpacked(rep, &pa);
 
 	if (status != 0) {
 		printf("user '%s' was disconnected\n", arg);
@@ -378,6 +382,7 @@ int handle_disconnect_id_cmd(struct unix_ctx *ctx, const char *arg)
 	unsigned status;
 	unsigned id;
 	IdReq req = ID_REQ__INIT;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	if (arg != NULL)
 		id = atoi(arg);
@@ -398,12 +403,12 @@ int handle_disconnect_id_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error;
 	}
 
-	rep = bool_msg__unpack(NULL, raw.data_size, raw.data);
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error;
 
 	status = rep->status;
-	bool_msg__free_unpacked(rep, NULL);
+	bool_msg__free_unpacked(rep, &pa);
 
 	if (status != 0) {
 		printf("connection ID '%s' was disconnected\n", arg);
@@ -436,6 +441,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 	time_t t;
 	struct tm *tm;
 	char str_since[64];
+	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	init_reply(&raw);
 
@@ -448,7 +454,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error;
 	}
 
-	rep = user_list_rep__unpack(NULL, raw.data_size, raw.data);
+	rep = user_list_rep__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error;
 
@@ -503,7 +509,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 
  cleanup:
 	if (rep != NULL)
-		user_list_rep__free_unpacked(rep, NULL);
+		user_list_rep__free_unpacked(rep, &pa);
 
 	free_reply(&raw);
 	pager_stop(out);
@@ -656,6 +662,7 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg)
 	struct cmd_reply_st raw;
 	UserListRep *rep = NULL;
 	UsernameReq req = USERNAME_REQ__INIT;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	if (arg == NULL || need_help(arg)) {
 		check_cmd_help(rl_line_buffer);
@@ -673,7 +680,7 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error;
 	}
 
-	rep = user_list_rep__unpack(NULL, raw.data_size, raw.data);
+	rep = user_list_rep__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error;
 
@@ -689,7 +696,7 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg)
 	ret = 1;
  cleanup:
 	if (rep != NULL)
-		user_list_rep__free_unpacked(rep, NULL);
+		user_list_rep__free_unpacked(rep, &pa);
 	free_reply(&raw);
 
 	return ret;
@@ -702,6 +709,7 @@ int handle_show_id_cmd(struct unix_ctx *ctx, const char *arg)
 	UserListRep *rep = NULL;
 	unsigned id;
 	IdReq req = ID_REQ__INIT;
+	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	if (arg != NULL)
 		id = atoi(arg);
@@ -722,7 +730,7 @@ int handle_show_id_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error;
 	}
 
-	rep = user_list_rep__unpack(NULL, raw.data_size, raw.data);
+	rep = user_list_rep__unpack(&pa, raw.data_size, raw.data);
 	if (rep == NULL)
 		goto error;
 
@@ -738,7 +746,7 @@ int handle_show_id_cmd(struct unix_ctx *ctx, const char *arg)
 	ret = 1;
  cleanup:
 	if (rep != NULL)
-		user_list_rep__free_unpacked(rep, NULL);
+		user_list_rep__free_unpacked(rep, &pa);
 	free_reply(&raw);
 
 	return ret;

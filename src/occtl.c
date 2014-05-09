@@ -450,10 +450,10 @@ static char *command_generator(const char *text, int state)
 	return NULL;
 }
 
-static char *occtl_completion(char *text, int start, int end)
+static char **occtl_completion(const char *text, int start, int end)
 {
 	cmd_start = start;
-	return (void *)rl_completion_matches(text, command_generator);
+	return rl_completion_matches(text, command_generator);
 }
 
 void handle_sigint(int signo)
@@ -470,7 +470,7 @@ void handle_sigint(int signo)
 void initialize_readline(void)
 {
 	rl_readline_name = "occtl";
-	rl_attempted_completion_function = (CPPFunction*)occtl_completion;
+	rl_attempted_completion_function = occtl_completion;
 	rl_completion_entry_function = command_generator;
 	rl_completion_query_items = 20;
 #ifdef HAVE_ORIG_READLINE

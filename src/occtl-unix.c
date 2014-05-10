@@ -230,7 +230,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 
 	t = rep->start_time;
 	tm = localtime(&t);
-	strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+	strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 	printf("   Up since: %s\n", str_since);
 
 	printf("    Clients: %u\n", (unsigned)rep->active_clients);
@@ -482,7 +482,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 
 		t = rep->user[i]->conn_time;
 		tm = localtime(&t);
-		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		groupname = rep->user[i]->groupname;
 		if (groupname == NULL || groupname[0] == 0)
@@ -565,7 +565,7 @@ int common_info_cmd(UserListRep * args)
 
 		t = args->user[i]->conn_time;
 		tm = localtime(&t);
-		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		username = args->user[i]->username;
 		if (username == NULL || username[0] == 0)

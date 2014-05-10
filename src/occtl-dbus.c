@@ -509,7 +509,7 @@ int handle_list_users_cmd(dbus_ctx *ctx, const char *arg)
 
 		t = since;
 		tm = localtime(&t);
-		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		if (groupname == NULL || groupname[0] == 0)
 			groupname = NO_GROUP;
@@ -691,7 +691,7 @@ int common_info_cmd(DBusMessageIter * args)
 
 		t = since;
 		tm = localtime(&t);
-		strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;

@@ -12,6 +12,8 @@
 # include <readline.h>
 #endif
 
+#define DATE_TIME_FMT "%Y-%m-%d %H:%M"
+
 FILE* pager_start(void);
 void pager_stop(FILE* fp);
 void print_time_ival7(time_t t, FILE * fout);

@@ -180,6 +180,7 @@ typedef struct main_server_st {
 	pid_t sec_mod_pid;
 	
 	unsigned active_clients;
+	time_t start_time;
 
 	void * auth_extra;
 

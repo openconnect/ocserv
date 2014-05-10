@@ -872,6 +872,7 @@ int main(int argc, char** argv)
 	s->main_pool = main_pool;
 	s->worker_pool = worker_pool;
 	s->creds = &creds;
+	s->start_time = time(0);
 
 	list_head_init(&s->proc_list.head);
 	list_head_init(&s->ban_list.head);

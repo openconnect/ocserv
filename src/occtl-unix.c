@@ -209,6 +209,9 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 	int ret;
 	struct cmd_reply_st raw;
 	StatusRep *rep;
+	char str_since[64];
+	time_t t;
+	struct tm *tm;
 	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	init_reply(&raw);
@@ -224,6 +227,12 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 
 	printf("OpenConnect SSL VPN server\n");
 	printf("     Status: %s\n", rep->status != 0 ? "online" : "error");
+
+	t = rep->start_time;
+	tm = localtime(&t);
+	strftime(str_since, sizeof(str_since), "%Y-%m-%d %H:%M", tm);
+	printf("   Up since: %s\n", str_since);
+
 	printf("    Clients: %u\n", (unsigned)rep->active_clients);
 	printf("\n");
 	printf(" Server PID: %u\n", (unsigned)rep->pid);

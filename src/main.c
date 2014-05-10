@@ -572,7 +572,7 @@ void clear_lists(main_server_st *s)
 		if (ctmp->auth_ctx != NULL)
 			proc_auth_deinit(s, ctmp);
 		list_del(&ctmp->list);
-		memset(ctmp, 0, sizeof(*ctmp));
+		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);
 		s->proc_list.total--;
 	}
@@ -1014,8 +1014,6 @@ int main(int argc, char** argv)
 			set = FD_ISSET(ltmp->fd, &rd_set);
 			if (set && ltmp->socktype == SOCK_STREAM) {
 				/* connection on TCP port */
-				memset(ws, 0, sizeof(*ws));
-
 				ws->remote_addr_len = sizeof(ws->remote_addr);
 				fd = accept(ltmp->fd, (void*)&ws->remote_addr, &ws->remote_addr_len);
 				if (fd < 0) {

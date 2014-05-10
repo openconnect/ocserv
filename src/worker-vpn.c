@@ -1323,15 +1323,7 @@ static int connect_handler(worker_st * ws)
 	sigemptyset(&emptyset);
 	sigaddset(&blockset, SIGTERM);
 
-	ws->buffer_size = 16 * 1024;
-	ws->buffer = talloc_size(ws, ws->buffer_size);
-	if (ws->buffer == NULL) {
-		oclog(ws, LOG_INFO, "memory error");
-		tls_puts(ws->session,
-			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		tls_close(ws->session);
-		exit_worker(ws);
-	}
+	ws->buffer_size = sizeof(ws->buffer);
 
 	if (ws->auth_state != S_AUTH_COMPLETE && req->cookie_set == 0) {
 		oclog(ws, LOG_INFO, "connect request without authentication");
@@ -1760,13 +1752,10 @@ static int connect_handler(worker_st * ws)
 	SEND_ERR(ret);
 
 	if (ws->buffer_size <= ws->conn_mtu + CSTP_OVERHEAD) {
-		oclog(ws, LOG_WARNING,
-		      "buffer size is smaller than MTU (%u < %u); adjusting",
+		oclog(ws, LOG_ERR,
+		      "buffer size is smaller than MTU (%u < %u)",
 		      ws->buffer_size, ws->conn_mtu);
-		ws->buffer_size = ws->conn_mtu + CSTP_OVERHEAD;
-		ws->buffer = talloc_realloc_size(ws, ws->buffer, ws->buffer_size);
-		if (ws->buffer == NULL)
-			goto exit;
+		goto exit;
 	}
 
 	mtu_send(ws, ws->conn_mtu);

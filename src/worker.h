@@ -188,7 +188,7 @@ typedef struct worker_st {
 	unsigned full_ipv6;
 
 	/* Buffer used by worker */
-	uint8_t * buffer;
+	uint8_t buffer[16*1024];
 	unsigned buffer_size;
 
 	/* the following are set only if authentication is complete */

@@ -47,8 +47,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 {
 	unsigned groupname_size;
 	FILE *fp;
-	char *line = NULL;
-	size_t len;
+	char line[512];
 	ssize_t ll;
 	char *p, *sp;
 	int ret;
@@ -61,7 +60,10 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 		return -1;
 	}
 
-	while ((ll = getline(&line, &len, fp)) > 0) {
+	line[sizeof(line)-1] = 0;
+	while ((p=fgets(line, sizeof(line)-1, fp)) != NULL) {
+		ll = strlen(p);
+
 		if (ll <= 4)
 			continue;
 
@@ -100,8 +102,8 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 	/* always succeed */
 	ret = 0;
  exit:
+	safe_memset(line, 0, sizeof(line));
 	fclose(fp);
-	free(line); /* no talloc_free, as it is provided by getline */
 	return ret;
 }
 

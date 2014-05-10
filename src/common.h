@@ -59,5 +59,20 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 const char* cmd_request_to_str(unsigned cmd);
 
+inline static
+void safe_memset(void *data, int c, size_t size)
+{
+	volatile unsigned volatile_zero = 0;
+	volatile char *vdata = (volatile char*)data;
+
+	/* This is based on a nice trick for safe memset,
+	 * sent by David Jacobson in the openssl-dev mailing list.
+	 */
+
+	do {
+		memset(data, c, size);
+	} while(vdata[volatile_zero] != c);
+}
+
 #endif
 

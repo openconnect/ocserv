@@ -27,7 +27,7 @@ endif
 
 EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
-	occtl-args.def ipc.proto
+	occtl-args.def ipc.proto ctl.proto
 
 bin_PROGRAMS = ocpasswd occtl
 
@@ -59,15 +59,11 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	main-user.c worker-misc.c setproctitle.h route-add.c route-add.h \
 	setproctitle.c worker-privs.c plain.c plain.h common.h common.c \
 	sec-mod.c sec-mod.h script-list.h system.c system.h icmp-ping.c icmp-ping.h \
-	worker-bandwidth.c worker-bandwidth.h ctl.h \
+	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES)
 
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
-
-if LOCAL_PROTOBUF_C
-ocserv_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
-endif
 
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
@@ -108,6 +104,11 @@ occtl_LDADD += $(LIBDBUS_LIBS)
 else
 ocserv_SOURCES += main-ctl-unix.c
 occtl_SOURCES += occtl-unix.c
+endif
+
+if LOCAL_PROTOBUF_C
+ocserv_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
+occtl_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
 endif
 
 ipc.pb-c.c: ipc.proto

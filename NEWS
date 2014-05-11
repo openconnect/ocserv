@@ -1,7 +1,9 @@
 * Version 0.4.0 (unreleased)
 
 - By default unix sockets are being used for the communication with
-  occtl, instead of D-BUS.
+  occtl, instead of D-BUS. That allows for occtl to connect to any
+  of the running servers in the system, by specifying '-s' and the
+  server's occtl socket file.
 - Ocserv was modified to utilize talloc, the samba allocation
   library which can prevent memory leaks on the main server. As
   this is not a memory intersive server the overhead should not be

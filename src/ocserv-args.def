@@ -249,13 +249,17 @@ use-utmp = true
 # or via a unix socket).
 use-occtl = true
 
+# socket file used for IPC with occtl. You only need to set that,
+# if you use more than a single servers.
+#occtl-socket-file = /var/run/occtl.socket
+
 # PID file. It can be overriden in the command line.
 pid-file = /var/run/ocserv.pid
 
 # The default server directory. Does not require any devices present.
 #chroot-dir = /path/to/chroot
 
-# socket file used for IPC, will be appended with .PID
+# socket file used for server IPC (worker-main), will be appended with .PID
 # It must be accessible within the chroot environment (if any)
 socket-file = /var/run/ocserv-socket
 

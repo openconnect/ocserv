@@ -32,6 +32,7 @@
 #include <c-strcase.h>
 
 #include <vpn.h>
+#include <ctl.h>
 #include <tlslib.h>
 
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
@@ -75,6 +76,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "disconnect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
+	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	/* this is alias for cisco-client-compat */
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -360,6 +362,9 @@ unsigned force_cert_auth;
 		READ_STRING("pid-file", pid_file);
 
 	READ_STRING("socket-file", config->socket_file_prefix);
+	READ_STRING("occtl-socket-file", config->occtl_socket_file);
+	if (config->occtl_socket_file == NULL)
+		config->occtl_socket_file = talloc_strdup(config, OCCTL_UNIX_SOCKET);
 
 	READ_STRING("banner", config->banner);
 	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);

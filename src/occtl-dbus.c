@@ -942,7 +942,7 @@ int handle_show_id_cmd(dbus_ctx *ctx, const char *arg)
 	return ret;
 }
 
-dbus_ctx *conn_init(void *pool)
+dbus_ctx *conn_init(void *pool, const char *file)
 {
 	DBusError err;
 	dbus_ctx *ctx;

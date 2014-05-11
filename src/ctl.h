@@ -1,7 +1,7 @@
 #ifndef CTL_H
 # define CTL_H
 
-#define OCSERV_UNIX_NAME "/var/run/ocserv.usocket"
+#define OCCTL_UNIX_SOCKET "/var/run/occtl.socket"
 
 enum {
 	CTL_CMD_STATUS = 1,

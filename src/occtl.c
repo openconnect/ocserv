@@ -148,6 +148,7 @@ static
 void usage(void)
 {
 	printf("occtl: [OPTIONS...] {COMMAND}\n\n");
+	printf("  -s --socket-file       Specify the server's occtl socket file\n");
 	printf("  -h --help              Show this help\n");
 	printf("  -v --version           Show the program's version\n");
 	printf("\n");
@@ -479,10 +480,27 @@ void initialize_readline(void)
 	signal(SIGINT, handle_sigint);
 }
 
+static int single_cmd(int argc, char **argv, void *pool, const char *file)
+{
+	CONN_TYPE *conn;
+	char *line;
+	int ret;
+
+	conn = conn_init(pool, file);
+
+	line = merge_args(argc, argv);
+	ret = handle_cmd(conn, line);
+
+	free(line);
+	return ret;
+}
+
+
 int main(int argc, char **argv)
 {
 	char *line = NULL;
 	CONN_TYPE *conn;
+	const char *file = NULL;
 	void *gl_pool;
 
 	gl_pool = talloc_init("occtl");
@@ -493,27 +511,34 @@ int main(int argc, char **argv)
 
 	signal(SIGPIPE, SIG_IGN);
 
-	conn = conn_init(gl_pool);
 
 	if (argc > 1) {
-		int ret;
-
 		if (argv[1][0] == '-') {
 			if (argv[1][1] == 'v'
 			    || (argv[1][1] == '-' && argv[1][2] == 'v')) {
 				version();
+			} else if (argc > 2 && (argv[1][1] == 's'
+			    || (argv[1][1] == '-' && argv[1][2] == 's'))) {
+				file = talloc_strdup(gl_pool, argv[2]);
+				if (argc == 3) {
+					goto interactive;
+				} else {
+					argv += 2;
+					argc -= 2;
+					exit(single_cmd(argc, argv, gl_pool, file));
+				}
 			} else {
 				usage();
 			}
 			exit(0);
-		}
+  		}
 
-		line = merge_args(argc, argv);
-		ret = handle_cmd(conn, line);
-
-		free(line);
-		return ret;
+  		/* handle all arguments as a command */
+		exit(single_cmd(argc, argv, gl_pool, file));
 	}
+
+ interactive:
+	conn = conn_init(gl_pool, file);
 
 	initialize_readline();
 

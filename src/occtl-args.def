@@ -25,6 +25,14 @@ copyright = {
 
 help-value    = h;
 
+flag = {
+    name      = socket-file;
+    value     = s;
+    arg-type  = file;
+    descrip   = "Specify the server's occtl socket file";
+    doc   = "This option is only needed if you have multiple servers.";
+};
+
 
 doc-section = {
   ds-type = 'SYNOPSIS';

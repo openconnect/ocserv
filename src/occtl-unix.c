@@ -42,6 +42,7 @@
 struct unix_ctx {
 	int fd;
 	int is_open;
+	const char *socket_file;
 };
 
 static uint8_t msg_map[] = {   
@@ -172,14 +173,17 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 }
 
 static
-int connect_to_ocserv (void)
+int connect_to_ocserv (const char *socket_file)
 {
 	int sd, ret, e;
 	struct sockaddr_un sa;
 
+	if (socket_file == NULL)
+		socket_file = OCCTL_UNIX_SOCKET;
+
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", OCSERV_UNIX_NAME);
+	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
@@ -763,7 +767,7 @@ int handle_show_id_cmd(struct unix_ctx *ctx, const char *arg)
 
 int conn_prehandle(struct unix_ctx *ctx)
 {
-	ctx->fd = connect_to_ocserv();
+	ctx->fd = connect_to_ocserv(ctx->socket_file);
 	if (ctx->fd != -1)
 		ctx->is_open = 1;
 
@@ -778,9 +782,15 @@ void conn_posthandle(struct unix_ctx *ctx)
 	}
 }
 
-struct unix_ctx *conn_init(void *pool)
+struct unix_ctx *conn_init(void *pool, const char *file)
 {
-	return talloc_zero(pool, struct unix_ctx);
+struct unix_ctx *ctx;
+	ctx = talloc_zero(pool, struct unix_ctx);
+	if (ctx == NULL)
+		return NULL;
+	ctx->socket_file = file;
+
+	return ctx;
 }
 
 void conn_close(struct unix_ctx* conn)

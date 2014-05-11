@@ -88,7 +88,7 @@ void ctl_handler_deinit(main_server_st * s)
 		return;
 
 	if (s->ctl_fd >= 0) {
-		mslog(s, NULL, LOG_DEBUG, "closing unix socket connection");
+		/*mslog(s, NULL, LOG_DEBUG, "closing unix socket connection");*/
 		close(s->ctl_fd);
 		/*remove(OCSERV_UNIX_NAME); */
 	}
@@ -102,19 +102,20 @@ int ctl_handler_init(main_server_st * s)
 	struct sockaddr_un sa;
 	int sd, e;
 
-	if (s->config->use_occtl == 0)
+	if (s->config->use_occtl == 0 || s->config->occtl_socket_file == NULL)
 		return 0;
 
+	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s", s->config->occtl_socket_file);
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", OCSERV_UNIX_NAME);
-	remove(OCSERV_UNIX_NAME);
+	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", s->config->occtl_socket_file);
+	remove(s->config->occtl_socket_file);
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not create socket '%s': %s",
-		      OCSERV_UNIX_NAME, strerror(e));
+		      s->config->occtl_socket_file, strerror(e));
 		return -1;
 	}
 
@@ -123,22 +124,22 @@ int ctl_handler_init(main_server_st * s)
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not bind socket '%s': %s",
-		      OCSERV_UNIX_NAME, strerror(e));
+		      s->config->occtl_socket_file, strerror(e));
 		return -1;
 	}
 
-	ret = chown(OCSERV_UNIX_NAME, s->config->uid, s->config->gid);
+	ret = chown(s->config->occtl_socket_file, s->config->uid, s->config->gid);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not chown socket '%s': %s",
-		      OCSERV_UNIX_NAME, strerror(e));
+		      s->config->occtl_socket_file, strerror(e));
 	}
 
 	ret = listen(sd, 1024);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not listen to socket '%s': %s",
-		      OCSERV_UNIX_NAME, strerror(e));
+		      s->config->occtl_socket_file, strerror(e));
 		return -1;
 	}
 

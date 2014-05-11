@@ -43,7 +43,7 @@ unsigned check_cmd_help(const char *line);
 # define CONN_TYPE struct unix_ctx
 #endif
 
-CONN_TYPE *conn_init(void *pool);
+CONN_TYPE *conn_init(void *pool, const char *socket_file);
 void conn_close(CONN_TYPE*);
 
 int conn_prehandle(CONN_TYPE *ctx);

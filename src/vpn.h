@@ -221,6 +221,8 @@ struct cfg_st {
 	unsigned use_utmp;
 	unsigned use_dbus; /* whether the D-BUS service is registered */
 	unsigned use_occtl; /* whether support for the occtl tool will be enabled */
+	char* occtl_socket_file;
+
 	unsigned try_mtu; /* MTU discovery enabled */
 	unsigned cisco_client_compat; /* do not require client certificate, 
 	                               * and allow auth to complete in different

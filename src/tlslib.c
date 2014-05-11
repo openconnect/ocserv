@@ -203,7 +203,7 @@ struct htable_iter iter;
 	cache = htable_first(&db->ht, &iter);
 	while(cache != NULL) {
 		if (cache->session_data_size > 0) {
-	          	memset(cache->session_data, 0, cache->session_data_size);
+	          	safe_memset(cache->session_data, 0, cache->session_data_size);
 	          	cache->session_data_size = 0;
 	          	cache->session_id_size = 0;
 		}

@@ -2,7 +2,7 @@ Short term items:
 
 * Move PAM (and other authentication methods) to sec-mod, to prevent
   any leakage to the worker process. Alternatively that could be
-  prevented in a fork-then-exec mode switch, but on fortunately that
+  prevented in a fork-then-exec mode switch, but unfortunately that
   requires the reload of all certificates/parameters on the worker
   process, and imposes a quite high penalty (see the 'exec' branch).
 
@@ -21,8 +21,6 @@ Short term items:
   connection.
 
 * Give each worker a limited number of accesses to the security module.
-
-* Use talloc in main process to simplify the release of resources.
 
 Long term items:
 

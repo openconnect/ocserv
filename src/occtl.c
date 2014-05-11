@@ -280,8 +280,15 @@ unsigned check_cmd(const char *cmd, const char *input,
 		while (whitespace(*p))
 			p++;
 
-		if (need_preconn == 0 || conn_prehandle(conn) >= 0)
+		if (need_preconn != 0) {
+			if (conn_prehandle(conn) < 0) {
+			 	*status = 1;
+			} else {
+				*status = func(conn, p);
+			}
+		} else {
 			*status = func(conn, p);
+		}
 
 		ret = 1;
 

@@ -651,7 +651,6 @@ int common_info_cmd(UserListRep * args)
 		if (print_list_entries(out, "\tiRoutes:", args->user[i]->iroutes, args->user[i]->n_iroutes) < 0)
 			goto error_parse;
 
-
 		at_least_one = 1;
 	}
 
@@ -662,8 +661,10 @@ int common_info_cmd(UserListRep * args)
 	fprintf(stderr, "%s: message parsing error\n", __func__);
 	goto cleanup;
  cleanup:
-	if (at_least_one == 0)
+	if (at_least_one == 0) {
 		fprintf(out, "user or ID not found\n");
+		ret = 2;
+	}
 	pager_stop(out);
 
 	return ret;
@@ -701,7 +702,6 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg)
 	if (ret < 0)
 		goto error;
 
-	ret = 0;
 	goto cleanup;
 
  error:
@@ -751,7 +751,6 @@ int handle_show_id_cmd(struct unix_ctx *ctx, const char *arg)
 	if (ret < 0)
 		goto error;
 
-	ret = 0;
 	goto cleanup;
 
  error:

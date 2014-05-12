@@ -177,6 +177,7 @@ typedef struct main_server_st {
 	struct ban_list_st ban_list;
 	
 	char socket_file[_POSIX_PATH_MAX];
+	char full_socket_file[_POSIX_PATH_MAX];
 	pid_t sec_mod_pid;
 	
 	unsigned active_clients;

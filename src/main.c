@@ -768,7 +768,8 @@ unsigned total = 10;
 	if (terminate != 0) {
 		mslog(s, NULL, LOG_DEBUG, "termination request received; waiting for children to die");
 		kill_children(s);
-		remove(s->socket_file);
+		remove(s->full_socket_file);
+		remove(s->config->occtl_socket_file);
 		remove_pid_file();
 
 		while (waitpid(-1, NULL, WNOHANG) == 0) {

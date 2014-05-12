@@ -847,24 +847,31 @@ void run_sec_mod(main_server_st * s)
 {
 	int e;
 	pid_t pid;
-	char file[_POSIX_PATH_MAX];
 	const char *p;
 
 	/* make socket name */
 	snprintf(s->socket_file, sizeof(s->socket_file), "%s.%u",
 		 s->config->socket_file_prefix, (unsigned)getpid());
-	p = s->socket_file;
+
 	if (s->config->chroot_dir != NULL) {
-		snprintf(file, sizeof(file), "%s/%s.%u",
-			 s->config->chroot_dir, s->config->socket_file_prefix,
-			 (unsigned)getpid());
-		p = file;
+		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
+			 s->config->chroot_dir, s->socket_file);
+	} else {
+		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s",
+			 s->socket_file);
 	}
+	p = s->full_socket_file;
 
 	pid = fork();
 	if (pid == 0) {		/* child */
 		clear_lists(s);
 		kill_on_parent_kill(SIGTERM);
+
+#ifdef HAVE_MALLOC_TRIM
+		/* try to return all the pages we've freed to
+		 * the operating system. */
+		malloc_trim(0);
+#endif
 		setproctitle(PACKAGE_NAME "-secmod");
 
 		sec_mod_server(s->config, p);

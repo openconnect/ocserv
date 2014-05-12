@@ -77,7 +77,7 @@ unsigned i;
 	if (msg_size == 0)
 		return PAM_SUCCESS;
 
-	pctx->replies = talloc_zero_size(pctx, msg_size*sizeof(*pctx->replies));
+	pctx->replies = calloc(1, msg_size*sizeof(*pctx->replies));
 	if (pctx->replies == NULL)
 		return PAM_BUF_ERR;
 
@@ -104,7 +104,7 @@ unsigned i;
 				co_resume();
 				pctx->state = PAM_S_INIT;
 
-				pctx->replies[i].resp = talloc_strdup(pctx, pctx->password);
+				pctx->replies[i].resp = strdup(pctx->password);
 				pctx->sent_msg = 0;
 				break;
                 }
@@ -307,7 +307,7 @@ static void pam_auth_deinit(void* ctx)
 struct pam_ctx_st * pctx = ctx;
 
 	pam_end(pctx->ph, pctx->cr_ret);
-	talloc_free(pctx->replies);
+	free(pctx->replies);
 	str_clear(&pctx->msg);
 	if (pctx->cr != NULL)
 		co_delete(pctx->cr);

@@ -97,12 +97,13 @@ message auth_reply_msg
 	repeated string routes = 21;
 	repeated string dns = 22;
 	repeated string nbns = 23;
+	optional bool no_udp = 24 [default = false];
 
 	/* The sid is used when this message is a reply
 	 * to an AUTH_REINIT, to let the worker know of
 	 * any change in the sid.
 	 */
-	optional bytes sid = 24;
+	optional bytes sid = 25;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

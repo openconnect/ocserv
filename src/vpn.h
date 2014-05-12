@@ -146,6 +146,7 @@ struct group_cfg_st {
 	size_t tx_per_sec;
 	
 	unsigned net_priority;
+	unsigned no_udp; /* whether to disable UDP for this user */
 };
 
 struct vpn_st {

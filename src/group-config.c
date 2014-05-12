@@ -40,6 +40,7 @@ struct cfg_options {
 };
 
 static struct cfg_options available_options[] = {
+	{ .name = "no-udp", .type = OPTION_BOOLEAN },
 	{ .name = "route", .type = OPTION_MULTI_LINE },
 	{ .name = "iroute", .type = OPTION_MULTI_LINE },
 	{ .name = "dns", .type = OPTION_MULTI_LINE },
@@ -107,6 +108,18 @@ static struct cfg_options available_options[] = {
 		} \
 	}
 
+#define READ_TF(name, s_name, def) \
+	{ char* tmp_tf = NULL; \
+		READ_RAW_STRING(name, tmp_tf); \
+		if (tmp_tf == NULL) s_name = def; \
+		else { \
+			if (c_strcasecmp(tmp_tf, "true") == 0 || c_strcasecmp(tmp_tf, "yes") == 0) \
+				s_name = 1; \
+			else \
+				s_name = 0; \
+		} \
+		talloc_free(tmp_tf); \
+	}
 
 static int handle_option(const tOptionValue* val)
 {
@@ -150,6 +163,8 @@ struct group_cfg_st *config = &proc->config;
 		}
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
+
+	READ_TF("no-udp", config->no_udp, (s->config->udp_port!=0)?0:1);
 
 	READ_RAW_MULTI_LINE("route", config->routes, config->routes_size);
 	READ_RAW_MULTI_LINE("iroute", config->iroutes, config->iroutes_size);

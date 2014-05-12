@@ -125,6 +125,11 @@ int send_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.net_priority = proc->config.net_priority;
 		}
 
+		if (proc->config.no_udp != 0) {
+			msg.has_no_udp = 1;
+			msg.no_udp = proc->config.no_udp;
+		}
+
 		msg.n_dns = proc->config.dns_size;
 		for (i=0;i<proc->config.dns_size;i++) {
 			mslog(s, proc, LOG_DEBUG, "sending dns '%s'", proc->config.dns[i]);

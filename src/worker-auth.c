@@ -331,6 +331,9 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			if (msg->has_net_priority)
 				ws->config->net_priority = msg->net_priority;
 
+			if (msg->has_no_udp && msg->no_udp != 0)
+				ws->config->udp_port = 0;
+
 			/* routes */
 			ws->routes_size = msg->n_routes;
 

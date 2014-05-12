@@ -951,9 +951,6 @@ int main(int argc, char** argv)
 	
 	run_sec_mod(s);
 
-	/* Initialize certificates */
-	tls_load_certs(s, &creds);
-
 	mslog(s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
 
 	ret = ctl_handler_init(s);
@@ -961,6 +958,15 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Cannot create command handler\n");
 		exit(1);
 	}
+
+	/* chdir to our chroot directory, to allow opening the sec-mod
+	 * socket if necessary. */
+	if (s->config->chroot_dir)
+		chdir(s->config->chroot_dir);
+	ms_sleep(100); /* give some time for sec-mod to initialize */
+
+	/* Initialize certificates */
+	tls_load_certs(s, &creds);
 
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
 	alarm(MAINTAINANCE_TIME(s));

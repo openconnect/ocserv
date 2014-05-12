@@ -319,9 +319,12 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 		}
 
 		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid);
+		if (ret < 0) /* allow root connections */
+			ret = check_upeer_id("sec-mod", cfd, 0, 0);
+
 		if (ret < 0) {
 			syslog(LOG_ERR,
-			       "sec-mod: unauthorized connection");
+			       "sec-mod: rejected unauthorized connection");
 			goto cont;
 		}
 

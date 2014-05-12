@@ -190,7 +190,6 @@ typedef struct main_server_st {
 	int ctl_fd;
 #endif
 	void *main_pool; /* talloc main pool */
-	void *worker_pool; /* talloc worker pool */
 } main_server_st;
 
 void clear_lists(main_server_st *s);

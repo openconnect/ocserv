@@ -786,7 +786,6 @@ unsigned total = 10;
 		clear_lists(s);
 		tls_global_deinit(s->creds);
 		clear_cfg_file(&s->config);
-		talloc_free(s->worker_pool);
 		talloc_free(s->main_pool);
 		closelog();
 		exit(0);
@@ -845,15 +844,15 @@ int main(int argc, char** argv)
 
 	memset(&creds, 0, sizeof(creds));
 
-	worker_pool = talloc_init("worker");
-	if (worker_pool == NULL) {
+	/* main pool */
+	main_pool = talloc_init("main");
+	if (main_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
 		exit(1);
 	}
 
-	/* main pool */
-	main_pool = talloc_init("main");
-	if (main_pool == NULL) {
+	worker_pool = talloc_named(main_pool, 0, "worker", NULL);
+	if (worker_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
 		exit(1);
 	}
@@ -870,7 +869,6 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 	s->main_pool = main_pool;
-	s->worker_pool = worker_pool;
 	s->creds = &creds;
 	s->start_time = time(0);
 

@@ -68,8 +68,6 @@ enum {
 	PS_AUTH_INACTIVE, /* no comm with worker */
 	PS_AUTH_FAILED, /* no tried authenticated but failed */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
-	PS_AUTH_ZOMBIE, /* in INIT state but worker has disconnected! - only present when cisco-client-compat is set */
-	PS_AUTH_DEAD, /* it was created but subsequently the client revived a zombie proc. - only present when cisco-client-compat is set */
 	PS_AUTH_COMPLETED, /* successful authentication */
 };
 
@@ -97,7 +95,7 @@ struct proc_st {
 	 * who re-uses it when it performs authentication in multiple
 	 * sessions.
 	 */
-	uint8_t sid[SID_SIZE];
+	uint8_t sid[SID_SIZE];//XXX
 
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
@@ -121,10 +119,8 @@ struct proc_st {
 	 * and are considered when generating an IP address. That is used to
 	 * generate the same address as previously allocated.
 	 */
-	uint8_t seeds_are_set; /* non zero if the following two elements are set */
 	uint8_t ipv4_seed[4];
 
-	void * auth_ctx; /* the context of authentication */
 	unsigned status; /* PS_AUTH_ */
 	unsigned auth_reqs; /* the number of requests received */
 
@@ -201,7 +197,6 @@ int user_connected(main_server_st *s, struct proc_st* cur);
 void user_disconnected(main_server_st *s, struct proc_st* cur);
 
 void expire_tls_sessions(main_server_st *s);
-void expire_zombies(main_server_st* s);
 
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 
@@ -234,28 +229,14 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 int open_tun(main_server_st* s, struct proc_st* proc);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
-int send_auth_reply_msg(main_server_st* s, struct proc_st* proc, unsigned need_sid);
-
-int send_auth_reply(main_server_st* s, struct proc_st* proc,
-			AuthReplyMsg__AUTHREP r, unsigned need_sid);
+int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
+			AUTHREP r);
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req);
-int generate_cookie(main_server_st *s, struct proc_st* proc);
-int handle_auth_init(main_server_st *s, struct proc_st* proc,
-		     const AuthInitMsg * req);
-int handle_auth_reinit(main_server_st *s, struct proc_st** proc,
-		     const AuthReinitMsg * req);
-int handle_auth_req(main_server_st *s, struct proc_st* proc,
-		     const AuthRequestMsg * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
-
-void add_to_ip_ban_list(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
-void expire_banned(main_server_st* s);
-int check_if_banned(main_server_st* s, struct sockaddr_storage *addr, socklen_t addr_len);
-
-int handle_script_exit(main_server_st *s, struct proc_st* proc, int code, unsigned need_sid);
+int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
 void run_sec_mod(main_server_st * s);
 

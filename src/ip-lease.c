@@ -47,6 +47,26 @@ static void bignum_add (uint8_t * num, unsigned size, unsigned step)
     }
 }
 
+void ip_from_seed(uint8_t *seed, unsigned seed_size,
+		void *ip, size_t ip_size)
+{
+	uint8_t digest[20];
+	int ret;
+
+	if (ip_size > sizeof(digest)) {
+		syslog(LOG_ERR, "too large IP!");
+		abort();
+	}
+
+	ret = gnutls_hash_fast(GNUTLS_DIG_SHA1, seed, seed_size, digest);
+	if (ret < 0) {
+		syslog(LOG_ERR, "cannot hash: %s", strerror(ret));
+		abort();
+	}
+
+	memcpy(ip, digest, ip_size);
+
+}
 
 void ip_lease_deinit(struct ip_lease_db_st* db)
 {
@@ -173,14 +193,11 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 				goto fail;
 			}
 			if (max_loops == MAX_IP_TRIES) {
-				if (proc->seeds_are_set) {
-					memcpy(SA_IN_U8_P(&rnd), proc->ipv4_seed, 4);
-				} else {
-					uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
-					memcpy(SA_IN_U8_P(&rnd), &t, 4);
-				}
-			} else
-				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+				memcpy(SA_IN_U8_P(&rnd), proc->ipv4_seed, 4);
+			} else {
+				ip_from_seed(SA_IN_U8_P(&rnd), sizeof(struct in_addr),
+						SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+			}
 			max_loops--;
 
         		if (SA_IN_U8_P(&rnd)[3] == 255 || SA_IN_U8_P(&rnd)[3] == 254) /* avoid broadcast */
@@ -311,14 +328,11 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			
 			if (max_loops == MAX_IP_TRIES) {
 				memset(SA_IN6_U8_P(&rnd), 0, sizeof(struct in6_addr));
-				if (proc->seeds_are_set) {
-					memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, proc->ipv4_seed, 4);
-				} else {
-					uint32_t t = hash_any(proc->username, strlen(proc->username), 0);
-					memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, &t, 4);
-				}
-			} else
-				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
+				memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, proc->ipv4_seed, 4);
+			} else {
+				ip_from_seed(SA_IN6_U8_P(&rnd), sizeof(struct in6_addr),
+						SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
+			}
 			max_loops--;
 			
 			/* Mask the random number with the netmask */

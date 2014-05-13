@@ -20,6 +20,66 @@
  */
 #ifndef SEC_MOD_H
 
-void sec_mod_server(struct cfg_st* config, const char* file);
+#include <cookies.h>
+
+typedef struct sec_mod_st {
+	gnutls_datum_t cookie_key; /* the key to generate cookies */
+
+	struct cfg_st *config;
+	gnutls_privkey_t *key;
+	unsigned key_size;
+	void *client_db;
+	void *ban_db;
+
+	int fd;
+} sec_mod_st;
+
+
+typedef struct client_entry_st {
+	/* A unique session identifier used to distinguish sessions
+	 * prior to authentication. It is sent as cookie to the client
+	 * who re-uses it when it performs authentication in multiple
+	 * sessions.
+	 */
+	uint8_t sid[SID_SIZE];
+	void * auth_ctx; /* the context of authentication */
+	unsigned status; /* PS_AUTH_ */
+
+	char ip[MAX_IP_STR]; /* the user's IP */
+	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
+	char username[MAX_USERNAME_SIZE]; /* the owner */
+	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
+	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
+	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
+
+	time_t time;
+} client_entry_st;
+
+void *sec_mod_client_db_init(void *pool);
+client_entry_st * new_client_entry(void *_db, const char *ip);
+client_entry_st * find_client_entry(void *_db, uint8_t sid[SID_SIZE]);
+void del_client_entry(void *_db, client_entry_st * e);
+void cleanup_client_entries(void *_db);
+
+#ifdef __GNUC__
+# define seclog(prio, fmt, ...) \
+	syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__)
+#else
+# define seclog syslog
+#endif
+
+void sec_auth_init(struct cfg_st *config);
+void sec_auth_user_deinit(client_entry_st *e);
+
+int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
+int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
+
+void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
+			uint8_t *cookie_key, unsigned cookie_key_size);
+
+void cleanup_banned_entries(void *_db);
+unsigned check_if_banned(void *_db, const char *ip);
+void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time);
+void *sec_mod_ban_db_init(void *pool);
 
 #endif

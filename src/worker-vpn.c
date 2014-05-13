@@ -297,8 +297,8 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
 					if (req->selected_ciphersuite == NULL ||
-					    req->selected_ciphersuite->
-					    server_prio <
+					    req->
+					    selected_ciphersuite->server_prio <
 					    ciphersuites[i].server_prio) {
 						req->selected_ciphersuite =
 						    &ciphersuites[i];
@@ -341,17 +341,18 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
-				nlen = sizeof(req->cookie);
+				nlen = sizeof(ws->cookie);
 				ret =
 				    base64_decode((char *)p, tmplen,
-						  (char *)req->cookie, &nlen);
+						  (char *)ws->cookie, &nlen);
 				if (ret == 0 || nlen != COOKIE_SIZE) {
 					oclog(ws, LOG_DEBUG,
 					      "could not decode cookie: %.*s",
 					      tmplen, p);
-					req->cookie_set = 0;
+					ws->cookie_set = 0;
 				} else {
-					req->cookie_set = 1;
+					ws->auth_state = S_AUTH_COOKIE;
+					ws->cookie_set = 1;
 				}
 			} else if (strncmp(p, "webvpncontext=", 14) == 0) {
 				p += 14;
@@ -361,18 +362,17 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
-				nlen = sizeof(req->sid_cookie);
+				nlen = sizeof(ws->sid);
 				ret =
 				    base64_decode((char *)p, tmplen,
-						  (char *)req->sid_cookie,
-						  &nlen);
-				if (ret == 0 || nlen != sizeof(req->sid_cookie)) {
+						  (char *)ws->sid, &nlen);
+				if (ret == 0 || nlen != sizeof(ws->sid)) {
 					oclog(ws, LOG_DEBUG,
 					      "could not decode sid: %.*s",
 					      tmplen, p);
-					req->sid_cookie_set = 0;
+					ws->sid_set = 0;
 				} else {
-					req->sid_cookie_set = 1;
+					ws->sid_set = 1;
 					oclog(ws, LOG_DEBUG,
 					      "received sid: %.*s", tmplen, p);
 				}
@@ -541,8 +541,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 
 	ret =
 	    gnutls_priority_set_direct(session,
-				       ws->req.selected_ciphersuite->
-				       gnutls_name, NULL);
+				       ws->req.
+				       selected_ciphersuite->gnutls_name, NULL);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s",
 		      gnutls_strerror(ret));
@@ -550,13 +550,14 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
-					   ws->req.selected_ciphersuite->
-					   gnutls_version, GNUTLS_KX_RSA,
-					   ws->req.selected_ciphersuite->
-					   gnutls_cipher,
-					   ws->req.selected_ciphersuite->
-					   gnutls_mac, GNUTLS_COMP_NULL,
-					   &master, &sid);
+					   ws->req.
+					   selected_ciphersuite->gnutls_version,
+					   GNUTLS_KX_RSA,
+					   ws->req.
+					   selected_ciphersuite->gnutls_cipher,
+					   ws->req.
+					   selected_ciphersuite->gnutls_mac,
+					   GNUTLS_COMP_NULL, &master, &sid);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s",
 		      gnutls_strerror(ret));
@@ -627,12 +628,14 @@ void exit_worker(worker_st * ws)
 		msg.bytes_out = ws->tun_bytes_out;
 
 		send_msg_to_main(ws, CMD_CLI_STATS, &msg,
-			 (pack_size_func) cli_stats_msg__get_packed_size,
-			 (pack_func) cli_stats_msg__pack);
+				 (pack_size_func)
+				 cli_stats_msg__get_packed_size,
+				 (pack_func) cli_stats_msg__pack);
 
-		oclog(ws, LOG_DEBUG, "sending stats (in: %lu, out: %lu) to main",
-			(unsigned long)msg.bytes_in,
-			(unsigned long)msg.bytes_out);
+		oclog(ws, LOG_DEBUG,
+		      "sending stats (in: %lu, out: %lu) to main",
+		      (unsigned long)msg.bytes_in,
+		      (unsigned long)msg.bytes_out);
 	}
 	closelog();
 	exit(1);
@@ -1325,28 +1328,26 @@ static int connect_handler(worker_st * ws)
 
 	ws->buffer_size = sizeof(ws->buffer);
 
-	if (ws->auth_state != S_AUTH_COMPLETE && req->cookie_set == 0) {
-		oclog(ws, LOG_INFO, "connect request without authentication");
+	/* we must be in S_AUTH_COOKIE state */
+	if (ws->auth_state != S_AUTH_COOKIE || ws->cookie_set == 0) {
+		oclog(ws, LOG_INFO, "no cookie found");
 		tls_puts(ws->session,
 			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 	}
 
-	if (ws->auth_state != S_AUTH_COMPLETE) {
-		/* authentication didn't occur in this session. Use the
-		 * cookie */
-		ret = auth_cookie(ws, req->cookie, sizeof(req->cookie));
-		if (ret < 0) {
-			oclog(ws, LOG_INFO,
-			      "failed cookie authentication attempt");
-			tls_puts(ws->session,
-				 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-			tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
-			exit_worker(ws);
-		}
-		ws->auth_state= S_AUTH_COMPLETE;
+	/* we have authenticated against sec-mod, we need to complete
+	 * our authentication by forwarding our cookie to main. */
+	ret = auth_cookie(ws, ws->cookie, sizeof(ws->cookie));
+	if (ret < 0) {
+		oclog(ws, LOG_INFO, "failed cookie authentication attempt");
+		tls_puts(ws->session,
+			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
+		exit_worker(ws);
 	}
+	ws->auth_state = S_AUTH_COMPLETE;
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
@@ -1575,7 +1576,8 @@ static int connect_handler(worker_st * ws)
 			method = REKEY_METHOD_NEW_TUNNEL;
 
 		ret = tls_printf(ws->session, "X-CSTP-Rekey-Method: %s\r\n",
-				 (method == REKEY_METHOD_SSL) ? "ssl" : "new-tunnel");
+				 (method ==
+				  REKEY_METHOD_SSL) ? "ssl" : "new-tunnel");
 		SEND_ERR(ret);
 	} else {
 		ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: none\r\n");
@@ -1712,10 +1714,10 @@ static int connect_handler(worker_st * ws)
 
 		/* crypto overhead for DTLS */
 		ws->crypto_overhead =
-		    tls_get_overhead(ws->req.selected_ciphersuite->
-				     gnutls_version,
-				     ws->req.selected_ciphersuite->
-				     gnutls_cipher,
+		    tls_get_overhead(ws->req.
+				     selected_ciphersuite->gnutls_version,
+				     ws->req.
+				     selected_ciphersuite->gnutls_cipher,
 				     ws->req.selected_ciphersuite->gnutls_mac);
 		ws->crypto_overhead += CSTP_DTLS_OVERHEAD;
 
@@ -1730,7 +1732,8 @@ static int connect_handler(worker_st * ws)
 		    MIN(ws->conn_mtu,
 			ws->vinfo.mtu - proto_overhead - ws->crypto_overhead);
 
-		ret = tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
+		ret =
+		    tls_printf(ws->session, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
 		SEND_ERR(ret);
 		oclog(ws, LOG_DEBUG, "suggesting DTLS MTU %u", ws->conn_mtu);
 

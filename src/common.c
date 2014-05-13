@@ -32,18 +32,10 @@ cmd_request_t cmd = _cmd;
 static char tmp[32];
 
 	switch(cmd) {
-	case AUTH_INIT:
-		return "auth init";
-	case AUTH_REINIT:
-		return "auth reinit";
-	case AUTH_REP:
-		return "auth reply";
-	case AUTH_REQ:
-		return "auth request";
+	case AUTH_COOKIE_REP:
+		return "auth cookie reply";
 	case AUTH_COOKIE_REQ:
 		return "auth cookie request";
-	case AUTH_MSG:
-		return "auth msg";
 	case RESUME_STORE_REQ:
 		return "resume data store request";
 	case RESUME_DELETE_REQ:
@@ -62,6 +54,17 @@ static char tmp[32];
 		return "session info";
 	case CMD_CLI_STATS:
 		return "cli stats";
+
+	case SM_CMD_AUTH_INIT:
+		return "sm: auth init";
+	case SM_CMD_AUTH_CONT:
+		return "sm: auth cont";
+	case SM_CMD_AUTH_REP:
+		return "sm: auth rep";
+	case SM_CMD_DECRYPT:
+		return "sm: decrypt";
+	case SM_CMD_SIGN:
+		return "sm: sign";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;
@@ -295,8 +298,9 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 
+	/* FIXME: Add a timeout here */
 	do {
-		ret = recvmsg( fd, &hdr, 0);
+		ret = recvmsg(fd, &hdr, 0);
 	} while (ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		int e = errno;
@@ -306,13 +310,13 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	if (ret == 0) {
 		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__, __LINE__);
-		return ERR_WORKER_TERMINATED;
+		return ERR_PEER_TERMINATED;
 	}
 	
 	if (rcmd != cmd) {
 		return ERR_BAD_COMMAND;
 	}
-	
+
 	/* try to receive socket (if any) */
 	if (socketfd != NULL) {
 		if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {

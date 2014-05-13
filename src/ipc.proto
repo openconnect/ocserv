@@ -1,54 +1,16 @@
 /*
- * == Auth with username/password ==
+ * == Auth in main process (cookie auth only) ==
  *
- *   main                     worker
- *               <------     AUTH_INIT (username)
- * AUTH_REP(MSG) ------>
- *               <------     AUTH_REQ (password)
- *                 .
- *                 .
- *                 .
- * AUTH_REP(ΟΚ)  ------>
- *
- *
- * == Auth with cookie ==
- *
- *   main                       worker
- *               <------     AUTH_COOKIE_REQ
- * AUTH_REP(OK)  ------>
- *
- *
- * == Auth with legacy client ==
- *
- *   main                     worker
- *               <------     AUTH_INIT (username)
- * AUTH_REP(MSG) ------>
- *
- * (worker terminates as client disconnects)
- *
- *                     <------  AUTH_REINIT (password, sid)
- * AUTH_REP(ΟΚ,newsid) ------>
+ *   main                              worker
+ *                      <------     AUTH_COOKIE_REQ
+ * AUTH_REP(OK/FAILED)  ------>
  *
  */
 
-/* AUTH_INIT */
-message auth_init_msg
-{
-	required bool user_present = 1;
-	required bool tls_auth_ok = 2 [default = false];
-	required string user_name = 3;
-	optional string cert_user_name = 4;
-	optional string cert_group_name = 5;
-	optional string hostname = 6;
-}
-
-/* AUTH_REINIT - used in cisco compatible clients, to
- * revive open authentication in zombie mode. */
-message auth_reinit_msg
-{
-	required bool tls_auth_ok = 1 [default = false];
-	required string password = 2;
-	required bytes sid = 3;
+enum AUTH_REP {
+	OK = 1;
+	MSG = 2;
+	FAILED = 3;
 }
 
 /* AUTH_COOKIE_REQ */
@@ -60,20 +22,9 @@ message auth_cookie_request_msg
 	optional string cert_group_name = 4;
 }
 
-/* AUTH_REQ */
-message auth_request_msg
-{
-	required string password = 1;
-}
-
 /* AUTH_REP */
 message auth_reply_msg
 {
-	enum AUTH_REP {
-		OK = 1;
-		MSG = 2;
-		FAILED = 3;
-	}
 	required AUTH_REP reply = 1;
 	optional bytes cookie = 2;
 	optional bytes session_id = 3;
@@ -98,12 +49,6 @@ message auth_reply_msg
 	repeated string dns = 22;
 	repeated string nbns = 23;
 	optional bool no_udp = 24 [default = false];
-
-	/* The sid is used when this message is a reply
-	 * to an AUTH_REINIT, to let the worker know of
-	 * any change in the sid.
-	 */
-	optional bytes sid = 25;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */
@@ -154,4 +99,65 @@ message session_info_msg
 	required string tls_ciphersuite = 1;
 	required string dtls_ciphersuite = 2;
 	required string user_agent = 3;
+}
+
+
+/* Messages to and from the security module */
+
+/*
+ * == Auth with username/password ==
+ *
+ *   main                     worker
+ *                    <------     AUTH_INIT (username)
+ * AUTH_REP(MSG,SID)  ------>
+ *                    <------     AUTH_CONT (SID,password)
+ *                       .
+ *                       .
+ *                       .
+ * AUTH_REP(OK,COOKIE)------>
+ *
+ *
+ * The authentication is now identical for openconnect and
+ * legacy cisco anyconnect clients. That is because the
+ * authentication method identifies the user using the SID.
+ *
+ */
+
+/* SEC_AUTH_INIT */
+message sec_auth_init_msg
+{
+	required bool user_present = 1;
+	required bool tls_auth_ok = 2 [default = false];
+	required string user_name = 3;
+	optional string cert_user_name = 4;
+	optional string cert_group_name = 5;
+	optional string hostname = 6;
+	required string ip = 7;
+}
+
+/* SEC_AUTH_CONT */
+message sec_auth_cont_msg
+{
+	required bool tls_auth_ok = 1 [default = false];
+	required string password = 2;
+	required bytes sid = 3;
+	required string ip = 4;
+}
+
+/* SEC_AUTH_REP */
+message sec_auth_reply_msg
+{
+	required AUTH_REP reply = 1;
+	optional bytes cookie = 2;
+	optional string user_name = 3;
+	optional string msg = 4;
+	optional bytes dtls_session_id = 5;
+	optional bytes sid = 6;
+}
+
+/* SEC_SIGN/DECRYPT */
+message sec_op_msg
+{
+	optional uint32 key_idx = 1;
+	required bytes data = 2;
 }

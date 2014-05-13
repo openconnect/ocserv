@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
  *
  * This file is part of ocserv.
  *
@@ -38,6 +38,7 @@
 #include <vpn.h>
 #include <main.h>
 #include <worker.h>
+#include <common.h>
 #include <sys/un.h>
 #include <sys/uio.h>
 #include <c-ctype.h>
@@ -394,10 +395,10 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 	gnutls_datum_t * output, unsigned type)
 {
 	struct key_cb_data* cdata = userdata;
-	int sd, ret, e;
-	uint8_t header[2];
-	struct iovec iov[2];
-	uint16_t length;
+	int sd = -1, ret, e;
+	SecOpMsg msg = SEC_OP_MSG__INIT;
+	SecOpMsg *reply = NULL;
+	PROTOBUF_ALLOCATOR(pa, userdata);
 
 	output->data = NULL;
 
@@ -416,50 +417,47 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		goto error;
 	}
 
-	header[0] = cdata->idx;
-	header[1] = type;
+	msg.has_key_idx = 1;
+	msg.key_idx = cdata->idx;
+	msg.data.data = raw_data->data;
+	msg.data.len = raw_data->size;
 
-	iov[0].iov_base = header;
-	iov[0].iov_len = 2;
-	iov[1].iov_base = raw_data->data;
-	iov[1].iov_len = raw_data->size;
-
-	ret = writev(sd, iov, 2);
-	if (ret == -1) {
-		e = errno;
-		syslog(LOG_ERR, "error writing to sec-mod: %s", strerror(e));
+	ret = send_msg(userdata, sd, type, &msg,
+			(pack_size_func)sec_op_msg__get_packed_size,
+			(pack_func)sec_op_msg__pack);
+	if (ret < 0) {
 		goto error;
 	}
 
-	ret = recv(sd, &length, 2, 0);
-	if (ret < 2) {
+	ret = recv_msg(userdata, sd, type, (void*)&reply, (unpack_func)sec_op_msg__unpack);
+	if (ret < 0) {
 		e = errno;
-		syslog(LOG_ERR, "error reading from sec-mod: %s", strerror(e));
+		syslog(LOG_ERR, "error receiving sec-mod reply: %s", 
+				strerror(e));
 		goto error;
 	}
+	close(sd);
+	sd = -1;
 
-	output->size = length;
-	output->data = gnutls_malloc(output->size);
+	output->size = reply->data.len;
+	output->data = gnutls_malloc(reply->data.len);
 	if (output->data == NULL) {
 		syslog(LOG_ERR, "error allocating memory");
 		goto error;
 	}
 
-	ret = recv(sd, output->data, output->size, 0);
-	if (ret <= 0) {
-		e = errno;
-		syslog(LOG_ERR, "error reading from sec-mod: %s", strerror(e));
-		goto error;
-	}
+	memcpy(output->data, reply->data.data, reply->data.len);
 
-	output->size = ret;
-
-	close(sd);
+	if (reply != NULL)
+		sec_op_msg__free_unpacked(reply, &pa);
 	return 0;
 
 error:
-	close(sd);
+	if (sd != -1)
+		close(sd);
 	gnutls_free(output->data);
+	if (reply != NULL)
+		sec_op_msg__free_unpacked(reply, &pa);
 	return GNUTLS_E_INTERNAL_ERROR;
 
 }
@@ -468,13 +466,13 @@ static
 int key_cb_sign_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
 	gnutls_datum_t * signature)
 {
-	return key_cb_common_func(key, userdata, raw_data, signature, 'S');
+	return key_cb_common_func(key, userdata, raw_data, signature, SM_CMD_SIGN);
 }
 
 static int key_cb_decrypt_func(gnutls_privkey_t key, void* userdata, const gnutls_datum_t * ciphertext,
 	gnutls_datum_t * plaintext)
 {
-	return key_cb_common_func(key, userdata, ciphertext, plaintext, 'D');
+	return key_cb_common_func(key, userdata, ciphertext, plaintext, SM_CMD_DECRYPT);
 }
 
 static void key_cb_deinit_func(gnutls_privkey_t key, void* userdata)

@@ -317,10 +317,6 @@ static int append_user_info(method_ctx *ctx,
 		strtmp = "connected";
 	else if (ctmp->status == PS_AUTH_INIT)
 		strtmp = "auth";
-	else if (ctmp->status == PS_AUTH_ZOMBIE)
-		strtmp = "zombie";
-	else if (ctmp->status == PS_AUTH_DEAD)
-		strtmp = "dead";
 	else if (ctmp->status == PS_AUTH_INACTIVE)
 		strtmp = "pre-auth";
 	else if (ctmp->status == PS_AUTH_FAILED)

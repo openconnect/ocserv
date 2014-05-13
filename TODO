@@ -1,11 +1,5 @@
 Short term items:
 
-* Move PAM (and other authentication methods) to sec-mod, to prevent
-  any leakage to the worker process. Alternatively that could be
-  prevented in a fork-then-exec mode switch, but unfortunately that
-  requires the reload of all certificates/parameters on the worker
-  process, and imposes a quite high penalty (see the 'exec' branch).
-
 * Think for ways for ocserv to co-exist on the same system with
   an HTTPS server (while sharing the same port).
 

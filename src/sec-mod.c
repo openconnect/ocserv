@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
  *
  * This file is part of ocserv.
  *
@@ -37,13 +37,18 @@
 #include <common.h>
 #include <syslog.h>
 #include <vpn.h>
+#include <sec-mod.h>
 #include <tlslib.h>
-#include <sys/uio.h>
+#include <ipc.pb-c.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/abstract.h>
 
+#define MAX_WAIT_SECS 3
 #define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
+#define MAINTAINANCE_TIME 300
+
+static int need_maintainance = 0;
 
 struct pin_st {
 	char pin[MAX_PIN_SIZE];
@@ -122,7 +127,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 			return -1;
 		}
 
-		ret = read(fd, s->srk_pin, sizeof(s->srk_pin)-1);
+		ret = read(fd, s->srk_pin, sizeof(s->srk_pin) - 1);
 		close(fd);
 		if (ret <= 1) {
 			syslog(LOG_ERR, "could not read from PIN file '%s'",
@@ -143,7 +148,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 			return -1;
 		}
 
-		ret = read(fd, s->pin, sizeof(s->pin)-1);
+		ret = read(fd, s->pin, sizeof(s->pin) - 1);
 		close(fd);
 		if (ret <= 1) {
 			syslog(LOG_ERR, "could not read from PIN file '%s'",
@@ -159,6 +164,140 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 	return 0;
 }
 
+static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
+		     size_t rep_size)
+{
+	SecOpMsg msg = SEC_OP_MSG__INIT;
+	int ret;
+
+	msg.data.data = rep;
+	msg.data.len = rep_size;
+
+	ret = send_msg(pool, sec->fd, type, &msg,
+		       (pack_size_func) sec_op_msg__get_packed_size,
+		       (pack_func) sec_op_msg__pack);
+	if (ret < 0) {
+		seclog(LOG_WARNING, "sec-mod error in sending reply");
+	}
+
+	return 0;
+}
+
+static
+int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
+		   uint8_t * buffer, size_t buffer_size)
+{
+	unsigned i;
+	gnutls_datum_t data, out;
+	int ret;
+	SecOpMsg *op;
+	PROTOBUF_ALLOCATOR(pa, pool);
+
+	seclog(LOG_DEBUG, "cmd [size=%d] %s\n", (int)buffer_size,
+	       cmd_request_to_str(cmd));
+	data.data = buffer;
+	data.size = buffer_size;
+
+	switch (cmd) {
+	case SM_CMD_SIGN:
+	case SM_CMD_DECRYPT:
+		op = sec_op_msg__unpack(&pa, data.size, data.data);
+		if (op == NULL) {
+			seclog(LOG_INFO, "error unpacking sec op\n");
+			return -1;
+		}
+
+		i = op->key_idx;
+		if (op->has_key_idx == 0 || i >= sec->key_size) {
+			seclog(LOG_INFO,
+			       "received out-of-bounds key index (%d)", i);
+			return -1;
+		}
+
+		data.data = op->data.data;
+		data.size = op->data.len;
+
+		if (cmd == SM_CMD_DECRYPT) {
+			ret =
+			    gnutls_privkey_decrypt_data(sec->key[i], 0, &data,
+							&out);
+		} else {
+#if GNUTLS_VERSION_NUMBER >= 0x030200
+			ret =
+			    gnutls_privkey_sign_hash(sec->key[i], 0,
+						     GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA,
+						     &data, &out);
+#else
+			ret =
+			    gnutls_privkey_sign_raw_data(sec->key[i], 0, &data,
+							 &out);
+#endif
+		}
+		sec_op_msg__free_unpacked(op, &pa);
+
+		if (ret < 0) {
+			seclog(LOG_INFO, "error in crypto operation: %s",
+			       gnutls_strerror(ret));
+			return -1;
+		}
+
+		ret = handle_op(pool, sec, cmd, out.data, out.size);
+		gnutls_free(out.data);
+
+		return ret;
+
+	case SM_CMD_AUTH_INIT:{
+			SecAuthInitMsg *auth_init;
+
+			auth_init =
+			    sec_auth_init_msg__unpack(&pa, data.size,
+						      data.data);
+			if (auth_init == NULL) {
+				seclog(LOG_INFO, "error unpacking auth init\n");
+				return -1;
+			}
+
+			ret = handle_sec_auth_init(sec, auth_init);
+			sec_auth_init_msg__free_unpacked(auth_init, &pa);
+			return ret;
+		}
+	case SM_CMD_AUTH_CONT:{
+			SecAuthContMsg *auth_cont;
+
+			auth_cont =
+			    sec_auth_cont_msg__unpack(&pa, data.size,
+						      data.data);
+			if (auth_cont == NULL) {
+				seclog(LOG_INFO, "error unpacking auth cont\n");
+				return -1;
+			}
+
+			ret = handle_sec_auth_cont(sec, auth_cont);
+			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
+			return ret;
+		}
+	default:
+		seclog(LOG_WARNING, "unknown type 0x%.2x", cmd);
+		return -1;
+	}
+
+	return 0;
+}
+
+static void handle_alarm(int signo)
+{
+	need_maintainance = 1;
+}
+
+static void check_other_work(sec_mod_st *sec)
+{
+	if (need_maintainance) {
+		seclog(LOG_DEBUG, "performing maintenance");
+		cleanup_client_entries(sec->client_db);
+		cleanup_banned_entries(sec->ban_db);
+		alarm(MAINTAINANCE_TIME);
+	}
+}
 
 /* sec_mod_server:
  * @config: server configuration
@@ -168,11 +307,6 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
  * It creates the unix domain socket identified by @socket_file
  * and then accepts connections from the workers to it. Then 
  * it serves commands requested on the server's private key.
- *
- * The format of the command is:
- * byte[0]: key index
- * byte[1]: operation ('D': decrypt, 'S' sign)
- * byte[2-total]: data
  *
  * When the operation is decrypt the provided data are
  * decrypted and sent back to worker. The sign operation
@@ -192,37 +326,59 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
  * clients fast without becoming a bottleneck due to private 
  * key operations.
  */
-void sec_mod_server(struct cfg_st *config, const char *socket_file)
+void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
+		    uint8_t * cookie_key, unsigned cookie_key_size)
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
 	int cfd, ret, e;
-	unsigned i, buffer_size, type;
-	gnutls_privkey_t *key;
-	uint8_t *buffer;
-	unsigned key_size = config->key_size;
+	unsigned cmd, length;
+	unsigned i, buffer_size;
+	uint8_t *buffer, *tpool;
 	struct pin_st pins;
-	gnutls_datum_t data, out;
-	uint16_t length;
-	struct iovec iov[2];
 	int sd;
+	sec_mod_st *sec;
+
+	sec = talloc_zero(pool, sec_mod_st);
+	if (sec == NULL) {
+		seclog(LOG_ERR, "error in memory allocation");
+		exit(1);
+	}
+
+	sec->cookie_key.data = cookie_key;
+	sec->cookie_key.size = cookie_key_size;
+	sec->config = config;
 
 	ocsignal(SIGHUP, SIG_IGN);
 	ocsignal(SIGINT, SIG_DFL);
 	ocsignal(SIGTERM, SIG_DFL);
+	ocsignal(SIGALRM, handle_alarm);
+
+	alarm(MAINTAINANCE_TIME);
+
+	sec_auth_init(config);
 
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();
 	if (ret < 0) {
-		syslog(LOG_WARNING, "error in PKCS #11 reinitialization: %s",
+		seclog(LOG_WARNING, "error in PKCS #11 reinitialization: %s",
 		       gnutls_strerror(ret));
 	}
 #endif
 
+	sec->client_db = sec_mod_client_db_init(pool);
+	if (sec->client_db == NULL) {
+		seclog(LOG_ERR, "error in client db initialization");
+		exit(1);
+	}
+
+	if (config->min_reauth_time > 0)
+		sec->ban_db = sec_mod_ban_db_init(pool);
+
 	buffer_size = 8 * 1024;
-	buffer = malloc(buffer_size);
+	buffer = talloc_size(pool, buffer_size);
 	if (buffer == NULL) {
-		syslog(LOG_ERR, "error in memory allocation");
+		seclog(LOG_ERR, "error in memory allocation");
 		exit(1);
 	}
 
@@ -234,7 +390,7 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not create socket '%s': %s", socket_file,
+		seclog(LOG_ERR, "could not create socket '%s': %s", socket_file,
 		       strerror(e));
 		exit(1);
 	}
@@ -243,7 +399,7 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not bind socket '%s': %s", socket_file,
+		seclog(LOG_ERR, "could not bind socket '%s': %s", socket_file,
 		       strerror(e));
 		exit(1);
 	}
@@ -251,53 +407,55 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 	ret = chown(socket_file, config->uid, config->gid);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not chown socket '%s': %s", socket_file,
+		seclog(LOG_INFO, "could not chown socket '%s': %s", socket_file,
 		       strerror(e));
 	}
 
 	ret = listen(sd, 1024);
 	if (ret == -1) {
 		e = errno;
-		syslog(LOG_ERR, "could not listen to socket '%s': %s",
+		seclog(LOG_ERR, "could not listen to socket '%s': %s",
 		       socket_file, strerror(e));
 		exit(1);
 	}
 
 	ret = load_pins(config, &pins);
 	if (ret < 0) {
-		syslog(LOG_ERR, "error loading PIN files");
+		seclog(LOG_ERR, "error loading PIN files");
 		exit(1);
 	}
 
-	key = malloc(sizeof(*key) * config->key_size);
-	if (key == NULL) {
-		syslog(LOG_ERR, "error in memory allocation");
+	sec->key_size = config->key_size;
+	sec->key = talloc_size(sec, sizeof(*sec->key) * config->key_size);
+	if (sec->key == NULL) {
+		seclog(LOG_ERR, "error in memory allocation");
 		exit(1);
 	}
 
 	/* read private keys */
-	for (i = 0; i < key_size; i++) {
-		ret = gnutls_privkey_init(&key[i]);
+	for (i = 0; i < sec->key_size; i++) {
+		ret = gnutls_privkey_init(&sec->key[i]);
 		GNUTLS_FATAL_ERR(ret);
 
 		/* load the private key */
 		if (gnutls_url_is_supported(config->key[i]) != 0) {
-			gnutls_privkey_set_pin_function(key[i], pin_callback,
-							&pins);
+			gnutls_privkey_set_pin_function(sec->key[i],
+							pin_callback, &pins);
 			ret =
-			    gnutls_privkey_import_url(key[i], config->key[i],
-						      0);
+			    gnutls_privkey_import_url(sec->key[i],
+						      config->key[i], 0);
 			GNUTLS_FATAL_ERR(ret);
 		} else {
+			gnutls_datum_t data;
 			ret = gnutls_load_file(config->key[i], &data);
 			if (ret < 0) {
-				syslog(LOG_ERR, "error loading file '%s'",
+				seclog(LOG_ERR, "error loading file '%s'",
 				       config->key[i]);
 				GNUTLS_FATAL_ERR(ret);
 			}
 
 			ret =
-			    gnutls_privkey_import_x509_raw(key[i], &data,
+			    gnutls_privkey_import_x509_raw(sec->key[i], &data,
 							   GNUTLS_X509_FMT_PEM,
 							   NULL, 0);
 			GNUTLS_FATAL_ERR(ret);
@@ -306,93 +464,66 @@ void sec_mod_server(struct cfg_st *config, const char *socket_file)
 		}
 	}
 
-	syslog(LOG_INFO, "sec-mod initialized (socket: %s)", socket_file);
+	seclog(LOG_INFO, "sec-mod initialized (socket: %s)", socket_file);
 	for (;;) {
+		check_other_work(sec);
+
 		sa_len = sizeof(sa);
 		cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
 		if (cfd == -1) {
 			e = errno;
-			syslog(LOG_ERR,
-			       "sec-mod error accepting connection: %s",
-			       strerror(e));
+			if (e != EINTR) {
+				seclog(LOG_DEBUG,
+				       "sec-mod error accepting connection: %s",
+				       strerror(e));
+			}
 			continue;
 		}
 
+		/* do not allow unauthorized processes to issue commands
+		 */
 		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid);
-		if (ret < 0) /* allow root connections */
-			ret = check_upeer_id("sec-mod", cfd, 0, 0);
-
 		if (ret < 0) {
-			syslog(LOG_ERR,
-			       "sec-mod: rejected unauthorized connection");
+			seclog(LOG_INFO, "rejected unauthorized connection");
 			goto cont;
 		}
 
 		/* read request */
-		ret = recv(cfd, buffer, buffer_size, 0);
+		ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
 		if (ret == 0)
 			goto cont;
-		else if (ret <= 2) {
+		else if (ret < 3) {
 			e = errno;
-			syslog(LOG_ERR, "error receiving sec-mod data: %s",
+			seclog(LOG_INFO, "error receiving msg head: %s",
 			       strerror(e));
 			goto cont;
 		}
 
-		/* calculate */
-		i = buffer[0];
-		type = buffer[1];
+		cmd = buffer[0];
+		length = buffer[1] | buffer[2] << 8;
 
-		if (i >= key_size) {
-			syslog(LOG_ERR,
-			       "sec-mod received out-of-bounds key index");
+		if (length > buffer_size - 4) {
+			seclog(LOG_INFO, "too big message");
 			goto cont;
 		}
 
-		data.data = &buffer[2];
-		data.size = ret - 2;
-
-		if (type == 'S') {
-#if GNUTLS_VERSION_NUMBER >= 0x030200
-			ret =
-			    gnutls_privkey_sign_hash(key[i], 0,
-						     GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA,
-						     &data, &out);
-#else
-			ret =
-			    gnutls_privkey_sign_raw_data(key[i], 0, &data,
-							 &out);
-#endif
-		} else if (type == 'D') {
-			ret =
-			    gnutls_privkey_decrypt_data(key[i], 0, &data, &out);
-		} else {
-			syslog(LOG_ERR, "unknown type 0x%.2x", type);
-			goto cont;
-		}
-
+		/* read the body */
+		ret = force_read_timeout(cfd, buffer, length, MAX_WAIT_SECS);
 		if (ret < 0) {
-			syslog(LOG_ERR, "sec-mod error in crypto operation: %s",
-			       gnutls_strerror(ret));
+			e = errno;
+			seclog(LOG_INFO, "error receiving msg body: %s",
+			       strerror(e));
 			goto cont;
 		}
 
-		/* write reply */
-		length = out.size;
-
-		iov[0].iov_base = &length;
-		iov[0].iov_len = 2;
-
-		iov[1].iov_base = out.data;
-		iov[1].iov_len = out.size;
-		ret = writev(cfd, iov, 2);
-		if (ret == -1) {
-			e = errno;
-			syslog(LOG_ERR, "sec-mod error in writev: %s",
-			       strerror(e));
+		tpool = talloc_new(sec);
+		sec->fd = cfd;
+		ret = process_packet(tpool, sec, cmd, buffer, ret);
+		if (ret < 0) {
+			seclog(LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 		}
+		talloc_free(tpool);
 
-		gnutls_free(out.data);
  cont:
 		close(cfd);
 	}

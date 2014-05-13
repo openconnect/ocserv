@@ -432,7 +432,7 @@ struct script_wait_st *stmp = NULL, *spos;
 			if (stmp->pid == pid) {
 				mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
 				list_del(&stmp->list);
-				ret = handle_script_exit(s, stmp->proc, estatus, 0);
+				ret = handle_script_exit(s, stmp->proc, estatus);
 				if (ret < 0) {
 					remove_proc(s, stmp->proc, 1);
 				} else {
@@ -569,8 +569,6 @@ void clear_lists(main_server_st *s)
 			close(ctmp->fd);
 		if (ctmp->tun_lease.fd >= 0)
 			close(ctmp->tun_lease.fd);
-		if (ctmp->auth_ctx != NULL)
-			proc_auth_deinit(s, ctmp);
 		list_del(&ctmp->list);
 		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);
@@ -748,7 +746,7 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME(s) (MIN((300 + MAX_ZOMBIE_SECS), ((s)->config->cookie_validity + 300)))
+#define MAINTAINANCE_TIME(s) (MIN(300, ((s)->config->cookie_validity + 300)))
 
 static void check_other_work(main_server_st *s)
 {
@@ -795,10 +793,8 @@ unsigned total = 10;
 	/* Check if we need to expire any cookies */
 	if (need_maintenance != 0) {
 		need_maintenance = 0;
-		mslog(s, NULL, LOG_DEBUG, "Performing maintenance");
+		mslog(s, NULL, LOG_DEBUG, "performing maintenance");
 		expire_tls_sessions(s);
-		expire_zombies(s);
-		expire_banned(s);
 		alarm(MAINTAINANCE_TIME(s));
 	}
 }
@@ -852,18 +848,6 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	worker_pool = talloc_named(main_pool, 0, "worker", NULL);
-	if (worker_pool == NULL) {
-		fprintf(stderr, "talloc init error\n");
-		exit(1);
-	}
-
-	ws = talloc_zero(worker_pool, struct worker_st);
-	if (ws == NULL) {
-		fprintf(stderr, "memory error\n");
-		exit(1);
-	}
-
 	s = talloc_zero(main_pool, main_server_st);
 	if (s == NULL) {
 		fprintf(stderr, "memory error\n");
@@ -897,6 +881,8 @@ int main(int argc, char** argv)
 	/* Initialize GnuTLS */
 	tls_global_init(&creds);
 
+	/* this is the key used to sign and verify cookies. It is used
+	 * by sec-mod (for signing) and main (for verification). */
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, s->cookie_key, sizeof(s->cookie_key));
 	if (ret < 0) {
 		fprintf(stderr, "Error in cookie key generation\n");
@@ -916,8 +902,6 @@ int main(int argc, char** argv)
 		fprintf(stderr, "This server requires root access to operate.\n");
 		exit(1);
 	}
-
-	main_auth_init(s);
 
 	/* Listen to network ports */
 	ret = listen_ports(s, s->config, &s->listen_list);
@@ -966,6 +950,19 @@ int main(int argc, char** argv)
 
 	/* Initialize certificates */
 	tls_load_certs(s, &creds);
+
+	/* initialize memory for worker process */
+	worker_pool = talloc_named(main_pool, 0, "worker", NULL);
+	if (worker_pool == NULL) {
+		fprintf(stderr, "talloc init error\n");
+		exit(1);
+	}
+
+	ws = talloc_zero(worker_pool, struct worker_st);
+	if (ws == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
+	}
 
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
 	alarm(MAINTAINANCE_TIME(s));
@@ -1036,15 +1033,6 @@ int main(int argc, char** argv)
 					break;
 				}
 
-				/* Check if the client is on the banned list */
-				ret = check_if_banned(s, &ws->remote_addr, ws->remote_addr_len);
-				if (ret < 0) {
-					/* banned */
-					close(fd);
-					mslog(s, NULL, LOG_INFO, "dropping client connection due to a previous failed authentication attempt");
-					break;
-				}
-
 				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
 					close(fd);
 					mslog(s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", s->active_clients);
@@ -1073,9 +1061,17 @@ int main(int argc, char** argv)
 					close(cmd_fd[0]);
 					clear_lists(s);
 
+					/* clear the cookie key */
+					safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));
+
 					setproctitle(PACKAGE_NAME"-worker");
 					kill_on_parent_kill(SIGTERM);
-					
+
+					/* write sec-mod's address */
+					ws->secmod_addr.sun_family = AF_UNIX;
+					snprintf(ws->secmod_addr.sun_path, sizeof(ws->secmod_addr.sun_path), "%s", s->socket_file);
+					ws->secmod_addr_len = SUN_LEN(&ws->secmod_addr);
+
 					ws->config = s->config;
 					ws->cmd_fd = cmd_fd[1];
 					ws->tun_fd = -1;
@@ -1135,10 +1131,7 @@ fork_failed:
 		list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 			if (ctmp->fd >= 0 && FD_ISSET(ctmp->fd, &rd_set)) {
 				ret = handle_commands(s, ctmp);
-				if (ret == ERR_WORKER_TERMINATED && ctmp->status == PS_AUTH_INIT &&
-					s->config->cisco_client_compat != 0) {
-					proc_to_zombie(s, ctmp);
-				} else if (ret < 0) {
+				if (ret < 0) {
 					remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
 				}
 			}

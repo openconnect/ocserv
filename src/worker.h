@@ -33,6 +33,8 @@
 #include <common.h>
 #include <str.h>
 #include <worker-bandwidth.h>
+#include <sys/un.h>
+#include <sys/uio.h>
 
 typedef enum {
 	UP_DISABLED,
@@ -77,6 +79,7 @@ enum {
 	S_AUTH_INACTIVE = 0,
 	S_AUTH_INIT,
 	S_AUTH_REQ,
+	S_AUTH_COOKIE,
 	S_AUTH_COMPLETE
 };
 
@@ -106,11 +109,6 @@ struct http_req_st {
 	unsigned user_agent_type;;
 
 	unsigned int next_header;
-	unsigned char cookie[COOKIE_SIZE];
-	unsigned int cookie_set;
-
-	uint8_t sid_cookie[SID_SIZE];
-	unsigned int sid_cookie_set;
 
 	unsigned int is_mobile;
 
@@ -139,6 +137,7 @@ typedef struct worker_st {
 
 	/* inique session identifier */
 	uint8_t sid[SID_SIZE];
+	unsigned int sid_set;
 
 	int cmd_fd;
 	int conn_fd;
@@ -146,6 +145,9 @@ typedef struct worker_st {
 	http_parser *parser;
 	struct cfg_st *config;
 	unsigned int auth_state; /* S_AUTH */
+
+	struct sockaddr_un secmod_addr;	/* sec-mod unix address */
+	socklen_t secmod_addr_len;
 
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
@@ -197,6 +199,8 @@ typedef struct worker_st {
 	char username[MAX_USERNAME_SIZE];
 	char hostname[MAX_HOSTNAME_SIZE];
 	uint8_t cookie[COOKIE_SIZE];
+	unsigned int cookie_set;
+
 	uint8_t master_secret[TLS_MASTER_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	unsigned cert_auth_ok;

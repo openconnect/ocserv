@@ -46,7 +46,6 @@
 
 #define VERSION_MSG "<version who=\"sg\">0.1(1)</version>\n"
 
-
 #define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
 			"<config-auth client=\"vpn\" type=\"complete\">\n" \
 			VERSION_MSG \
@@ -56,22 +55,21 @@
 #define SUCCESS_MSG_FOOT "</auth></config-auth>\n"
 
 static const char login_msg_user[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    VERSION_MSG \
+    VERSION_MSG
     "<auth id=\"main\">\n"
     "<message>Please enter your username</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
-    "</form></auth>\n"
-    "</config-auth>";
+    "</form></auth>\n" "</config-auth>";
 
 static const char login_msg_no_user[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" 
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    VERSION_MSG \
+    VERSION_MSG
     "<auth id=\"main\">\n"
-    "<message>%s</message>\n" 
+    "<message>%s</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
     "</form></auth></config-auth>\n";
@@ -80,8 +78,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
 	char login_msg[MAX_MSG_SIZE + sizeof(login_msg_user)];
-	char context[BASE64_LENGTH(SID_SIZE)+1];
-	struct http_req_st *req = &ws->req;
+	char context[BASE64_LENGTH(SID_SIZE) + 1];
 	unsigned int lsize;
 
 	tls_cork(ws->session);
@@ -93,12 +90,14 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ret < 0)
 		return -1;
 
-	if (req->sid_cookie_set == 0 || memcmp(req->sid_cookie, ws->sid, SID_SIZE) != 0) {
-		base64_encode((char*)ws->sid, sizeof(ws->sid), (char*)context, sizeof(context));
+	if (ws->sid_set != 0) {
+		base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
+			      sizeof(context));
 
 		ret =
-		    tls_printf(ws->session, "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
-			       context, (unsigned)MAX_ZOMBIE_SECS);
+		    tls_printf(ws->session,
+			       "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
+			       context, (unsigned)MAX_AUTH_SECS);
 		if (ret < 0)
 			return -1;
 
@@ -118,7 +117,9 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			     pmsg);
 	} else {
 		/* ask for username only */
-		lsize = snprintf(login_msg, sizeof(login_msg), "%s", login_msg_user);
+		lsize =
+		    snprintf(login_msg, sizeof(login_msg), "%s",
+			     login_msg_user);
 	}
 
 	ret =
@@ -211,7 +212,8 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw,
 
 }
 
-static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
+/* auth reply from main process */
+static int recv_cookie_auth_reply(worker_st * ws)
 {
 	unsigned i;
 	int ret;
@@ -219,7 +221,7 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 	AuthReplyMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_socket_msg(ws, ws->cmd_fd, AUTH_REP, &socketfd,
+	ret = recv_socket_msg(ws, ws->cmd_fd, AUTH_COOKIE_REP, &socketfd,
 			      (void *)&msg,
 			      (unpack_func) auth_reply_msg__unpack);
 	if (ret < 0) {
@@ -231,21 +233,7 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 	      (unsigned)msg->reply);
 
 	switch (msg->reply) {
-	case AUTH_REPLY_MSG__AUTH__REP__MSG:
-		if (txt == NULL || msg->msg == NULL) {
-			oclog(ws, LOG_ERR, "received unexpected msg");
-			return ERR_AUTH_FAIL;
-		}
-
-		snprintf(txt, max_txt_size, "%s", msg->msg);
-		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
-			/* update our sid */
-			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
-		}
-
-		ret = ERR_AUTH_CONTINUE;
-		goto cleanup;
-	case AUTH_REPLY_MSG__AUTH__REP__OK:
+	case AUTH__REP__OK:
 		if (socketfd != -1) {
 			ws->tun_fd = socketfd;
 
@@ -259,14 +247,9 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			snprintf(ws->username, sizeof(ws->username), "%s",
 				 msg->user_name);
 
-			if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
-				/* update our sid */
-				memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
-			}
-
 			if (msg->has_cookie == 0 ||
-				msg->cookie.len != sizeof(ws->cookie) ||
-				msg->session_id.len != sizeof(ws->session_id)) {
+			    msg->cookie.len != sizeof(ws->cookie) ||
+			    msg->session_id.len != sizeof(ws->session_id)) {
 
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
@@ -280,7 +263,8 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 				if (strcmp(msg->ipv4, "0.0.0.0") == 0)
 					ws->vinfo.ipv4 = NULL;
 				else
-					ws->vinfo.ipv4 = talloc_strdup(ws, msg->ipv4);
+					ws->vinfo.ipv4 =
+					    talloc_strdup(ws, msg->ipv4);
 			}
 
 			if (msg->ipv6 != NULL) {
@@ -288,7 +272,8 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 				if (strcmp(msg->ipv6, "::") == 0)
 					ws->vinfo.ipv6 = NULL;
 				else
-					ws->vinfo.ipv6 = talloc_strdup(ws, msg->ipv6);
+					ws->vinfo.ipv6 =
+					    talloc_strdup(ws, msg->ipv6);
 			}
 
 			if (msg->ipv4_local != NULL) {
@@ -296,7 +281,8 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 				if (strcmp(msg->ipv4_local, "0.0.0.0") == 0)
 					ws->vinfo.ipv4_local = NULL;
 				else
-					ws->vinfo.ipv4_local = talloc_strdup(ws, msg->ipv4_local);
+					ws->vinfo.ipv4_local =
+					    talloc_strdup(ws, msg->ipv4_local);
 			}
 
 			if (msg->ipv6_local != NULL) {
@@ -304,7 +290,8 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 				if (strcmp(msg->ipv6_local, "::") == 0)
 					ws->vinfo.ipv6_local = NULL;
 				else
-					ws->vinfo.ipv6_local = talloc_strdup(ws, msg->ipv6_local);
+					ws->vinfo.ipv6_local =
+					    talloc_strdup(ws, msg->ipv6_local);
 			}
 
 			/* Read any additional data */
@@ -338,7 +325,8 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			ws->routes_size = msg->n_routes;
 
 			for (i = 0; i < ws->routes_size; i++) {
-				ws->routes[i] = talloc_strdup(ws, msg->routes[i]);
+				ws->routes[i] =
+				    talloc_strdup(ws, msg->routes[i]);
 			}
 
 			ws->dns_size = msg->n_dns;
@@ -358,9 +346,9 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
 			goto cleanup;
 		}
 		break;
-	case AUTH_REPLY_MSG__AUTH__REP__FAILED:
+	case AUTH__REP__FAILED:
 	default:
-		if (msg->reply != AUTH_REPLY_MSG__AUTH__REP__FAILED)
+		if (msg->reply != AUTH__REP__FAILED)
 			oclog(ws, LOG_ERR, "unexpected auth reply %u",
 			      (unsigned)msg->reply);
 		ret = ERR_AUTH_FAIL;
@@ -371,6 +359,120 @@ static int recv_auth_reply(worker_st * ws, char *txt, size_t max_txt_size)
  cleanup:
 	if (msg != NULL)
 		auth_reply_msg__free_unpacked(msg, &pa);
+	return ret;
+}
+
+/* returns the fd */
+static int connect_to_secmod(worker_st * ws)
+{
+	int sd, ret, e;
+
+	sd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sd == -1) {
+		e = errno;
+		oclog(ws, LOG_ERR, "error opening unix socket (for sec-mod) %s",
+		      strerror(e));
+		return -1;
+	}
+
+	ret =
+	    connect(sd, (struct sockaddr *)&ws->secmod_addr,
+		    ws->secmod_addr_len);
+	if (ret < 0) {
+		e = errno;
+		close(sd);
+		oclog(ws, LOG_ERR,
+		      "error connecting to sec-mod socket '%s': %s",
+		      ws->secmod_addr.sun_path, strerror(e));
+		return -1;
+	}
+	return sd;
+}
+
+static
+int send_msg_to_secmod(worker_st * ws, int sd, uint8_t cmd,
+		       const void *msg, pack_size_func get_size, pack_func pack)
+{
+	oclog(ws, LOG_DEBUG, "sending message '%s' to secmod",
+	      cmd_request_to_str(cmd));
+
+	return send_msg(ws, sd, cmd, msg, get_size, pack);
+}
+
+static int recv_auth_reply(worker_st * ws, int sd, char *txt,
+			   size_t max_txt_size)
+{
+	int ret;
+	SecAuthReplyMsg *msg = NULL;
+	PROTOBUF_ALLOCATOR(pa, ws);
+
+	ret = recv_msg(ws, sd, SM_CMD_AUTH_REP,
+		       (void *)&msg, (unpack_func) sec_auth_reply_msg__unpack);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "error receiving auth reply message");
+		return ret;
+	}
+
+	oclog(ws, LOG_DEBUG, "received auth reply message (value: %u)",
+	      (unsigned)msg->reply);
+
+	switch (msg->reply) {
+	case AUTH__REP__MSG:
+		if (txt == NULL || msg->msg == NULL) {
+			oclog(ws, LOG_ERR, "received unexpected msg");
+			return ERR_AUTH_FAIL;
+		}
+
+		snprintf(txt, max_txt_size, "%s", msg->msg);
+		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
+			/* update our sid */
+			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
+			ws->sid_set = 1;
+		}
+
+		ret = ERR_AUTH_CONTINUE;
+		goto cleanup;
+	case AUTH__REP__OK:
+		if (msg->user_name == NULL) {
+			ret = ERR_AUTH_FAIL;
+			goto cleanup;
+		}
+
+		snprintf(ws->username, sizeof(ws->username), "%s",
+			 msg->user_name);
+
+		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
+			/* update our sid */
+			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
+			ws->sid_set = 1;
+		}
+
+		if (msg->has_cookie == 0 ||
+		    msg->cookie.len != sizeof(ws->cookie) ||
+		    msg->dtls_session_id.len != sizeof(ws->session_id)) {
+
+			ret = ERR_AUTH_FAIL;
+			goto cleanup;
+		}
+		memcpy(ws->cookie, msg->cookie.data, msg->cookie.len);
+		ws->cookie_set = 1;
+		memcpy(ws->session_id, msg->dtls_session_id.data,
+		       msg->dtls_session_id.len);
+
+		break;
+	case AUTH__REP__FAILED:
+	default:
+		if (msg->reply != AUTH__REP__FAILED)
+			oclog(ws, LOG_ERR, "unexpected auth reply %u",
+			      (unsigned)msg->reply);
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
+	}
+
+	ret = 0;
+ cleanup:
+	if (msg != NULL)
+		sec_auth_reply_msg__free_unpacked(msg, &pa);
 	return ret;
 }
 
@@ -435,8 +537,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 	msg.cookie.data = cookie;
 	msg.cookie.len = cookie_size;
 
-	ret = send_msg_to_main(ws, AUTH_COOKIE_REQ, &msg,
-			       (pack_size_func)
+	ret = send_msg_to_main(ws, AUTH_COOKIE_REQ, &msg, (pack_size_func)
 			       auth_cookie_request_msg__get_packed_size,
 			       (pack_func) auth_cookie_request_msg__pack);
 	if (ret < 0) {
@@ -445,7 +546,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 		return ret;
 	}
 
-	ret = recv_auth_reply(ws, NULL, 0);
+	ret = recv_cookie_auth_reply(ws);
 	if (ret < 0) {
 		oclog(ws, LOG_INFO,
 		      "error receiving cookie authentication reply");
@@ -458,11 +559,12 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver)
 {
 	int ret, size;
-	char str_cookie[BASE64_LENGTH(COOKIE_SIZE)+1];
+	char str_cookie[BASE64_LENGTH(COOKIE_SIZE) + 1];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 
-	base64_encode((char*)ws->cookie, sizeof(ws->cookie), (char*)str_cookie, str_cookie_size); 
+	base64_encode((char *)ws->cookie, sizeof(ws->cookie),
+		      (char *)str_cookie, str_cookie_size);
 
 	/* reply */
 	tls_cork(ws->session);
@@ -501,7 +603,8 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 		return -1;
 
 	ret =
-	    tls_printf(ws->session, "Set-Cookie: webvpn=%s; Max-Age=%u; Secure\r\n",
+	    tls_printf(ws->session,
+		       "Set-Cookie: webvpn=%s; Max-Age=%u; Secure\r\n",
 		       str_cookie, (unsigned)ws->config->cookie_validity);
 	if (ret < 0)
 		return -1;
@@ -601,7 +704,8 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*username =
-			    unescape_html(ws, *username, strlen(*username), NULL);
+			    unescape_html(ws, *username, strlen(*username),
+					  NULL);
 		}
 
 		if (password != NULL) {
@@ -620,7 +724,8 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*password =
-			    unescape_html(ws, *password, strlen(*password), NULL);
+			    unescape_html(ws, *password, strlen(*password),
+					  NULL);
 		}
 
 	} else {		/* non-xml version */
@@ -661,7 +766,8 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*username =
-			    unescape_url(ws, *username, strlen(*username), NULL);
+			    unescape_url(ws, *username, strlen(*username),
+					 NULL);
 		}
 
 		if (password != NULL) {
@@ -675,7 +781,8 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 			}
 
 			*password =
-			    unescape_url(ws, *password, strlen(*password), NULL);
+			    unescape_url(ws, *password, strlen(*password),
+					 NULL);
 		}
 	}
 
@@ -696,52 +803,72 @@ int read_user_pass(worker_st * ws, char *body, unsigned body_length,
 
 int post_auth_handler(worker_st * ws, unsigned http_ver)
 {
-	int ret;
+	int ret, sd = -1;
 	struct http_req_st *req = &ws->req;
 	const char *reason = "Authentication failed";
 	char *username = NULL;
 	char *password = NULL;
 	char tmp_user[MAX_USERNAME_SIZE];
 	char tmp_group[MAX_USERNAME_SIZE];
+	char ipbuf[128];
 	char msg[MAX_MSG_SIZE];
 
 	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
-		      req->body);
+	      req->body);
 
 	if (ws->auth_state == S_AUTH_INACTIVE) {
-		AuthInitMsg ireq = AUTH_INIT_MSG__INIT;
+		SecAuthInitMsg ireq = SEC_AUTH_INIT_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret =
 			    read_user_pass(ws, req->body, req->body_length,
 					   &username, NULL);
 			if (ret < 0) {
-				/* Try if we need to ReInit */
+				/* No username, see if we are continuing a previous session */
 				if (ws->config->cisco_client_compat != 0 &&
-					gnutls_session_is_resumed(ws->session) != 0) {
-					AuthReinitMsg rreq = AUTH_REINIT_MSG__INIT;
+				    gnutls_session_is_resumed(ws->session) !=
+				    0) {
+					SecAuthContMsg rreq =
+					    SEC_AUTH_CONT_MSG__INIT;
 
 					/* could it be a client reconnecting and sending
 					 * his password? */
 					ret =
-					    read_user_pass(ws, req->body, req->body_length,
-						   NULL, &password);
+					    read_user_pass(ws, req->body,
+							   req->body_length,
+							   NULL, &password);
 					if (ret < 0) {
-						oclog(ws, LOG_INFO, "failed reading password as well");
+						oclog(ws, LOG_INFO,
+						      "failed reading password as well");
 						goto ask_auth;
 					}
 
 					rreq.tls_auth_ok = ws->cert_auth_ok;
 					rreq.password = password;
+					rreq.ip =
+					    human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
+						       ipbuf, sizeof(ipbuf), 0);
 
-					if (req->sid_cookie_set != 0) {
-						rreq.sid.data = req->sid_cookie;
-						rreq.sid.len = sizeof(req->sid_cookie);
+					if (ws->sid_set != 0) {
+						rreq.sid.data = ws->sid;
+						rreq.sid.len = sizeof(ws->sid);
 					}
 
-					ret = send_msg_to_main(ws, AUTH_REINIT, &rreq,
-					       (pack_size_func)auth_reinit_msg__get_packed_size,
-					       (pack_func)auth_reinit_msg__pack);
+					sd = connect_to_secmod(ws);
+					if (sd == -1) {
+						oclog(ws, LOG_ERR,
+						      "failed connecting to sec mod");
+						goto auth_fail;
+					}
+
+					ret =
+					    send_msg_to_secmod(ws, sd,
+							       SM_CMD_AUTH_CONT,
+							       &rreq,
+							       (pack_size_func)
+							       sec_auth_cont_msg__get_packed_size,
+							       (pack_func)
+							       sec_auth_cont_msg__pack);
 					talloc_free(username);
 
 					if (ret < 0) {
@@ -758,9 +885,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				goto ask_auth;
 			}
 
-			snprintf(tmp_user, sizeof(tmp_user), "%s", username);
+			snprintf(ws->username, sizeof(ws->username), "%s",
+				 username);
 			talloc_free(username);
-			ireq.user_name = tmp_user;
+			ireq.user_name = ws->username;
 		}
 
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
@@ -784,22 +912,30 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		ireq.hostname = req->hostname;
+		ireq.ip =
+		    human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
+			       ipbuf, sizeof(ipbuf), 0);
 
-		ret = send_msg_to_main(ws, AUTH_INIT,
-				       &ireq,
-				       (pack_size_func)
-				       auth_init_msg__get_packed_size,
-				       (pack_func) auth_init_msg__pack);
+		sd = connect_to_secmod(ws);
+		if (sd == -1) {
+			oclog(ws, LOG_ERR, "failed connecting to sec mod");
+			goto auth_fail;
+		}
+
+		ret = send_msg_to_secmod(ws, sd, SM_CMD_AUTH_INIT,
+					 &ireq, (pack_size_func)
+					 sec_auth_init_msg__get_packed_size,
+					 (pack_func) sec_auth_init_msg__pack);
 		if (ret < 0) {
 			oclog(ws, LOG_ERR,
-			      "failed sending auth init message to main");
+			      "failed sending auth init message to sec mod");
 			goto auth_fail;
 		}
 
 		ws->auth_state = S_AUTH_INIT;
 	} else if (ws->auth_state == S_AUTH_INIT
 		   || ws->auth_state == S_AUTH_REQ) {
-		AuthRequestMsg areq = AUTH_REQUEST_MSG__INIT;
+		SecAuthContMsg areq = SEC_AUTH_CONT_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 			ret =
@@ -811,13 +947,24 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			areq.password = password;
+			if (ws->sid_set != 0) {
+				areq.sid.data = ws->sid;
+				areq.sid.len = sizeof(ws->sid);
+			}
 
-			ret = send_msg_to_main(ws, AUTH_REQ, &areq,
+			sd = connect_to_secmod(ws);
+			if (sd == -1) {
+				oclog(ws, LOG_ERR,
+				      "failed connecting to sec mod");
+				goto auth_fail;
+			}
+
+			ret =
+			    send_msg_to_secmod(ws, sd, SM_CMD_AUTH_CONT, &areq,
 					       (pack_size_func)
-					       auth_request_msg__get_packed_size,
+					       sec_auth_cont_msg__get_packed_size,
 					       (pack_func)
-					       auth_request_msg__pack);
-
+					       sec_auth_cont_msg__pack);
 			talloc_free(password);
 
 			if (ret < 0) {
@@ -836,7 +983,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	}
 
  recv_reply:
-	ret = recv_auth_reply(ws, msg, sizeof(msg));
+	ret = recv_auth_reply(ws, sd, msg, sizeof(msg));
+	if (sd != -1)
+		close(sd);
+
 	if (ret == ERR_AUTH_CONTINUE) {
 		oclog(ws, LOG_DEBUG, "continuing authentication for '%s'",
 		      ws->username);
@@ -849,15 +999,19 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	oclog(ws, LOG_INFO, "user '%s' logged in", ws->username);
-	ws->auth_state = S_AUTH_COMPLETE;
+	oclog(ws, LOG_INFO, "user '%s' obtained cookie", ws->username);
+	ws->auth_state = S_AUTH_COOKIE;
 
 	return post_common_handler(ws, http_ver);
 
  ask_auth:
+	if (sd != -1)
+		close(sd);
 	return get_auth_handler(ws, http_ver);
 
  auth_fail:
+	if (sd != -1)
+		close(sd);
 	tls_printf(ws->session,
 		   "HTTP/1.1 503 Service Unavailable\r\nX-Reason: %s\r\n\r\n",
 		   reason);

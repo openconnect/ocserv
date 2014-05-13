@@ -92,14 +92,14 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 	return ret;
 }
 
-int handle_script_exit(main_server_st * s, struct proc_st *proc, int code, unsigned need_sid)
+int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 {
 	int ret;
 
 	if (code == 0) {
 		proc->status = PS_AUTH_COMPLETED;
 
-		ret = send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__OK, need_sid);
+		ret = send_cookie_auth_reply(s, proc, AUTH__REP__OK);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
 			      "could not send auth reply cmd.");
@@ -113,7 +113,7 @@ int handle_script_exit(main_server_st * s, struct proc_st *proc, int code, unsig
 		      "failed authentication attempt for user '%s'",
 		      proc->username);
 		ret =
-		    send_auth_reply(s, proc, AUTH_REPLY_MSG__AUTH__REP__FAILED, need_sid);
+		    send_cookie_auth_reply(s, proc, AUTH__REP__FAILED);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
 			      "could not send reply auth cmd.");
@@ -125,7 +125,8 @@ int handle_script_exit(main_server_st * s, struct proc_st *proc, int code, unsig
 
  fail:
 	/* we close the lease tun fd both on success and failure.
-	 * The parent doesn't need to keep the tunfd.
+	 * The parent doesn't need to keep the tunfd, and if it does,
+	 * it causes issues to client.
 	 */
 	if (proc->tun_lease.name[0] != 0) {
 		if (proc->tun_lease.fd >= 0)
@@ -241,26 +242,10 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	remove_iroutes(s, proc);
 	del_additional_config(&proc->config);
 
-	if (proc->auth_ctx != NULL)
-		proc_auth_deinit(s, proc);
-
 	if (proc->ipv4 || proc->ipv6)
 		remove_ip_leases(s, proc);
 
 	talloc_free(proc);
-}
-
-void proc_to_zombie(main_server_st * s, struct proc_st *proc)
-{
-	proc->status = PS_AUTH_ZOMBIE;
-
-	mslog_hex(s, proc, LOG_INFO, "client disconnected, became zombie", proc->sid, sizeof(proc->sid), 1);
-
-	/* close the intercomm fd */
-	if (proc->fd >= 0)
-		close(proc->fd);
-	proc->fd = -1;
-	proc->pid = -1;
 }
 
 /* This is the function after which proc is populated */
@@ -270,7 +255,6 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 	const char *group;
 
 	mslog(s, proc, LOG_DEBUG, "accepting user '%s'", proc->username);
-	proc_auth_deinit(s, proc);
 
 	/* check for multiple connections */
 	ret = check_multiple_users(s, proc);
@@ -298,16 +282,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 	else
 		group = proc->groupname;
 
-	if (cmd == AUTH_REQ || cmd == AUTH_INIT || cmd == AUTH_REINIT) {
-		/* generate cookie */
-		ret = generate_cookie(s, proc);
-		if (ret < 0) {
-			return ret;
-		}
-		mslog(s, proc, LOG_INFO,
-		      "user '%s' of group '%s' authenticated", proc->username,
-		      group);
-	} else if (cmd == AUTH_COOKIE_REQ) {
+	if (cmd == AUTH_COOKIE_REQ) {
 		mslog(s, proc, LOG_INFO,
 		      "user '%s' of group '%s' re-authenticated (using cookie)",
 		      proc->username, group);
@@ -334,31 +309,12 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
  * @cmd: the command received
  * @result: the auth result
  */
-static int handle_auth_res(main_server_st * s, struct proc_st *proc,
+static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
 			   unsigned cmd, int result)
 {
 	int ret;
-	unsigned need_sid = 0;
-	unsigned can_cont = 1;
 
-	/* we use seeds only in AUTH_REINIT */
-	if (cmd == AUTH_REINIT)
-		need_sid = 1;
-
-	/* no point to allow ERR_AUTH_CONTINUE in cookie auth */
-	if (cmd == AUTH_COOKIE_REQ)
-		can_cont = 0;
-
-	if (can_cont != 0 && result == ERR_AUTH_CONTINUE) {
-		ret = send_auth_reply_msg(s, proc, need_sid);
-		if (ret < 0) {
-			proc->status = PS_AUTH_FAILED;
-			mslog(s, proc, LOG_ERR,
-			      "could not send reply auth cmd.");
-			return ret;
-		}
-		return 0;	/* wait for another command */
-	} else if (result == 0) {
+	if (result == 0) {
 		ret = accept_user(s, proc, cmd);
 		if (ret < 0) {
 			proc->status = PS_AUTH_FAILED;
@@ -367,8 +323,6 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 		proc->status = PS_AUTH_COMPLETED;
 	} else if (result < 0) {
 		proc->status = PS_AUTH_FAILED;
-		add_to_ip_ban_list(s, &proc->remote_addr,
-				   proc->remote_addr_len);
 		ret = result;
 	} else {
 		proc->status = PS_AUTH_FAILED;
@@ -377,11 +331,14 @@ static int handle_auth_res(main_server_st * s, struct proc_st *proc,
 	}
 
  finished:
-	if (ret == ERR_WAIT_FOR_SCRIPT)
+	if (ret == ERR_WAIT_FOR_SCRIPT) {
+		/* we will wait for script termination to send our reply.
+		 * The notification of peer will be done in handle_script_exit().
+		 */
 		ret = 0;
-	else {
+	} else {
 		/* no script was called. Handle it as a successful script call. */
-		ret = handle_script_exit(s, proc, ret, need_sid);
+		ret = handle_script_exit(s, proc, ret);
 		if (ret < 0)
 			proc->status = PS_AUTH_FAILED;
 	}
@@ -394,10 +351,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	struct iovec iov[3];
 	uint8_t cmd;
 	struct msghdr hdr;
-	AuthInitMsg *auth_init;
-	AuthReinitMsg *auth_reinit;
 	AuthCookieRequestMsg *auth_cookie_req;
-	AuthRequestMsg *auth_req;
 	uint16_t length;
 	uint8_t *raw;
 	int ret, raw_len, e;
@@ -523,7 +477,6 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 					 tmsg->user_agent);
 
 			session_info_msg__free_unpacked(tmsg, &pa);
-
 		}
 
 		break;
@@ -622,104 +575,6 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		break;
 
-	case AUTH_INIT:
-		if (proc->status != PS_AUTH_INACTIVE) {
-			mslog(s, proc, LOG_ERR,
-			      "received authentication init when complete.");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		auth_init = auth_init_msg__unpack(&pa, raw_len, raw);
-		if (auth_init == NULL) {
-			mslog(s, proc, LOG_ERR, "error unpacking data");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		ret = handle_auth_init(s, proc, auth_init);
-
-		auth_init_msg__free_unpacked(auth_init, &pa);
-
-		proc->status = PS_AUTH_INIT;
-
-		ret = handle_auth_res(s, proc, cmd, ret);
-		if (ret < 0) {
-			goto cleanup;
-		}
-
-		break;
-
-	case AUTH_REINIT:
-		if (proc->status != PS_AUTH_INACTIVE
-		    || s->config->cisco_client_compat == 0) {
-			mslog(s, proc, LOG_ERR,
-			      "received authentication reinit when complete.");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		auth_reinit = auth_reinit_msg__unpack(&pa, raw_len, raw);
-		if (auth_reinit == NULL) {
-			mslog(s, proc, LOG_ERR, "error unpacking data");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		/* note that it may replace proc on success */
-		ret = handle_auth_reinit(s, &proc, auth_reinit);
-
-		auth_reinit_msg__free_unpacked(auth_reinit, &pa);
-
-		proc->status = PS_AUTH_INIT;
-
-		ret = handle_auth_res(s, proc, cmd, ret);
-		if (ret < 0) {
-			goto cleanup;
-		}
-
-		/* handle_auth_reinit() has succeeded so the current proc
-		 * is in dead state and unused. Terminate it.
-		 */
-		ret = ERR_WORKER_TERMINATED;
-		goto cleanup;
-
-	case AUTH_REQ:
-		if (proc->status != PS_AUTH_INIT) {
-			mslog(s, proc, LOG_ERR,
-			      "received authentication request when not initialized.");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		proc->auth_reqs++;
-		if (proc->auth_reqs > MAX_AUTH_REQS) {
-			mslog(s, proc, LOG_ERR,
-			      "received too many authentication requests.");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		auth_req = auth_request_msg__unpack(&pa, raw_len, raw);
-		if (auth_req == NULL) {
-			mslog(s, proc, LOG_ERR, "error unpacking data");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		ret = handle_auth_req(s, proc, auth_req);
-
-		auth_request_msg__free_unpacked(auth_req, &pa);
-
-		proc->status = PS_AUTH_INIT;
-
-		ret = handle_auth_res(s, proc, cmd, ret);
-		if (ret < 0) {
-			goto cleanup;
-		}
-
-		break;
-
 	case AUTH_COOKIE_REQ:
 		if (proc->status != PS_AUTH_INACTIVE) {
 			mslog(s, proc, LOG_ERR,
@@ -740,7 +595,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 		auth_cookie_request_msg__free_unpacked(auth_cookie_req, &pa);
 
-		ret = handle_auth_res(s, proc, cmd, ret);
+		ret = handle_cookie_auth_res(s, proc, cmd, ret);
 		if (ret < 0) {
 			goto cleanup;
 		}
@@ -758,93 +613,6 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	talloc_free(raw);
 
 	return ret;
-}
-
-int check_if_banned(main_server_st * s, struct sockaddr_storage *addr,
-		    socklen_t addr_len)
-{
-	time_t now = time(0);
-	struct banned_st *btmp = NULL, *bpos;
-
-	if (s->config->min_reauth_time == 0)
-		return 0;
-
-	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
-		if (now - btmp->failed_time > s->config->min_reauth_time) {
-			/* invalid entry. Clean it up */
-			list_del(&btmp->list);
-			talloc_free(btmp);
-		} else {
-			if (SA_IN_SIZE(btmp->addr_len) == SA_IN_SIZE(addr_len)
-			    &&
-			    memcmp(SA_IN_P_GENERIC(&btmp->addr, btmp->addr_len),
-				   SA_IN_P_GENERIC(addr, addr_len),
-				   SA_IN_SIZE(btmp->addr_len)) == 0) {
-				return -1;
-			}
-		}
-	}
-
-	return 0;
-}
-
-void expire_banned(main_server_st * s)
-{
-	time_t now = time(0);
-	struct banned_st *btmp = NULL, *bpos;
-
-	if (s->config->min_reauth_time == 0)
-		return;
-
-	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
-		if (now - btmp->failed_time > s->config->min_reauth_time) {
-			/* invalid entry. Clean it up */
-			list_del(&btmp->list);
-			talloc_free(btmp);
-		}
-	}
-
-	return;
-}
-
-void add_to_ip_ban_list(main_server_st * s, struct sockaddr_storage *addr,
-			socklen_t addr_len)
-{
-	struct banned_st *btmp;
-
-	if (s->config->min_reauth_time == 0)
-		return;
-
-	btmp = talloc(s, struct banned_st);
-	if (btmp == NULL)
-		return;
-
-	btmp->failed_time = time(0);
-	memcpy(&btmp->addr, addr, addr_len);
-	btmp->addr_len = addr_len;
-
-	list_add(&s->ban_list.head, &(btmp->list));
-}
-
-void expire_zombies(main_server_st * s)
-{
-	time_t now = time(0);
-	struct proc_st *ctmp = NULL, *cpos;
-
-	if (s->config->cisco_client_compat == 0)
-		return;
-
-	/* In CISCO compatibility mode we could have proc_st in
-	 * mode INACTIVE or ZOMBIE that need to be cleaned up.
-	 */
-	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
-		if ((ctmp->status == PS_AUTH_ZOMBIE || ctmp->status == PS_AUTH_DEAD) &&
-		    now - ctmp->conn_time > MAX_ZOMBIE_SECS) {
-			remove_proc(s, ctmp, 0);
-		}
-	}
-
-	return;
 }
 
 void run_sec_mod(main_server_st * s)
@@ -878,7 +646,7 @@ void run_sec_mod(main_server_st * s)
 #endif
 		setproctitle(PACKAGE_NAME "-secmod");
 
-		sec_mod_server(s->config, p);
+		sec_mod_server(s, s->config, p, s->cookie_key, sizeof(s->cookie_key));
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		s->sec_mod_pid = pid;

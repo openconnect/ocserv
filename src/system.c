@@ -78,7 +78,7 @@ int check_upeer_id(const char *mod, int cfd, int uid, int gid)
 	       "%s received request from pid %u and uid %u",
 	       mod, (unsigned)cr.pid, (unsigned)cr.uid);
 
-	if (cr.uid != uid || cr.gid != gid) {
+	if (cr.uid != 0 && (cr.uid != uid || cr.gid != gid)) {
 		syslog(LOG_DEBUG,
 		       "%s received unauthorized request from pid %u and uid %u",
 		       mod, (unsigned)cr.pid, (unsigned)cr.uid);

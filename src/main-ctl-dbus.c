@@ -502,10 +502,6 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 		strtmp = "connected";
 	else if (ctmp->status == PS_AUTH_INIT)
 		strtmp = "auth";
-	else if (ctmp->status == PS_AUTH_ZOMBIE)
-		strtmp = "zombie";
-	else if (ctmp->status == PS_AUTH_DEAD)
-		strtmp = "dead";
 	else if (ctmp->status == PS_AUTH_INACTIVE)
 		strtmp = "pre-auth";
 	else if (ctmp->status == PS_AUTH_FAILED)

@@ -35,19 +35,18 @@
 #include <main.h>
 #include <cookies.h>
 
-int decrypt_cookie(main_server_st * s, const uint8_t* cookie, unsigned cookie_size, 
+int decrypt_cookie(gnutls_datum_t *key, const uint8_t* cookie, unsigned cookie_size, 
 			struct stored_cookie_st* sc)
 {
 gnutls_datum_t iv = { (void*)cookie, COOKIE_IV_SIZE };
 int ret;
 uint8_t tag[COOKIE_MAC_SIZE];
 gnutls_cipher_hd_t h;
-gnutls_datum_t key = { (void*)s->cookie_key, sizeof(s->cookie_key) };
 
 	if (cookie_size != COOKIE_SIZE)
 		return -1;
 
-	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, &key, &iv);
+	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, key, &iv);
 	if (ret < 0)
 		return -1;
 	
@@ -79,13 +78,12 @@ cleanup:
 	return ret;
 }
 
-int encrypt_cookie(main_server_st * s, const struct stored_cookie_st* sc,
+int encrypt_cookie(gnutls_datum_t *key, const struct stored_cookie_st* sc,
         uint8_t* cookie, unsigned cookie_size)
 {
 uint8_t _iv[COOKIE_IV_SIZE];
 gnutls_cipher_hd_t h;
 gnutls_datum_t iv = { _iv, sizeof(_iv) };
-gnutls_datum_t key = { (void*)s->cookie_key, sizeof(s->cookie_key) };
 int ret;
 
 	if (cookie_size != COOKIE_SIZE)
@@ -95,7 +93,7 @@ int ret;
 	if (ret < 0)
 		return -1;
 	
-	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, &key, &iv);
+	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, key, &iv);
 	if (ret < 0)
 		return -1;
 
@@ -122,32 +120,5 @@ cleanup:
 	gnutls_cipher_deinit(h);
 	return ret;
 
-}
-
-int generate_cookie(main_server_st *s, struct proc_st* proc)
-{
-int ret;
-struct stored_cookie_st sc;
-
-        ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->dtls_session_id, sizeof(proc->dtls_session_id));
-        if (ret < 0)
-                return -1;
-        
-        proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
-
-	memcpy(sc.username, proc->username, sizeof(proc->username));
-	memcpy(sc.groupname, proc->groupname, sizeof(proc->groupname));
-	memcpy(sc.hostname, proc->hostname, sizeof(proc->hostname));
-	memcpy(sc.session_id, proc->dtls_session_id, sizeof(proc->dtls_session_id));
-	
-	sc.expiration = time(0) + s->config->cookie_validity;
-	
-	memcpy(sc.ipv4_seed, SA_IN_U8_P(&proc->ipv4->lip), 4);
-
-	ret = encrypt_cookie(s, &sc, proc->cookie, sizeof(proc->cookie));
-	if (ret < 0)
-		return -1;
-
-	return 0;
 }
 

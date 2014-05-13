@@ -584,6 +584,7 @@ void clear_lists(main_server_st *s)
 	tls_cache_deinit(s->tls_db);
 	ip_lease_deinit(&s->ip_leases);
 	ctl_handler_deinit(s);
+	memset(s->cookie_key, 0, sizeof(s->cookie_key));
 }
 
 static void kill_children(main_server_st* s)

@@ -46,6 +46,10 @@
 #include <ipc.pb-c.h>
 #include <script-list.h>
 
+#ifdef HAVE_MALLOC_TRIM
+# include <malloc.h>
+#endif
+
 #include <vpn.h>
 #include <cookies.h>
 #include <tun.h>

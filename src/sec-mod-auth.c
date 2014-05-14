@@ -299,6 +299,11 @@ int handle_sec_auth_cont(sec_mod_st * sec, const SecAuthContMsg * req)
 		return -1;
 	}
 
+	if (e->status != PS_AUTH_INIT) {
+		seclog(LOG_ERR, "auth cont received but we are on state %u!", e->status);
+		return -1;
+	}
+
 	seclog(LOG_DEBUG, "auth cont for user '%s'", e->username);
 
 	if (req->password == NULL) {
@@ -347,15 +352,15 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		snprintf(e->hostname, sizeof(e->hostname), "%s", req->hostname);
 	}
 
-	e->status = PS_AUTH_INIT;
 
 	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* req->username is non-null at this point */
 		ret =
 		    module->auth_init(&e->auth_ctx, e, req->user_name, req->ip,
 				      sec->config->plain_passwd);
-		if (ret < 0)
+		if (ret < 0) {
 			return ret;
+		}
 
 		ret =
 		    module->auth_group(e->auth_ctx, e->groupname,
@@ -374,6 +379,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		}
 	}
 
+
 	ret =
 	    check_user_group_status(sec, e, req->tls_auth_ok,
 				    req->cert_user_name, req->cert_group_name);
@@ -381,6 +387,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		goto cleanup;
 	}
 
+	e->status = PS_AUTH_INIT;
 	seclog(LOG_DEBUG, "auth init for user '%s' from '%s'", e->username, req->ip);
 
 	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {

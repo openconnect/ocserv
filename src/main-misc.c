@@ -55,7 +55,6 @@
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
-#include "pam.h"
 
 int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 {

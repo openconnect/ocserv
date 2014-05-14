@@ -43,9 +43,7 @@
 #include <main.h>
 #include <ccan/list/list.h>
 #include <main-auth.h>
-#include <plain.h>
 #include <common.h>
-#include <pam.h>
 
 int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			AUTHREP r)

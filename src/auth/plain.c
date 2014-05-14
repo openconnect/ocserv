@@ -24,7 +24,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <vpn.h>
-#include <plain.h>
+#include "plain.h"
 
 #define MAX_CPASS_SIZE 128
 #define MAX_TRIES 3

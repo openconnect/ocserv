@@ -23,6 +23,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <vpn.h>
+#include "pam.h"
 #include <main-auth.h>
 
 #ifdef HAVE_PAM

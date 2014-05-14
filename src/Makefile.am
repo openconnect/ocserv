@@ -52,17 +52,19 @@ ocserv-args.c: $(srcdir)/ocserv-args.def
 ocserv-args.h: ocserv-args.c
 
 # Files common to ocserv and occtl.
-COMMON=common.c common.h system.c system.h setproctitle.c setproctitle.h
+COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
+
+# Authentication module sources
+AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c group-config.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
-	config.c pam.c pam.h worker-resume.c worker.h main-resume.c main.h \
+	config.c worker-resume.c worker.h main-resume.c main.h \
 	worker-extras.c main-auth.h html.c html.h \
-	main-user.c worker-misc.c route-add.c route-add.h \
-	worker-privs.c plain.c plain.h \
+	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
 	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod.h sec-mod-ban.c \
-	script-list.h $(COMMON) \
+	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) \
 	icmp-ping.c icmp-ping.h \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES)
@@ -97,7 +99,7 @@ ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 ocpasswd-args.h: ocpasswd-args.c
 
 occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c \
-	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON)
+	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES)
 occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 

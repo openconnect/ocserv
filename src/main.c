@@ -952,7 +952,7 @@ int main(int argc, char** argv)
 	tls_load_certs(s, &creds);
 
 	/* initialize memory for worker process */
-	worker_pool = talloc_named(main_pool, 0, "worker", NULL);
+	worker_pool = talloc_named(main_pool, 0, "worker");
 	if (worker_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
 		exit(1);

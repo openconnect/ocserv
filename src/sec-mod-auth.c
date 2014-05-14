@@ -43,9 +43,9 @@
 #include <main.h>
 #include <ccan/list/list.h>
 #include <main-auth.h>
-#include <plain.h>
+#include <auth/plain.h>
 #include <common.h>
-#include <pam.h>
+#include <auth/pam.h>
 #include <sec-mod.h>
 #include <vpn.h>
 

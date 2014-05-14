@@ -8,6 +8,15 @@
   library which can prevent memory leaks on the main server. As
   this is not a memory intersive server the overhead should not be
   significant.
+- Ocserv was refactored and user authentication was moved to the security
+  module. That ensures that there can be no critical memory leaks to
+  the worker process.
+- Added the default-user-config and default-group-config configuration
+  options. These allow setting a configuration file that will be loaded
+  if a user-specific or group-specific configuration file isn't found.
+- Added the predictable-ips configuration option. That option allows
+  to disable the default "stable" IP assignment, and use completely
+  random assignment.
 
 
 * Version 0.3.4 (released 2014-05-01)

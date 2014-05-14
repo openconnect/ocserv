@@ -138,7 +138,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 }
 
 static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
-				       const char *file, const char *type)
+				       const char *file, const char *fallback, const char *type)
 {
 	int ret;
 
@@ -150,8 +150,16 @@ static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
 		if (ret < 0)
 			return ERR_READ_CONFIG;
 	} else {
-		mslog(s, proc, LOG_DEBUG, "No %s configuration for '%s'", type,
-		      proc->username);
+		if (fallback != NULL) {
+			mslog(s, proc, LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
+
+			ret = parse_group_cfg_file(s, proc, fallback);
+			if (ret < 0)
+				return ERR_READ_CONFIG;
+		} else {
+			mslog(s, proc, LOG_DEBUG, "No %s configuration for '%s'", type,
+			      proc->username);
+		}
 	}
 
 	return 0;
@@ -169,7 +177,7 @@ static int read_additional_config(struct main_server_st *s,
 		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir,
 			 proc->groupname);
 
-		ret = read_additional_config_file(s, proc, file, "group");
+		ret = read_additional_config_file(s, proc, file, s->config->default_group_conf, "group");
 		if (ret < 0)
 			return ret;
 	}
@@ -178,7 +186,7 @@ static int read_additional_config(struct main_server_st *s,
 		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir,
 			 proc->username);
 
-		ret = read_additional_config_file(s, proc, file, "user");
+		ret = read_additional_config_file(s, proc, file, s->config->default_user_conf, "user");
 		if (ret < 0)
 			return ret;
 	}

@@ -125,6 +125,8 @@ static struct cfg_options available_options[] = {
 	{ .name = "route-del-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-group", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "default-user-config", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "default-group-config", .type = OPTION_STRING, .mandatory = 0 },
 };
 
 static const tOptionValue* get_option(const char* name, unsigned * mand)
@@ -511,6 +513,9 @@ unsigned force_cert_auth;
 	READ_STRING("route-del-cmd", config->route_del_cmd);
 	READ_STRING("config-per-user", config->per_user_dir);
 	READ_STRING("config-per-group", config->per_group_dir);
+
+	READ_STRING("default-user-config", config->default_user_conf);
+	READ_STRING("default-group-config", config->default_group_conf);
 
 	optionUnloadNested(pov);
 }

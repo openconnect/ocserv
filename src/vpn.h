@@ -262,6 +262,8 @@ struct cfg_st {
 	/* additional configuration files */
 	char *per_group_dir;
 	char *per_user_dir;
+	char *default_group_conf;
+	char *default_user_conf;
 	
 	/* the tun network */
 	struct vpn_st network;

@@ -359,6 +359,11 @@ route = 192.168.5.0/255.255.255.0
 #config-per-user = /etc/ocserv/config-per-user/
 #config-per-group = /etc/ocserv/config-per-group/
 
+# When config-per-xxx is specified and there is no group or user that
+# matches, then utilize the following configuration.
+#default-user-config = /etc/ocserv/defaults/user.conf
+#default-group-config = /etc/ocserv/defaults/group.conf
+
 # The system command to use to setup a route. %R will be replaced with the
 # route/mask and %D with the (tun) device.
 #

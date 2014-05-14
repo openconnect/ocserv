@@ -76,8 +76,14 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 		return -1;
 
 	/* Fixme: possibly we should allow for completely random seeds */
-	t = hash_any(entry->username, strlen(entry->username), 0);
-	memcpy(sc.ipv4_seed, &t, 4);
+	if (sec->config->predictable_ips != 0) {
+		t = hash_any(entry->username, strlen(entry->username), 0);
+		memcpy(sc.ipv4_seed, &t, 4);
+	} else {
+		ret = gnutls_rnd(GNUTLS_RND_NONCE, sc.ipv4_seed, sizeof(sc.ipv4_seed));
+		if (ret < 0)
+			return -1;
+	}
 
 	memcpy(sc.username, entry->username, sizeof(entry->username));
 	memcpy(sc.groupname, entry->groupname, sizeof(entry->groupname));

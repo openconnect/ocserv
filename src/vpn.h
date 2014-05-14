@@ -240,6 +240,7 @@ struct cfg_st {
 
 	unsigned output_buffer;
 	unsigned default_mtu;
+	unsigned predictable_ips; /* boolean */
 
 	char *route_add_cmd;
 	char *route_del_cmd;

@@ -78,6 +78,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	/* this is alias for cisco-client-compat */
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -374,6 +375,7 @@ unsigned force_cert_auth;
 		config->cisco_client_compat = 1;
 	}
 
+	READ_TF("predictable-ips", config->predictable_ips, 1);
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);
 	if (config->use_dbus != 0) {

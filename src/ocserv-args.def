@@ -286,6 +286,10 @@ cgroup = "cpuset,cpu:test"
 # The name to use for the tun device
 device = vpns
 
+# Whether the generated IPs will be predictable, i.e., IP stays the
+# same for the same user when possible.
+predictable-ips = true
+
 # The default domain to be advertised
 default-domain = example.com
 

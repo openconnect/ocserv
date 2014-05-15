@@ -51,6 +51,11 @@ ocserv-args.c: $(srcdir)/ocserv-args.def
 	$(AUTOGEN) $<
 ocserv-args.h: ocserv-args.c
 
+PROTOBUF_SOURCES =
+if LOCAL_PROTOBUF_C
+PROTOBUF_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
+endif
+
 # Files common to ocserv and occtl.
 COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
 
@@ -67,7 +72,8 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) \
 	icmp-ping.c icmp-ping.h \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
-	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES)
+	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
+	$(PROTOBUF_SOURCES)
 
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
@@ -99,7 +105,8 @@ ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
 ocpasswd-args.h: ocpasswd-args.c
 
 occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c \
-	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES)
+	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES) \
+	$(PROTOBUF_SOURCES)
 occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 
@@ -111,11 +118,6 @@ occtl_LDADD += $(LIBDBUS_LIBS)
 else
 ocserv_SOURCES += main-ctl-unix.c
 occtl_SOURCES += occtl-unix.c
-endif
-
-if LOCAL_PROTOBUF_C
-ocserv_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
-occtl_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
 endif
 
 ipc.pb-c.c: ipc.proto

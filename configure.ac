@@ -119,6 +119,8 @@ fi
 if test "$with_local_talloc" != no;then
 FLAGS='-Iccan/talloc/ -Iccan/typedef_cb/ -Iccan/compiler/'
 AC_SUBST([LIBTALLOC_CFLAGS], [$FLAGS])
+else
+AC_DEFINE(HAVE_LIBTALLOC, 1, [have libtalloc])
 fi
 
 AM_CONDITIONAL(LOCAL_TALLOC, test "x$with_local_talloc" != xno)

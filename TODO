@@ -3,10 +3,6 @@ Short term items:
 * Think for ways for ocserv to co-exist on the same system with
   an HTTPS server (while sharing the same port).
 
-* More elaborate checks on "make check". Currently we test whether a
-  cookie can be obtained, but not whether a TUN devices is created or
-  data can be transfered. Need more ideas on how that can be done.
-
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time (or should we drop this functionality altogether and rely
   on PAM handling that?)

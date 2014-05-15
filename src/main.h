@@ -180,6 +180,7 @@ typedef struct main_server_st {
 	time_t start_time;
 
 	void * auth_extra;
+	struct config_mod_st *config_module;
 
 #ifdef HAVE_DBUS
 	void * ctl_ctx;
@@ -239,10 +240,6 @@ int check_multiple_users(main_server_st *s, struct proc_st* proc);
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
 void run_sec_mod(main_server_st * s);
-
-int parse_group_cfg_file(main_server_st* s, struct proc_st *proc, const char* file);
-
-void del_additional_config(struct group_cfg_st* config);
 
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,

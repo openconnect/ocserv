@@ -45,6 +45,7 @@
 #include <ip-lease.h>
 #include <ipc.pb-c.h>
 #include <script-list.h>
+#include <main-sup-config.h>
 
 #ifdef HAVE_MALLOC_TRIM
 # include <malloc.h>
@@ -136,67 +137,6 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 	return ret;
 }
 
-static int read_additional_config_file(main_server_st * s, struct proc_st *proc,
-				       const char *file, const char *fallback, const char *type)
-{
-	int ret;
-
-	if (access(file, R_OK) == 0) {
-		mslog(s, proc, LOG_DEBUG, "Loading %s configuration '%s'", type,
-		      file);
-
-		ret = parse_group_cfg_file(s, proc, file);
-		if (ret < 0)
-			return ERR_READ_CONFIG;
-	} else {
-		if (fallback != NULL) {
-			mslog(s, proc, LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
-
-			ret = parse_group_cfg_file(s, proc, fallback);
-			if (ret < 0)
-				return ERR_READ_CONFIG;
-		} else {
-			mslog(s, proc, LOG_DEBUG, "No %s configuration for '%s'", type,
-			      proc->username);
-		}
-	}
-
-	return 0;
-}
-
-static int read_additional_config(struct main_server_st *s,
-				  struct proc_st *proc)
-{
-	char file[_POSIX_PATH_MAX];
-	int ret;
-
-	memset(&proc->config, 0, sizeof(proc->config));
-
-	if (s->config->per_group_dir != NULL && proc->groupname[0] != 0) {
-		snprintf(file, sizeof(file), "%s/%s", s->config->per_group_dir,
-			 proc->groupname);
-
-		ret = read_additional_config_file(s, proc, file, s->config->default_group_conf, "group");
-		if (ret < 0)
-			return ret;
-	}
-
-	if (s->config->per_user_dir != NULL) {
-		snprintf(file, sizeof(file), "%s/%s", s->config->per_user_dir,
-			 proc->username);
-
-		ret = read_additional_config_file(s, proc, file, s->config->default_user_conf, "user");
-		if (ret < 0)
-			return ret;
-	}
-
-	if (proc->config.cgroup != NULL) {
-		put_into_cgroup(s, proc->config.cgroup, proc->pid);
-	}
-
-	return 0;
-}
-
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
 			uint8_t *sid, size_t sid_size)
@@ -247,7 +187,9 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	proc->pid = -1;
 
 	remove_iroutes(s, proc);
-	del_additional_config(&proc->config);
+	if (s->config_module) {
+		s->config_module->clear_sup_config(&proc->config);
+	}
 
 	if (proc->ipv4 || proc->ipv6)
 		remove_ip_leases(s, proc);
@@ -272,11 +214,17 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 		return ret;
 	}
 
-	ret = read_additional_config(s, proc);
-	if (ret < 0) {
-		mslog(s, proc, LOG_ERR,
-		      "error reading additional configuration");
-		return ERR_READ_CONFIG;
+	if (s->config_module) {
+		ret = s->config_module->get_sup_config(s->config, proc);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR,
+			      "error reading additional configuration");
+			return ERR_READ_CONFIG;
+		}
+
+	        if (proc->config.cgroup != NULL) {
+	        	put_into_cgroup(s, proc->config.cgroup, proc->pid);
+		}
 	}
 
 	ret = open_tun(s, proc);

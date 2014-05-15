@@ -63,7 +63,7 @@ COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	cookies.c main-misc.c group-config.c ip-lease.c ip-lease.h \
+	cookies.c main-misc.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c worker-resume.c worker.h main-resume.c main.h \
 	worker-extras.c main-auth.h html.c html.h \
@@ -71,6 +71,8 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod.h sec-mod-ban.c \
 	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) \
 	icmp-ping.c icmp-ping.h \
+	main-sup-config.c main-sup-config.h \
+	sup-config/file.c sup-config/file.h \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	$(PROTOBUF_SOURCES)

@@ -49,6 +49,7 @@
 # include <systemd/sd-daemon.h>
 #endif
 #include <main.h>
+#include <main-sup-config.h>
 #include <main-ctl.h>
 #include <route-add.h>
 #include <main-auth.h>
@@ -934,13 +935,15 @@ int main(int argc, char** argv)
 	
 	run_sec_mod(s);
 
-	mslog(s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
+	sup_config_init(s);
 
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot create command handler\n");
 		exit(1);
 	}
+
+	mslog(s, NULL, LOG_INFO, "initialized %s", PACKAGE_STRING);
 
 	/* chdir to our chroot directory, to allow opening the sec-mod
 	 * socket if necessary. */

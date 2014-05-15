@@ -33,6 +33,7 @@
 
 #include <vpn.h>
 #include <main.h>
+#include <main-sup-config.h>
 
 struct cfg_options {
 	const char* name;
@@ -138,81 +139,142 @@ unsigned j;
  * config. The provided config must either be memset to zero, or be
  * already allocated using this function.
  */
-int parse_group_cfg_file(main_server_st* s, struct proc_st *proc, const char* file)
+static
+int parse_group_cfg_file(struct cfg_st *global_config, struct proc_st *proc,
+			 const char* file)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
 unsigned prefix = 0;
-struct group_cfg_st *config = &proc->config;
+struct group_cfg_st *sconfig = &proc->config;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
-		mslog(s, NULL, LOG_ERR, "Cannot load config file %s", file);
+		syslog(LOG_ERR, "cannot load config file %s", file);
 		return 0;
 	}
 
 	val = optionGetValue(pov, NULL);
 	if (val == NULL) {
-		mslog(s, NULL, LOG_ERR, "No configuration directives found in %s", file);
+		syslog(LOG_ERR, "no configuration directives found in %s", file);
+		optionUnloadNested(pov);
 		return ERR_READ_CONFIG;
 	}
 
 	do {
 		if (handle_option(val) == 0) {
-			mslog(s, NULL, LOG_ERR, "Skipping unknown option '%s' in %s", val->pzName, file);
+			syslog(LOG_ERR, "skipping unknown option '%s' in %s", val->pzName, file);
 		}
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
-	READ_TF("no-udp", config->no_udp, (s->config->udp_port!=0)?0:1);
+	READ_TF("no-udp", sconfig->no_udp, (global_config->udp_port!=0)?0:1);
 
-	READ_RAW_MULTI_LINE("route", config->routes, config->routes_size);
-	READ_RAW_MULTI_LINE("iroute", config->iroutes, config->iroutes_size);
+	READ_RAW_MULTI_LINE("route", sconfig->routes, sconfig->routes_size);
+	READ_RAW_MULTI_LINE("iroute", sconfig->iroutes, sconfig->iroutes_size);
 
-	READ_RAW_MULTI_LINE("dns", config->dns, config->dns_size);
-	if (config->dns_size == 0) {
+	READ_RAW_MULTI_LINE("dns", sconfig->dns, sconfig->dns_size);
+	if (sconfig->dns_size == 0) {
 		/* try aliases */
-		READ_RAW_MULTI_LINE("ipv6-dns", config->dns, config->dns_size);
-		READ_RAW_MULTI_LINE("ipv4-dns", config->dns, config->dns_size);
+		READ_RAW_MULTI_LINE("ipv6-dns", sconfig->dns, sconfig->dns_size);
+		READ_RAW_MULTI_LINE("ipv4-dns", sconfig->dns, sconfig->dns_size);
 	}
 
-	READ_RAW_MULTI_LINE("nbns", config->nbns, config->nbns_size);
-	if (config->nbns_size == 0) {
+	READ_RAW_MULTI_LINE("nbns", sconfig->nbns, sconfig->nbns_size);
+	if (sconfig->nbns_size == 0) {
 		/* try aliases */
-		READ_RAW_MULTI_LINE("ipv6-nbns", config->nbns, config->nbns_size);
-		READ_RAW_MULTI_LINE("ipv4-nbns", config->nbns, config->nbns_size);
+		READ_RAW_MULTI_LINE("ipv6-nbns", sconfig->nbns, sconfig->nbns_size);
+		READ_RAW_MULTI_LINE("ipv4-nbns", sconfig->nbns, sconfig->nbns_size);
 	}
 
-	READ_RAW_STRING("cgroup", config->cgroup);
-	READ_RAW_STRING("ipv4-network", config->ipv4_network);
-	READ_RAW_STRING("ipv6-network", config->ipv6_network);
-	READ_RAW_STRING("ipv4-netmask", config->ipv4_netmask);
+	READ_RAW_STRING("cgroup", sconfig->cgroup);
+	READ_RAW_STRING("ipv4-network", sconfig->ipv4_network);
+	READ_RAW_STRING("ipv6-network", sconfig->ipv6_network);
+	READ_RAW_STRING("ipv4-netmask", sconfig->ipv4_netmask);
 
 	READ_RAW_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) {
-		config->ipv6_netmask = ipv6_prefix_to_mask(proc, prefix);
-		config->ipv6_prefix = prefix;
+		sconfig->ipv6_netmask = ipv6_prefix_to_mask(proc, prefix);
+		sconfig->ipv6_prefix = prefix;
 
-		if (config->ipv6_netmask == NULL) {
-			mslog(s, NULL, LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);
+		if (sconfig->ipv6_netmask == NULL) {
+			syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);
 		}
 	}
 
-	READ_RAW_NUMERIC("rx-data-per-sec", config->rx_per_sec);
-	READ_RAW_NUMERIC("tx-data-per-sec", config->tx_per_sec);
-	config->rx_per_sec /= 1000; /* in kb */
-	config->tx_per_sec /= 1000; /* in kb */
+	READ_RAW_NUMERIC("rx-data-per-sec", sconfig->rx_per_sec);
+	READ_RAW_NUMERIC("tx-data-per-sec", sconfig->tx_per_sec);
+	sconfig->rx_per_sec /= 1000; /* in kb */
+	sconfig->tx_per_sec /= 1000; /* in kb */
 	
 	/* net-priority will contain the actual priority + 1,
 	 * to allow having zero as uninitialized. */
-	READ_RAW_PRIO_TOS("net-priority", config->net_priority);
+	READ_RAW_PRIO_TOS("net-priority", sconfig->net_priority);
 
 	optionUnloadNested(pov);
 	
 	return 0;
 }
 
-void del_additional_config(struct group_cfg_st* config)
+static int read_sup_config_file(struct cfg_st *global_config, struct proc_st *proc,
+				       const char *file, const char *fallback, const char *type)
+{
+	int ret;
+
+	if (access(file, R_OK) == 0) {
+		syslog(LOG_DEBUG, "Loading %s configuration '%s'", type,
+		      file);
+
+		ret = parse_group_cfg_file(global_config, proc, file);
+		if (ret < 0)
+			return ERR_READ_CONFIG;
+	} else {
+		if (fallback != NULL) {
+			syslog(LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
+
+			ret = parse_group_cfg_file(global_config, proc, fallback);
+			if (ret < 0)
+				return ERR_READ_CONFIG;
+		} else {
+			syslog(LOG_DEBUG, "No %s configuration for '%s'", type,
+			      proc->username);
+		}
+	}
+
+	return 0;
+}
+
+static int get_sup_config(struct cfg_st *global_config, struct proc_st *proc)
+{
+	char file[_POSIX_PATH_MAX];
+	int ret;
+
+	memset(&proc->config, 0, sizeof(proc->config));
+
+	if (global_config->per_group_dir != NULL && proc->groupname[0] != 0) {
+		snprintf(file, sizeof(file), "%s/%s", global_config->per_group_dir,
+			 proc->groupname);
+
+		ret = read_sup_config_file(global_config, proc, file, global_config->default_group_conf, "group");
+		if (ret < 0)
+			return ret;
+	}
+
+	if (global_config->per_user_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", global_config->per_user_dir,
+			 proc->username);
+
+		ret = read_sup_config_file(global_config, proc, file, global_config->default_user_conf, "user");
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
+
+static
+void clear_sup_config(struct group_cfg_st* config)
 {
 unsigned i;
 
@@ -243,3 +305,8 @@ unsigned i;
 	talloc_free(config->ipv6_netmask);
 	safe_memset(config, 0, sizeof(*config));
 }
+
+struct config_mod_st file_sup_config = {
+	.get_sup_config = get_sup_config,
+	.clear_sup_config = clear_sup_config,
+};

@@ -630,76 +630,80 @@ int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 }
 
 #define DEL(x) {talloc_free(x);x=NULL;}
-void clear_cfg_file(struct cfg_st** config)
+void clear_cfg_file(struct cfg_st* config)
 {
 unsigned i;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	DEL((*config)->xml_config_file);
-	DEL((*config)->xml_config_hash);
-	DEL((*config)->cert_hash);
+	DEL(config->xml_config_file);
+	DEL(config->xml_config_hash);
+	DEL(config->cert_hash);
 #endif
-	DEL((*config)->cgroup);
-	DEL((*config)->route_add_cmd);
-	DEL((*config)->route_del_cmd);
-	DEL((*config)->per_user_dir);
-	DEL((*config)->per_group_dir);
-	DEL((*config)->socket_file_prefix);
-	DEL((*config)->default_domain);
-	DEL((*config)->plain_passwd);
-	DEL((*config)->ocsp_response);
-	DEL((*config)->banner);
-	DEL((*config)->dh_params_file);
-	DEL((*config)->name);
-	DEL((*config)->pin_file);
-	DEL((*config)->srk_pin_file);
-	DEL((*config)->ca);
-	DEL((*config)->crl);
-	DEL((*config)->cert_user_oid);
-	DEL((*config)->cert_group_oid);
-	DEL((*config)->priorities);
-	DEL((*config)->chroot_dir);
-	DEL((*config)->connect_script);
-	DEL((*config)->disconnect_script);
+	DEL(config->cgroup);
+	DEL(config->route_add_cmd);
+	DEL(config->route_del_cmd);
+	DEL(config->per_user_dir);
+	DEL(config->per_group_dir);
+	DEL(config->socket_file_prefix);
+	DEL(config->default_domain);
+	DEL(config->plain_passwd);
+	DEL(config->ocsp_response);
+	DEL(config->banner);
+	DEL(config->dh_params_file);
+	DEL(config->name);
+	DEL(config->pin_file);
+	DEL(config->srk_pin_file);
+	DEL(config->ca);
+	DEL(config->crl);
+	DEL(config->cert_user_oid);
+	DEL(config->cert_group_oid);
+	DEL(config->priorities);
+	DEL(config->chroot_dir);
+	DEL(config->connect_script);
+	DEL(config->disconnect_script);
 
-	DEL((*config)->network.ipv4);
-	DEL((*config)->network.ipv4_netmask);
-	DEL((*config)->network.ipv6);
-	DEL((*config)->network.ipv6_netmask);
-	for (i=0;i<(*config)->network.routes_size;i++)
-		DEL((*config)->network.routes[i]);
-	DEL((*config)->network.routes);
-	for (i=0;i<(*config)->network.dns_size;i++)
-		DEL((*config)->network.dns[i]);
-	DEL((*config)->network.dns);
-	for (i=0;i<(*config)->network.nbns_size;i++)
-		DEL((*config)->network.nbns[i]);
-	DEL((*config)->network.nbns);
-	for (i=0;i<(*config)->key_size;i++)
-		DEL((*config)->key[i]);
-	DEL((*config)->key);
-	for (i=0;i<(*config)->cert_size;i++)
-		DEL((*config)->cert[i]);
-	DEL((*config)->cert);
-	for (i=0;i<(*config)->custom_header_size;i++)
-		DEL((*config)->custom_header[i]);
-	DEL((*config)->custom_header);
-	for (i=0;i<(*config)->split_dns_size;i++)
-		DEL((*config)->split_dns[i]);
-	DEL((*config)->split_dns);
-	talloc_free(*config);
-	*config = NULL;
+	DEL(config->network.ipv4);
+	DEL(config->network.ipv4_netmask);
+	DEL(config->network.ipv6);
+	DEL(config->network.ipv6_netmask);
+	for (i=0;i<config->network.routes_size;i++)
+		DEL(config->network.routes[i]);
+	DEL(config->network.routes);
+	for (i=0;i<config->network.dns_size;i++)
+		DEL(config->network.dns[i]);
+	DEL(config->network.dns);
+	for (i=0;i<config->network.nbns_size;i++)
+		DEL(config->network.nbns[i]);
+	DEL(config->network.nbns);
+	for (i=0;i<config->key_size;i++)
+		DEL(config->key[i]);
+	DEL(config->key);
+	for (i=0;i<config->cert_size;i++)
+		DEL(config->cert[i]);
+	DEL(config->cert);
+	for (i=0;i<config->custom_header_size;i++)
+		DEL(config->custom_header[i]);
+	DEL(config->custom_header);
+	for (i=0;i<config->split_dns_size;i++)
+		DEL(config->split_dns[i]);
+	DEL(config->split_dns);
+#ifdef HAVE_LIBTALLOC
+	/* our included talloc don't include that */
+	talloc_free_children(config);
+#endif
+	memset(config, 0, sizeof(*config));
 
 	return;
 }
 
-void reload_cfg_file(void *pool, struct cfg_st** config)
+void reload_cfg_file(void *pool, struct cfg_st* config)
 {
 	clear_cfg_file(config);
+	memset(config, 0, sizeof(*config));
 
-	parse_cfg_file(cfg_file, *config);
+	parse_cfg_file(cfg_file, config);
 
-	check_cfg(*config);
+	check_cfg(config);
 
 	return;
 }

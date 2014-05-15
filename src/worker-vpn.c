@@ -637,6 +637,7 @@ void exit_worker(worker_st * ws)
 		      (unsigned long)msg.bytes_in,
 		      (unsigned long)msg.bytes_out);
 	}
+	talloc_free(ws->main_pool);
 	closelog();
 	exit(1);
 }

@@ -49,6 +49,7 @@
 #define MAINTAINANCE_TIME 300
 
 static int need_maintainance = 0;
+static int need_exit = 0;
 
 struct pin_st {
 	char pin[MAX_PIN_SIZE];
@@ -289,8 +290,26 @@ static void handle_alarm(int signo)
 	need_maintainance = 1;
 }
 
+static void handle_sigterm(int signo)
+{
+	need_exit = 1;
+}
+
 static void check_other_work(sec_mod_st *sec)
 {
+	if (need_exit) {
+		unsigned i;
+
+		for (i = 0; i < sec->key_size; i++) {
+			gnutls_privkey_deinit(sec->key[i]);
+		}
+
+		sec_mod_client_db_deinit(sec->client_db);
+		sec_mod_ban_db_deinit(sec->ban_db);
+		talloc_free(sec->main_pool);
+		exit(0);
+	}
+
 	if (need_maintainance) {
 		seclog(LOG_DEBUG, "performing maintenance");
 		cleanup_client_entries(sec->client_db);
@@ -348,10 +367,11 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 	sec->cookie_key.data = cookie_key;
 	sec->cookie_key.size = cookie_key_size;
 	sec->config = config;
+	sec->main_pool = pool;
 
 	ocsignal(SIGHUP, SIG_IGN);
-	ocsignal(SIGINT, SIG_DFL);
-	ocsignal(SIGTERM, SIG_DFL);
+	ocsignal(SIGINT, handle_sigterm);
+	ocsignal(SIGTERM, handle_sigterm);
 	ocsignal(SIGALRM, handle_alarm);
 
 	alarm(MAINTAINANCE_TIME);
@@ -366,17 +386,17 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 	}
 #endif
 
-	sec->client_db = sec_mod_client_db_init(pool);
+	sec->client_db = sec_mod_client_db_init(sec);
 	if (sec->client_db == NULL) {
 		seclog(LOG_ERR, "error in client db initialization");
 		exit(1);
 	}
 
 	if (config->min_reauth_time > 0)
-		sec->ban_db = sec_mod_ban_db_init(pool);
+		sec->ban_db = sec_mod_ban_db_init(sec);
 
 	buffer_size = 8 * 1024;
-	buffer = talloc_size(pool, buffer_size);
+	buffer = talloc_size(sec, buffer_size);
 	if (buffer == NULL) {
 		seclog(LOG_ERR, "error in memory allocation");
 		exit(1);

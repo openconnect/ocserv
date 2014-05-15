@@ -220,6 +220,8 @@ typedef struct worker_st {
 	char* dns[MAX_ROUTES];
 	unsigned nbns_size;
 	char* nbns[MAX_ROUTES];
+
+	void *main_pool; /* to be used only on deinitialization */
 } worker_st;
 
 void vpn_server(struct worker_st* ws);

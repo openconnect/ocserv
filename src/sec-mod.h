@@ -31,6 +31,9 @@ typedef struct sec_mod_st {
 	void *client_db;
 	void *ban_db;
 
+	/* to be used on deinitialization only */
+	void *main_pool;
+
 	int fd;
 } sec_mod_st;
 
@@ -56,6 +59,7 @@ typedef struct client_entry_st {
 } client_entry_st;
 
 void *sec_mod_client_db_init(void *pool);
+void sec_mod_client_db_deinit(void *db);
 client_entry_st * new_client_entry(void *_db, const char *ip);
 client_entry_st * find_client_entry(void *_db, uint8_t sid[SID_SIZE]);
 void del_client_entry(void *_db, client_entry_st * e);
@@ -81,5 +85,6 @@ void cleanup_banned_entries(void *_db);
 unsigned check_if_banned(void *_db, const char *ip);
 void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time);
 void *sec_mod_ban_db_init(void *pool);
+void sec_mod_ban_db_deinit(void *_db);
 
 #endif

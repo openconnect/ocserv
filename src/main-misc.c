@@ -601,7 +601,7 @@ void run_sec_mod(main_server_st * s)
 #endif
 		setproctitle(PACKAGE_NAME "-secmod");
 
-		sec_mod_server(s, s->config, p, s->cookie_key, sizeof(s->cookie_key));
+		sec_mod_server(s->main_pool, s->config, p, s->cookie_key, sizeof(s->cookie_key));
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		s->sec_mod_pid = pid;

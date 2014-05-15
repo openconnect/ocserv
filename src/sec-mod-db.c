@@ -63,6 +63,14 @@ void *sec_mod_client_db_init(void *pool)
 	return db;
 }
 
+void sec_mod_client_db_deinit(void *_db)
+{
+struct htable *db = _db;
+
+	htable_clear(db);
+	talloc_free(db);
+}
+
 client_entry_st *new_client_entry(void *_db, const char *ip)
 {
 	struct htable *db = _db;

@@ -65,6 +65,16 @@ void *sec_mod_ban_db_init(void *pool)
 	return db;
 }
 
+void sec_mod_ban_db_deinit(void *_db)
+{
+struct htable *db = _db;
+
+	if (db != NULL) {
+		htable_clear(db);
+		talloc_free(db);
+	}
+}
+
 void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time)
 {
 	struct htable *db = _db;

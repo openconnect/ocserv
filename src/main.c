@@ -784,7 +784,8 @@ unsigned total = 10;
 		 */
 		clear_lists(s);
 		tls_global_deinit(s->creds);
-		clear_cfg_file(&s->config);
+		clear_cfg_file(s->config);
+		talloc_free(s->config);
 		talloc_free(s->main_pool);
 		closelog();
 		exit(0);
@@ -1074,6 +1075,7 @@ int main(int argc, char** argv)
 					snprintf(ws->secmod_addr.sun_path, sizeof(ws->secmod_addr.sun_path), "%s", s->socket_file);
 					ws->secmod_addr_len = SUN_LEN(&ws->secmod_addr);
 
+					ws->main_pool = main_pool;
 					ws->config = s->config;
 					ws->cmd_fd = cmd_fd[1];
 					ws->tun_fd = -1;

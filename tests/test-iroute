@@ -37,6 +37,11 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 
 echo ok
 
+echo -n "Re-connecting to force script run... "
+openconnect -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./kill-parent.sh </dev/null >/dev/null 2>&1
+
+echo ok
+
 sleep 1
 echo -n "Checking if routes have been applied... "
 

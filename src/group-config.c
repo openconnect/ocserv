@@ -241,5 +241,5 @@ unsigned i;
 	talloc_free(config->ipv6_network);
 	talloc_free(config->ipv4_netmask);
 	talloc_free(config->ipv6_netmask);
-	memset(config, 0, sizeof(*config));
+	safe_memset(config, 0, sizeof(*config));
 }

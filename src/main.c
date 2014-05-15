@@ -52,7 +52,6 @@
 #include <main-sup-config.h>
 #include <main-ctl.h>
 #include <route-add.h>
-#include <main-auth.h>
 #include <worker.h>
 #include <cookies.h>
 #include <tun.h>

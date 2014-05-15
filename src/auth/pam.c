@@ -24,7 +24,7 @@
 #include <syslog.h>
 #include <vpn.h>
 #include "pam.h"
-#include <main-auth.h>
+#include <sec-mod-auth.h>
 
 #ifdef HAVE_PAM
 

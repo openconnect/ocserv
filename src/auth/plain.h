@@ -21,7 +21,7 @@
 #ifndef PLAIN_H
 #define PLAIN_H
 
-#include <main-auth.h>
+#include <sec-mod-auth.h>
 
 extern const struct auth_mod_st plain_auth_funcs;
 

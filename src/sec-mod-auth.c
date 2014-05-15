@@ -42,7 +42,7 @@
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
-#include <main-auth.h>
+#include <sec-mod-auth.h>
 #include <auth/plain.h>
 #include <common.h>
 #include <auth/pam.h>

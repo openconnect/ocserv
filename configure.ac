@@ -101,7 +101,8 @@ AC_ARG_WITH(local-talloc,
 
 with_local_talloc=yes
 if test "$no_test_for_talloc" != yes;then
-PKG_CHECK_MODULES([LIBTALLOC], [talloc],,
+PKG_CHECK_MODULES([LIBTALLOC], [talloc],
+with_local_talloc=no,
 [AC_LIB_HAVE_LINKFLAGS(talloc,, [#include <talloc.h>], [talloc_size(0,0);])
  if test x$ac_cv_libtalloc = xyes; then
   AC_SUBST([LIBTALLOC_LIBS], [$LIBTALLOC])

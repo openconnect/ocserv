@@ -840,6 +840,10 @@ int main(int argc, char** argv)
 	/* tls credentials */
 	struct tls_st creds;
 
+#ifdef DEBUG_LEAKS
+	talloc_enable_leak_report_full();
+#endif
+
 	memset(&creds, 0, sizeof(creds));
 
 	/* main pool */
@@ -1143,6 +1147,10 @@ fork_failed:
 
 		/* Check for pending control commands */
 		ctl_handler_run_pending(s, &rd_set, &wr_set);
+
+#ifdef DEBUG_LEAKS
+		talloc_report_full(s, stderr);
+#endif
 	}
 
 	return 0;

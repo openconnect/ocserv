@@ -90,13 +90,6 @@ struct proc_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 
-	/* A unique session identifier used to distinguish sessions
-	 * prior to authentication. It is sent as cookie to the client
-	 * who re-uses it when it performs authentication in multiple
-	 * sessions.
-	 */
-	uint8_t sid[SID_SIZE];//XXX
-
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
 	 */
@@ -165,7 +158,7 @@ typedef struct main_server_st {
 	hash_db_st *tls_db;
 	tls_st *creds;
 	
-	uint8_t cookie_key[16];
+	uint8_t cookie_key[COOKIE_KEY_SIZE];
 
 	struct listen_list_st listen_list;
 	struct proc_list_st proc_list;

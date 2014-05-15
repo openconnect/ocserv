@@ -11,6 +11,8 @@ BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 	ctl.pb-c.c ctl.pb-c.h
 
+#AM_CPPFLAGS += -DDEBUG_LEAKS
+
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/
 HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h

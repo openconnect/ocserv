@@ -33,6 +33,8 @@ struct __attribute__ ((__packed__)) stored_cookie_st {
 	uint8_t ipv4_seed[4];
 };
 
+#define COOKIE_KEY_SIZE 16
+
 #define COOKIE_IV_SIZE 12 /* AES-GCM */
 #define COOKIE_MAC_SIZE 12 /* 96-bits of AES-GCM */
 #define COOKIE_SIZE (COOKIE_IV_SIZE + sizeof(struct stored_cookie_st) + COOKIE_MAC_SIZE)

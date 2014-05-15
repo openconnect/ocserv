@@ -306,7 +306,7 @@ static void check_other_work(sec_mod_st *sec)
 
 		sec_mod_client_db_deinit(sec->client_db);
 		sec_mod_ban_db_deinit(sec->ban_db);
-		talloc_free(sec->main_pool);
+		talloc_free(sec);
 		exit(0);
 	}
 
@@ -345,8 +345,8 @@ static void check_other_work(sec_mod_st *sec)
  * clients fast without becoming a bottleneck due to private 
  * key operations.
  */
-void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
-		    uint8_t * cookie_key, unsigned cookie_key_size)
+void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
+		    uint8_t cookie_key[COOKIE_KEY_SIZE])
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
@@ -357,17 +357,38 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 	struct pin_st pins;
 	int sd;
 	sec_mod_st *sec;
+	void *sec_mod_pool;
 
-	sec = talloc_zero(pool, sec_mod_st);
+#ifdef DEBUG_LEAKS
+	talloc_enable_leak_report_full();
+#endif
+
+	sec_mod_pool = talloc_init("sec-mod");
+	if (sec_mod_pool == NULL) {
+		seclog(LOG_ERR, "error in memory allocation");
+		exit(1);
+	}
+
+	sec = talloc_zero(sec_mod_pool, sec_mod_st);
 	if (sec == NULL) {
 		seclog(LOG_ERR, "error in memory allocation");
 		exit(1);
 	}
 
-	sec->cookie_key.data = cookie_key;
-	sec->cookie_key.size = cookie_key_size;
-	sec->config = config;
-	sec->main_pool = pool;
+	memcpy(sec->cookie_key, cookie_key, COOKIE_KEY_SIZE);
+	sec->dcookie_key.data = sec->cookie_key;
+	sec->dcookie_key.size = COOKIE_KEY_SIZE;
+	sec->config = talloc_steal(sec, config);
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sun_family = AF_UNIX;
+	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
+	remove(socket_file);
+
+#define SOCKET_FILE sa.sun_path
+
+	/* we no longer need the main pool after this point. */
+	talloc_free(main_pool);
 
 	ocsignal(SIGHUP, SIG_IGN);
 	ocsignal(SIGINT, handle_sigterm);
@@ -402,15 +423,11 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 		exit(1);
 	}
 
-	memset(&sa, 0, sizeof(sa));
-	sa.sun_family = AF_UNIX;
-	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
-	remove(socket_file);
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
-		seclog(LOG_ERR, "could not create socket '%s': %s", socket_file,
+		seclog(LOG_ERR, "could not create socket '%s': %s", SOCKET_FILE,
 		       strerror(e));
 		exit(1);
 	}
@@ -419,15 +436,15 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));
 	if (ret == -1) {
 		e = errno;
-		seclog(LOG_ERR, "could not bind socket '%s': %s", socket_file,
+		seclog(LOG_ERR, "could not bind socket '%s': %s", SOCKET_FILE,
 		       strerror(e));
 		exit(1);
 	}
 
-	ret = chown(socket_file, config->uid, config->gid);
+	ret = chown(SOCKET_FILE, config->uid, config->gid);
 	if (ret == -1) {
 		e = errno;
-		seclog(LOG_INFO, "could not chown socket '%s': %s", socket_file,
+		seclog(LOG_INFO, "could not chown socket '%s': %s", SOCKET_FILE,
 		       strerror(e));
 	}
 
@@ -435,7 +452,7 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 	if (ret == -1) {
 		e = errno;
 		seclog(LOG_ERR, "could not listen to socket '%s': %s",
-		       socket_file, strerror(e));
+		       SOCKET_FILE, strerror(e));
 		exit(1);
 	}
 
@@ -484,7 +501,8 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 		}
 	}
 
-	seclog(LOG_INFO, "sec-mod initialized (socket: %s)", socket_file);
+	seclog(LOG_INFO, "sec-mod initialized (socket: %s)", SOCKET_FILE);
+
 	for (;;) {
 		check_other_work(sec);
 
@@ -544,6 +562,9 @@ void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
 		}
 		talloc_free(tpool);
 
+#ifdef DEBUG_LEAKS
+		talloc_report_full(sec, stderr);
+#endif
  cont:
 		close(cfd);
 	}

@@ -93,7 +93,7 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 	sc.expiration = time(0) + sec->config->cookie_validity;
 
 	ret =
-	    encrypt_cookie(&sec->cookie_key, &sc, entry->cookie,
+	    encrypt_cookie(&sec->dcookie_key, &sc, entry->cookie,
 			   sizeof(entry->cookie));
 	if (ret < 0)
 		return -1;

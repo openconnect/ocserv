@@ -23,16 +23,14 @@
 #include <cookies.h>
 
 typedef struct sec_mod_st {
-	gnutls_datum_t cookie_key; /* the key to generate cookies */
+	gnutls_datum_t dcookie_key; /* the key to generate cookies */
+	uint8_t cookie_key[COOKIE_KEY_SIZE];
 
 	struct cfg_st *config;
 	gnutls_privkey_t *key;
 	unsigned key_size;
 	void *client_db;
 	void *ban_db;
-
-	/* to be used on deinitialization only */
-	void *main_pool;
 
 	int fd;
 } sec_mod_st;
@@ -78,8 +76,8 @@ void sec_auth_user_deinit(client_entry_st *e);
 int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
 
-void sec_mod_server(void *pool, struct cfg_st *config, const char *socket_file,
-			uint8_t *cookie_key, unsigned cookie_key_size);
+void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
+		    uint8_t cookie_key[COOKIE_KEY_SIZE]);
 
 void cleanup_banned_entries(void *_db);
 unsigned check_if_banned(void *_db, const char *ip);

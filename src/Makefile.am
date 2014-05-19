@@ -68,9 +68,9 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
 	config.c worker-resume.c worker.h main-resume.c main.h \
-	worker-extras.c main-auth.h html.c html.h \
+	worker-extras.c html.c html.h \
 	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
-	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod.h sec-mod-ban.c \
+	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod-auth.h sec-mod.h sec-mod-ban.c \
 	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) \
 	icmp-ping.c icmp-ping.h \
 	main-sup-config.c main-sup-config.h \

@@ -327,7 +327,21 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			for (i = 0; i < ws->routes_size; i++) {
 				ws->routes[i] =
 				    talloc_strdup(ws, msg->routes[i]);
+
+				/* If a default route is detected */
+				if (ws->routes[i] != NULL &&
+				    (strcmp(ws->routes[i], "default") == 0 ||
+				     strcmp(ws->routes[i], "0.0.0.0/0") == 0)) {
+
+				     /* disable all routes */
+				     ws->routes_size = 0;
+				     ws->default_route = 1;
+				     break;
+				}
 			}
+
+			if (check_if_default_route(ws->routes, ws->routes_size))
+				ws->default_route = 1;
 
 			ws->dns_size = msg->n_dns;
 

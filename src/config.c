@@ -254,7 +254,7 @@ static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
-unsigned j, mand;
+unsigned j, i, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned prefix = 0;
@@ -482,12 +482,16 @@ unsigned force_cert_auth;
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
 	for (j=0;j<config->network.routes_size;j++) {
-		if (strstr(config->network.routes[j], "0.0.0.0/0") != 0) {
-			fprintf(stderr, "Illegal route '%s' detected; to set a default route remove all route directives\n",
-				config->network.routes[j]);
-			exit(1);
+		if (strcmp(config->network.routes[j], "0.0.0.0/0") == 0 ||
+		    strcmp(config->network.routes[j], "default") == 0) {
+		    	/* set default route */
+			for (i=0;i<j;i++)
+				free(config->network.routes[i]);
+			config->network.routes_size = 0;
+			break;
 		}
 	}
+
 	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);
 	if (config->network.dns_size == 0) {
 		/* try the aliases */

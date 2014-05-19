@@ -1496,53 +1496,56 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
-	for (i = 0; i < ws->vinfo.routes_size; i++) {
-		if (strchr(ws->vinfo.routes[i], ':') != 0)
-			ip6 = 1;
-		else
-			ip6 = 0;
+	if (ws->default_route == 0) {
+		for (i = 0; i < ws->vinfo.routes_size; i++) {
+			if (strchr(ws->vinfo.routes[i], ':') != 0)
+				ip6 = 1;
+			else
+				ip6 = 0;
 
-		if (req->no_ipv6 != 0 && ip6 != 0)
-			continue;
-		if (req->no_ipv4 != 0 && ip6 == 0)
-			continue;
-		oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
+			if (req->no_ipv6 != 0 && ip6 != 0)
+				continue;
+			if (req->no_ipv4 != 0 && ip6 == 0)
+				continue;
+			oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
 
-		if (ip6 != 0 && ws->full_ipv6) {
-			ret = tls_printf(ws->session,
+			if (ip6 != 0 && ws->full_ipv6) {
+				ret = tls_printf(ws->session,
 					 "X-CSTP-Split-Include-IP6: %s\r\n",
 					 ws->vinfo.routes[i]);
-		} else {
-			ret = tls_printf(ws->session,
+			} else {
+				ret = tls_printf(ws->session,
 					 "X-CSTP-Split-Include: %s\r\n",
 					 ws->vinfo.routes[i]);
+			}
+			SEND_ERR(ret);
 		}
-		SEND_ERR(ret);
-	}
 
-	for (i = 0; i < ws->routes_size; i++) {
-		if (strchr(ws->routes[i], ':') != 0)
-			ip6 = 1;
-		else
-			ip6 = 0;
+		for (i = 0; i < ws->routes_size; i++) {
+			if (strchr(ws->routes[i], ':') != 0)
+				ip6 = 1;
+			else
+				ip6 = 0;
 
-		if (req->no_ipv6 != 0 && ip6 != 0)
-			continue;
-		if (req->no_ipv4 != 0 && ip6 == 0)
-			continue;
-		oclog(ws, LOG_DEBUG, "adding private route %s", ws->routes[i]);
+			if (req->no_ipv6 != 0 && ip6 != 0)
+				continue;
+			if (req->no_ipv4 != 0 && ip6 == 0)
+				continue;
+			oclog(ws, LOG_DEBUG, "adding private route %s", ws->routes[i]);
 
-		if (ip6 != 0 && ws->full_ipv6) {
-			ret = tls_printf(ws->session,
+			if (ip6 != 0 && ws->full_ipv6) {
+				ret = tls_printf(ws->session,
 					 "X-CSTP-Split-Include-IP6: %s\r\n",
 					 ws->routes[i]);
-		} else {
-			ret = tls_printf(ws->session,
+			} else {
+				ret = tls_printf(ws->session,
 					 "X-CSTP-Split-Include: %s\r\n",
 					 ws->routes[i]);
+			}
+			SEND_ERR(ret);
 		}
-		SEND_ERR(ret);
 	}
+
 	ret =
 	    tls_printf(ws->session, "X-CSTP-Keepalive: %u\r\n",
 		       ws->config->keepalive);

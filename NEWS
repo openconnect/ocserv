@@ -17,6 +17,10 @@
 - Added the predictable-ips configuration option. That option allows
   to disable the default "stable" IP assignment, and use completely
   random assignment.
+- The route configuration directive accepts the keyword 'default',
+  and will return a default route irrespective of any other route
+  directives. That allows overriding existing routes with a default
+  route for specific users and groups.
 
 
 * Version 0.3.4 (released 2014-05-01)

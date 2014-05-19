@@ -212,6 +212,7 @@ typedef struct worker_st {
 
 	/* information on the tun device addresses and network */
 	struct vpn_st vinfo;
+	unsigned default_route;
 	
 	/* additional data - received per user or per group */
 	unsigned routes_size;
@@ -253,6 +254,7 @@ void __attribute__ ((format(printf, 3, 4)))
 
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
+unsigned check_if_default_route(char **routes, unsigned routes_size);
 
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);

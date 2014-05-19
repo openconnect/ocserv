@@ -338,7 +338,9 @@ ping-leases = false
 # config-per-user/group or even connect and disconnect scripts.
 #
 # To set the server as the default gateway for the client just
-# comment out all routes from the server.
+# comment out all routes from the server, or use the special keyword
+# 'default'.
+
 route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 #route = fef4:db8:1000:1001::/64

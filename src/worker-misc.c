@@ -171,6 +171,19 @@ udp_fd_fail:
 	return -1;
 }
 
+unsigned check_if_default_route(char **routes, unsigned routes_size)
+{
+	unsigned i;
+
+	for (i=0;i<routes_size;i++) {
+		if (strcmp(routes[i], "default") == 0 ||
+		    strcmp(routes[i], "0.0.0.0/0") == 0)
+		    return 1;
+	}
+
+	return 0;
+}
+
 /* Completes the VPN device information.
  * 
  * Returns 0 on success.
@@ -195,6 +208,9 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 	vinfo->routes_size = ws->config->network.routes_size;
 	if (ws->config->network.routes_size > 0)
 		vinfo->routes = ws->config->network.routes;
+
+	if (check_if_default_route(vinfo->routes, vinfo->routes_size))
+		ws->default_route = 1;
 
 	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
 	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;

@@ -352,6 +352,10 @@ route = 192.168.5.0/255.255.255.0
 #select-group = group1
 #select-group = group2
 
+# The name of the group that if selected it would allow to use
+# the assigned by default group.
+#default-select-group = DEFAULT
+
 # Instead of specifying manually all the allowed groups, you may instruct
 # ocserv to scan all available groups and include the full list. That
 # option is only functional on plain authentication.

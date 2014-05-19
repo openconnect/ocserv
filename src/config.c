@@ -84,6 +84,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "auto-select-group", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "default-select-group", .type = OPTION_STRING, .mandatory = 0 },
 	/* this is alias for cisco-client-compat */
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -500,6 +501,7 @@ unsigned force_cert_auth;
 		}
 	}
 
+	READ_STRING("default-select-group", config->default_select_group);
 	READ_TF("auto-select-group", auto_select_group, 0);
 	if (auto_select_group != 0 && amod != NULL && amod->group_list != NULL) {
 		amod->group_list(config, config->plain_passwd, &config->group_list, &config->group_list_size);
@@ -709,6 +711,7 @@ unsigned i;
 	for (i=0;i<config->group_list_size;i++)
 		DEL(config->group_list[i]);
 	DEL(config->group_list);
+	DEL(config->default_select_group);
 #ifdef HAVE_LIBTALLOC
 	/* our included talloc don't include that */
 	talloc_free_children(config);

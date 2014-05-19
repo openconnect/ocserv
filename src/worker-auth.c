@@ -157,6 +157,15 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 				goto cleanup;
 			}
 
+			if (ws->config->default_select_group) {
+				snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->config->default_select_group);
+				ret = str_append_str(&str, temp);
+				if (ret < 0) {
+					ret = -1;
+					goto cleanup;
+				}
+			}
+
 			for (i=0;i<ws->config->group_list_size;i++) {
 				snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->config->group_list[i]);
 				ret = str_append_str(&str, temp);
@@ -859,12 +868,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					&groupname);
 			if (ret < 0) {
 				oclog(ws, LOG_DEBUG, "failed reading groupname");
-			} else {
+			} else if (ws->config->default_select_group == NULL ||
+				   strcmp(groupname, ws->config->default_select_group) != 0) {
 				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
 				 	groupname);
 				ireq.group_name = ws->groupname;
-				talloc_free(groupname);
 			}
+			talloc_free(groupname);
 
 			ret = parse_reply(ws, req->body, req->body_length,
 					USERNAME_FIELD, sizeof(USERNAME_FIELD)-1,

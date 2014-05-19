@@ -201,6 +201,7 @@ struct cfg_st {
 
 	char **group_list; /* select_group */
 	unsigned int group_list_size;
+	char *default_select_group;
 
 	char **custom_header;
 	unsigned custom_header_size;;

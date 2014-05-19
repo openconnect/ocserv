@@ -345,6 +345,18 @@ route = 192.168.1.0/255.255.255.0
 route = 192.168.5.0/255.255.255.0
 #route = fef4:db8:1000:1001::/64
 
+# Groups that a client is allowed to select from.
+# A client may belong in multiple groups, and in certain use-cases
+# it is needed to switch between them. For these cases the client can
+# select prior to authentication. Add multiple entries for multiple groups.
+#select-group = group1
+#select-group = group2
+
+# Instead of specifying manually all the allowed groups, you may instruct
+# ocserv to scan all available groups and include the full list. That
+# option is only functional on plain authentication.
+#auto-select-group = true
+
 # Configuration files that will be applied per user connection or
 # per group. Each file name on these directories must match the username
 # or the groupname.

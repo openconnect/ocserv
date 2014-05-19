@@ -129,10 +129,11 @@ message sec_auth_init_msg
 	required bool user_present = 1;
 	required bool tls_auth_ok = 2 [default = false];
 	required string user_name = 3;
-	optional string cert_user_name = 4;
-	optional string cert_group_name = 5;
-	optional string hostname = 6;
-	required string ip = 7;
+	optional string group_name = 4; /* selected group name */
+	optional string cert_user_name = 5;
+	optional string cert_group_name = 6;
+	optional string hostname = 7;
+	required string ip = 8;
 }
 
 /* SEC_AUTH_CONT */

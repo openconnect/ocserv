@@ -353,7 +353,6 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		snprintf(e->hostname, sizeof(e->hostname), "%s", req->hostname);
 	}
 
-
 	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		/* req->username is non-null at this point */
 		ret =
@@ -364,7 +363,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		}
 
 		ret =
-		    module->auth_group(e->auth_ctx, e->groupname,
+		    module->auth_group(e->auth_ctx, req->group_name, e->groupname,
 				       sizeof(e->groupname));
 		if (ret != 0)
 			return -1;

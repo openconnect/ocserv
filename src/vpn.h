@@ -199,6 +199,9 @@ struct cfg_st {
 	char *ocsp_response; /* file with the OCSP response */
 	char *default_domain; /* domain to be advertised */
 
+	char **group_list; /* select_group */
+	unsigned int group_list_size;
+
 	char **custom_header;
 	unsigned custom_header_size;;
 

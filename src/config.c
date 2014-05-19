@@ -30,8 +30,11 @@
 #include <limits.h>
 #include <common.h>
 #include <c-strcase.h>
+#include <auth/pam.h>
+#include <auth/plain.h>
 
 #include <vpn.h>
+#include <main.h>
 #include <ctl.h>
 #include <tlslib.h>
 
@@ -51,6 +54,7 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "select-group", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
@@ -79,6 +83,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "auto-select-group", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	/* this is alias for cisco-client-compat */
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -257,7 +262,8 @@ const tOptionValue* val, *prev;
 unsigned j, i, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
-unsigned prefix = 0;
+unsigned prefix = 0, auto_select_group = 0;
+const struct auth_mod_st *amod = NULL;
 char *tmp;
 unsigned force_cert_auth;
 
@@ -294,6 +300,7 @@ unsigned force_cert_auth;
 			}
 #ifdef HAVE_PAM
 			config->auth_types |= AUTH_TYPE_PAM;
+			amod = &pam_auth_funcs;
 #else
 			fprintf(stderr, "PAM support is disabled\n");
 			exit(1);
@@ -313,6 +320,7 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 			*p = 0;
+			amod = &plain_auth_funcs;
 			config->auth_types |= AUTH_TYPE_PLAIN;
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
@@ -490,6 +498,13 @@ unsigned force_cert_auth;
 			config->network.routes_size = 0;
 			break;
 		}
+	}
+
+	READ_TF("auto-select-group", auto_select_group, 0);
+	if (auto_select_group != 0 && amod != NULL && amod->group_list != NULL) {
+		amod->group_list(config, config->plain_passwd, &config->group_list, &config->group_list_size);
+	} else {
+		READ_MULTI_LINE("select-group", config->group_list, config->group_list_size);
 	}
 
 	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);
@@ -691,6 +706,9 @@ unsigned i;
 	for (i=0;i<config->split_dns_size;i++)
 		DEL(config->split_dns[i]);
 	DEL(config->split_dns);
+	for (i=0;i<config->group_list_size;i++)
+		DEL(config->group_list[i]);
+	DEL(config->group_list);
 #ifdef HAVE_LIBTALLOC
 	/* our included talloc don't include that */
 	talloc_free_children(config);

@@ -54,22 +54,27 @@
 
 #define SUCCESS_MSG_FOOT "</auth></config-auth>\n"
 
-static const char login_msg_user[] =
+static const char login_msg_user_start[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
     VERSION_MSG
     "<auth id=\"main\">\n"
     "<message>Please enter your username</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
-    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
+    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
+
+static const char login_msg_user_end[] =
     "</form></auth>\n" "</config-auth>";
 
-static const char login_msg_no_user[] =
+static const char login_msg_no_user_start[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
     VERSION_MSG
     "<auth id=\"main\">\n"
-    "<message>%s</message>\n"
+    "<message>";
+
+static const char login_msg_no_user_end[] =
+    "</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
     "</form></auth></config-auth>\n";
@@ -77,9 +82,12 @@ static const char login_msg_no_user[] =
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
-	char login_msg[MAX_MSG_SIZE + sizeof(login_msg_user)];
 	char context[BASE64_LENGTH(SID_SIZE) + 1];
-	unsigned int lsize;
+	char temp[128];
+	unsigned int i;
+	str_st str;
+
+	str_init(&str, ws);
 
 	tls_cork(ws->session);
 	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -105,46 +113,111 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	}
 
 	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
-	if (ret < 0)
-		return -1;
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
 	if (ws->auth_state == S_AUTH_REQ) {
 		/* only ask password */
 		if (pmsg == NULL)
 			pmsg = "Please enter your password.";
-		lsize =
-		    snprintf(login_msg, sizeof(login_msg), login_msg_no_user,
-			     pmsg);
+
+		ret = str_append_str(&str, login_msg_no_user_start);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
+		ret = str_append_str(&str, pmsg);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
+		ret = str_append_str(&str, login_msg_no_user_end);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
 	} else {
-		/* ask for username only */
-		lsize =
-		    snprintf(login_msg, sizeof(login_msg), "%s",
-			     login_msg_user);
+		/* ask for username and group */
+		ret = str_append_str(&str, login_msg_user_start);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
+		/* send groups */
+		if (ws->groupname[0] == 0 && ws->config->group_list_size > 0) {
+			ret = str_append_str(&str, "<select name=\"group_list\" label=\"GROUP:\">\n");
+			if (ret < 0) {
+				ret = -1;
+				goto cleanup;
+			}
+
+			for (i=0;i<ws->config->group_list_size;i++) {
+				snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->config->group_list[i]);
+				ret = str_append_str(&str, temp);
+				if (ret < 0) {
+					ret = -1;
+					goto cleanup;
+				}
+			}
+			ret = str_append_str(&str, "</select>\n");
+			if (ret < 0) {
+				ret = -1;
+				goto cleanup;
+			}
+		}
+
+		ret = str_append_str(&str, login_msg_user_end);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
 	}
 
 	ret =
 	    tls_printf(ws->session, "Content-Length: %u\r\n",
-		       (unsigned int)lsize);
-	if (ret < 0)
-		return -1;
+		       (unsigned int)str.length);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
 	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
-	if (ret < 0)
-		return -1;
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
 	ret = tls_puts(ws->session, "\r\n");
-	if (ret < 0)
-		return -1;
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
-	ret = tls_send(ws->session, login_msg, lsize);
-	if (ret < 0)
-		return -1;
+	ret = tls_send(ws->session, str.data, str.length);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
 
 	ret = tls_uncork(ws->session);
-	if (ret < 0)
-		return -1;
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
-	return 0;
+	ret = 0;
+
+ cleanup:
+ 	str_clear(&str);
+	return ret;
 }
 
 int get_auth_handler(worker_st * ws, unsigned http_ver)
@@ -670,150 +743,92 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
  * buffers.
  */
 static
-int read_user_pass(worker_st * ws, char *body, unsigned body_length,
-		   char **username, char **password)
+int parse_reply(worker_st * ws, char *body, unsigned body_length,
+		const char *field, unsigned field_size,
+		const char *xml_field, unsigned xml_field_size,
+		char **value)
 {
 	char *p;
+	char temp1[64];
+	char temp2[64];
+	unsigned temp2_len, temp1_len;
+	unsigned len;
 
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
-
-		if (username != NULL) {
-			/* body should contain <username>test</username><password>test</password> */
-			*username =
-			    memmem(body, body_length, XMLUSER,
-				   sizeof(XMLUSER) - 1);
-			if (*username == NULL) {
-				oclog(ws, LOG_DEBUG,
-				      "cannot find username in client XML message");
-				return -1;
-			}
-			*username += sizeof(XMLUSER) - 1;
+		if (xml_field) {
+			field = xml_field;
+			field_size = xml_field_size;
 		}
 
-		if (password != NULL) {
-			*password =
-			    memmem(body, body_length, XMLPASS,
-				   sizeof(XMLPASS) - 1);
-			if (*password == NULL) {
-				oclog(ws, LOG_DEBUG,
-				      "cannot find password in client XML message");
-				return -1;
-			}
-			*password += sizeof(XMLPASS) - 1;
+		temp1_len = snprintf(temp1, sizeof(temp1), "<%s>", field);
+		temp2_len = snprintf(temp2, sizeof(temp2), "</%s>", field);
+
+		/* body should contain <username>test</username><password>test</password> */
+		*value =
+		    memmem(body, body_length, temp1, temp1_len);
+		if (*value == NULL) {
+			oclog(ws, LOG_DEBUG,
+			      "cannot find '%s' in client XML message", field);
+			return -1;
 		}
+		*value += temp1_len;
 
-		/* modify body */
-		if (username != NULL) {
-			p = *username;
-			while (*p != 0) {
-				if (*p == '<'
-				    &&
-				    (strncmp
-				     (p, XMLUSER_END,
-				      sizeof(XMLUSER_END) - 1) == 0)) {
-					*p = 0;
-					break;
-				}
-				p++;
+		p = *value;
+		len = 0;
+		while (*p != 0) {
+			if (*p == '<'
+			    && (strncmp(p, temp2, temp2_len) == 0)) {
+				break;
 			}
-
-			*username =
-			    unescape_html(ws, *username, strlen(*username),
-					  NULL);
+			p++;
+			len++;
 		}
-
-		if (password != NULL) {
-			p = *password;
-			while (*p != 0) {
-				if (*p == '<'
-				    &&
-				    (strncmp
-				     (p, XMLPASS_END,
-				      sizeof(XMLPASS_END) - 1) == 0)) {
-					*p = 0;
-					break;
-				}
-				p++;
-
-			}
-
-			*password =
-			    unescape_html(ws, *password, strlen(*password),
-					  NULL);
-		}
-
 	} else {		/* non-xml version */
+		temp1_len = snprintf(temp1, sizeof(temp1), "%s=", field);
+
 		/* body should be "username=test&password=test" */
-		if (username != NULL) {
-			*username =
-			    memmem(body, body_length, "username=",
-				   sizeof("username=") - 1);
-			if (*username == NULL) {
-				oclog(ws, LOG_DEBUG,
-				      "cannot find username in client message");
-				return -1;
-			}
-			*username += sizeof("username=") - 1;
+		*value =
+		    memmem(body, body_length, temp1, temp1_len);
+		if (*value == NULL) {
+			oclog(ws, LOG_DEBUG,
+			      "cannot find '%s' in client message", field);
+			return -1;
 		}
 
-		if (password != NULL) {
-			*password =
-			    memmem(body, body_length, "password=",
-				   sizeof("password=") - 1);
-			if (*password == NULL) {
-				oclog(ws, LOG_DEBUG,
-				      "cannot find password in client message");
-				return -1;
+		*value += temp1_len;
+
+		p = *value;
+		len = 0;
+		while (*p != 0) {
+			if (*p == '&') {
+				break;
 			}
-			*password += sizeof("password=") - 1;
-		}
-
-		/* modify body */
-		if (username != NULL) {
-			p = *username;
-			while (*p != 0) {
-				if (*p == '&') {
-					*p = 0;
-					break;
-				}
-				p++;
-			}
-
-			*username =
-			    unescape_url(ws, *username, strlen(*username),
-					 NULL);
-		}
-
-		if (password != NULL) {
-			p = *password;
-			while (*p != 0) {
-				if (*p == '&') {
-					*p = 0;
-					break;
-				}
-				p++;
-			}
-
-			*password =
-			    unescape_url(ws, *password, strlen(*password),
-					 NULL);
+			p++;
+			len++;
 		}
 	}
 
-	if (username != NULL && *username == NULL) {
-		oclog(ws, LOG_ERR,
-		      "username requested but no username in client message");
+	if (len == 0) {
+		oclog(ws, LOG_DEBUG,
+		      "cannot parse '%s' in client XML message", field);
 		return -1;
 	}
+	*value =
+	    unescape_url(ws->req.body, *value, len, NULL);
 
-	if (password != NULL && *password == NULL) {
+	if (*value == NULL) {
 		oclog(ws, LOG_ERR,
-		      "password requested but no password in client message");
+		      "%s requested but no such field in client message", field);
 		return -1;
 	}
 
 	return 0;
 }
+
+#define USERNAME_FIELD "username"
+#define PASSWORD_FIELD "password"
+#define GROUPNAME_FIELD "group%5flist"
+#define GROUPNAME_FIELD_XML "group-select"
 
 int post_auth_handler(worker_st * ws, unsigned http_ver)
 {
@@ -822,6 +837,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	const char *reason = "Authentication failed";
 	char *username = NULL;
 	char *password = NULL;
+	char *groupname = NULL;
 	char tmp_user[MAX_USERNAME_SIZE];
 	char tmp_group[MAX_USERNAME_SIZE];
 	char ipbuf[128];
@@ -830,71 +846,31 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
 	      req->body);
 
+	if (ws->sid_set && ws->auth_state == S_AUTH_INACTIVE)
+		ws->auth_state = S_AUTH_INIT;
+
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		SecAuthInitMsg ireq = SEC_AUTH_INIT_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-			ret =
-			    read_user_pass(ws, req->body, req->body_length,
-					   &username, NULL);
+			ret = parse_reply(ws, req->body, req->body_length,
+					GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
+					GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
+					&groupname);
 			if (ret < 0) {
-				/* No username, see if we are continuing a previous session */
-				if (ws->config->cisco_client_compat != 0 &&
-				    gnutls_session_is_resumed(ws->session) !=
-				    0) {
-					SecAuthContMsg rreq =
-					    SEC_AUTH_CONT_MSG__INIT;
+				oclog(ws, LOG_DEBUG, "failed reading groupname");
+			} else {
+				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
+				 	groupname);
+				ireq.group_name = ws->groupname;
+				talloc_free(groupname);
+			}
 
-					/* could it be a client reconnecting and sending
-					 * his password? */
-					ret =
-					    read_user_pass(ws, req->body,
-							   req->body_length,
-							   NULL, &password);
-					if (ret < 0) {
-						oclog(ws, LOG_INFO,
-						      "failed reading password as well");
-						goto ask_auth;
-					}
-
-					rreq.tls_auth_ok = ws->cert_auth_ok;
-					rreq.password = password;
-					rreq.ip =
-					    human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
-						       ipbuf, sizeof(ipbuf), 0);
-
-					if (ws->sid_set != 0) {
-						rreq.sid.data = ws->sid;
-						rreq.sid.len = sizeof(ws->sid);
-					}
-
-					sd = connect_to_secmod(ws);
-					if (sd == -1) {
-						oclog(ws, LOG_ERR,
-						      "failed connecting to sec mod");
-						goto auth_fail;
-					}
-
-					ret =
-					    send_msg_to_secmod(ws, sd,
-							       SM_CMD_AUTH_CONT,
-							       &rreq,
-							       (pack_size_func)
-							       sec_auth_cont_msg__get_packed_size,
-							       (pack_func)
-							       sec_auth_cont_msg__pack);
-					talloc_free(username);
-
-					if (ret < 0) {
-						oclog(ws, LOG_ERR,
-						      "failed sending auth reinit message to main");
-						goto auth_fail;
-					}
-
-					ws->auth_state = S_AUTH_INIT;
-					goto recv_reply;
-				}
-
+			ret = parse_reply(ws, req->body, req->body_length,
+					USERNAME_FIELD, sizeof(USERNAME_FIELD)-1,
+					NULL, 0,
+					&username);
+			if (ret < 0) {
 				oclog(ws, LOG_INFO, "failed reading username");
 				goto ask_auth;
 			}
@@ -952,9 +928,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		SecAuthContMsg areq = SEC_AUTH_CONT_MSG__INIT;
 
 		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-			ret =
-			    read_user_pass(ws, req->body, req->body_length,
-					   NULL, &password);
+			ret = parse_reply(ws, req->body, req->body_length,
+					PASSWORD_FIELD, sizeof(PASSWORD_FIELD)-1,
+					NULL, 0,
+					&password);
 			if (ret < 0) {
 				oclog(ws, LOG_ERR, "failed reading password");
 				goto auth_fail;
@@ -996,7 +973,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
- recv_reply:
 	ret = recv_auth_reply(ws, sd, msg, sizeof(msg));
 	if (sd != -1)
 		close(sd);
@@ -1019,11 +995,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	return post_common_handler(ws, http_ver);
 
  ask_auth:
+
 	if (sd != -1)
 		close(sd);
 	return get_auth_handler(ws, http_ver);
 
  auth_fail:
+
 	if (sd != -1)
 		close(sd);
 	tls_printf(ws->session,

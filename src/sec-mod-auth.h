@@ -24,15 +24,17 @@
 #include <main.h>
 
 #define MAX_AUTH_REQS 8
+#define MAX_GROUPS 32
 
 struct auth_mod_st {
 	unsigned int type;
 	int (*auth_init)(void** ctx, void *pool, const char* username, const char* ip, void* additional);
 	int (*auth_msg)(void* ctx, char* msg, size_t msg_size);
 	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
-	int (*auth_group)(void* ctx, char *groupname, int groupname_size);
+	int (*auth_group)(void* ctx, const char *suggested, char *groupname, int groupname_size);
 	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
 	void (*auth_deinit)(void* ctx);
+	void (*group_list)(void *pool, void *additional, char ***groupname, unsigned *groupname_size);
 };
 
 void main_auth_init(main_server_st *s);

@@ -264,17 +264,40 @@ struct pam_ctx_st * pctx = ctx;
 
 /* Returns 0 if the user is successfully authenticated
  */
-static int pam_auth_group(void* ctx, char *groupname, int groupname_size)
+static int pam_auth_group(void* ctx, const char *suggested, char *groupname, int groupname_size)
 {
 struct passwd * pwd;
 struct pam_ctx_st * pctx = ctx;
+struct group *grp;
+int ret;
 
 	groupname[0] = 0;
+
 	pwd = getpwnam(pctx->username);
 	if (pwd != NULL) {
-		struct group* grp = getgrgid(pwd->pw_gid);
-		if (grp != NULL)
-			snprintf(groupname, groupname_size, "%s", grp->gr_name);
+		if (suggested != NULL) {
+			gid_t groups[MAX_GROUPS];
+			int ngroups = sizeof(groups)/sizeof(groups[0]);
+			unsigned i;
+
+			ret = getgrouplist(pctx->username, pwd->pw_gid, groups, &ngroups);
+			if (ret <= 0) {
+				return 0;
+			}
+
+			for (i=0;i<ngroups;i++) {
+				grp = getgrgid(groups[i]);
+				if (grp != NULL && strcmp(suggested, grp->gr_name) == 0) {
+					snprintf(groupname, groupname_size, "%s", grp->gr_name);
+					return 0;
+				}
+			}
+
+		} else {
+			struct group* grp = getgrgid(pwd->pw_gid);
+			if (grp != NULL)
+				snprintf(groupname, groupname_size, "%s", grp->gr_name);
+		}
 	}
 
 	return 0;
@@ -322,7 +345,8 @@ const struct auth_mod_st pam_auth_funcs = {
   .auth_msg = pam_auth_msg,
   .auth_pass = pam_auth_pass,
   .auth_group = pam_auth_group,
-  .auth_user = pam_auth_user
+  .auth_user = pam_auth_user,
+  .group_list = NULL
 };
 
 #endif

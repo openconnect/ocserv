@@ -1,3 +1,9 @@
+* Version 0.3.6 (unreleased)
+
+- Use a variant of memset() that cannot be optimized out while
+  overwritting critical parameters.
+
+
 * Version 0.3.5 (released 2014-05-08)
 
 - Corrected issue in the stats reporting for resumed processes and
@@ -6,6 +12,7 @@
   stats-send-time).
 - Added the STATS_DURATION script environment variable which reports
   the duration of the session in seconds.
+
 
 * Version 0.3.4 (released 2014-05-01)
 

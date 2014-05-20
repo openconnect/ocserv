@@ -467,8 +467,7 @@ doc-section = {
   ds-format = 'texi';
   ds-text   = <<-_EOT_
 Users can be authenticated in multiple ways, which are explained in the following
-paragraphs. Once authenticated users can be disconnected by killing their worker process. 
-The pid of that process is available from the command 'who -u' if utmp logging is enabled.
+paragraphs. Connected users can be managed using the 'occtl' tool.
 
 @subheading Password authentication
 If your system supports Pluggable Authentication Modules (PAM), then

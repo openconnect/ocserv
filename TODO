@@ -19,7 +19,7 @@ Long term items:
   but that would require a new protocol to be implemented in openconnect
   client and ocserv. 
 
-* Certificate authentication to the main process. Possibly that is just
+* Certificate authentication to the security module. Possibly that is just
   wishful thinking. To verify the TLS client certificate verify signature 
   one needs in addition to the signature, the contents of all the handshake 
   messages, and knowledge of the negotiated TLS version, as well as being 

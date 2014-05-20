@@ -198,6 +198,11 @@ typedef struct worker_st {
 
 	char username[MAX_USERNAME_SIZE];
 	char groupname[MAX_USERNAME_SIZE];
+
+	char cert_username[MAX_USERNAME_SIZE];
+	char **cert_groups;
+	unsigned cert_groups_size;
+
 	char hostname[MAX_HOSTNAME_SIZE];
 	uint8_t cookie[COOKIE_SIZE];
 	unsigned int cookie_set;

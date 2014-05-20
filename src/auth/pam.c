@@ -270,6 +270,7 @@ struct passwd * pwd;
 struct pam_ctx_st * pctx = ctx;
 struct group *grp;
 int ret;
+unsigned found;
 
 	groupname[0] = 0;
 
@@ -285,14 +286,22 @@ int ret;
 				return 0;
 			}
 
+			found = 0;
 			for (i=0;i<ngroups;i++) {
 				grp = getgrgid(groups[i]);
 				if (grp != NULL && strcmp(suggested, grp->gr_name) == 0) {
 					snprintf(groupname, groupname_size, "%s", grp->gr_name);
-					return 0;
+					found = 1;
+					break;
 				}
 			}
 
+			if (found == 0) {
+				syslog(LOG_AUTH,
+				       "user '%s' requested group '%s' but he is not a member",
+				       pctx->username, suggested);
+				return -1;
+			}
 		} else {
 			struct group* grp = getgrgid(pwd->pw_gid);
 			if (grp != NULL)

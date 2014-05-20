@@ -89,6 +89,14 @@ break_group_list(void *pool, char *text,
 				/* skip the group */
 				(*elements)--;
 			}
+		} else {
+			p2 = strrchr(broken_text[(*elements)-1], ' ');
+			if (p2 != NULL) {
+				while (c_isspace(*p2)) {
+					*p2 = 0;
+					p2--;
+				}
+			}
 		}
 	}
 	while (p != NULL && *elements < MAX_GROUPS);
@@ -182,7 +190,7 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 static int plain_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)
 {
 	struct plain_ctx_st *pctx = ctx;
-	unsigned i;
+	unsigned i, found = 0;
 
 	groupname[0] = 0;
 
@@ -190,8 +198,16 @@ static int plain_auth_group(void *ctx, const char *suggested, char *groupname, i
 		for (i=0;i<pctx->groupnames_size;i++) {
 			if (strcmp(suggested, pctx->groupnames[i]) == 0) {
 				snprintf(groupname, groupname_size, "%s", pctx->groupnames[i]);
+				found = 1;
 				break;
 			}
+		}
+
+		if (found == 0) {
+			syslog(LOG_AUTH,
+			       "user '%s' requested group '%s' but he is not a member",
+			       pctx->username, suggested);
+			return -1;
 		}
 	}
 

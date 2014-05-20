@@ -188,8 +188,11 @@ int send_sec_auth_reply_msg(sec_mod_st * sec, client_entry_st * e)
 
 static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 				   int tls_auth_ok, const char *cert_user,
-				   const char *cert_group)
+				   char **cert_groups,
+				   unsigned cert_groups_size)
 {
+	unsigned found, i;
+
 	if (sec->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 		if (tls_auth_ok == 0 && sec->config->cisco_client_compat == 0) {
 			seclog(LOG_INFO, "user '%s' presented no certificate",
@@ -198,26 +201,39 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 		}
 
 		if (tls_auth_ok != 0) {
-			if (e->username[0] == 0) {
+			if (e->username[0] == 0 && sec->config->cert_user_oid != NULL) {
+				if (cert_user == NULL) {
+					seclog(LOG_INFO, "no username in the certificate!");
+					return -1;
+				}
+
 				snprintf(e->username, sizeof(e->username), "%s",
 					 cert_user);
-				snprintf(e->groupname, sizeof(e->groupname),
-					 "%s", cert_group);
+				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL)
+					snprintf(e->groupname, sizeof(e->groupname),
+						 "%s", cert_groups[0]);
 			} else {
-				if (strcmp(e->username, cert_user) != 0) {
+				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->username, cert_user) != 0) {
 					seclog(LOG_INFO,
 					       "user '%s' presented a certificate from user '%s'",
 					       e->username, cert_user);
 					return -1;
 				}
 
-				if (sec->config->cert_group_oid != NULL
-				    && strcmp(e->groupname, cert_group) != 0) {
-					seclog(LOG_INFO,
-					       "user '%s' presented a certificate from group '%s' but he is member of '%s'",
-					       e->username, cert_group,
-					       e->groupname);
-					return -1;
+				if (sec->config->cert_group_oid != NULL) {
+					found = 0;
+					for (i=0;i<cert_groups_size;i++) {
+						if (strcmp(e->groupname, cert_groups[i]) == 0) {
+							found++;
+							break;
+						}
+					}
+					if (found == 0) {
+						seclog(LOG_INFO,
+							"user '%s' presented a certificate from group '%s' but he isn't a member of it",
+							e->username, e->groupname);
+							return -1;
+					}
 				}
 			}
 		}
@@ -379,10 +395,30 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		}
 	}
 
+	if (sec->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+		if (e->groupname[0] == 0 && req->group_name != NULL && sec->config->cert_group_oid != NULL) {
+			unsigned i, found = 0;
+
+			for (i=0;i<req->n_cert_group_names;i++) {
+				if (strcmp(req->group_name, req->cert_group_names[i]) == 0) {
+					snprintf(e->groupname, sizeof(e->groupname), "%s", req->cert_group_names[i]);
+					found = 1;
+					break;
+				}
+			}
+
+			if (found == 0) {
+				seclog(LOG_AUTH, "user '%s' requested group '%s' but it is not part of his certificate groups",
+					req->user_name, req->group_name);
+				return -1;
+			}
+		}
+	}
 
 	ret =
 	    check_user_group_status(sec, e, req->tls_auth_ok,
-				    req->cert_user_name, req->cert_group_name);
+				    req->cert_user_name, req->cert_group_names,
+				    req->n_cert_group_names);
 	if (ret < 0) {
 		goto cleanup;
 	}

@@ -79,12 +79,14 @@ static const char login_msg_no_user_end[] =
     "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
     "</form></auth></config-auth>\n";
 
+static int get_cert_info(worker_st * ws);
+
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
 	char context[BASE64_LENGTH(SID_SIZE) + 1];
 	char temp[128];
-	unsigned int i;
+	unsigned int i, j;
 	str_st str;
 
 	str_init(&str, ws);
@@ -142,15 +144,24 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		}
 
 	} else {
-		/* ask for username and group */
+		/* ask for username and groups */
 		ret = str_append_str(&str, login_msg_user_start);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
+		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
+			ret = get_cert_info(ws);
+			if (ret < 0) {
+				ret = -1;
+				oclog(ws, LOG_WARNING, "cannot obtain certificate information");
+				goto cleanup;
+			}
+		}
+
 		/* send groups */
-		if (ws->groupname[0] == 0 && ws->config->group_list_size > 0) {
+		if (ws->groupname[0] == 0 && (ws->config->group_list_size > 0 || ws->config->group_list_size > 0)) {
 			ret = str_append_str(&str, "<select name=\"group_list\" label=\"GROUP:\">\n");
 			if (ret < 0) {
 				ret = -1;
@@ -163,6 +174,30 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 				if (ret < 0) {
 					ret = -1;
 					goto cleanup;
+				}
+			}
+
+			/* append any groups available in the certificate */
+			if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
+				unsigned dup;
+
+				for (i=0;i<ws->cert_groups_size;i++) {
+					dup = 0;
+					for (j=0;j<ws->config->group_list_size;j++) {
+						if (strcmp(ws->cert_groups[i], ws->config->group_list[j]) == 0) {
+							dup = 1;
+							break;
+						}
+					}
+
+					if (dup != 0)
+						continue;
+					snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->cert_groups[i]);
+					ret = str_append_str(&str, temp);
+					if (ret < 0) {
+						ret = -1;
+						goto cleanup;
+					}
 				}
 			}
 
@@ -235,12 +270,15 @@ int get_auth_handler(worker_st * ws, unsigned http_ver)
 }
 
 static
-int get_cert_names(worker_st * ws, const gnutls_datum_t * raw,
-		   char *username, size_t username_size,
-		   char *groupname, size_t groupname_size)
+int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 {
 	gnutls_x509_crt_t crt;
 	int ret;
+	unsigned i;
+	size_t size;
+
+	if (ws->cert_username[0] != 0 || ws->cert_groups_size > 0)
+		return 0; /* already read, nothing to do */
 
 	ret = gnutls_x509_crt_init(&crt);
 	if (ret < 0) {
@@ -256,13 +294,14 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw,
 		goto fail;
 	}
 
+	size = sizeof(ws->cert_username);
 	if (ws->config->cert_user_oid) {	/* otherwise certificate username is ignored */
 		ret =
 		    gnutls_x509_crt_get_dn_by_oid(crt,
-						  ws->config->cert_user_oid, 0,
-						  0, username, &username_size);
+					  ws->config->cert_user_oid, 0,
+					  0, ws->cert_username, &size);
 	} else {
-		ret = gnutls_x509_crt_get_dn(crt, username, &username_size);
+		ret = gnutls_x509_crt_get_dn(crt, ws->cert_username, &size);
 	}
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "cannot obtain user from certificate DN: %s",
@@ -271,19 +310,53 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw,
 	}
 
 	if (ws->config->cert_group_oid) {
-		ret =
-		    gnutls_x509_crt_get_dn_by_oid(crt,
-						  ws->config->cert_group_oid, 0,
-						  0, groupname,
-						  &groupname_size);
-		if (ret < 0) {
-			oclog(ws, LOG_ERR,
-			      "cannot obtain group from certificate DN: %s",
-			      gnutls_strerror(ret));
-			goto fail;
-		}
-	} else {
-		groupname[0] = 0;
+		i = 0;
+		do {
+			ws->cert_groups = talloc_realloc(ws, ws->cert_groups, char*,  i+1);
+			if (ws->cert_groups == NULL) {
+				oclog(ws, LOG_ERR, "cannot allocate memory for cert groups");
+				ret = -1;
+				goto fail;
+			}
+
+			size = 0;
+			ret =
+			    gnutls_x509_crt_get_dn_by_oid(crt,
+						  ws->config->cert_group_oid, i,
+						  0, NULL, &size);
+			if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE)
+				break;
+
+			if (ret != GNUTLS_E_SHORT_MEMORY_BUFFER) {
+				if (ret == 0)
+					ret = GNUTLS_E_INTERNAL_ERROR;
+				oclog(ws, LOG_ERR,
+				      "cannot obtain group from certificate DN: %s",
+				      gnutls_strerror(ret));
+				goto fail;
+			}
+
+			ws->cert_groups[i] = talloc_size(ws->cert_groups, size);
+			if (ws->cert_groups[i] == NULL) {
+				oclog(ws, LOG_ERR, "cannot allocate memory for cert group");
+				ret = -1;
+				goto fail;
+			}
+
+			ret =
+			    gnutls_x509_crt_get_dn_by_oid(crt,
+						  ws->config->cert_group_oid, i,
+						  0, ws->cert_groups[i], &size);
+			if (ret < 0) {
+				oclog(ws, LOG_ERR,
+				      "cannot obtain group from certificate DN: %s",
+				      gnutls_strerror(ret));
+				goto fail;
+			}
+			i++;
+		} while (ret >= 0);
+
+		ws->cert_groups_size = i;
 	}
 
 	ret = 0;
@@ -574,8 +647,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 
 /* grabs the username from the session certificate */
 static
-int get_cert_info(worker_st * ws, char *user, unsigned user_size,
-		  char *group, unsigned group_size)
+int get_cert_info(worker_st * ws)
 {
 	const gnutls_datum_t *cert;
 	unsigned int ncerts;
@@ -589,7 +661,7 @@ int get_cert_info(worker_st * ws, char *user, unsigned user_size,
 		return -1;
 	}
 
-	ret = get_cert_names(ws, cert, user, user_size, group, group_size);
+	ret = get_cert_names(ws, cert);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "cannot get username (%s) from certificate",
 		      ws->config->cert_user_oid);
@@ -607,8 +679,6 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 {
 	int ret;
 	AuthCookieRequestMsg msg = AUTH_COOKIE_REQUEST_MSG__INIT;
-	char tmp_user[MAX_USERNAME_SIZE];
-	char tmp_group[MAX_USERNAME_SIZE];
 
 	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE)
 	    && ws->config->cisco_client_compat == 0) {
@@ -618,16 +688,13 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 			return -1;
 		}
 
-		ret = get_cert_info(ws, tmp_user, sizeof(tmp_user),
-				    tmp_group, sizeof(tmp_group));
+		ret = get_cert_info(ws);
 		if (ret < 0) {
 			oclog(ws, LOG_INFO, "cannot obtain certificate info");
 			return -1;
 		}
 
 		msg.tls_auth_ok = 1;
-		msg.cert_user_name = tmp_user;
-		msg.cert_group_name = tmp_group;
 	}
 
 	msg.cookie.data = cookie;
@@ -847,8 +914,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *username = NULL;
 	char *password = NULL;
 	char *groupname = NULL;
-	char tmp_user[MAX_USERNAME_SIZE];
-	char tmp_group[MAX_USERNAME_SIZE];
 	char ipbuf[128];
 	char msg[MAX_MSG_SIZE];
 
@@ -898,8 +963,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				goto auth_fail;
 			}
 
-			ret = get_cert_info(ws, tmp_user, sizeof(tmp_user),
-					    tmp_group, sizeof(tmp_group));
+			ret = get_cert_info(ws);
 			if (ret < 0) {
 				oclog(ws, LOG_ERR,
 				      "failed reading certificate info");
@@ -907,8 +971,9 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			ireq.tls_auth_ok = 1;
-			ireq.cert_user_name = tmp_user;
-			ireq.cert_group_name = tmp_group;
+			ireq.cert_user_name = ws->cert_username;
+			ireq.cert_group_names = ws->cert_groups;
+			ireq.n_cert_group_names = ws->cert_groups_size;
 		}
 
 		ireq.hostname = req->hostname;

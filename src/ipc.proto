@@ -18,8 +18,6 @@ message auth_cookie_request_msg
 {
 	required bytes cookie = 1;
 	required bool tls_auth_ok = 2 [default = false];
-	optional string cert_user_name = 3;
-	optional string cert_group_name = 4;
 }
 
 /* AUTH_REP */
@@ -131,7 +129,7 @@ message sec_auth_init_msg
 	required string user_name = 3;
 	optional string group_name = 4; /* selected group name */
 	optional string cert_user_name = 5;
-	optional string cert_group_name = 6;
+	repeated string cert_group_names = 6;
 	optional string hostname = 7;
 	required string ip = 8;
 }

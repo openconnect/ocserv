@@ -19,7 +19,8 @@
   random assignment.
 - The 'select-group' and 'auto-select-group' configuration directives were
   added; select-group accepts groups that a connecting client will be
-  prompted to select from.
+  prompted to select from. Additionally a client with a certificate that
+  contains multiple groups will also be prompted to select one.
 - The 'route' configuration directive accepts the keyword 'default',
   and will return a default route irrespective of any other route
   directives. That allows overriding existing routes with a default

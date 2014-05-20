@@ -566,7 +566,7 @@ void clear_lists(main_server_st *s)
 		if (ctmp->auth_ctx != NULL)
 			proc_auth_deinit(s, ctmp);
 		list_del(&ctmp->list);
-		memset(ctmp, 0, sizeof(*ctmp));
+		safe_memset(ctmp, 0, sizeof(*ctmp));
 		free(ctmp);
 		s->proc_list.total--;
 	}
@@ -584,7 +584,7 @@ void clear_lists(main_server_st *s)
 	tls_cache_deinit(s->tls_db);
 	ip_lease_deinit(&s->ip_leases);
 	ctl_handler_deinit(s);
-	memset(s->cookie_key, 0, sizeof(s->cookie_key));
+	safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));
 }
 
 static void kill_children(main_server_st* s)

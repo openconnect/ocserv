@@ -500,7 +500,7 @@ certtool.
 $ certtool --generate-privkey --outfile server-key.pem
 $ cat << _EOF_ >server.tmpl
 cn = "www.example.com"
-o = "MyCompany"
+organization = "MyCompany"
 serial = 2
 expiration_days = -1
 signing_key
@@ -524,7 +524,7 @@ with the signing_key option and another with the encryption_key.
 $ certtool --generate-privkey --outfile server-key.pem
 $ cat << _EOF_ >server.tmpl
 cn = "www.example.com"
-o = "MyCompany"
+organization = "MyCompany"
 serial = 2
 expiration_days = -1
 signing_key
@@ -546,7 +546,7 @@ certificate as it is sent in clear during TLS authentication.
 $ certtool --generate-privkey --outfile user-key.pem
 $ cat << _EOF_ >user.tmpl
 cn = "user"
-ou = "admins"
+unit = "admins"
 serial = 1824
 expiration_days = -1
 signing_key

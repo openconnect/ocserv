@@ -828,9 +828,10 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 	char temp1[64];
 	char temp2[64];
 	unsigned temp2_len, temp1_len;
-	unsigned len;
+	unsigned len, xml = 0;
 
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
+		xml = 1;
 		if (xml_field) {
 			field = xml_field;
 			field_size = xml_field_size;
@@ -889,8 +890,10 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		      "cannot parse '%s' in client XML message", field);
 		return -1;
 	}
-	*value =
-	    unescape_url(ws->req.body, *value, len, NULL);
+	if (xml)
+		*value = unescape_html(ws->req.body, *value, len, NULL);
+	else
+		*value = unescape_url(ws->req.body, *value, len, NULL);
 
 	if (*value == NULL) {
 		oclog(ws, LOG_ERR,

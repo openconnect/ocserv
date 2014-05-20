@@ -20,7 +20,7 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4444
+PORT=6552
 
 . `dirname $0`/common.sh
 

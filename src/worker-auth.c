@@ -1115,8 +1115,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	}
 
 	ret = recv_auth_reply(ws, sd, msg, sizeof(msg));
-	if (sd != -1)
+	if (sd != -1) {
 		close(sd);
+		sd = -1;
+	}
 
 	if (ret == ERR_AUTH_CONTINUE) {
 		oclog(ws, LOG_DEBUG, "continuing authentication for '%s'",
@@ -1137,8 +1139,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
  ask_auth:
 
-	if (sd != -1)
-		close(sd);
 	return get_auth_handler(ws, http_ver);
 
  auth_fail:

@@ -390,7 +390,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		    module->auth_user(e->auth_ctx, e->username,
 				      sizeof(e->username));
 		if (ret != 0 && req->user_name != NULL) {
-			snprintf(e->username, MAX_USERNAME_SIZE, "%s",
+			snprintf(e->username, sizeof(e->username), "%s",
 				 req->user_name);
 		}
 	}

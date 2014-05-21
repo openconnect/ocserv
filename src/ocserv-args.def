@@ -460,6 +460,11 @@ Once authenticated, the server provides the client with an IP address and a list
 of routes that it may access. In order to allow high-speed transfers the 
 server does not process or filter packets. It is expected that the server has 
 or will set up any required routes or firewall rules. 
+
+It is possible to separate users into groups, which are either present on their
+certificate, or presented on login for the user to choose. That way a user may
+take advantage of the different settings that may apply per group. See the 
+comments on the configuration file for more information.
 _EOT_;
 };
 

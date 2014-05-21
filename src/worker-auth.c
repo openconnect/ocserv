@@ -88,10 +88,10 @@ static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
 	const char *value;
 
 	value = ws->config->group_list[i];
-	if (ws->config->friendly_group_list[i] == NULL)
-		name = ws->config->group_list[i];
-	else
+	if (ws->config->friendly_group_list != NULL && ws->config->friendly_group_list[i] != NULL)
 		name = ws->config->friendly_group_list[i];
+	else
+		name = ws->config->group_list[i];
 
 	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n", value, name);
 	if (str_append_str(str, temp) < 0)

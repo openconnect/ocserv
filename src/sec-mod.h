@@ -51,7 +51,9 @@ typedef struct client_entry_st {
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
-	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
+	uint8_t *cookie; /* the cookie associated with the session */
+	unsigned cookie_size;
+
 	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
 
 	time_t time;

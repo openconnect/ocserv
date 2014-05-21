@@ -341,16 +341,21 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
-				nlen = sizeof(ws->cookie);
+				nlen = tmplen;
+				ws->cookie = talloc_size(ws, nlen);
+				if (ws->cookie == NULL)
+					return;
+
 				ret =
 				    base64_decode((char *)p, tmplen,
 						  (char *)ws->cookie, &nlen);
-				if (ret == 0 || nlen != COOKIE_SIZE) {
+				if (ret == 0) {
 					oclog(ws, LOG_DEBUG,
 					      "could not decode cookie: %.*s",
 					      tmplen, p);
 					ws->cookie_set = 0;
 				} else {
+					ws->cookie_size = nlen;
 					ws->auth_state = S_AUTH_COOKIE;
 					ws->cookie_set = 1;
 				}
@@ -1340,7 +1345,7 @@ static int connect_handler(worker_st * ws)
 
 	/* we have authenticated against sec-mod, we need to complete
 	 * our authentication by forwarding our cookie to main. */
-	ret = auth_cookie(ws, ws->cookie, sizeof(ws->cookie));
+	ret = auth_cookie(ws, ws->cookie, ws->cookie_size);
 	if (ret < 0) {
 		oclog(ws, LOG_INFO, "failed cookie authentication attempt");
 		tls_puts(ws->session,

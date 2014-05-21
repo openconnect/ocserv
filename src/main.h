@@ -100,7 +100,8 @@ struct proc_st {
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
-	uint8_t cookie[COOKIE_SIZE]; /* the cookie associated with the session */
+	uint8_t *cookie; /* the cookie associated with the session */
+	unsigned cookie_size;
 
 	/* the following are copied here from the worker process for reporting
 	 * purposes (from main-ctl-handler). */

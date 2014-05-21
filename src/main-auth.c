@@ -64,9 +64,6 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 
 		/* fill message */
 		msg.reply = AUTH__REP__OK;
-		msg.has_cookie = 1;
-		msg.cookie.data = proc->cookie;
-		msg.cookie.len = COOKIE_SIZE;
 
 		msg.has_session_id = 1;
 		msg.session_id.data = proc->dtls_session_id;
@@ -156,36 +153,47 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req)
 {
 int ret;
-struct stored_cookie_st sc;
+Cookie *cmsg;
 time_t now = time(0);
 gnutls_datum_t key = {s->cookie_key, sizeof(s->cookie_key)};
+PROTOBUF_ALLOCATOR(pa, proc);
 
-	if (req->cookie.len == 0 || req->cookie.len != sizeof(proc->cookie)) {
+	if (req->cookie.len == 0) {
 		mslog(s, proc, LOG_INFO, "error in cookie size");
 		return -1;
 	}
 
-	ret = decrypt_cookie(&key, req->cookie.data, req->cookie.len, &sc);
+	proc->cookie = talloc_memdup(proc, req->cookie.data, req->cookie.len);
+	if (proc->cookie == NULL)
+		return -1;
+	proc->cookie_size = req->cookie.len;
+
+	ret = decrypt_cookie(&pa, &key, req->cookie.data, req->cookie.len, &cmsg);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "error decrypting cookie");
 		return -1;
 	}
 
-	if (sc.expiration < now)
+	if (cmsg->expiration < now)
 		return -1;
 
-	memcpy(proc->cookie, req->cookie.data, req->cookie.len);
-	memcpy(proc->username, sc.username, sizeof(proc->username));
-	memcpy(proc->groupname, sc.groupname, sizeof(proc->groupname));
-	memcpy(proc->hostname, sc.hostname, sizeof(proc->hostname));
-	memcpy(proc->dtls_session_id, sc.session_id, sizeof(proc->dtls_session_id));
-	proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
+	if (cmsg->username == NULL)
+		return -1;
+	snprintf(proc->username, sizeof(proc->username), "%s", cmsg->username);
 
-	proc->username[sizeof(proc->username)-1] = 0;
-	proc->groupname[sizeof(proc->groupname)-1] = 0;
-	proc->hostname[sizeof(proc->hostname)-1] = 0;
+	if (cmsg->groupname)
+		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
 
-	memcpy(proc->ipv4_seed, sc.ipv4_seed, sizeof(proc->ipv4_seed));
+	if (cmsg->hostname)
+		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);
+
+	if (cmsg->session_id.len != sizeof(proc->dtls_session_id))
+		return -1;
+
+	memcpy(proc->dtls_session_id, cmsg->session_id.data, cmsg->session_id.len);
+	proc->dtls_session_id_size = cmsg->session_id.len;
+
+	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
 
 	return 0;
 }
@@ -206,7 +214,8 @@ unsigned int entries = 1; /* that one */
 
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp != proc && ctmp->pid != -1) {
-			if (memcmp(proc->cookie, ctmp->cookie, sizeof(proc->cookie)) == 0) {
+			if (ctmp->cookie_size == proc->cookie_size &&
+			    memcmp(proc->cookie, ctmp->cookie, ctmp->cookie_size) == 0) {
 				mslog(s, ctmp, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", ctmp->username);
 
 				/* steal its leases */

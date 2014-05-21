@@ -465,14 +465,6 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			snprintf(ws->username, sizeof(ws->username), "%s",
 				 msg->user_name);
 
-			if (msg->has_cookie == 0 ||
-			    msg->cookie.len != sizeof(ws->cookie) ||
-			    msg->session_id.len != sizeof(ws->session_id)) {
-
-				ret = ERR_AUTH_FAIL;
-				goto cleanup;
-			}
-			memcpy(ws->cookie, msg->cookie.data, msg->cookie.len);
 			memcpy(ws->session_id, msg->session_id.data,
 			       msg->session_id.len);
 
@@ -680,14 +672,18 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 		}
 
 		if (msg->has_cookie == 0 ||
-		    msg->cookie.len != sizeof(ws->cookie) ||
+		    msg->cookie.len == 0 ||
 		    msg->dtls_session_id.len != sizeof(ws->session_id)) {
 
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
 		}
-		memcpy(ws->cookie, msg->cookie.data, msg->cookie.len);
-		ws->cookie_set = 1;
+		
+		ws->cookie = talloc_memdup(ws, msg->cookie.data, msg->cookie.len);
+		if (ws->cookie) {
+			ws->cookie_size = msg->cookie.len;
+			ws->cookie_set = 1;
+		}
 		memcpy(ws->session_id, msg->dtls_session_id.data,
 		       msg->dtls_session_id.len);
 
@@ -785,11 +781,11 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver)
 {
 	int ret, size;
-	char str_cookie[BASE64_LENGTH(COOKIE_SIZE) + 1];
+	char str_cookie[BASE64_LENGTH(ws->cookie_size)+1];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 
-	base64_encode((char *)ws->cookie, sizeof(ws->cookie),
+	base64_encode((char *)ws->cookie, ws->cookie_size,
 		      (char *)str_cookie, str_cookie_size);
 
 	/* reply */

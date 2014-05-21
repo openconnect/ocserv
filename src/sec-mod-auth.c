@@ -68,33 +68,35 @@ void sec_auth_init(struct cfg_st *config)
 static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 {
 	int ret;
-	struct stored_cookie_st sc;
-	uint32_t t;
+	Cookie msg = COOKIE__INIT;
+	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 
 	ret =
-	    gnutls_rnd(GNUTLS_RND_NONCE, sc.session_id, sizeof(sc.session_id));
+	    gnutls_rnd(GNUTLS_RND_NONCE, session_id, sizeof(session_id));
 	if (ret < 0)
 		return -1;
 
+	msg.session_id.data = session_id;
+	msg.session_id.len = sizeof(session_id);
+
+	msg.username = entry->username;
+	msg.groupname = entry->groupname;
+	msg.hostname = entry->hostname;
+
 	/* Fixme: possibly we should allow for completely random seeds */
 	if (sec->config->predictable_ips != 0) {
-		t = hash_any(entry->username, strlen(entry->username), 0);
-		memcpy(sc.ipv4_seed, &t, 4);
+		msg.ipv4_seed = hash_any(entry->username, strlen(entry->username), 0);
 	} else {
-		ret = gnutls_rnd(GNUTLS_RND_NONCE, sc.ipv4_seed, sizeof(sc.ipv4_seed));
+		ret = gnutls_rnd(GNUTLS_RND_NONCE, &msg.ipv4_seed, sizeof(msg.ipv4_seed));
 		if (ret < 0)
 			return -1;
 	}
 
-	memcpy(sc.username, entry->username, sizeof(entry->username));
-	memcpy(sc.groupname, entry->groupname, sizeof(entry->groupname));
-	memcpy(sc.hostname, entry->hostname, sizeof(entry->hostname));
-
-	sc.expiration = time(0) + sec->config->cookie_validity;
+	msg.expiration = time(0) + sec->config->cookie_validity;
 
 	ret =
-	    encrypt_cookie(&sec->dcookie_key, &sc, entry->cookie,
-			   sizeof(entry->cookie));
+	    encrypt_cookie(entry, &sec->dcookie_key, &msg, &entry->cookie,
+			   &entry->cookie_size);
 	if (ret < 0)
 		return -1;
 
@@ -118,7 +120,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 		msg.reply = AUTH__REP__OK;
 		msg.has_cookie = 1;
 		msg.cookie.data = entry->cookie;
-		msg.cookie.len = COOKIE_SIZE;
+		msg.cookie.len = entry->cookie_size;
 
 		msg.user_name = entry->username;
 

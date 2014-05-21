@@ -22,26 +22,17 @@
 #define COOKIES_H
 
 #include <vpn.h>
-
-struct __attribute__ ((__packed__)) stored_cookie_st {
-	char username[MAX_USERNAME_SIZE];
-	char groupname[MAX_GROUPNAME_SIZE];
-	char hostname[MAX_HOSTNAME_SIZE];
-	uint8_t session_id[GNUTLS_MAX_SESSION_ID]; /* the DTLS one */
-	uint32_t expiration;
-	
-	uint8_t ipv4_seed[4];
-};
+#include <ipc.pb-c.h>
 
 #define COOKIE_KEY_SIZE 16
 
 #define COOKIE_IV_SIZE 12 /* AES-GCM */
 #define COOKIE_MAC_SIZE 12 /* 96-bits of AES-GCM */
-#define COOKIE_SIZE (COOKIE_IV_SIZE + sizeof(struct stored_cookie_st) + COOKIE_MAC_SIZE)
 
-int encrypt_cookie(gnutls_datum_t *key, const struct stored_cookie_st* sc,
-        uint8_t* cookie, unsigned cookie_size);
-int decrypt_cookie(gnutls_datum_t *key, const uint8_t* cookie, unsigned cookie_size, 
-			struct stored_cookie_st* sc);
+int encrypt_cookie(void *pool, gnutls_datum_t *key, const Cookie *msg,
+        uint8_t** ecookie, unsigned *ecookie_size);
+int decrypt_cookie(ProtobufCAllocator *pa, gnutls_datum_t *key,
+			uint8_t *cookie, unsigned cookie_size, 
+			Cookie **msg);
 
 #endif

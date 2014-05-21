@@ -204,7 +204,9 @@ typedef struct worker_st {
 	unsigned cert_groups_size;
 
 	char hostname[MAX_HOSTNAME_SIZE];
-	uint8_t cookie[COOKIE_SIZE];
+	uint8_t *cookie;
+	unsigned cookie_size;
+
 	unsigned int cookie_set;
 
 	uint8_t master_secret[TLS_MASTER_SIZE];

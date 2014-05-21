@@ -35,15 +35,18 @@
 #include <main.h>
 #include <cookies.h>
 
-int decrypt_cookie(gnutls_datum_t *key, const uint8_t* cookie, unsigned cookie_size, 
-			struct stored_cookie_st* sc)
+int decrypt_cookie(ProtobufCAllocator *pa, gnutls_datum_t *key,
+			uint8_t* cookie, unsigned cookie_size, 
+			Cookie **msg)
 {
 gnutls_datum_t iv = { (void*)cookie, COOKIE_IV_SIZE };
 int ret;
 uint8_t tag[COOKIE_MAC_SIZE];
 gnutls_cipher_hd_t h;
+uint8_t *p;
+unsigned p_size;
 
-	if (cookie_size != COOKIE_SIZE)
+	if (cookie_size <= COOKIE_IV_SIZE+COOKIE_MAC_SIZE)
 		return -1;
 
 	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, key, &iv);
@@ -51,21 +54,32 @@ gnutls_cipher_hd_t h;
 		return -1;
 	
 	cookie += COOKIE_IV_SIZE;
+	cookie_size -= (COOKIE_IV_SIZE + COOKIE_MAC_SIZE);
 	
-	ret = gnutls_cipher_decrypt2(h, cookie, sizeof(*sc), sc, sizeof(*sc));
+	ret = gnutls_cipher_decrypt2(h, cookie, cookie_size, cookie, cookie_size);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
-	
+
+	p = cookie;
+	p_size = cookie_size;
+
 	ret = gnutls_cipher_tag(h, tag, sizeof(tag));
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 	
-	cookie += sizeof(*sc);
+	cookie += cookie_size;
 	if (memcmp(tag, cookie, COOKIE_MAC_SIZE) != 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	/* unpack */
+	*msg = cookie__unpack(pa, p_size, p);
+	if (*msg == NULL) {
 		ret = -1;
 		goto cleanup;
 	}
@@ -78,46 +92,77 @@ cleanup:
 	return ret;
 }
 
-int encrypt_cookie(gnutls_datum_t *key, const struct stored_cookie_st* sc,
-        uint8_t* cookie, unsigned cookie_size)
+int encrypt_cookie(void *pool, gnutls_datum_t *key, const Cookie *msg,
+        uint8_t** ecookie, unsigned *ecookie_size)
 {
 uint8_t _iv[COOKIE_IV_SIZE];
-gnutls_cipher_hd_t h;
+gnutls_cipher_hd_t h = NULL;
 gnutls_datum_t iv = { _iv, sizeof(_iv) };
 int ret;
+unsigned packed_size, e_size;
+uint8_t *packed = NULL, *e;
 
-	if (cookie_size != COOKIE_SIZE)
+	/* pack the cookie */
+	packed_size = cookie__get_packed_size(msg);
+	if (packed_size == 0)
 		return -1;
-	
+
+	packed = talloc_size(pool, packed_size);
+	if (packed == NULL)
+		return -1;
+
+	ret = cookie__pack(msg, packed);
+	if (ret == 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, _iv, sizeof(_iv));
-	if (ret < 0)
-		return -1;
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 	
 	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, key, &iv);
-	if (ret < 0)
-		return -1;
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
-	memcpy(cookie, _iv, COOKIE_IV_SIZE);
-	cookie += COOKIE_IV_SIZE;
+	e_size = packed_size+COOKIE_IV_SIZE+COOKIE_MAC_SIZE;
+	e = talloc_size(pool, e_size);
+	if (e == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	*ecookie = e;
+	*ecookie_size = e_size;
+
+	memcpy(e, _iv, COOKIE_IV_SIZE);
+	e += COOKIE_IV_SIZE;
+	e_size -= COOKIE_IV_SIZE;
 	
-	ret = gnutls_cipher_encrypt2(h, sc, sizeof(*sc), cookie, sizeof(*sc));
+	ret = gnutls_cipher_encrypt2(h, packed, packed_size, e, e_size);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
+
+	e += packed_size;
 	
-	cookie += sizeof(*sc);
-	
-	ret = gnutls_cipher_tag(h, cookie, COOKIE_MAC_SIZE);
+	ret = gnutls_cipher_tag(h, e, COOKIE_MAC_SIZE);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
-	
+
 	ret = 0;
 	
 cleanup:
-	gnutls_cipher_deinit(h);
+	talloc_free(packed);
+	if (h != NULL)
+		gnutls_cipher_deinit(h);
 	return ret;
 
 }

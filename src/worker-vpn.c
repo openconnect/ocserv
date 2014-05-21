@@ -1357,7 +1357,7 @@ static int connect_handler(worker_st * ws)
 		exit_worker(ws);
 	}
 
-	if (ws->config->network.name == NULL) {
+	if (ws->config->network.name[0] == 0) {
 		oclog(ws, LOG_ERR,
 		      "no networks are configured; rejecting client");
 		tls_puts(ws->session, "HTTP/1.1 503 Service Unavailable\r\n");

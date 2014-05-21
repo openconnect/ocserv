@@ -1,7 +1,7 @@
 EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.config \
 	test1.passwd test-user-cert.config user-cert.pem user-key.pem test3.config test-iroute.config \
 	user-config/test test-pass-script.config test-multi-cookie.config test-pam.config \
-	test-stress.config user-cert-wrong.pem connect-script kill-parent.sh test-group-pass.passwd \
+	test-stress.config user-cert-wrong.pem connect-script kill-parent.sh test-group.passwd \
 	test-group-pass.config user-group-cert.pem user-group-key.pem test-user-group-cert.config
 
 dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \

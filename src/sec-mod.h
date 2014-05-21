@@ -21,6 +21,7 @@
 #ifndef SEC_MOD_H
 
 #include <cookies.h>
+#include <gnutls/abstract.h>
 
 typedef struct sec_mod_st {
 	gnutls_datum_t dcookie_key; /* the key to generate cookies */

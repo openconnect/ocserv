@@ -42,7 +42,7 @@
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
 
-static const char* pid_file = NULL;
+static char pid_file[_POSIX_PATH_MAX] = "";
 static const char* cfg_file = DEFAULT_CFG_FILE;
 
 struct cfg_options {
@@ -317,7 +317,7 @@ static char *get_brackets_string(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
-static void parse_cfg_file(const char* file, struct cfg_st *config)
+static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
@@ -427,8 +427,8 @@ unsigned force_cert_auth;
 	READ_STRING("connect-script", config->connect_script);
 	READ_STRING("disconnect-script", config->disconnect_script);
 
-	if (pid_file == NULL)
-		READ_STRING("pid-file", pid_file);
+	if (reload == 0 && pid_file[0] == 0)
+		READ_STATIC_STRING("pid-file", pid_file);
 
 	READ_STRING("socket-file", config->socket_file_prefix);
 	READ_STRING("occtl-socket-file", config->occtl_socket_file);
@@ -689,8 +689,9 @@ int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 	if (HAVE_OPT(FOREGROUND))
 		(*config)->foreground = 1;
 
-	if (HAVE_OPT(PID_FILE))
-		pid_file = OPT_ARG(PID_FILE);
+	if (HAVE_OPT(PID_FILE)) {
+		snprintf(pid_file, sizeof(pid_file), "%s", OPT_ARG(PID_FILE));
+	}
 
 	if (HAVE_OPT(DEBUG))
 		(*config)->debug = OPT_VALUE_DEBUG;
@@ -702,7 +703,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 		exit(1);
 	}
 
-	parse_cfg_file(cfg_file, *config);
+	parse_cfg_file(cfg_file, *config, 0);
 
 	check_cfg(*config);
 
@@ -786,7 +787,7 @@ void reload_cfg_file(void *pool, struct cfg_st* config)
 	clear_cfg_file(config);
 	memset(config, 0, sizeof(*config));
 
-	parse_cfg_file(cfg_file, config);
+	parse_cfg_file(cfg_file, config, 1);
 
 	check_cfg(config);
 
@@ -797,7 +798,7 @@ void write_pid_file(void)
 {
 FILE* fp;
 
-	if (pid_file==NULL)
+	if (pid_file[0]==0)
 		return;
 
 	fp = fopen(pid_file, "w");
@@ -812,7 +813,7 @@ FILE* fp;
 
 void remove_pid_file(void)
 {
-	if (pid_file==NULL)
+	if (pid_file[0]==0)
 		return;
 
 	remove(pid_file);

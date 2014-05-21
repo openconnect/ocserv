@@ -100,6 +100,30 @@ static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
 	return 0;
 }
 
+static int append_group_str(worker_st * ws, str_st *str, const char *group)
+{
+	char temp[128];
+	const char *name;
+	const char *value;
+	unsigned i;
+
+	value = name = group;
+
+	for (i=0;i<ws->config->group_list_size;i++) {
+		if (strcmp(ws->config->group_list[i], group) == 0) {
+			if (ws->config->friendly_group_list[i] != NULL)
+				name = ws->config->friendly_group_list[i];
+			break;
+		}
+	}
+
+	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n", value, name);
+	if (str_append_str(str, temp) < 0)
+		return -1;
+
+	return 0;
+}
+
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
@@ -180,11 +204,24 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		}
 
 		/* send groups */
-		if (ws->groupname[0] == 0 && (ws->config->group_list_size > 0 || ws->config->group_list_size > 0)) {
+		if ((ws->config->group_list_size > 0 || ws->config->group_list_size > 0)) {
 			ret = str_append_str(&str, "<select name=\"group_list\" label=\"GROUP:\">\n");
 			if (ret < 0) {
 				ret = -1;
 				goto cleanup;
+			}
+
+			/* Several anyconnect clients (and openconnect) submit the group name
+			 * separately in that form. In that case they expect that we re-order
+			 * the list and we place the group they selected first. WTF! No respect
+			 * to server time.
+			 */
+			if (ws->groupname[0] != 0) {
+				ret = append_group_str(ws, &str, ws->groupname);
+				if (ret < 0) {
+					ret = -1;
+					goto cleanup;
+				}
 			}
 
 			if (ws->config->default_select_group) {
@@ -209,6 +246,9 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 						}
 					}
 
+					if (dup == 0 && ws->groupname[0] != 0 && strcmp(ws->groupname, ws->cert_groups[i]) == 0)
+						dup = 1;
+
 					if (dup != 0)
 						continue;
 
@@ -223,6 +263,9 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 
 			for (i=0;i<ws->config->group_list_size;i++) {
+				if (ws->groupname[0] != 0 && strcmp(ws->groupname, ws->config->group_list[i]) == 0)
+					continue;
+
 				ret = append_group_idx(ws, &str, i);
 				if (ret < 0) {
 					ret = -1;

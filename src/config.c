@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <common.h>
 #include <c-strcase.h>
+#include <c-ctype.h>
 #include <auth/pam.h>
 #include <auth/plain.h>
 
@@ -135,6 +136,8 @@ static struct cfg_options available_options[] = {
 	{ .name = "default-group-config", .type = OPTION_STRING, .mandatory = 0 },
 };
 
+static char *get_brackets_string(void *pool, const char *str);
+
 static const tOptionValue* get_option(const char* name, unsigned * mand)
 {
 unsigned j;
@@ -156,6 +159,10 @@ unsigned j;
 		if (s_name == NULL) { \
 			num = 0; \
 			s_name = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			if (s_name == NULL) { \
+				fprintf(stderr, "memory error\n"); \
+				exit(1); \
+			} \
 		} \
 		do { \
 		        if (val && !strcmp(val->pzName, name)==0) \
@@ -166,6 +173,36 @@ unsigned j;
 		        break; \
 	      } while((val = optionNextValue(pov, val)) != NULL); \
 	      s_name[num] = NULL; \
+	} else if (mand != 0) { \
+		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		exit(1); \
+	}
+
+#define READ_MULTI_BRACKET_LINE(name, s_name, s_name2, num) \
+	val = get_option(name, &mand); \
+	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
+		if (s_name == NULL || s_name2 == NULL) { \
+			num = 0; \
+			s_name = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			s_name2 = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			if (s_name == NULL || s_name2 == NULL) { \
+				fprintf(stderr, "memory error\n"); \
+				exit(1); \
+			} \
+		} \
+		do { \
+		        char *xp; \
+		        if (val && !strcmp(val->pzName, name)==0) \
+				continue; \
+		        s_name[num] = talloc_strdup(config, val->v.strVal); \
+		        xp = strchr(s_name[num], '['); if (xp != NULL) *xp = 0; \
+		        s_name2[num] = get_brackets_string(config, val->v.strVal); \
+		        num++; \
+		        if (num>=MAX_CONFIG_ENTRIES) \
+		        break; \
+	      } while((val = optionNextValue(pov, val)) != NULL); \
+	      s_name[num] = NULL; \
+	      s_name2[num] = NULL; \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
@@ -256,6 +293,30 @@ unsigned j;
 	}
 }
 
+static char *get_brackets_string(void *pool, const char *str)
+{
+	char *p, *p2;
+	unsigned len;
+
+	p = strchr(str, '[');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+	while (c_isspace(*p))
+		p++;
+
+	p2 = strchr(p, ']');
+	if (p2 == NULL) {
+		fprintf(stderr, "error parsing %s\n", str);
+		exit(1);
+	}
+
+	len = p2 - p;
+
+	return talloc_strndup(pool, p, len);
+}
+
 static void parse_cfg_file(const char* file, struct cfg_st *config)
 {
 tOptionValue const * pov;
@@ -306,21 +367,17 @@ unsigned force_cert_auth;
 			fprintf(stderr, "PAM support is disabled\n");
 			exit(1);
 #endif
-		} else if (strncasecmp(auth[j], "plain[", 6) == 0) {
-			char* p;
-
+		} else if (strncasecmp(auth[j], "plain", 5) == 0) {
 			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
 				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
 				exit(1);
 			}
 
-			config->plain_passwd = talloc_strdup(config, auth[j]+6);
-			p = strchr(config->plain_passwd, ']');
-			if (p == NULL) {
+			config->plain_passwd = get_brackets_string(config, auth[j]+5);
+			if (config->plain_passwd == NULL) {
 				fprintf(stderr, "Format error in %s\n", auth[j]);
 				exit(1);
 			}
-			*p = 0;
 			amod = &plain_auth_funcs;
 			config->auth_types |= AUTH_TYPE_PLAIN;
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
@@ -506,7 +563,10 @@ unsigned force_cert_auth;
 	if (auto_select_group != 0 && amod != NULL && amod->group_list != NULL) {
 		amod->group_list(config, config->plain_passwd, &config->group_list, &config->group_list_size);
 	} else {
-		READ_MULTI_LINE("select-group", config->group_list, config->group_list_size);
+		READ_MULTI_BRACKET_LINE("select-group",
+				config->group_list,
+				config->friendly_group_list,
+				config->group_list_size);
 	}
 
 	READ_MULTI_LINE("dns", config->network.dns, config->network.dns_size);

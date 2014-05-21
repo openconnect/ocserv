@@ -349,8 +349,9 @@ route = 192.168.5.0/255.255.255.0
 # A client may belong in multiple groups, and in certain use-cases
 # it is needed to switch between them. For these cases the client can
 # select prior to authentication. Add multiple entries for multiple groups.
+# The group may be followed by a user-friendly name in brackets.
 #select-group = group1
-#select-group = group2
+#select-group = group2[My special group]
 
 # The name of the group that if selected it would allow to use
 # the assigned by default group.

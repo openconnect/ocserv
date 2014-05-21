@@ -81,6 +81,25 @@ static const char login_msg_no_user_end[] =
 
 static int get_cert_info(worker_st * ws);
 
+static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
+{
+	char temp[128];
+	const char *name;
+	const char *value;
+
+	value = ws->config->group_list[i];
+	if (ws->config->friendly_group_list[i] == NULL)
+		name = ws->config->group_list[i];
+	else
+		name = ws->config->friendly_group_list[i];
+
+	snprintf(temp, sizeof(temp), "<option value=\"%s\">%s</option>\n", value, name);
+	if (str_append_str(str, temp) < 0)
+		return -1;
+
+	return 0;
+}
+
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
@@ -192,6 +211,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 					if (dup != 0)
 						continue;
+
 					snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->cert_groups[i]);
 					ret = str_append_str(&str, temp);
 					if (ret < 0) {
@@ -201,9 +221,9 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 				}
 			}
 
+
 			for (i=0;i<ws->config->group_list_size;i++) {
-				snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->config->group_list[i]);
-				ret = str_append_str(&str, temp);
+				ret = append_group_idx(ws, &str, i);
 				if (ret < 0) {
 					ret = -1;
 					goto cleanup;

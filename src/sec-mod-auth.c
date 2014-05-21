@@ -82,6 +82,7 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 	msg.username = entry->username;
 	msg.groupname = entry->groupname;
 	msg.hostname = entry->hostname;
+	msg.ip = entry->ip;
 
 	/* Fixme: possibly we should allow for completely random seeds */
 	if (sec->config->predictable_ips != 0) {

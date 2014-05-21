@@ -156,6 +156,7 @@ int ret;
 Cookie *cmsg;
 time_t now = time(0);
 gnutls_datum_t key = {s->cookie_key, sizeof(s->cookie_key)};
+char str_ip[MAX_IP_STR+1];
 PROTOBUF_ALLOCATOR(pa, proc);
 
 	if (req->cookie.len == 0) {
@@ -180,6 +181,16 @@ PROTOBUF_ALLOCATOR(pa, proc);
 	if (cmsg->username == NULL)
 		return -1;
 	snprintf(proc->username, sizeof(proc->username), "%s", cmsg->username);
+
+	/* check whether the IP matches */
+	if (cmsg->ip == NULL || human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
+					    str_ip, sizeof(str_ip), 0) == NULL)
+		return -1;
+	if (strcmp(str_ip, cmsg->ip) != 0) {
+		mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
+			cmsg->username, cmsg->ip, str_ip);
+		return -1;
+	}
 
 	if (cmsg->groupname)
 		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);

@@ -1642,11 +1642,13 @@ static int connect_handler(worker_st * ws)
 	for (i = 0; i < ws->config->custom_header_size; i++) {
 		const char *h = replace_vals(ws, ws->config->custom_header[i]);
 
-		oclog(ws, LOG_DEBUG, "adding custom header '%s'", h);
-		ret =
-		    tls_printf(ws->session, "%s\r\n", h);
-		SEND_ERR(ret);
-		talloc_free(h);
+		if (h) {
+			oclog(ws, LOG_DEBUG, "adding custom header '%s'", h);
+			ret =
+			    tls_printf(ws->session, "%s\r\n", h);
+			SEND_ERR(ret);
+			talloc_free(h);
+		}
 	}
 
 	/* calculate base MTU */

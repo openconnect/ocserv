@@ -392,7 +392,7 @@ route = 192.168.5.0/255.255.255.0
 #route-add-cmd = "ip route add %R dev %D"
 #route-del-cmd = "ip route delete %R dev %D"
 
-# This option allows to forward a proxy. The special strings '%U'
+# This option allows to forward a proxy. The special keywords '%U'
 # and '%G', if present will be replaced by the username and group name.
 #proxy-url = http://example.com/
 #proxy-url = http://example.com/%U/
@@ -424,7 +424,8 @@ route = 192.168.5.0/255.255.255.0
 # authentication and prior to VPN tunnel establishment. You shouldn't
 # need to use this option normally; if you do and you think that
 # this may help others, please send your settings and reason to
-# the openconnect mailing list.
+# the openconnect mailing list. The special keywords '%U'
+# and '%G', if present will be replaced by the username and group name.
 #custom-header = "X-My-Header: hi there"
 
 @end example

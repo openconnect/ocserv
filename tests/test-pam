@@ -33,11 +33,11 @@ echo "Connecting to obtain cookie... "
 ( echo "test" | openconnect --authgroup test -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-echo "Connecting to obtain cookie... "
+echo "Connecting to obtain cookie with default group... "
 ( echo "test" | openconnect --authgroup DEFAULT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-echo "Connecting to obtain cookie... "
+echo "Connecting to obtain cookie with wrong group... "
 ( echo "test" | openconnect --authgroup daemon -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 

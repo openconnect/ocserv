@@ -27,6 +27,7 @@
   route for specific users and groups.
 - The cookies are only limited to the specific IP they were granted to.
 - Added the proxy-url configuration option to allow sending a proxy URL.
+- License was upgraded to GPLv3.
 
 
 * Version 0.3.4 (released 2014-05-01)

@@ -1621,7 +1621,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	if (ws->config->proxy_url != NULL) {
-		const char *url = replace_vals(ws, ws->config->proxy_url);
+		char *url = replace_vals(ws, ws->config->proxy_url);
 		if (url != NULL) {
 			ret =
 			    tls_printf(ws->session, "X-CSTP-MSIE-Proxy-Pac-URL: %s\r\n",
@@ -1640,7 +1640,7 @@ static int connect_handler(worker_st * ws)
 	SEND_ERR(ret);
 
 	for (i = 0; i < ws->config->custom_header_size; i++) {
-		const char *h = replace_vals(ws, ws->config->custom_header[i]);
+		char *h = replace_vals(ws, ws->config->custom_header[i]);
 
 		if (h) {
 			oclog(ws, LOG_DEBUG, "adding custom header '%s'", h);

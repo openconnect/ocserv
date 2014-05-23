@@ -339,7 +339,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	}
 
 	p = htable_first(&hash, &iter);
-	while (p != NULL) {
+	while (p != NULL && (*groupname_size) < MAX_GROUPS) {
 		(*groupname)[(*groupname_size)] = talloc_strdup(*groupname, p);
 		p = htable_next(&hash, &iter);
 		(*groupname_size)++;

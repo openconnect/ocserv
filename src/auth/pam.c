@@ -298,7 +298,7 @@ unsigned found;
 
 			if (found == 0) {
 				syslog(LOG_AUTH,
-				       "user '%s' requested group '%s' but he is not a member",
+				       "user '%s' requested group '%s' but is not a member",
 				       pctx->username, suggested);
 				return -1;
 			}

@@ -205,7 +205,7 @@ static int plain_auth_group(void *ctx, const char *suggested, char *groupname, i
 
 		if (found == 0) {
 			syslog(LOG_AUTH,
-			       "user '%s' requested group '%s' but he is not a member",
+			       "user '%s' requested group '%s' but is not a member",
 			       pctx->username, suggested);
 			return -1;
 		}

@@ -411,7 +411,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 			}
 
 			if (found == 0) {
-				seclog(LOG_AUTH, "user '%s' requested group '%s' but it is not part of his certificate groups",
+				seclog(LOG_AUTH, "user '%s' requested group '%s' but is not included on his certificate groups",
 					req->user_name, req->group_name);
 				return -1;
 			}

@@ -22,7 +22,7 @@ copyright = {
     owner = "Nikos Mavrogiannopoulos";
     author = "Nikos Mavrogiannopoulos";
     eaddr  = "openconnect-devel@lists.infradead.org";
-    type  = gplv2;
+    type  = gpl;
 };
 
 flag = {

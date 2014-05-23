@@ -347,6 +347,43 @@ struct pam_ctx_st * pctx = ctx;
 	talloc_free(pctx);
 }
 
+static void pam_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+{
+	struct group *grp;
+	gid_t min = 0;
+	char *additional = _additional;
+
+	if (additional != NULL) {
+		if (strstr(additional, "gid-min=") != NULL) {
+			additional += 8;
+			min = atoi(additional);
+		} else {
+			syslog(LOG_INFO, "unknown PAM auth string '%s'", additional);
+		}
+	}
+
+	setgrent();
+
+	*groupname_size = 0;
+	*groupname = talloc_size(pool, sizeof(char*)*MAX_GROUPS);
+	if (*groupname == NULL) {
+		goto exit;
+	}
+
+	while((grp = getgrent()) != NULL && (*groupname_size) < MAX_GROUPS) {
+		if (grp->gr_gid >= min) {
+			(*groupname)[(*groupname_size)] = talloc_strdup(*groupname, grp->gr_name);
+			if ((*groupname)[(*groupname_size)] == NULL)
+				break;
+			(*groupname_size)++;
+		}
+	}
+
+ exit:
+	endgrent();
+	return;
+}
+
 const struct auth_mod_st pam_auth_funcs = {
   .type = AUTH_TYPE_PAM | AUTH_TYPE_USERNAME_PASS,
   .auth_init = pam_auth_init,
@@ -355,7 +392,7 @@ const struct auth_mod_st pam_auth_funcs = {
   .auth_pass = pam_auth_pass,
   .auth_group = pam_auth_group,
   .auth_user = pam_auth_user,
-  .group_list = NULL
+  .group_list = pam_group_list
 };
 
 #endif

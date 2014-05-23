@@ -356,7 +356,8 @@ unsigned force_cert_auth;
 
 	READ_MULTI_LINE("auth", auth, auth_size);
 	for (j=0;j<auth_size;j++) {
-		if (c_strcasecmp(auth[j], "pam") == 0) {
+		if (c_strncasecmp(auth[j], "pam", 3) == 0) {
+			config->auth_additional = get_brackets_string(config, auth[j]+3);
 			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
 				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
 				exit(1);
@@ -374,8 +375,8 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 
-			config->plain_passwd = get_brackets_string(config, auth[j]+5);
-			if (config->plain_passwd == NULL) {
+			config->auth_additional = get_brackets_string(config, auth[j]+5);
+			if (config->auth_additional == NULL) {
 				fprintf(stderr, "Format error in %s\n", auth[j]);
 				exit(1);
 			}
@@ -563,7 +564,7 @@ unsigned force_cert_auth;
 	READ_STRING("default-select-group", config->default_select_group);
 	READ_TF("auto-select-group", auto_select_group, 0);
 	if (auto_select_group != 0 && amod != NULL && amod->group_list != NULL) {
-		amod->group_list(config, config->plain_passwd, &config->group_list, &config->group_list_size);
+		amod->group_list(config, config->auth_additional, &config->group_list, &config->group_list_size);
 	} else {
 		READ_MULTI_BRACKET_LINE("select-group",
 				config->group_list,
@@ -639,9 +640,9 @@ static void check_cfg(struct cfg_st *config)
 			config->cert_req = GNUTLS_CERT_REQUEST;
 	}
 
-	if (config->plain_passwd != NULL) {
-		if (access(config->plain_passwd, R_OK) != 0) {
-			fprintf(stderr, "cannot access password file '%s'\n", config->plain_passwd);
+	if (config->auth_additional != NULL && (config->auth_types & AUTH_TYPE_PLAIN) == AUTH_TYPE_PLAIN) {
+		if (access(config->auth_additional, R_OK) != 0) {
+			fprintf(stderr, "cannot access password file '%s'\n", config->auth_additional);
 			exit(1);
 		}
 	}
@@ -730,7 +731,7 @@ unsigned i;
 	DEL(config->per_group_dir);
 	DEL(config->socket_file_prefix);
 	DEL(config->default_domain);
-	DEL(config->plain_passwd);
+	DEL(config->auth_additional);
 	DEL(config->ocsp_response);
 	DEL(config->banner);
 	DEL(config->dh_params_file);

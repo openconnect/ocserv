@@ -376,7 +376,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 		/* req->username is non-null at this point */
 		ret =
 		    module->auth_init(&e->auth_ctx, e, req->user_name, req->ip,
-				      sec->config->plain_passwd);
+				      sec->config->auth_additional);
 		if (ret < 0) {
 			return ret;
 		}

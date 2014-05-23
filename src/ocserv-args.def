@@ -75,11 +75,15 @@ An example configuration file follows.
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, plain, pam. 
 #auth = "certificate"
-auth = "pam"
+#auth = "pam"
+
+# The gid-min option is used by auto-select-group option, in order to
+# select the minimum group ID.
+#auth = "pam[gid-min=1000]"
 
 # The plain option requires specifying a password file which contains
 # entries of the following format.
-# "username:groupname:encoded-password"
+# "username:groupname1,groupname2:encoded-password"
 # One entry must be listed per line, and 'ocpasswd' can be used
 # to generate password entries.
 #auth = "plain[/etc/ocserv/ocpasswd]"
@@ -358,8 +362,7 @@ route = 192.168.5.0/255.255.255.0
 #default-select-group = DEFAULT
 
 # Instead of specifying manually all the allowed groups, you may instruct
-# ocserv to scan all available groups and include the full list. That
-# option is only functional on plain authentication.
+# ocserv to scan all available groups and include the full list.
 #auto-select-group = true
 
 # Configuration files that will be applied per user connection or

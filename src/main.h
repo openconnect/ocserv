@@ -73,7 +73,7 @@ enum {
 
 /* Each worker process maps to a unique proc_st structure.
  */
-struct proc_st {
+typedef struct proc_st {
 	struct list_node list;
 	int fd; /* the command file descriptor */
 	pid_t pid;
@@ -125,7 +125,7 @@ struct proc_st {
 	
 	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
 	struct group_cfg_st config; /* custom user/group config */
-};
+} proc_st;
 
 struct ip_lease_db_st {
 	struct htable ht;

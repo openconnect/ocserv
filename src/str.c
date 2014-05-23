@@ -160,7 +160,7 @@ int str_replace_str(str_st *str, const char *what, const char *with)
 	if (ret < 0) {
 		return ret;
 	}
-fprintf(stderr, "str[%d]: %s\n", str->length, str->data);
+
 	/* allow multiple replacements */
 	return str_replace_str(str, what, with);
 }

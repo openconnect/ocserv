@@ -383,14 +383,14 @@ route = 192.168.5.0/255.255.255.0
 #default-user-config = /etc/ocserv/defaults/user.conf
 #default-group-config = /etc/ocserv/defaults/group.conf
 
-# The system command to use to setup a route. %R will be replaced with the
-# route/mask and %D with the (tun) device.
+# The system command to use to setup a route. %{R} will be replaced with the
+# route/mask and %{D} with the (tun) device.
 #
 # The following example is from linux systems. %R should be something
 # like 192.168.2.0/24
 
-#route-add-cmd = "ip route add %R dev %D"
-#route-del-cmd = "ip route delete %R dev %D"
+#route-add-cmd = "ip route add %{R} dev %{D}"
+#route-del-cmd = "ip route delete %{R} dev %{D}"
 
 # This option allows to forward a proxy. The special keywords '%{U}'
 # and '%{G}', if present will be replaced by the username and group name.

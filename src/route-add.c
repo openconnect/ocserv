@@ -28,56 +28,60 @@
 
 #include <route-add.h>
 #include <main.h>
+#include <str.h>
 #include <common.h>
 
 static
-int replace_cmd(struct main_server_st* s, char cmd[_POSIX_PATH_MAX], const char* pattern, 
-	const char* route, const char* dev)
+int replace_cmd(struct main_server_st* s, proc_st *proc, 
+		char **cmd, const char* pattern, 
+		const char* route, const char* dev)
 {
-int len = strlen(pattern);
-unsigned i, j;
-unsigned rlen = strlen(route);
-unsigned dlen = strlen(dev);
+	str_st str;
+	int ret;
 
-	if (len + rlen + dlen >= _POSIX_PATH_MAX) {
-		mslog(s, NULL, LOG_WARNING, "not enough memory to hold expanded pattern: %s", pattern);
+	str_init(&str, proc);
+
+	ret = str_append_str(&str, pattern);
+	if (ret < 0)
 		return ERR_MEM;
-	}
-	
-	for (i=j=0;i<len;i++) {
-		if (pattern[i] == '%') {
-			if (pattern[i+1] == 'R') {
-				memcpy(&cmd[j], route, rlen);
-				j += rlen;
-				i++;
-			} else if (pattern[i+1] == 'D') {
-				memcpy(&cmd[j], dev, dlen);
-				j += dlen;
-				i++;
-			} else {
-				mslog(s, NULL, LOG_WARNING, "unknown token '%%%c' in cmd: %s", pattern[i+1], pattern);
-				return ERR_PARSING;
-			}
-		} else
-			cmd[j++] = pattern[i];
-	}
-	cmd[j] = 0;
-	
+
+	ret = str_replace_str(&str, "%R", route);
+	if (ret < 0)
+		goto fail;
+
+	ret = str_replace_str(&str, "%{R}", route);
+	if (ret < 0)
+		goto fail;
+
+	ret = str_replace_str(&str, "%D", dev);
+	if (ret < 0)
+		goto fail;
+
+	ret = str_replace_str(&str, "%{D}", dev);
+	if (ret < 0)
+		goto fail;
+
+	*cmd = (char*)str.data;
+
 	return 0;
+ fail:
+	str_clear(&str);
+	return ERR_MEM;
 }
 
 static
-int route_adddel(struct main_server_st* s, const char* pattern, const char* route, const char* dev)
+int route_adddel(struct main_server_st* s, proc_st *proc,
+		 const char* pattern, const char* route, const char* dev)
 {
 int ret;
-char cmd[_POSIX_PATH_MAX];
+char *cmd = NULL;
 
 	if (pattern == 0) {
 		mslog(s, NULL, LOG_WARNING, "route-add-cmd or route-del-cmd are not set.");
 		return 0;
 	}
 
-	ret = replace_cmd(s, cmd, pattern, route, dev);
+	ret = replace_cmd(s, proc, &cmd, pattern, route, dev);
 	if (ret < 0)
 		return ret;
 	
@@ -86,32 +90,38 @@ char cmd[_POSIX_PATH_MAX];
 	if (ret == -1) {
 		int e = errno;
 		mslog(s, NULL, LOG_INFO, "failed to spawn cmd: %s: %s", cmd, strerror(e));
-		return ERR_EXEC;
+		ret = ERR_EXEC;
+		goto fail;
 	}
 	
 	if (!WIFEXITED(ret)) {
 		mslog(s, NULL, LOG_INFO, "cmd: %s: exited abnormally", cmd);
-		return ERR_EXEC;
+		ret = ERR_EXEC;
+		goto fail;
 	}
 
 	if (WEXITSTATUS(ret)) {
 		mslog(s, NULL, LOG_INFO, "cmd: %s: exited with error %d", cmd, WEXITSTATUS(ret));
-		return ERR_EXEC;
+		ret = ERR_EXEC;
+		goto fail;
 	}
 	
-	return 0;
+	ret = 0;
+ fail:
+ 	talloc_free(cmd);
+	return ret;
 }
 
 static
-int route_add(struct main_server_st* s, const char* route, const char* dev)
+int route_add(struct main_server_st* s, proc_st *proc, const char* route, const char* dev)
 {
-	return route_adddel(s, s->config->route_add_cmd, route, dev);
+	return route_adddel(s, proc, s->config->route_add_cmd, route, dev);
 }
 
 static
-int route_del(struct main_server_st* s, const char* route, const char* dev)
+int route_del(struct main_server_st* s, proc_st *proc, const char* route, const char* dev)
 {
-	return route_adddel(s, s->config->route_del_cmd, route, dev);
+	return route_adddel(s, proc, s->config->route_del_cmd, route, dev);
 }
 
 /* Executes the commands required to apply all the configured routes 
@@ -126,7 +136,7 @@ int ret;
 		return;
 
 	for (i=0;i<proc->config.iroutes_size;i++) {
-		ret = route_add(s, proc->config.iroutes[i], proc->tun_lease.name);
+		ret = route_add(s, proc, proc->config.iroutes[i], proc->tun_lease.name);
 		if (ret < 0)
 			goto fail;
 	}
@@ -135,7 +145,7 @@ int ret;
 	return;
 fail:
 	for (j=0;j<i;j++)
-		route_del(s, proc->config.iroutes[j], proc->tun_lease.name);
+		route_del(s, proc, proc->config.iroutes[j], proc->tun_lease.name);
 	
 	return;
 }
@@ -151,7 +161,7 @@ unsigned i;
 		return;
 
 	for (i=0;i<proc->config.iroutes_size;i++) {
-		route_del(s, proc->config.iroutes[i], proc->tun_lease.name);
+		route_del(s, proc, proc->config.iroutes[i], proc->tun_lease.name);
 	}
 	proc->applied_iroutes = 0;
 	

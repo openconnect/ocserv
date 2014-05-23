@@ -26,6 +26,7 @@
   directives. That allows overriding existing routes with a default
   route for specific users and groups.
 - The cookies are only limited to the specific IP they were granted to.
+- Added the proxy-url configuration option to allow sending a proxy URL.
 
 
 * Version 0.3.4 (released 2014-05-01)

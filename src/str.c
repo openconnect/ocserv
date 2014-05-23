@@ -127,3 +127,41 @@ int str_append_str(str_st * dest, const char *src)
 	return ret;
 }
 
+int str_replace_str(str_st *str, const char *what, const char *with)
+{
+	uint8_t *p, *final;
+	unsigned what_len, final_len;
+	int ret;
+
+	what_len = strlen(what);
+
+	p = memmem(str->data, str->length, what, what_len);
+	if (p == NULL)
+		return 0;
+
+	p += what_len;
+	final_len = str->length - (ptrdiff_t)(p-str->data);
+
+	final = talloc_memdup(str->allocd, p, final_len);
+	if (final == NULL)
+		return -1;
+
+	str->length -= final_len + what_len;
+
+	ret = str_append_str(str, with);
+	if (ret < 0) {
+		talloc_free(final);
+		return ret;
+	}
+
+	ret = str_append_data(str, final, final_len);
+	talloc_free(final);
+
+	if (ret < 0) {
+		return ret;
+	}
+fprintf(stderr, "str[%d]: %s\n", str->length, str->data);
+	/* allow multiple replacements */
+	return str_replace_str(str, what, with);
+}
+

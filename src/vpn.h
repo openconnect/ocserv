@@ -256,6 +256,7 @@ struct cfg_st {
 	char *disconnect_script;
 	
 	char *cgroup;
+	char *proxy_url;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	char *xml_config_file;

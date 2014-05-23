@@ -116,6 +116,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "run-as-group", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "device", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "cgroup", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "proxy-url", .type = OPTION_STRING, .mandatory = 0 },
 
 	{ .name = "ipv4-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING, .mandatory = 0 },
@@ -526,6 +527,7 @@ unsigned force_cert_auth;
 
 	READ_STATIC_STRING("device", config->network.name);
 	READ_STRING("cgroup", config->cgroup);
+	READ_STRING("proxy-url", config->proxy_url);
 
 	READ_STRING("ipv4-network", config->network.ipv4);
 	READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
@@ -743,6 +745,7 @@ unsigned i;
 	DEL(config->chroot_dir);
 	DEL(config->connect_script);
 	DEL(config->disconnect_script);
+	DEL(config->proxy_url);
 
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);

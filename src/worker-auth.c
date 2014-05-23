@@ -465,6 +465,13 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			snprintf(ws->username, sizeof(ws->username), "%s",
 				 msg->user_name);
 
+			if (msg->group_name != NULL) {
+				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
+					 msg->group_name);
+			} else {
+				ws->groupname[0] = 0;
+			}
+
 			memcpy(ws->session_id, msg->session_id.data,
 			       msg->session_id.len);
 

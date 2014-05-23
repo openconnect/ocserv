@@ -71,6 +71,7 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 
 		msg.vname = proc->tun_lease.name;
 		msg.user_name = proc->username;
+		msg.group_name = proc->groupname;
 
 		if (proc->ipv4 && proc->ipv4->rip_len > 0) {
 			msg.ipv4 = human_addr2((struct sockaddr*)&proc->ipv4->rip, proc->ipv4->rip_len,

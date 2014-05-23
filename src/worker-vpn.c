@@ -1299,6 +1299,33 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	return 0;
 }
 
+static
+char *replace_vals(worker_st *ws, const char *txt)
+{
+	str_st str;
+	int ret;
+
+	str_init(&str, ws);
+
+	ret = str_append_str(&str, txt);
+	if (ret < 0)
+		return NULL;
+
+	ret = str_replace_str(&str, "%U", ws->username);
+	if (ret < 0) {
+		str_clear(&str);
+		return NULL;
+	}
+
+	ret = str_replace_str(&str, "%G", ws->groupname);
+	if (ret < 0) {
+		str_clear(&str);
+		return NULL;
+	}
+
+	return (char*)str.data;
+}
+
 /* connect_handler:
  * @ws: an initialized worker structure
  *
@@ -1591,6 +1618,17 @@ static int connect_handler(worker_st * ws)
 	} else {
 		ret = tls_puts(ws->session, "X-CSTP-Rekey-Method: none\r\n");
 		SEND_ERR(ret);
+	}
+
+	if (ws->config->proxy_url != NULL) {
+		const char *url = replace_vals(ws, ws->config->proxy_url);
+		if (url != NULL) {
+			ret =
+			    tls_printf(ws->session, "X-CSTP-MSIE-Proxy-Pac-URL: %s\r\n",
+			       url);
+			SEND_ERR(ret);
+			talloc_free(url);
+		}
 	}
 
 	ret = tls_puts(ws->session, "X-CSTP-Session-Timeout: none\r\n"

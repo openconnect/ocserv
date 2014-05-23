@@ -392,6 +392,11 @@ route = 192.168.5.0/255.255.255.0
 #route-add-cmd = "ip route add %R dev %D"
 #route-del-cmd = "ip route delete %R dev %D"
 
+# This option allows to forward a proxy. The special strings '%U'
+# and '%G', if present will be replaced by the username and group name.
+#proxy-url = http://example.com/
+#proxy-url = http://example.com/%U/
+
 #
 # The following options are for (experimental) AnyConnect client 
 # compatibility. 

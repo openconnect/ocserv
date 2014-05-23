@@ -45,19 +45,20 @@ int replace_cmd(struct main_server_st* s, proc_st *proc,
 	if (ret < 0)
 		return ERR_MEM;
 
-	ret = str_replace_str(&str, "%R", route);
-	if (ret < 0)
-		goto fail;
-
 	ret = str_replace_str(&str, "%{R}", route);
 	if (ret < 0)
 		goto fail;
 
-	ret = str_replace_str(&str, "%D", dev);
+	ret = str_replace_str(&str, "%{D}", dev);
 	if (ret < 0)
 		goto fail;
 
-	ret = str_replace_str(&str, "%{D}", dev);
+	/* The old compatibility strings */
+	ret = str_replace_str(&str, "%R", route);
+	if (ret < 0)
+		goto fail;
+
+	ret = str_replace_str(&str, "%D", dev);
 	if (ret < 0)
 		goto fail;
 

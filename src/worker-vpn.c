@@ -1311,13 +1311,13 @@ char *replace_vals(worker_st *ws, const char *txt)
 	if (ret < 0)
 		return NULL;
 
-	ret = str_replace_str(&str, "%U", ws->username);
+	ret = str_replace_str(&str, "%{U}", ws->username);
 	if (ret < 0) {
 		str_clear(&str);
 		return NULL;
 	}
 
-	ret = str_replace_str(&str, "%G", ws->groupname);
+	ret = str_replace_str(&str, "%{G}", ws->groupname);
 	if (ret < 0) {
 		str_clear(&str);
 		return NULL;

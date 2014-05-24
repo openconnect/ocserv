@@ -1,4 +1,4 @@
-* Version 0.3.6 (unreleased)
+* Version 0.3.6 (released 2014-05-24)
 
 - Use a variant of memset() that cannot be optimized out while
   overwritting critical parameters.

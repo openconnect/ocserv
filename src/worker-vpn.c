@@ -1375,8 +1375,15 @@ static int connect_handler(worker_st * ws)
 	ret = auth_cookie(ws, ws->cookie, ws->cookie_size);
 	if (ret < 0) {
 		oclog(ws, LOG_INFO, "failed cookie authentication attempt");
-		tls_puts(ws->session,
-			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		if (ret == ERR_AUTH_FAIL) {
+			tls_puts(ws->session,
+				 "HTTP/1.1 401 Unauthorized\r\n\r\n");
+			tls_puts(ws->session,
+				 "X-Reason: Cookie is not acceptable\r\n\r\n");
+		} else {
+			tls_puts(ws->session,
+				 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		}
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 	}

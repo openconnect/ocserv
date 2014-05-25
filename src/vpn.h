@@ -147,7 +147,8 @@ struct group_cfg_st {
 
 	size_t rx_per_sec;
 	size_t tx_per_sec;
-	
+
+	unsigned deny_roaming; /* whether the user is allowed to re-use cookies from another IP */
 	unsigned net_priority;
 	unsigned no_udp; /* whether to disable UDP for this user */
 };
@@ -213,6 +214,8 @@ struct cfg_st {
 	unsigned split_dns_size;;
 
 	char* socket_file_prefix;
+
+	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_validity;	/* in seconds */
 
 	time_t rekey_time;	/* in seconds */

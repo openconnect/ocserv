@@ -213,19 +213,6 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 		return ret;
 	}
 
-	if (s->config_module) {
-		ret = s->config_module->get_sup_config(s->config, proc);
-		if (ret < 0) {
-			mslog(s, proc, LOG_ERR,
-			      "error reading additional configuration");
-			return ERR_READ_CONFIG;
-		}
-
-	        if (proc->config.cgroup != NULL) {
-	        	put_into_cgroup(s, proc->config.cgroup, proc->pid);
-		}
-	}
-
 	ret = open_tun(s, proc);
 	if (ret < 0) {
 		return -1;

@@ -89,6 +89,7 @@ static struct cfg_options available_options[] = {
 	/* this is alias for cisco-client-compat */
 	{ .name = "always-require-cert", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "cisco-client-compat", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "deny-roaming", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-occtl", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -474,6 +475,7 @@ unsigned force_cert_auth;
 	config->rx_per_sec /= 1000; /* in kb */
 	config->tx_per_sec /= 1000;
 
+	READ_TF("deny-roaming", config->deny_roaming, 1);
 	READ_NUMERIC("cookie-validity", config->cookie_validity);
 
 	config->rekey_time = -1;

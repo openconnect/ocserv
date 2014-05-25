@@ -214,6 +214,11 @@ auth-timeout = 40
 # of that cookie.
 cookie-validity = 10800
 
+# Whether roaming is allowed, i.e., if true a cookie is
+# restricted to a single IP address and cannot be re-used
+# from a different IP.
+deny-roaming = false
+
 # ReKey time (in seconds)
 # ocserv will ask the client to refresh keys periodically once
 # this amount of seconds is elapsed. Set to zero to disable.
@@ -370,7 +375,7 @@ route = 192.168.5.0/255.255.255.0
 # or the groupname.
 # The options allowed in the configuration files are dns, nbns,
 #  ipv?-network, ipv4-netmask, ipv6-prefix, rx/tx-per-sec, iroute, route,
-#  net-priority, no-udp and cgroup.
+#  net-priority, deny-roaming, no-udp and cgroup.
 #
 # Note that the 'iroute' option allows to add routes on the server
 # based on a user or group. The syntax depends on the input accepted

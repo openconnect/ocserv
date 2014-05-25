@@ -35,6 +35,7 @@
 #include <tlslib.h>
 #include <script-list.h>
 #include <ip-lease.h>
+#include <main-sup-config.h>
 #include "str.h"
 
 #include <vpn.h>
@@ -150,6 +151,12 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 	return 0;
 }
 
+static void apply_default_sup_config(struct cfg_st *config, struct proc_st *proc)
+{
+	proc->config.deny_roaming = config->deny_roaming;
+	proc->config.no_udp = (config->udp_port!=0)?0:1;
+}
+
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req)
 {
@@ -183,16 +190,6 @@ PROTOBUF_ALLOCATOR(pa, proc);
 		return -1;
 	snprintf(proc->username, sizeof(proc->username), "%s", cmsg->username);
 
-	/* check whether the IP matches */
-	if (cmsg->ip == NULL || human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
-					    str_ip, sizeof(str_ip), 0) == NULL)
-		return -1;
-	if (strcmp(str_ip, cmsg->ip) != 0) {
-		mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
-			cmsg->username, cmsg->ip, str_ip);
-		return -1;
-	}
-
 	if (cmsg->groupname)
 		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
 
@@ -206,6 +203,41 @@ PROTOBUF_ALLOCATOR(pa, proc);
 	proc->dtls_session_id_size = cmsg->session_id.len;
 
 	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
+
+	/* cookie is good so far, now read config */
+	memset(&proc->config, 0, sizeof(proc->config));
+	apply_default_sup_config(s->config, proc);
+
+	if (s->config_module) {
+		ret = s->config_module->get_sup_config(s->config, proc);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR,
+			      "error reading additional configuration");
+			return ERR_READ_CONFIG;
+		}
+
+	        if (proc->config.cgroup != NULL) {
+	        	put_into_cgroup(s, proc->config.cgroup, proc->pid);
+		}
+	}
+
+	/* check whether the cookie IP matches */
+	if (proc->config.deny_roaming != 0) {
+		if (cmsg->ip == NULL) {
+			return -1;
+		}
+
+		if (human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
+					    str_ip, sizeof(str_ip), 0) == NULL)
+			return -1;
+
+		if (strcmp(str_ip, cmsg->ip) != 0) {
+			mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
+				cmsg->username, cmsg->ip, str_ip);
+			return -1;
+		}
+	}
+
 
 	return 0;
 }

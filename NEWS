@@ -25,7 +25,7 @@
   and will return a default route irrespective of any other route
   directives. That allows overriding existing routes with a default
   route for specific users and groups.
-- The cookies are only limited to the specific IP they were granted to.
+- The cookies can be limited to the specific IP they were granted to.
 - Added the proxy-url configuration option to allow sending a proxy URL.
 - License was upgraded to GPLv3.
 

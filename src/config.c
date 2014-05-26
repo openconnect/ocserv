@@ -475,7 +475,7 @@ unsigned force_cert_auth;
 	config->rx_per_sec /= 1000; /* in kb */
 	config->tx_per_sec /= 1000;
 
-	READ_TF("deny-roaming", config->deny_roaming, 1);
+	READ_TF("deny-roaming", config->deny_roaming, 0);
 	READ_NUMERIC("cookie-validity", config->cookie_validity);
 
 	config->rekey_time = -1;

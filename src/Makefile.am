@@ -125,11 +125,11 @@ occtl_SOURCES += occtl-unix.c
 endif
 
 ipc.pb-c.c: ipc.proto
-	protoc-c --c_out=. $<
+	protoc-c --c_out=. --proto_path=$(srcdir) $<
 
 ipc.pb-c.h: ipc.pb-c.c
 
 ctl.pb-c.c: ctl.proto
-	protoc-c --c_out=. $<
+	protoc-c --c_out=. --proto_path=$(srcdir) $<
 
 ctl.pb-c.h: ctl.pb-c.c

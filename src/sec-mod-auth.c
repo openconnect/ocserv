@@ -197,7 +197,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 	unsigned found, i;
 
 	if (sec->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (tls_auth_ok == 0 && sec->config->cisco_client_compat == 0) {
+		if (tls_auth_ok == 0) {
 			seclog(LOG_INFO, "user '%s' presented no certificate",
 			       e->username);
 			return -1;

@@ -1027,6 +1027,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 			if (ws->cert_auth_ok == 0) {
+				reason = "No certificate was provided";
 				oclog(ws, LOG_INFO,
 				      "no certificate provided for authentication");
 				goto auth_fail;
@@ -1034,6 +1035,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			ret = get_cert_info(ws);
 			if (ret < 0) {
+				reason = "Error reading certificate";
 				oclog(ws, LOG_ERR,
 				      "failed reading certificate info");
 				goto auth_fail;
@@ -1052,6 +1054,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {
+			reason = "Internal error";
 			oclog(ws, LOG_ERR, "failed connecting to sec mod");
 			goto auth_fail;
 		}
@@ -1061,6 +1064,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					 sec_auth_init_msg__get_packed_size,
 					 (pack_func) sec_auth_init_msg__pack);
 		if (ret < 0) {
+			reason = "Internal error";
 			oclog(ws, LOG_ERR,
 			      "failed sending auth init message to sec mod");
 			goto auth_fail;
@@ -1077,6 +1081,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					NULL, 0,
 					&password);
 			if (ret < 0) {
+				reason = "No password was provided";
 				oclog(ws, LOG_ERR, "failed reading password");
 				goto auth_fail;
 			}
@@ -1089,6 +1094,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			sd = connect_to_secmod(ws);
 			if (sd == -1) {
+				reason = "Internal error";
 				oclog(ws, LOG_ERR,
 				      "failed connecting to sec mod");
 				goto auth_fail;
@@ -1103,6 +1109,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			talloc_free(password);
 
 			if (ret < 0) {
+				reason = "Internal error";
 				oclog(ws, LOG_ERR,
 				      "failed sending auth req message to main");
 				goto auth_fail;
@@ -1149,7 +1156,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	if (sd != -1)
 		close(sd);
 	tls_printf(ws->session,
-		   "HTTP/1.1 503 Service Unavailable\r\nX-Reason: %s\r\n\r\n",
+		   "HTTP/1.1 401 Unauthorized\r\nX-Reason: %s\r\n\r\n",
 		   reason);
 	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
 	exit(1);

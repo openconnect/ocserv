@@ -975,6 +975,11 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 #define GROUPNAME_FIELD "group%5flist"
 #define GROUPNAME_FIELD_XML "group-select"
 
+#define MSG_INTERNAL_ERROR "Internal error"
+#define MSG_CERT_READ_ERROR "Could not read certificate"
+#define MSG_NO_CERT_ERROR "No certificate"
+#define MSG_NO_PASSWORD_ERROR "No password"
+
 int post_auth_handler(worker_st * ws, unsigned http_ver)
 {
 	int ret, sd = -1;
@@ -1027,7 +1032,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
 			if (ws->cert_auth_ok == 0) {
-				reason = "No certificate was provided";
+				reason = MSG_NO_CERT_ERROR;
 				oclog(ws, LOG_INFO,
 				      "no certificate provided for authentication");
 				goto auth_fail;
@@ -1035,7 +1040,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			ret = get_cert_info(ws);
 			if (ret < 0) {
-				reason = "Error reading certificate";
+				reason = MSG_CERT_READ_ERROR;
 				oclog(ws, LOG_ERR,
 				      "failed reading certificate info");
 				goto auth_fail;
@@ -1054,7 +1059,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {
-			reason = "Internal error";
+			reason = MSG_INTERNAL_ERROR;
 			oclog(ws, LOG_ERR, "failed connecting to sec mod");
 			goto auth_fail;
 		}
@@ -1064,7 +1069,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					 sec_auth_init_msg__get_packed_size,
 					 (pack_func) sec_auth_init_msg__pack);
 		if (ret < 0) {
-			reason = "Internal error";
+			reason = MSG_INTERNAL_ERROR;
 			oclog(ws, LOG_ERR,
 			      "failed sending auth init message to sec mod");
 			goto auth_fail;
@@ -1081,7 +1086,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					NULL, 0,
 					&password);
 			if (ret < 0) {
-				reason = "No password was provided";
+				reason = MSG_NO_PASSWORD_ERROR;
 				oclog(ws, LOG_ERR, "failed reading password");
 				goto auth_fail;
 			}
@@ -1094,7 +1099,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			sd = connect_to_secmod(ws);
 			if (sd == -1) {
-				reason = "Internal error";
+				reason = MSG_INTERNAL_ERROR;
 				oclog(ws, LOG_ERR,
 				      "failed connecting to sec mod");
 				goto auth_fail;
@@ -1109,7 +1114,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			talloc_free(password);
 
 			if (ret < 0) {
-				reason = "Internal error";
+				reason = MSG_INTERNAL_ERROR;
 				oclog(ws, LOG_ERR,
 				      "failed sending auth req message to main");
 				goto auth_fail;

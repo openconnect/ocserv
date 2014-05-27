@@ -93,7 +93,9 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 			return -1;
 	}
 
-	msg.expiration = time(0) + sec->config->cookie_validity;
+	/* this is the time when this cookie must be activated (used to authenticate).
+	 * if not activated by that time it expires */
+	msg.expiration = time(0) + sec->config->cookie_timeout;
 
 	ret =
 	    encrypt_cookie(entry, &sec->dcookie_key, &msg, &entry->cookie,

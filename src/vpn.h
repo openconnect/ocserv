@@ -210,7 +210,7 @@ struct cfg_st {
 	char* socket_file_prefix;
 
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
-	time_t cookie_validity;	/* in seconds */
+	time_t cookie_timeout;	/* in seconds */
 
 	time_t rekey_time;	/* in seconds */
 	unsigned rekey_method; /* REKEY_METHOD_ */

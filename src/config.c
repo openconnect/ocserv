@@ -35,6 +35,7 @@
 #include <auth/plain.h>
 
 #include <vpn.h>
+#include <cookies.h>
 #include <main.h>
 #include <ctl.h>
 #include <tlslib.h>
@@ -100,7 +101,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "mtu", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "net-priority", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
-	{ .name = "cookie-validity", .type = OPTION_NUMERIC, .mandatory = 1 },
+	{ .name = "cookie-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-method", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -476,7 +477,6 @@ unsigned force_cert_auth;
 	config->tx_per_sec /= 1000;
 
 	READ_TF("deny-roaming", config->deny_roaming, 0);
-	READ_NUMERIC("cookie-validity", config->cookie_validity);
 
 	config->rekey_time = -1;
 	READ_NUMERIC("rekey-time", config->rekey_time);
@@ -495,6 +495,10 @@ unsigned force_cert_auth;
 		exit(1);
 	}
 	talloc_free(tmp); tmp = NULL;
+
+	READ_NUMERIC("cookie-timeout", config->cookie_timeout);
+	if (config->cookie_timeout == 0)
+		config->cookie_timeout = DEFAULT_COOKIE_RECON_TIMEOUT;
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("idle-timeout", config->idle_timeout);

@@ -166,16 +166,12 @@ time_t now = time(0);
 gnutls_datum_t key = {s->cookie_key, sizeof(s->cookie_key)};
 char str_ip[MAX_IP_STR+1];
 PROTOBUF_ALLOCATOR(pa, proc);
+struct cookie_entry_st *old;
 
 	if (req->cookie.len == 0) {
 		mslog(s, proc, LOG_INFO, "error in cookie size");
 		return -1;
 	}
-
-	proc->cookie = talloc_memdup(proc, req->cookie.data, req->cookie.len);
-	if (proc->cookie == NULL)
-		return -1;
-	proc->cookie_size = req->cookie.len;
 
 	ret = decrypt_cookie(&pa, &key, req->cookie.data, req->cookie.len, &cmsg);
 	if (ret < 0) {
@@ -183,18 +179,9 @@ PROTOBUF_ALLOCATOR(pa, proc);
 		return -1;
 	}
 
-	if (cmsg->expiration < now)
-		return -1;
-
 	if (cmsg->username == NULL)
 		return -1;
 	snprintf(proc->username, sizeof(proc->username), "%s", cmsg->username);
-
-	if (cmsg->groupname)
-		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
-
-	if (cmsg->hostname)
-		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);
 
 	if (cmsg->session_id.len != sizeof(proc->dtls_session_id))
 		return -1;
@@ -202,9 +189,7 @@ PROTOBUF_ALLOCATOR(pa, proc);
 	memcpy(proc->dtls_session_id, cmsg->session_id.data, cmsg->session_id.len);
 	proc->dtls_session_id_size = cmsg->session_id.len;
 
-	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
-
-	/* cookie is good so far, now read config */
+	/* cookie is good so far, now read config (in order to know whether roaming is allowed or not */
 	memset(&proc->config, 0, sizeof(proc->config));
 	apply_default_sup_config(s->config, proc);
 
@@ -238,6 +223,41 @@ PROTOBUF_ALLOCATOR(pa, proc);
 		}
 	}
 
+	/* check for a valid stored cookie */
+	if ((old=find_cookie_entry(&s->cookies, req->cookie.data, req->cookie.len)) != NULL) {
+		if (old->proc != NULL) {
+			mslog(s, old->proc, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", old->proc->username);
+
+			/* steal its leases */
+			steal_ip_leases(old->proc, proc);
+
+			/* steal its cookie */
+			old->proc->cookie_ptr = NULL;
+
+			kill(old->proc->pid, SIGTERM);
+		} else {
+			revive_cookie(old);
+		}
+		proc->cookie_ptr = old;
+		old->proc = proc;
+	} else {
+		if (cmsg->expiration < now) {
+			mslog(s, proc, LOG_INFO, "ignoring expired cookie");
+			return -1;
+		}
+
+		proc->cookie_ptr = new_cookie_entry(&s->cookies, proc, req->cookie.data, req->cookie.len);
+		if (proc->cookie_ptr == NULL)
+			return -1;
+	}
+
+	if (cmsg->groupname)
+		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
+
+	if (cmsg->hostname)
+		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);
+
+	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
 
 	return 0;
 }
@@ -256,17 +276,12 @@ int check_multiple_users(main_server_st *s, struct proc_st* proc)
 struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
 
+	if (s->config->max_same_clients == 0)
+		return 0;
+
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp != proc && ctmp->pid != -1) {
-			if (ctmp->cookie_size == proc->cookie_size &&
-			    memcmp(proc->cookie, ctmp->cookie, ctmp->cookie_size) == 0) {
-				mslog(s, ctmp, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", ctmp->username);
-
-				/* steal its leases */
-				steal_ip_leases(ctmp, proc);
-
-				kill(ctmp->pid, SIGTERM);
-			} else if (strcmp(proc->username, ctmp->username) == 0) {
+			if (strcmp(proc->username, ctmp->username) == 0) {
 				entries++;
 			}
 		}

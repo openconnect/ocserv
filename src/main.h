@@ -28,8 +28,9 @@
 #include <vpn.h>
 #include <tlslib.h>
 #include "ipc.pb-c.h"
-#include <cookies.h>
 #include <common.h>
+
+#define COOKIE_KEY_SIZE 16
 
 int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config);
 void reload_cfg_file(void *pool, struct cfg_st* config);
@@ -71,6 +72,14 @@ enum {
 	PS_AUTH_COMPLETED, /* successful authentication */
 };
 
+typedef struct cookie_entry_st {
+	struct proc_st *proc; /* may be null, otherwise the proc that uses that cookie */
+	time_t expiration; /* -1 or the time it should expire */
+
+	uint8_t *cookie; /* the cookie associated with the session */
+	unsigned cookie_size;
+} cookie_st;
+
 /* Each worker process maps to a unique proc_st structure.
  */
 typedef struct proc_st {
@@ -100,14 +109,15 @@ typedef struct proc_st {
 	char username[MAX_USERNAME_SIZE]; /* the owner */
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
-	uint8_t *cookie; /* the cookie associated with the session */
-	unsigned cookie_size;
 
 	/* the following are copied here from the worker process for reporting
 	 * purposes (from main-ctl-handler). */
 	char user_agent[MAX_AGENT_NAME];
 	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char dtls_ciphersuite[MAX_DTLS_CIPHERSUITE_NAME];
+
+	/* pointer to the cookie used by this session */
+	struct cookie_entry_st *cookie_ptr;
 
 	/* if the session is initiated by a cookie the following two are set
 	 * and are considered when generating an IP address. That is used to
@@ -151,10 +161,16 @@ struct ban_list_st {
 	struct list_head head;
 };
 
+struct cookie_entry_db_st {
+	struct htable *db;
+	unsigned total;
+};
+
 typedef struct main_server_st {
 	struct cfg_st *config;
 	
 	struct ip_lease_db_st ip_leases;
+	struct cookie_entry_db_st cookies;
 
 	tls_sess_db_st tls_db;
 	tls_st *creds;

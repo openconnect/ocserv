@@ -833,8 +833,8 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 
 	ret =
 	    tls_printf(ws->session,
-		       "Set-Cookie: webvpn=%s; Max-Age=%u; Secure\r\n",
-		       str_cookie, (unsigned)ws->config->cookie_validity);
+		       "Set-Cookie: webvpn=%s; Secure\r\n",
+		       str_cookie);
 	if (ret < 0)
 		return -1;
 

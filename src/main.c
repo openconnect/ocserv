@@ -588,6 +588,7 @@ void clear_lists(main_server_st *s)
 	tls_cache_deinit(&s->tls_db);
 	ip_lease_deinit(&s->ip_leases);
 	ctl_handler_deinit(s);
+	cookie_db_deinit(&s->cookies);
 }
 
 static void kill_children(main_server_st* s)
@@ -746,7 +747,7 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME(s) (MIN(300, ((s)->config->cookie_validity + 300)))
+#define MAINTAINANCE_TIME(s) (300)
 
 static void check_other_work(main_server_st *s)
 {
@@ -796,6 +797,7 @@ unsigned total = 10;
 		need_maintenance = 0;
 		mslog(s, NULL, LOG_DEBUG, "performing maintenance");
 		expire_tls_sessions(s);
+		expire_cookies(&s->cookies);
 		alarm(MAINTAINANCE_TIME(s));
 	}
 }
@@ -866,6 +868,7 @@ int main(int argc, char** argv)
 	list_head_init(&s->ban_list.head);
 	list_head_init(&s->script_list.head);
 	tls_cache_init(s, &s->tls_db);
+	cookie_db_init(s, &s->cookies);
 	ip_lease_init(&s->ip_leases);
 
 	sigemptyset(&blockset);

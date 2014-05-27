@@ -193,6 +193,14 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	if (proc->ipv4 || proc->ipv6)
 		remove_ip_leases(s, proc);
 
+	/* expire any available cookies */
+	if (proc->cookie_ptr) {
+		unsigned timeout = s->config->cookie_timeout;
+
+		proc->cookie_ptr->expiration = time(0) + timeout;
+		proc->cookie_ptr->proc = NULL;
+	}
+
 	talloc_free(proc);
 }
 

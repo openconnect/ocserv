@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2014 Red Hat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +32,8 @@
 #include <limits.h>
 #include <sys/stat.h>
 
+#include <ccan/htable/htable.h>
+#include <ccan/hash/hash.h>
 #include <ip-lease.h>
 #include <main.h>
 #include <cookies.h>
@@ -52,10 +55,10 @@ unsigned p_size;
 	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, key, &iv);
 	if (ret < 0)
 		return -1;
-	
+
 	cookie += COOKIE_IV_SIZE;
 	cookie_size -= (COOKIE_IV_SIZE + COOKIE_MAC_SIZE);
-	
+
 	ret = gnutls_cipher_decrypt2(h, cookie, cookie_size, cookie, cookie_size);
 	if (ret < 0) {
 		ret = -1;
@@ -70,7 +73,6 @@ unsigned p_size;
 		ret = -1;
 		goto cleanup;
 	}
-	
 	cookie += cookie_size;
 	if (memcmp(tag, cookie, COOKIE_MAC_SIZE) != 0) {
 		ret = -1;
@@ -88,7 +90,7 @@ unsigned p_size;
 
 cleanup:
 	gnutls_cipher_deinit(h);
-	
+
 	return ret;
 }
 
@@ -122,7 +124,7 @@ uint8_t *packed = NULL, *e;
 		ret = -1;
 		goto cleanup;
 	}
-	
+
 	ret = gnutls_cipher_init(&h, GNUTLS_CIPHER_AES_128_GCM, key, &iv);
 	if (ret < 0) {
 		ret = -1;
@@ -142,7 +144,7 @@ uint8_t *packed = NULL, *e;
 	memcpy(e, _iv, COOKIE_IV_SIZE);
 	e += COOKIE_IV_SIZE;
 	e_size -= COOKIE_IV_SIZE;
-	
+
 	ret = gnutls_cipher_encrypt2(h, packed, packed_size, e, e_size);
 	if (ret < 0) {
 		ret = -1;
@@ -150,7 +152,7 @@ uint8_t *packed = NULL, *e;
 	}
 
 	e += packed_size;
-	
+
 	ret = gnutls_cipher_tag(h, e, COOKIE_MAC_SIZE);
 	if (ret < 0) {
 		ret = -1;
@@ -158,7 +160,7 @@ uint8_t *packed = NULL, *e;
 	}
 
 	ret = 0;
-	
+
 cleanup:
 	talloc_free(packed);
 	if (h != NULL)
@@ -167,3 +169,131 @@ cleanup:
 
 }
 
+void cookie_db_deinit(struct cookie_entry_db_st* db)
+{
+struct cookie_entry_st * e;
+struct htable_iter iter;
+
+	e = htable_first(db->db, &iter);
+	while(e != NULL) {
+		if (e->proc)
+			e->proc->cookie_ptr = NULL;
+
+		e->proc = NULL;
+		safe_memset(e->cookie, 0, e->cookie_size);
+		talloc_free(e);
+
+		e = htable_next(db->db, &iter);
+	}
+	htable_clear(db->db);
+	talloc_free(db->db);
+
+	return;
+}
+
+void expire_cookies(struct cookie_entry_db_st* db)
+{
+struct cookie_entry_st * e;
+struct htable_iter iter;
+time_t now = time(0);
+
+	e = htable_first(db->db, &iter);
+	while(e != NULL) {
+		if (e->expiration == -1 || now < e->expiration)
+			goto cont;
+
+		if (e->proc) {
+			syslog(LOG_ERR, "found proc that references expired cookie!");
+			e->proc->cookie_ptr = NULL;
+		}
+
+		htable_delval(db->db, &iter);
+		db->total--;
+
+		safe_memset(e->cookie, 0, e->cookie_size);
+		talloc_free(e);
+ cont:
+		e = htable_next(db->db, &iter);
+	}
+
+	return;
+}
+
+static size_t rehash(const void* _e, void* unused)
+{
+const struct cookie_entry_st * e = _e;
+
+	return hash_any(e->cookie, e->cookie_size, 0);
+}
+
+void cookie_db_init(void *pool, struct cookie_entry_db_st* db)
+{
+	db->db = talloc(pool, struct htable);
+	htable_init(db->db, rehash, NULL);
+	db->total = 0;
+}
+
+static bool cookie_entry_cmp(const void* _c1, void* _c2)
+{
+const struct cookie_entry_st* c1 = _c1;
+struct cookie_entry_st* c2 = _c2;
+
+	if (c1->cookie_size == c2->cookie_size &&
+		memcmp(c1->cookie, c2->cookie, c2->cookie_size) == 0)
+		return 1;
+
+	return 0;
+}
+
+struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *cookie, unsigned cookie_size)
+{
+	struct cookie_entry_st *e;
+	struct cookie_entry_st t;
+
+	t.cookie = cookie;
+	t.cookie_size = cookie_size;
+
+	e = htable_get(db->db, hash_any(cookie, cookie_size, 0), cookie_entry_cmp, &t);
+	if (e == NULL)
+		return NULL;
+
+	if (e->expiration != -1 && e->expiration < time(0))
+		return NULL;
+
+	return e;
+}
+
+void revive_cookie(struct cookie_entry_st * e)
+{
+	e->expiration = -1;
+}
+
+struct cookie_entry_st *new_cookie_entry(struct cookie_entry_db_st* db, proc_st *proc, void *cookie, unsigned cookie_size)
+{
+	struct cookie_entry_st *t;
+
+	t = talloc(db->db, struct cookie_entry_st);
+	if (t == NULL)
+		return NULL;
+
+	t->expiration = -1;
+	t->cookie = talloc_memdup(t, cookie, cookie_size);
+	t->cookie_size = cookie_size;
+
+	if (t->cookie == NULL) {
+		goto fail;
+	}
+	t->proc = proc;
+
+	if (htable_add(db->db, rehash(t, NULL), t) == 0) {
+		goto fail;
+	}
+
+	db->total++;
+
+	return t;
+
+ fail:
+ 	talloc_free(t);
+ 	return NULL;
+}

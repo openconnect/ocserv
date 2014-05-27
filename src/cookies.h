@@ -22,17 +22,27 @@
 #define COOKIES_H
 
 #include <vpn.h>
+#include <main.h>
 #include <ipc.pb-c.h>
-
-#define COOKIE_KEY_SIZE 16
 
 #define COOKIE_IV_SIZE 12 /* AES-GCM */
 #define COOKIE_MAC_SIZE 12 /* 96-bits of AES-GCM */
+
+/* The time after a disconnection the cookie is valid */
+#define DEFAULT_COOKIE_RECON_TIMEOUT 120
 
 int encrypt_cookie(void *pool, gnutls_datum_t *key, const Cookie *msg,
         uint8_t** ecookie, unsigned *ecookie_size);
 int decrypt_cookie(ProtobufCAllocator *pa, gnutls_datum_t *key,
 			uint8_t *cookie, unsigned cookie_size, 
 			Cookie **msg);
+
+void cookie_db_init(void *pool, struct cookie_entry_db_st* db);
+void cookie_db_deinit(struct cookie_entry_db_st* db);
+void expire_cookies(struct cookie_entry_db_st* db);
+struct cookie_entry_st *new_cookie_entry(struct cookie_entry_db_st* db, proc_st *proc, void *cookie, unsigned cookie_size);
+struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *cookie, unsigned cookie_len);
+
+void revive_cookie(struct cookie_entry_st *);
 
 #endif

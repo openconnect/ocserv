@@ -230,17 +230,19 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 		goto error_status;
 
 	printf("OpenConnect SSL VPN server\n");
-	printf("     Status: %s\n", rep->status != 0 ? "online" : "error");
+	printf("         Status: %s\n", rep->status != 0 ? "online" : "error");
 
 	t = rep->start_time;
 	tm = localtime(&t);
 	strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
-	printf("   Up since: %s\n", str_since);
+	printf("       Up since: %s\n", str_since);
 
-	printf("    Clients: %u\n", (unsigned)rep->active_clients);
+	printf("        Clients: %u\n", (unsigned)rep->active_clients);
+	printf("        Cookies: %u\n", (unsigned)rep->stored_cookies);
+	printf(" TLS DB entries: %u\n", (unsigned)rep->stored_tls_sessions);
 	printf("\n");
-	printf(" Server PID: %u\n", (unsigned)rep->pid);
-	printf("Sec-mod PID: %u\n", (unsigned)rep->sec_mod_pid);
+	printf("     Server PID: %u\n", (unsigned)rep->pid);
+	printf("    Sec-mod PID: %u\n", (unsigned)rep->sec_mod_pid);
 
 	status_rep__free_unpacked(rep, &pa);
 
@@ -249,7 +251,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 
  error_status:
 	printf("OpenConnect SSL VPN server\n");
-	printf("     Status: offline\n");
+	printf("         Status: offline\n");
 	ret = 1;
 
  cleanup:

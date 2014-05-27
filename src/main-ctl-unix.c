@@ -160,6 +160,8 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.start_time = ctx->s->start_time;
 	rep.sec_mod_pid = ctx->s->sec_mod_pid;
 	rep.active_clients = ctx->s->active_clients;
+	rep.stored_cookies = ctx->s->cookies.total;
+	rep.stored_tls_sessions = ctx->s->tls_db.entries;
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,

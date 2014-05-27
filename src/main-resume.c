@@ -178,7 +178,7 @@ void expire_tls_sessions(main_server_st * s)
 
 		exp = gnutls_db_check_entry_time(&d);
 
-		if (now - exp > TLS_SESSION_EXPIRATION_TIME) {
+		if (now - exp > TLS_SESSION_EXPIRATION_TIME(s->config)) {
 			cache->session_id_size = 0;
 
 			htable_delval(s->tls_db.ht, &iter);

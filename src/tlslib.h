@@ -113,7 +113,7 @@ typedef struct
   unsigned int session_data_size;
 } tls_cache_st;
 
-#define TLS_SESSION_EXPIRATION_TIME 600
+#define TLS_SESSION_EXPIRATION_TIME(config) ((config)->cookie_timeout)
 #define DEFAULT_MAX_CACHED_TLS_SESSIONS 64
 
 void tls_cache_init(void *pool, tls_sess_db_st* db);

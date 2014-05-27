@@ -183,6 +183,7 @@ void expire_tls_sessions(main_server_st * s)
 			cache->session_id_size = 0;
 
 			htable_delval(&s->tls_db->ht, &iter);
+			safe_memset(cache->session_data, 0, cache->session_data_size);
 			talloc_free(cache);
 			s->tls_db->entries--;
 		}

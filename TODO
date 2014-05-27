@@ -1,7 +1,16 @@
 Short term items:
 
+* Fix issue with some anyconnect client not being presented the group
+  selection menu when having groups in a certificate. The issue is because
+  they don't send their certificate on subsequent connections, and they
+  don't resume the initial connection either.
+
+* Allow cookies to be valid for the lifetime of the user's session plus
+  few minutes for a reconnection.
+
 * Think for ways for ocserv to co-exist on the same system with
-  an HTTPS server (while sharing the same port).
+  an HTTPS server (while sharing the same port). A possible way is
+  through sniproxy -for low-traffic sites.
 
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time (or should we drop this functionality altogether and rely

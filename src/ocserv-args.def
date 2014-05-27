@@ -213,8 +213,8 @@ auth-timeout = 40
 # which he can reconnect. That cookie will be invalided if not
 # used within this timeout value. On a user disconnection, that
 # cookie will also be active for this time amount prior to be
-# invalid. That allows a reasonable amount of time for roaming between
-# networks.
+# invalid. That should allow a reasonable amount of time for roaming
+# between different networks.
 cookie-timeout = 300
 
 # Whether roaming is allowed, i.e., if true a cookie is

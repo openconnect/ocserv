@@ -26,6 +26,9 @@
   directives. That allows overriding existing routes with a default
   route for specific users and groups.
 - The cookies can be limited to the specific IP they were granted to.
+- Cookies are now valid during the whole connection period + a timeout
+  value after disconnection. That deprecates the cookie-validity config
+  option and introduces the cookie-timeout option.
 - Added the proxy-url configuration option to allow sending a proxy URL.
 - License was upgraded to GPLv3.
 

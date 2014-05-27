@@ -585,7 +585,7 @@ void clear_lists(main_server_st *s)
 		talloc_free(script_tmp);
 	}
 
-	tls_cache_deinit(s->tls_db);
+	tls_cache_deinit(&s->tls_db);
 	ip_lease_deinit(&s->ip_leases);
 	ctl_handler_deinit(s);
 }

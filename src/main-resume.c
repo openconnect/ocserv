@@ -47,7 +47,7 @@ int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,
 
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = htable_firstval(&s->tls_db->ht, &iter, key);
+	cache = htable_firstval(s->tls_db.ht, &iter, key);
 	while (cache != NULL) {
 		if (req->session_id.len == cache->session_id_size &&
 		    memcmp(req->session_id.data, cache->session_id,
@@ -56,13 +56,13 @@ int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,
 			cache->session_data_size = 0;
 			cache->session_id_size = 0;
 
-			htable_delval(&s->tls_db->ht, &iter);
+			htable_delval(s->tls_db.ht, &iter);
 			talloc_free(cache);
-			s->tls_db->entries--;
+			s->tls_db.entries--;
 			return 0;
 		}
 
-		cache = htable_nextval(&s->tls_db->ht, &iter, key);
+		cache = htable_nextval(s->tls_db.ht, &iter, key);
 	}
 
 	return 0;
@@ -80,7 +80,7 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = htable_firstval(&s->tls_db->ht, &iter, key);
+	cache = htable_firstval(s->tls_db.ht, &iter, key);
 	while (cache != NULL) {
 		if (req->session_id.len == cache->session_id_size &&
 		    memcmp(req->session_id.data, cache->session_id,
@@ -108,7 +108,7 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 			}
 		}
 
-		cache = htable_nextval(&s->tls_db->ht, &iter, key);
+		cache = htable_nextval(s->tls_db.ht, &iter, key);
 	}
 
 	return 0;
@@ -128,7 +128,7 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 		return -1;
 
 	max = MAX(2 * s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
-	if (s->tls_db->entries >= max) {
+	if (s->tls_db.entries >= max) {
 		mslog(s, NULL, LOG_INFO,
 		      "maximum number of stored TLS sessions reached (%u)",
 		      max);
@@ -138,7 +138,7 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = talloc(s, tls_cache_st);
+	cache = talloc(s->tls_db.ht, tls_cache_st);
 	if (cache == NULL)
 		return -1;
 
@@ -151,8 +151,8 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 	       req->session_data.len);
 	memcpy(&cache->remote_addr, &proc->remote_addr, proc->remote_addr_len);
 
-	htable_add(&s->tls_db->ht, key, cache);
-	s->tls_db->entries++;
+	htable_add(s->tls_db.ht, key, cache);
+	s->tls_db.entries++;
 
 	mslog_hex(s, proc, LOG_DEBUG, "TLS session DB storing",
 				req->session_id.data,
@@ -169,7 +169,7 @@ void expire_tls_sessions(main_server_st * s)
 
 	now = time(0);
 
-	cache = htable_first(&s->tls_db->ht, &iter);
+	cache = htable_first(s->tls_db.ht, &iter);
 	while (cache != NULL) {
 		gnutls_datum_t d;
 
@@ -182,12 +182,12 @@ void expire_tls_sessions(main_server_st * s)
 			cache->session_data_size = 0;
 			cache->session_id_size = 0;
 
-			htable_delval(&s->tls_db->ht, &iter);
+			htable_delval(s->tls_db.ht, &iter);
 			safe_memset(cache->session_data, 0, cache->session_data_size);
 			talloc_free(cache);
-			s->tls_db->entries--;
+			s->tls_db.entries--;
 		}
-		cache = htable_next(&s->tls_db->ht, &iter);
+		cache = htable_next(s->tls_db.ht, &iter);
 	}
 
 	return;

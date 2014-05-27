@@ -26,6 +26,12 @@
 #include <vpn.h>
 #include <ccan/htable/htable.h>
 
+typedef struct 
+{
+	struct htable *ht;
+	unsigned int entries;
+} tls_sess_db_st;
+
 #define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
 	
 int __attribute__ ((format(printf, 2, 3)))
@@ -110,8 +116,8 @@ typedef struct
 #define TLS_SESSION_EXPIRATION_TIME 600
 #define DEFAULT_MAX_CACHED_TLS_SESSIONS 64
 
-void tls_cache_init(void *pool, hash_db_st** db);
-void tls_cache_deinit(hash_db_st* db);
+void tls_cache_init(void *pool, tls_sess_db_st* db);
+void tls_cache_deinit(tls_sess_db_st* db);
 void *calc_sha1_hash(void *pool, char* file, unsigned cert);
 
 #endif

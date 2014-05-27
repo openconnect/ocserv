@@ -156,7 +156,7 @@ typedef struct main_server_st {
 	
 	struct ip_lease_db_st ip_leases;
 
-	hash_db_st *tls_db;
+	tls_sess_db_st tls_db;
 	tls_st *creds;
 	
 	uint8_t cookie_key[COOKIE_KEY_SIZE];

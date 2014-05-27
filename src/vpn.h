@@ -114,12 +114,6 @@ typedef enum {
 	SM_CMD_SIGN,
 } cmd_request_t;
 
-typedef struct 
-{
-	struct htable ht;
-	unsigned int entries;
-} hash_db_st;
-
 #define MAX_IP_STR 46
 
 struct group_cfg_st {

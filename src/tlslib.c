@@ -182,26 +182,22 @@ const tls_cache_st *e = _e;
 	return hash_any(e->session_id, e->session_id_size, 0);
 }
 
-void tls_cache_init(void *pool, hash_db_st** _db)
+void tls_cache_init(void *pool, tls_sess_db_st* db)
 {
-hash_db_st * db;
-
-	db = talloc(pool, hash_db_st);
-	if (db == NULL)
+	db->ht = talloc(pool, struct htable);
+	if (db->ht == NULL)
 		exit(1);
 
-	htable_init(&db->ht, rehash, NULL);
+	htable_init(db->ht, rehash, NULL);
 	db->entries = 0;
-
-	*_db = db;
 }
 
-void tls_cache_deinit(hash_db_st* db)
+void tls_cache_deinit(tls_sess_db_st* db)
 {
 tls_cache_st* cache;
 struct htable_iter iter;
 
-	cache = htable_first(&db->ht, &iter);
+	cache = htable_first(db->ht, &iter);
 	while(cache != NULL) {
 		if (cache->session_data_size > 0) {
 	          	safe_memset(cache->session_data, 0, cache->session_data_size);
@@ -210,11 +206,11 @@ struct htable_iter iter;
 		}
           	talloc_free(cache);
 
-          	cache = htable_next(&db->ht, &iter);
+          	cache = htable_next(db->ht, &iter);
         }
-        htable_clear(&db->ht);
+        htable_clear(db->ht);
 	db->entries = 0;
-	talloc_free(db);
+	talloc_free(db->ht);
 
         return;
 }

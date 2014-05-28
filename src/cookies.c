@@ -180,7 +180,7 @@ struct htable_iter iter;
 			e->proc->cookie_ptr = NULL;
 
 		e->proc = NULL;
-		safe_memset(e->cookie, 0, e->cookie_size);
+		safe_memset(e->cookie_hash, 0, sizeof(e->cookie_hash));
 		talloc_free(e);
 
 		e = htable_next(db->db, &iter);
@@ -210,7 +210,7 @@ time_t now = time(0);
 		htable_delval(db->db, &iter);
 		db->total--;
 
-		safe_memset(e->cookie, 0, e->cookie_size);
+		safe_memset(e->cookie_hash, 0, sizeof(e->cookie_hash));
 		talloc_free(e);
  cont:
 		e = htable_next(db->db, &iter);
@@ -223,7 +223,7 @@ static size_t rehash(const void* _e, void* unused)
 {
 const struct cookie_entry_st * e = _e;
 
-	return hash_any(e->cookie, e->cookie_size, 0);
+	return hash_any(e->cookie_hash, sizeof(e->cookie_hash), 0);
 }
 
 void cookie_db_init(void *pool, struct cookie_entry_db_st* db)
@@ -238,8 +238,7 @@ static bool cookie_entry_cmp(const void* _c1, void* _c2)
 const struct cookie_entry_st* c1 = _c1;
 struct cookie_entry_st* c2 = _c2;
 
-	if (c1->cookie_size == c2->cookie_size &&
-		memcmp(c1->cookie, c2->cookie, c2->cookie_size) == 0)
+	if (memcmp(c1->cookie_hash, c2->cookie_hash, sizeof(c1->cookie_hash)) == 0)
 		return 1;
 
 	return 0;
@@ -249,9 +248,12 @@ struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *c
 {
 	struct cookie_entry_st *e;
 	struct cookie_entry_st t;
+	int ret;
 
-	t.cookie = cookie;
-	t.cookie_size = cookie_size;
+	ret = gnutls_hash_fast(COOKIE_HASH, cookie, cookie_size, t.cookie_hash);
+	if (ret < 0) {
+		return NULL;
+	}
 
 	e = htable_get(db->db, hash_any(cookie, cookie_size, 0), cookie_entry_cmp, &t);
 	if (e == NULL)
@@ -271,18 +273,19 @@ void revive_cookie(struct cookie_entry_st * e)
 struct cookie_entry_st *new_cookie_entry(struct cookie_entry_db_st* db, proc_st *proc, void *cookie, unsigned cookie_size)
 {
 	struct cookie_entry_st *t;
+	int ret;
 
 	t = talloc(db->db, struct cookie_entry_st);
 	if (t == NULL)
 		return NULL;
 
 	t->expiration = -1;
-	t->cookie = talloc_memdup(t, cookie, cookie_size);
-	t->cookie_size = cookie_size;
 
-	if (t->cookie == NULL) {
+	ret = gnutls_hash_fast(COOKIE_HASH, cookie, cookie_size, t->cookie_hash);
+	if (ret < 0) {
 		goto fail;
 	}
+
 	t->proc = proc;
 
 	if (htable_add(db->db, rehash(t, NULL), t) == 0) {

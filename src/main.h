@@ -72,12 +72,17 @@ enum {
 	PS_AUTH_COMPLETED, /* successful authentication */
 };
 
+#define COOKIE_HASH_SIZE 20
+#define COOKIE_HASH GNUTLS_DIG_SHA1
+
 typedef struct cookie_entry_st {
 	struct proc_st *proc; /* may be null, otherwise the proc that uses that cookie */
 	time_t expiration; /* -1 or the time it should expire */
 
-	uint8_t *cookie; /* the cookie associated with the session */
-	unsigned cookie_size;
+	/* We store the hash of the cookie that is associated with a particular session.
+	 * The reason is to avoid a memory leak to an unprivileged process to expose
+	 * data that can be used to authenticate as another use */
+	uint8_t cookie_hash[COOKIE_HASH_SIZE];
 } cookie_st;
 
 /* Each worker process maps to a unique proc_st structure.

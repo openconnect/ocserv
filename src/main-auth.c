@@ -189,7 +189,8 @@ struct cookie_entry_st *old;
 	memcpy(proc->dtls_session_id, cmsg->session_id.data, cmsg->session_id.len);
 	proc->dtls_session_id_size = cmsg->session_id.len;
 
-	/* cookie is good so far, now read config (in order to know whether roaming is allowed or not */
+	/* cookie is good so far, now read config (in order to know
+	 * whether roaming is allowed or not */
 	memset(&proc->config, 0, sizeof(proc->config));
 	apply_default_sup_config(s->config, proc);
 
@@ -226,7 +227,8 @@ struct cookie_entry_st *old;
 	/* check for a valid stored cookie */
 	if ((old=find_cookie_entry(&s->cookies, req->cookie.data, req->cookie.len)) != NULL) {
 		if (old->proc != NULL) {
-			mslog(s, old->proc, LOG_DEBUG, "disconnecting '%s' due to new cookie connection", old->proc->username);
+			mslog(s, old->proc, LOG_DEBUG, "disconnecting '%s' (%u) due to new cookie connection",
+				old->proc->username, (unsigned)old->proc->pid);
 
 			/* steal its leases */
 			steal_ip_leases(old->proc, proc);
@@ -234,7 +236,8 @@ struct cookie_entry_st *old;
 			/* steal its cookie */
 			old->proc->cookie_ptr = NULL;
 
-			kill(old->proc->pid, SIGTERM);
+			if (old->proc->pid > 0)
+				kill(old->proc->pid, SIGTERM);
 		} else {
 			revive_cookie(old);
 		}

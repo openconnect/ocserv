@@ -109,11 +109,13 @@ static int append_group_str(worker_st * ws, str_st *str, const char *group)
 
 	value = name = group;
 
-	for (i=0;i<ws->config->group_list_size;i++) {
-		if (strcmp(ws->config->group_list[i], group) == 0) {
-			if (ws->config->friendly_group_list[i] != NULL)
-				name = ws->config->friendly_group_list[i];
-			break;
+	if (ws->config->friendly_group_list) {
+		for (i=0;i<ws->config->group_list_size;i++) {
+			if (strcmp(ws->config->group_list[i], group) == 0) {
+				if (ws->config->friendly_group_list[i] != NULL)
+					name = ws->config->friendly_group_list[i];
+				break;
+			}
 		}
 	}
 

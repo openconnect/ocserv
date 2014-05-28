@@ -131,7 +131,7 @@ typedef struct proc_st {
 	uint8_t ipv4_seed[4];
 
 	unsigned status; /* PS_AUTH_ */
-	unsigned auth_reqs; /* the number of requests received */
+	unsigned resume_reqs; /* the number of requests received */
 
 	/* these are filled in after the worker process dies, using the
 	 * Cli stats message. */

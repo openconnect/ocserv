@@ -486,6 +486,13 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			    SESSION_RESUME_REPLY_MSG__INIT;
 			SessionResumeFetchMsg *fmsg;
 
+			if (proc->resume_reqs > 0) {
+				mslog(s, proc, LOG_ERR, "too many resumption requests");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+			proc->resume_reqs++;
+
 			fmsg =
 			    session_resume_fetch_msg__unpack(&pa, raw_len,
 							     raw);

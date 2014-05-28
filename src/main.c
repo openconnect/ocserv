@@ -569,6 +569,8 @@ void clear_lists(main_server_st *s)
 			close(ctmp->fd);
 		if (ctmp->tun_lease.fd >= 0)
 			close(ctmp->tun_lease.fd);
+		if (ctmp->cookie_ptr)
+			ctmp->cookie_ptr->proc = NULL;
 		list_del(&ctmp->list);
 		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);

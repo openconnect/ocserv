@@ -747,7 +747,7 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME(s) (300)
+#define MAINTAINANCE_TIME(s) (900)
 
 static void check_other_work(main_server_st *s)
 {

@@ -443,6 +443,10 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 
 			ret = handle_resume_store_req(s, proc, smsg);
 
+			/* zeroize the data */
+			safe_memset(raw, 0, raw_len);
+			safe_memset(smsg->session_data.data, 0, smsg->session_data.len);
+
 			session_resume_store_req_msg__free_unpacked(smsg, &pa);
 
 			if (ret < 0) {
@@ -541,6 +545,9 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 		}
 
 		ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
+
+		safe_memset(raw, 0, raw_len);
+		safe_memset(auth_cookie_req->cookie.data, 0, auth_cookie_req->cookie.len);
 
 		auth_cookie_request_msg__free_unpacked(auth_cookie_req, &pa);
 

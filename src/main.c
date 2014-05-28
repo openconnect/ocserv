@@ -555,7 +555,6 @@ void clear_lists(main_server_st *s)
 	struct listener_st *ltmp = NULL, *lpos;
 	struct proc_st *ctmp = NULL, *cpos;
 	struct script_wait_st *script_tmp = NULL, *script_pos;
-	struct banned_st *btmp = NULL, *bpos;
 
 	list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
 		close(ltmp->fd);
@@ -575,11 +574,6 @@ void clear_lists(main_server_st *s)
 		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);
 		s->proc_list.total--;
-	}
-
-	list_for_each_safe(&s->ban_list.head, btmp, bpos, list) {
-		list_del(&btmp->list);
-		talloc_free(btmp);
 	}
 
 	list_for_each_safe(&s->script_list.head, script_tmp, script_pos, list) {
@@ -867,7 +861,6 @@ int main(int argc, char** argv)
 	s->start_time = time(0);
 
 	list_head_init(&s->proc_list.head);
-	list_head_init(&s->ban_list.head);
 	list_head_init(&s->script_list.head);
 	tls_cache_init(s, &s->tls_db);
 	cookie_db_init(s, &s->cookies);

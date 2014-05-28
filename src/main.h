@@ -162,10 +162,6 @@ struct banned_st {
 	socklen_t addr_len;
 };
 
-struct ban_list_st {
-	struct list_head head;
-};
-
 struct cookie_entry_db_st {
 	struct htable *db;
 	unsigned total;
@@ -185,7 +181,6 @@ typedef struct main_server_st {
 	struct listen_list_st listen_list;
 	struct proc_list_st proc_list;
 	struct script_list_st script_list;
-	struct ban_list_st ban_list;
 	
 	char socket_file[_POSIX_PATH_MAX];
 	char full_socket_file[_POSIX_PATH_MAX];

@@ -253,7 +253,7 @@ struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *c
 		return NULL;
 	}
 
-	e = htable_get(db->db, hash_any(cookie, cookie_size, 0), cookie_entry_cmp, &t);
+	e = htable_get(db->db, hash_any(t.cookie_hash, sizeof(t.cookie_hash), 0), cookie_entry_cmp, &t);
 	if (e == NULL)
 		return NULL;
 

@@ -180,7 +180,6 @@ struct htable_iter iter;
 			e->proc->cookie_ptr = NULL;
 
 		e->proc = NULL;
-		safe_memset(e->cookie_hash, 0, sizeof(e->cookie_hash));
 		talloc_free(e);
 
 		e = htable_next(db->db, &iter);
@@ -210,7 +209,6 @@ time_t now = time(0);
 		htable_delval(db->db, &iter);
 		db->total--;
 
-		safe_memset(e->cookie_hash, 0, sizeof(e->cookie_hash));
 		talloc_free(e);
  cont:
 		e = htable_next(db->db, &iter);

@@ -263,11 +263,6 @@ struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *c
 	return e;
 }
 
-void revive_cookie(struct cookie_entry_st * e)
-{
-	e->expiration = -1;
-}
-
 struct cookie_entry_st *new_cookie_entry(struct cookie_entry_db_st* db, proc_st *proc, void *cookie, unsigned cookie_size)
 {
 	struct cookie_entry_st *t;

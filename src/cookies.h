@@ -43,6 +43,9 @@ void expire_cookies(struct cookie_entry_db_st* db);
 struct cookie_entry_st *new_cookie_entry(struct cookie_entry_db_st* db, proc_st *proc, void *cookie, unsigned cookie_size);
 struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *cookie, unsigned cookie_len);
 
-void revive_cookie(struct cookie_entry_st *);
+inline static void revive_cookie(struct cookie_entry_st * e)
+{
+	e->expiration = -1;
+}
 
 #endif

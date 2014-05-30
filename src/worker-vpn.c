@@ -1613,6 +1613,8 @@ static int connect_handler(worker_st * ws)
 			       (unsigned)(ws->config->rekey_time));
 		SEND_ERR(ret);
 
+		/* if the peer isn't patched for safe renegotiation, always
+		 * require him to open a new tunnel. */
 		if (gnutls_safe_renegotiation_status(ws->session) != 0)
 			method = ws->config->rekey_method;
 		else

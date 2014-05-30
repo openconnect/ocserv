@@ -33,6 +33,22 @@
 - License was upgraded to GPLv3.
 
 
+* Version 0.3.6 (released 2014-05-24)
+
+- Use a variant of memset() that cannot be optimized out while
+  overwritting critical parameters.
+
+
+* Version 0.3.5 (released 2014-05-08)
+
+- Corrected issue in the stats reporting for resumed processes and
+  modified its sending to be periodically, in addition to the worker
+  process termination time (adds the new config file variable
+  stats-send-time).
+- Added the STATS_DURATION script environment variable which reports
+  the duration of the session in seconds.
+
+
 * Version 0.3.4 (released 2014-05-01)
 
 - Execute disconnect script for users that their IP was hijacked by a

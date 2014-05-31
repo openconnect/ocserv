@@ -132,20 +132,34 @@ fi
 #	stop
 #fi
 
+sleep 2
+
 kill $PID
 
-sleep 3
+sleep 4
 
 #check whether /tmp/disconnect/ok was created
+rm -f ./not-ok
+$DOCKER cp test_ocserv:/tmp/disconnect/not-ok ./
+if test -f ./not-ok;then
+	echo "There was an issue getting stats"
+	stop
+fi
+rm -f ./not-ok
+
+ret=0
+
 rm -f ./ok
 $DOCKER cp test_ocserv:/tmp/disconnect/ok ./
 if ! test -f ./ok;then
-	echo "Did not get stats"
-	stop
+	echo "Don't know if stats were received"
+	ret=77
 fi
+echo -n "stats: "
+echo `cat ./ok`
 rm -f ./ok
 
 $DOCKER stop test_ocserv
 $DOCKER rm test_ocserv
 
-exit 0
+exit $ret

@@ -392,12 +392,6 @@ Summary of build options:
   local http-parser:    ${with_local_http_parser}
 ])
 
-if test "$occtl_enabled" = no;then
-AC_MSG_NOTICE([
-  (needs dbus and libnl3)
-])
-fi
-
 AC_MSG_NOTICE([
 
 Experimental options:

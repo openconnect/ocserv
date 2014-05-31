@@ -1,5 +1,9 @@
-* Version 0.8.0 (released 2014-05-31)
+* Version 0.8.0 (unreleased)
 
+- Fix endianess issue with internal messages.
+
+
+* Version 0.8.0 (released 2014-05-31)
 - By default unix sockets are being used for the communication with
   occtl, instead of D-BUS. That allows for occtl to connect to any
   of the running servers in the system, by specifying '-s' and the

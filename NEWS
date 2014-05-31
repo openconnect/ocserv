@@ -1,4 +1,4 @@
-* Version 0.8.0 (pre-release 2014-05-24)
+* Version 0.8.0 (released 2014-05-31)
 
 - By default unix sockets are being used for the communication with
   occtl, instead of D-BUS. That allows for occtl to connect to any

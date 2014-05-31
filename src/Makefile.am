@@ -49,7 +49,7 @@ endif
 noinst_LIBRARIES = libcmd-ocserv.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
 
-ocserv-args.c: $(srcdir)/ocserv-args.def
+ocserv-args.c: $(srcdir)/ocserv-args.def $(srcdir)/version.inc
 	$(AUTOGEN) $<
 ocserv-args.h: ocserv-args.c
 
@@ -104,7 +104,7 @@ ocpasswd_SOURCES = ocpasswd.c
 ocpasswd_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
 
-ocpasswd-args.c: $(srcdir)/ocpasswd-args.def
+ocpasswd-args.c: $(srcdir)/ocpasswd-args.def $(srcdir)/version.inc
 	$(AUTOGEN) $<
 ocpasswd-args.h: ocpasswd-args.c
 

@@ -83,15 +83,14 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 	struct iovec iov[2];
 	unsigned iov_len = 1;
 	int e, ret;
-	unsigned length = 0;
+	uint16_t length = 0;
 	void *packed = NULL;
 
 	if (get_size)
 		length = get_size(data);
 
 	header[0] = cmd;
-	header[1] = length;
-	header[2] = length >> 8;
+	memcpy(&header[1], &length, 2);
 
 	iov[0].iov_base = header;
 	iov[0].iov_len = 3;
@@ -145,7 +144,7 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 			goto fail;
 		}
 
-		length = (header[2] << 8) | header[1];
+		memcpy(&length, &header[1], 2);
 
 		rep->data_size = length;
 		rep->data = talloc_size(ctx, length);

@@ -354,6 +354,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	unsigned cmd, length;
 	unsigned i, buffer_size;
 	uint8_t *buffer, *tpool;
+	uint16_t l16;
 	struct pin_st pins;
 	int sd;
 	sec_mod_st *sec;
@@ -538,10 +539,11 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		}
 
 		cmd = buffer[0];
-		length = buffer[1] | buffer[2] << 8;
+		memcpy(&l16, &buffer[1], 2);
+		length = l16;
 
 		if (length > buffer_size - 4) {
-			seclog(LOG_INFO, "too big message");
+			seclog(LOG_INFO, "too big message (%d)", length);
 			goto cont;
 		}
 

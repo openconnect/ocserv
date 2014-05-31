@@ -629,7 +629,7 @@ static void ctl_handle_commands(main_server_st * s)
 		}
 		goto cleanup;
 	}
-	length = (buffer[2] << 8) | buffer[1];
+	memcpy(&length, &buffer[1], 2);
 	buffer_size = ret - 3;
 
 	if (length != buffer_size) {

@@ -93,7 +93,7 @@ int handle_worker_commands(struct worker_st *ws)
 
 	if (ret == 0) {
 		oclog(ws, LOG_ERR, "parent terminated");
-		exit(0);
+		return ERR_NO_CMD_FD;
 	}
 
 	if (length > ret - 3) {

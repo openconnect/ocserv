@@ -82,6 +82,7 @@ extern int syslog_open;
 #define ERR_EXEC -10
 #define ERR_PEER_TERMINATED -11
 #define ERR_CTL -12
+#define ERR_NO_CMD_FD -13
 
 #define ERR_WORKER_TERMINATED ERR_PEER_TERMINATED
 

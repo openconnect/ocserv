@@ -1860,6 +1860,7 @@ static int connect_handler(worker_st * ws)
 		}
 
 		if (terminate != 0) {
+ terminate:
 			ws->buffer[0] = 'S';
 			ws->buffer[1] = 'T';
 			ws->buffer[2] = 'F';
@@ -1936,6 +1937,10 @@ static int connect_handler(worker_st * ws)
 		/* read commands from command fd */
 		if (FD_ISSET(ws->cmd_fd, &rfds)) {
 			ret = handle_worker_commands(ws);
+			if (ret == ERR_NO_CMD_FD) {
+				goto terminate;
+			}
+
 			if (ret < 0) {
 				goto exit;
 			}

@@ -266,7 +266,7 @@ static size_t rehash(const void *_e, void *unused)
 
 static bool str_cmp(const void* _c1, void* _c2)
 {
-	const char *c1 = _c1, *c2 = c2;
+	const char *c1 = _c1, *c2 = _c2;
 
 	if (strcmp(c1, c2) == 0)
 		return 1;

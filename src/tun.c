@@ -46,7 +46,6 @@
 #include <ccan/list/list.h>
 
 #ifdef __FreeBSD__
-# include <net/if_tun.h>
 # include <net/if_var.h>
 # include <netinet/in_var.h>
 #endif

@@ -661,7 +661,7 @@ time_t now;
 	if (buffer[0] != 22) {
 		mslog(s, NULL, LOG_INFO, "unexpected DTLS content type: %u", (unsigned int)buffer[0]);
 		/* Here we received a non-client hello packet. It may be that
-		 * the client's NAT changed it's UDP source port and the previous
+		 * the client's NAT changed its UDP source port and the previous
 		 * connection is invalidated. Try to see if we can simply match
 		 * the IP address and forward the socket.
 		 */
@@ -700,7 +700,7 @@ time_t now;
 		}
 
 		if (now - proc_to_send->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
-			mslog(s, proc_to_send, LOG_INFO, "received UDP connection too soon");
+			mslog(s, proc_to_send, LOG_DEBUG, "received UDP connection too soon");
 			goto fail;
 		}
 
@@ -750,7 +750,7 @@ static void check_other_work(main_server_st *s)
 unsigned total = 10;
 
 	if (reload_conf != 0) {
-		mslog(s, NULL, LOG_INFO, "reloading configuration");
+		mslog(s, NULL, LOG_DEBUG, "reloading configuration");
 		reload_cfg_file(s->main_pool, s->config);
 		tls_reload_crl(s, s->creds);
 		reload_conf = 0;
@@ -1030,13 +1030,6 @@ int main(int argc, char** argv)
 					continue;
 				}
 				set_cloexec_flag (fd, 1);
-
-				ret = gnutls_rnd(GNUTLS_RND_RANDOM, ws->sid, sizeof(ws->sid));
-				if (ret < 0) {
-					close(fd);
-					mslog(s, NULL, LOG_ERR, "Error generating SID");
-					break;
-				}
 
 				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
 					close(fd);

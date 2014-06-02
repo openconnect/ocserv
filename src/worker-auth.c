@@ -1022,7 +1022,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					NULL, 0,
 					&username);
 			if (ret < 0) {
-				oclog(ws, LOG_INFO, "failed reading username");
+				oclog(ws, LOG_DEBUG, "failed reading username");
 				goto ask_auth;
 			}
 
@@ -1149,7 +1149,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	oclog(ws, LOG_INFO, "user '%s' obtained cookie", ws->username);
+	oclog(ws, LOG_DEBUG, "user '%s' obtained cookie", ws->username);
 	ws->auth_state = S_AUTH_COOKIE;
 
 	return post_common_handler(ws, http_ver);

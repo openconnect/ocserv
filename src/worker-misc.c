@@ -114,7 +114,7 @@ int handle_worker_commands(struct worker_st *ws)
 			int fd;
 
 			if (ws->udp_state != UP_WAIT_FD) {
-				oclog(ws, LOG_INFO, "received another a UDP fd!");
+				oclog(ws, LOG_DEBUG, "received another a UDP fd!");
 			}
 
 			tmsg = udp_fd_msg__unpack(NULL, length, cmd_data);
@@ -228,7 +228,7 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", vinfo->name);
 		ret = ioctl(fd, SIOCGIFMTU, (caddr_t) & ifr);
 		if (ret < 0) {
-			oclog(ws, LOG_ERR,
+			oclog(ws, LOG_INFO,
 			      "cannot obtain MTU for %s. Assuming 1500",
 			      vinfo->name);
 			vinfo->mtu = 1500;

@@ -533,7 +533,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 		return -1;
 	}
 
-	oclog(ws, LOG_INFO, "setting up DTLS connection");
+	oclog(ws, LOG_DEBUG, "setting up DTLS connection");
 	/* DTLS cookie verified.
 	 * Initialize session.
 	 */
@@ -689,7 +689,7 @@ void vpn_server(struct worker_st *ws)
 		      "could not disable system calls, kernel might not support seccomp");
 	}
 
-	oclog(ws, LOG_INFO, "accepted connection");
+	oclog(ws, LOG_DEBUG, "accepted connection");
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
 		ws->proto = AF_INET;
 	else
@@ -770,7 +770,7 @@ void vpn_server(struct worker_st *ws)
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP GET %s", ws->req.url);
 		fn = get_url_handler(ws->req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "unexpected URL %s", ws->req.url);
+			oclog(ws, LOG_HTTP_DEBUG, "unexpected URL %s", ws->req.url);
 			tls_puts(session, "HTTP/1.1 404 Not found\r\n\r\n");
 			goto finish;
 		}
@@ -790,7 +790,7 @@ void vpn_server(struct worker_st *ws)
 			    http_parser_execute(&parser, &settings, (void *)buf,
 						nrecvd);
 			if (nparsed == 0) {
-				oclog(ws, LOG_INFO,
+				oclog(ws, LOG_HTTP_DEBUG,
 				      "error parsing HTTP request");
 				exit_worker(ws);
 			}
@@ -798,7 +798,7 @@ void vpn_server(struct worker_st *ws)
 
 		fn = post_url_handler(ws->req.url);
 		if (fn == NULL) {
-			oclog(ws, LOG_INFO, "unexpected POST URL %s",
+			oclog(ws, LOG_HTTP_DEBUG, "unexpected POST URL %s",
 			      ws->req.url);
 			tls_puts(session, "HTTP/1.1 404 Not found\r\n\r\n");
 			goto finish;
@@ -817,7 +817,7 @@ void vpn_server(struct worker_st *ws)
 			goto restart;
 
 	} else {
-		oclog(ws, LOG_INFO, "unexpected HTTP method %s",
+		oclog(ws, LOG_HTTP_DEBUG, "unexpected HTTP method %s",
 		      http_method_str(parser.method));
 		tls_printf(session, "HTTP/1.%u 404 Nah, go away\r\n\r\n",
 			   parser.http_minor);
@@ -837,7 +837,7 @@ void mtu_send(worker_st * ws, unsigned mtu)
 			 (pack_size_func) tun_mtu_msg__get_packed_size,
 			 (pack_func) tun_mtu_msg__pack);
 
-	oclog(ws, LOG_INFO, "setting MTU to %u", msg.mtu);
+	oclog(ws, LOG_DEBUG, "setting MTU to %u", msg.mtu);
 }
 
 static
@@ -907,7 +907,7 @@ int mtu_not_ok(worker_st * ws)
 	}
 
 	mtu_set(ws, ws->last_good_mtu);
-	oclog(ws, LOG_INFO, "MTU %u is too large, switching to %u",
+	oclog(ws, LOG_DEBUG, "MTU %u is too large, switching to %u",
 	      ws->last_bad_mtu, ws->conn_mtu);
 
 	return 0;
@@ -1011,7 +1011,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		max -= 13;
 		/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max); */
 		if (max > 0 && max - mtu_overhead < ws->conn_mtu) {
-			oclog(ws, LOG_INFO, "reducing MTU due to TCP MSS to %u",
+			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u",
 			      max - mtu_overhead);
 			mtu_set(ws, MIN(ws->conn_mtu, max - mtu_overhead));
 		}
@@ -1076,7 +1076,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			if (ws->last_dtls_rehandshake > 0 &&
 			    tnow->tv_sec - ws->last_dtls_rehandshake <
 			    ws->config->rekey_time / 2) {
-				oclog(ws, LOG_ERR,
+				oclog(ws, LOG_INFO,
 				      "client requested DTLS rehandshake too soon");
 				return -1;
 			}
@@ -1084,7 +1084,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			/* there is not much we can rehandshake on the DTLS channel,
 			 * at least not the way AnyConnect sets it up.
 			 */
-			oclog(ws, LOG_INFO,
+			oclog(ws, LOG_DEBUG,
 			      "client requested rehandshake on DTLS channel");
 
 			do {
@@ -1093,7 +1093,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 				 || ret == GNUTLS_E_INTERRUPTED);
 
 			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
-			oclog(ws, LOG_INFO, "DTLS rehandshake completed");
+			oclog(ws, LOG_DEBUG, "DTLS rehandshake completed");
 
 			ws->last_dtls_rehandshake = tnow->tv_sec;
 		} else if (ret > 0) {
@@ -1165,7 +1165,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			ws->udp_state = UP_ACTIVE;
 			mtu_discovery_init(ws, mtu);
 			mtu_set(ws, mtu);
-			oclog(ws, LOG_INFO,
+			oclog(ws, LOG_DEBUG,
 			      "DTLS handshake completed (plaintext MTU: %u)\n",
 			      ws->conn_mtu);
 		}
@@ -1186,7 +1186,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 	if (ret == 0) {		/* disconnect */
-		oclog(ws, LOG_INFO, "client disconnected");
+		oclog(ws, LOG_DEBUG, "client disconnected");
 		return -1;
 	} else if (ret > 0) {
 		l = ret;
@@ -1212,7 +1212,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		if (ws->last_tls_rehandshake > 0 &&
 		    tnow->tv_sec - ws->last_tls_rehandshake <
 		    ws->config->rekey_time / 2) {
-			oclog(ws, LOG_ERR,
+			oclog(ws, LOG_INFO,
 			      "client requested TLS rehandshake too soon");
 			return -1;
 		}
@@ -1363,7 +1363,7 @@ static int connect_handler(worker_st * ws)
 
 	/* we must be in S_AUTH_COOKIE state */
 	if (ws->auth_state != S_AUTH_COOKIE || ws->cookie_set == 0) {
-		oclog(ws, LOG_INFO, "no cookie found");
+		oclog(ws, LOG_WARNING, "no cookie found");
 		tls_puts(ws->session,
 			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
 		tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
@@ -1374,7 +1374,7 @@ static int connect_handler(worker_st * ws)
 	 * our authentication by forwarding our cookie to main. */
 	ret = auth_cookie(ws, ws->cookie, ws->cookie_size);
 	if (ret < 0) {
-		oclog(ws, LOG_INFO, "failed cookie authentication attempt");
+		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
 		if (ret == ERR_AUTH_FAIL) {
 			tls_puts(ws->session,
 				 "HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -1757,7 +1757,7 @@ static int connect_handler(worker_st * ws)
 			       ws->config->keepalive);
 		SEND_ERR(ret);
 
-		oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
+		oclog(ws, LOG_DEBUG, "DTLS ciphersuite: %s",
 		      ws->req.selected_ciphersuite->oc_name);
 		ret =
 		    tls_printf(ws->session, "X-DTLS-CipherSuite: %s\r\n",
@@ -2008,7 +2008,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 		}
 		break;
 	case AC_PKT_DISCONN:
-		oclog(ws, LOG_INFO, "received BYE packet; exiting");
+		oclog(ws, LOG_DEBUG, "received BYE packet; exiting");
 		exit_worker(ws);
 		break;
 	case AC_PKT_DATA:

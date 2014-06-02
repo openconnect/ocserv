@@ -42,6 +42,13 @@ flag = {
 };
 
 flag = {
+    name      = delete;
+    value     = d;
+    descrip   = "Delete user";
+    doc   = "Removes the specified user from the password file";
+};
+
+flag = {
     name      = lock;
     value     = l;
     descrip   = "Lock user";

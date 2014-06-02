@@ -126,11 +126,10 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	return ret;
 }
-#elif defined(SIOCSIFPHYADDR_IN6)
+#elif defined(SIOCAIFADDR_IN6)
 
-#warning "IPv6 support on this platform is untested"
+#include <netinet6/nd6.h>
 
-/* untested code for FreeBSD */
 static
 int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 {
@@ -149,12 +148,24 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memset(&ifr6, 0, sizeof(ifr6));
 	snprintf(ifr6.ifra_name, IFNAMSIZ, "%s", proc->tun_lease.name);
 
-	memcpy(&ifr6.ifra_addr, SA_IN6_P(&proc->ipv6->lip),
+	memcpy(&ifr6.ifra_addr.sin6_addr, SA_IN6_P(&proc->ipv6->lip),
 	       SA_IN_SIZE(proc->ipv6->lip_len));
-	memcpy(&ifr6.ifra_dstaddr, SA_IN6_P(&proc->ipv6->rip),
-	       SA_IN_SIZE(proc->ipv6->rip_len));
+	ifr6.ifra_addr.sin6_len = sizeof(struct sockaddr_in6);
+	ifr6.ifra_addr.sin6_family = AF_INET6;
 
-	ret = ioctl(fd, SIOCSIFPHYADDR_IN6, &ifr6);
+	memcpy(&ifr6.ifra_dstaddr.sin6_addr, SA_IN6_P(&proc->ipv6->rip),
+	       SA_IN_SIZE(proc->ipv6->rip_len));
+	ifr6.ifra_dstaddr.sin6_len = sizeof(struct sockaddr_in6);
+	ifr6.ifra_dstaddr.sin6_family = AF_INET6;
+
+	memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff, sizeof(struct in6_addr));
+	ifr6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
+	ifr6.ifra_prefixmask.sin6_family = AF_INET6;
+
+	ifr6.ifra_lifetime.ia6t_vltime = ND6_INFINITE_LIFETIME;
+	ifr6.ifra_lifetime.ia6t_pltime = ND6_INFINITE_LIFETIME;
+
+	ret = ioctl(fd, SIOCAIFADDR_IN6, &ifr6);
 	if (ret != 0) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n",
@@ -211,9 +222,6 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 
 #ifdef SIOCAIFADDR
 		snprintf(ifr.ifra_name, IFNAMSIZ, "%s", proc->tun_lease.name);
-
-		/* remove old addresses */
-		while (ioctl(fd, SIOCDIFADDR, &ifr) == 0);
 
 		memcpy(&ifr.ifra_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
 		ifr.ifra_addr.sin_len = sizeof(struct sockaddr_in);

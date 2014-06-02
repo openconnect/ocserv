@@ -426,10 +426,12 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 
 int close_tun(main_server_st * s, struct proc_st *proc)
 {
-	int fd = -1, ret = 0, e;
-	struct ifreq ifr;
+	int fd = -1, ret = 0;
 
 #ifdef SIOCIFDESTROY
+	int e;
+	struct ifreq ifr;
+
 	if (proc->tun_lease.name[0] != 0) {
 		fd = socket(AF_INET, SOCK_DGRAM, 0);
 		if (fd == -1)

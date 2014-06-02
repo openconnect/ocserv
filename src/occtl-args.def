@@ -13,7 +13,7 @@ explain       = "";
 #include version.inc
 
 detail  = "Openconnect VPN server control (occtl) is a tool to control
-the ocserv VPN server. It uses D-BUS to connect to ocserv.";
+the ocserv VPN server.";
 
 copyright = {
     date  = "2014";
@@ -60,8 +60,8 @@ doc-section = {
   ds-type = 'IMPLEMENTATION NOTES';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-This tool uses D-BUS to connect to ocserv thus the D-BUS access controls
-should be used to prevent potentially dangerous commands to be sent
+This tool uses unix domain sockets or D-BUS to connect to ocserv (depending on compilation options).
+In case D-BUS is being use the D-BUS access controls should be used to prevent potentially dangerous commands to be sent
 to ocserv by unprivileged users.
 _EOT_;
 };

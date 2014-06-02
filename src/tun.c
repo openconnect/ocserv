@@ -399,7 +399,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		ret = fstat(tunfd, &st);
 		if (ret < 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: stat: %s\n", strerror(e));
+			mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", tunfd, strerror(e));
 			goto fail;
 		}
 

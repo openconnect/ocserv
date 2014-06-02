@@ -201,6 +201,8 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 		proc->cookie_ptr->proc = NULL;
 	}
 
+	close_tun(s, proc);
+
 	talloc_free(proc);
 }
 

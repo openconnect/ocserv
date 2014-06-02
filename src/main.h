@@ -30,6 +30,11 @@
 #include "ipc.pb-c.h"
 #include <common.h>
 
+#ifdef __FreeBSD__
+# include <limits.h>
+# define SOL_IP IPPROTO_IP
+#endif
+
 #define COOKIE_KEY_SIZE 16
 
 int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config);
@@ -238,6 +243,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 int open_tun(main_server_st* s, struct proc_st* proc);
+int close_tun(main_server_st* s, struct proc_st* proc);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
 int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,

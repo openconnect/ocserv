@@ -1,4 +1,4 @@
-* Version 0.8.0 (unreleased)
+* Version 0.8.1 (unreleased)
 
 - Fix endianess issue with internal messages.
 - FreeBSD system fixes, by Brian Chu.

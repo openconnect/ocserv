@@ -2,6 +2,7 @@
 
 - Fix endianess issue with internal messages.
 - FreeBSD system fixes, by Brian Chu.
+- ocpasswd: Added --delete parameter.
 
 
 * Version 0.8.0 (released 2014-05-31)

@@ -5,9 +5,6 @@ Short term items:
   they don't send their certificate on subsequent connections, and they
   don't resume the initial connection either.
 
-* Allow cookies to be valid for the lifetime of the user's session plus
-  few minutes for a reconnection.
-
 * Think for ways for ocserv to co-exist on the same system with
   an HTTPS server (while sharing the same port). A possible way is
   through sniproxy -for low-traffic sites.

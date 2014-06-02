@@ -233,7 +233,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 
 	if (cmd == AUTH_COOKIE_REQ) {
 		mslog(s, proc, LOG_INFO,
-		      "user '%s' of group '%s' re-authenticated (using cookie)",
+		      "user '%s' of group '%s' authenticated (using cookie)",
 		      proc->username, group);
 	} else {
 		mslog(s, proc, LOG_INFO,

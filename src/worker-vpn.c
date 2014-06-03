@@ -1427,6 +1427,9 @@ static int connect_handler(worker_st * ws)
 	ret = tls_puts(ws->session, "X-CSTP-Version: 1\r\n");
 	SEND_ERR(ret);
 
+	ret = tls_puts(ws->session, "X-Server-Version: "PACKAGE_STRING"\r\n");
+	SEND_ERR(ret);
+
 	if (req->is_mobile) {
 		ws->config->dpd = ws->config->mobile_dpd;
 		ws->config->idle_timeout = ws->config->mobile_idle_timeout;

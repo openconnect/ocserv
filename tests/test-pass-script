@@ -42,11 +42,11 @@ rm -f ${builddir}/disconnect.ok
 #test special characters
 
 echo "Connecting to obtain cookie... "
-( echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u special --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Re-connecting to force script run... "
-echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u special --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./bin/true >/dev/null 2>&1 &
+echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./bin/true >/dev/null 2>&1 &
 kpid=$!
 
 sleep 2

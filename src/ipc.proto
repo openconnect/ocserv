@@ -138,7 +138,6 @@ message sec_auth_init_msg
 /* SEC_AUTH_CONT */
 message sec_auth_cont_msg
 {
-	required bool tls_auth_ok = 1 [default = false];
 	required string password = 2;
 	required bytes sid = 3;
 	required string ip = 4;

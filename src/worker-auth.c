@@ -46,15 +46,22 @@
 
 #define VERSION_MSG "<version who=\"sg\">0.1(1)</version>\n"
 
-#define SUCCESS_MSG_HEAD "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
-			"<config-auth client=\"vpn\" type=\"complete\">\n" \
-			VERSION_MSG \
-                        "<auth id=\"success\">\n" \
-                        "<title>SSL VPN Service</title>"
+static const char oc_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+			"<config-auth client=\"vpn\" type=\"complete\">\n"
+			VERSION_MSG
+                        "<auth id=\"success\">\n"
+                        "<title>SSL VPN Service</title>";
 
-#define SUCCESS_MSG_FOOT "</auth></config-auth>\n"
+static const char oc_success_msg_foot[] = "</auth></config-auth>\n";
 
-static const char login_msg_user_start[] =
+static const char ocv3_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        "<auth id=\"success\">\n"
+                        "<title>SSL VPN Service</title>";
+
+static const char ocv3_success_msg_foot[] = "</auth>\n";
+
+
+static const char oc_login_msg_user_start[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
     VERSION_MSG
@@ -63,21 +70,42 @@ static const char login_msg_user_start[] =
     "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
 
-static const char login_msg_user_end[] =
+static const char oc_login_msg_user_end[] =
     "</form></auth>\n" "</config-auth>";
 
-static const char login_msg_no_user_start[] =
+static const char oc_login_msg_no_user_start[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
     VERSION_MSG
     "<auth id=\"main\">\n"
     "<message>";
 
-static const char login_msg_no_user_end[] =
+static const char oc_login_msg_no_user_end[] =
     "</message>\n"
     "<form method=\"post\" action=\"/auth\">\n"
     "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
     "</form></auth></config-auth>\n";
+
+static const char ocv3_login_msg_user_start[] =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<auth id=\"main\">\n"
+    "<message>Please enter your username</message>\n"
+    "<form method=\"post\" action=\"/auth\">\n"
+    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
+
+static const char ocv3_login_msg_user_end[] =
+    "</form></auth>\n";
+
+static const char ocv3_login_msg_no_user_start[] =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<auth id=\"main\">\n"
+    "<message>";
+
+static const char ocv3_login_msg_no_user_end[] =
+    "</message>\n"
+    "<form method=\"post\" action=\"/auth\">\n"
+    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
+    "</form></auth>\n";
 
 static int get_cert_info(worker_st * ws);
 
@@ -133,6 +161,22 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	char temp[128];
 	unsigned int i, j;
 	str_st str;
+	const char *login_msg_user_start;
+	const char *login_msg_user_end;
+	const char *login_msg_no_user_start;
+	const char *login_msg_no_user_end;
+
+	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
+		login_msg_user_start = ocv3_login_msg_user_start;
+		login_msg_user_end = ocv3_login_msg_user_end;
+		login_msg_no_user_start = ocv3_login_msg_no_user_start;
+		login_msg_no_user_end = ocv3_login_msg_no_user_end;
+	} else {
+		login_msg_user_start = oc_login_msg_user_start;
+		login_msg_user_end = oc_login_msg_user_end;
+		login_msg_no_user_start = oc_login_msg_no_user_start;
+		login_msg_no_user_end = oc_login_msg_no_user_end;
+	}
 
 	str_init(&str, ws);
 
@@ -793,6 +837,22 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 	char str_cookie[BASE64_LENGTH(ws->cookie_size)+1];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
+	const char *success_msg_head;
+	const char *success_msg_foot;
+	unsigned success_msg_head_size;
+	unsigned success_msg_foot_size;
+
+	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
+		success_msg_head = ocv3_success_msg_head;
+		success_msg_foot = ocv3_success_msg_foot;
+		success_msg_head_size = sizeof(ocv3_success_msg_head)-1;
+		success_msg_foot_size = sizeof(ocv3_success_msg_foot)-1;
+	} else {
+		success_msg_head = oc_success_msg_head;
+		success_msg_foot = oc_success_msg_foot;
+		success_msg_head_size = sizeof(oc_success_msg_head)-1;
+		success_msg_foot_size = sizeof(oc_success_msg_foot)-1;
+	}
 
 	base64_encode((char *)ws->cookie, ws->cookie_size,
 		      (char *)str_cookie, str_cookie_size);
@@ -823,7 +883,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 		size = 0;
 	}
 
-	size += (sizeof(SUCCESS_MSG_HEAD) - 1) + (sizeof(SUCCESS_MSG_FOOT) - 1);
+	size += success_msg_head_size + success_msg_foot_size;
 
 	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)
@@ -867,7 +927,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 
 	ret =
 	    tls_printf(ws->session,
-		       "\r\n" SUCCESS_MSG_HEAD "%s" SUCCESS_MSG_FOOT, msg);
+		       "\r\n%s%s%s", success_msg_head, msg, success_msg_foot);
 	if (ret < 0)
 		return -1;
 

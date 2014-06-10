@@ -277,14 +277,22 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 	case HEADER_USER_AGENT:
 		if (value_length + 1 > MAX_AGENT_NAME) {
-			req->user_agent[0] = 0;
-			goto cleanup;
+			memcpy(req->user_agent, value, MAX_AGENT_NAME-1);
+			req->user_agent[MAX_AGENT_NAME-1] = 0;
+		} else {
+			memcpy(req->user_agent, value, value_length);
+			req->user_agent[value_length] = 0;
 		}
-		memcpy(req->user_agent, value, value_length);
-		req->user_agent[value_length] = 0;
 
-		if (strstr(req->user_agent, "Open Any") != NULL)
-			req->user_agent_type = AGENT_OPENCONNECT;
+		oclog(ws, LOG_DEBUG,
+		      "User-agent: '%s'", req->user_agent);
+
+		if (strncasecmp(req->user_agent, "Open Any", 8) == 0) {
+			if (strncmp(req->user_agent, "Open AnyConnect VPN Agent v3", 28) == 0)
+				req->user_agent_type = AGENT_OPENCONNECT_V3;
+			else
+				req->user_agent_type = AGENT_OPENCONNECT;
+		}
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:

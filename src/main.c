@@ -956,6 +956,10 @@ int main(int argc, char** argv)
 	/* Initialize certificates */
 	tls_load_certs(s, &creds);
 
+	s->secmod_addr.sun_family = AF_UNIX;
+	snprintf(s->secmod_addr.sun_path, sizeof(s->secmod_addr.sun_path), "%s", s->socket_file);
+	s->secmod_addr_len = SUN_LEN(&s->secmod_addr);
+
 	/* initialize memory for worker process */
 	worker_pool = talloc_named(main_pool, 0, "worker");
 	if (worker_pool == NULL) {
@@ -1066,9 +1070,8 @@ int main(int argc, char** argv)
 					kill_on_parent_kill(SIGTERM);
 
 					/* write sec-mod's address */
-					ws->secmod_addr.sun_family = AF_UNIX;
-					snprintf(ws->secmod_addr.sun_path, sizeof(ws->secmod_addr.sun_path), "%s", s->socket_file);
-					ws->secmod_addr_len = SUN_LEN(&ws->secmod_addr);
+					memcpy(&ws->secmod_addr, &s->secmod_addr, s->secmod_addr_len);
+					ws->secmod_addr_len = s->secmod_addr_len;
 
 					ws->main_pool = main_pool;
 					ws->config = s->config;

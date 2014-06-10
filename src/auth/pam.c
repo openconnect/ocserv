@@ -347,6 +347,33 @@ struct pam_ctx_st * pctx = ctx;
 	talloc_free(pctx);
 }
 
+static int pam_auth_open_session(void* ctx)
+{
+struct pam_ctx_st * pctx = ctx;
+int pret;
+
+	pret = pam_open_session(pctx->ph, PAM_SILENT);
+	if (pret != PAM_SUCCESS) {
+		syslog(LOG_AUTH, "PAM-auth: pam_open_session: %s", pam_strerror(pctx->ph, pret));
+		return -1;
+	}
+
+	return 0;
+}
+
+static void pam_auth_close_session(void* ctx)
+{
+struct pam_ctx_st * pctx = ctx;
+int pret;
+
+	pret = pam_close_session(pctx->ph, PAM_SILENT);
+	if (pret != PAM_SUCCESS) {
+		syslog(LOG_AUTH, "PAM-auth: pam_close_session: %s", pam_strerror(pctx->ph, pret));
+	}
+
+	return;
+}
+
 static void pam_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
 {
 	struct group *grp;
@@ -392,6 +419,8 @@ const struct auth_mod_st pam_auth_funcs = {
   .auth_pass = pam_auth_pass,
   .auth_group = pam_auth_group,
   .auth_user = pam_auth_user,
+  .open_session = pam_auth_open_session,
+  .close_session = pam_auth_close_session,
   .group_list = pam_group_list
 };
 

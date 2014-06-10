@@ -75,6 +75,16 @@ struct htable *db = _db;
 	}
 }
 
+unsigned sec_mod_ban_db_elems(void *_db)
+{
+struct htable *db = _db;
+
+	if (db)
+		return db->elems;
+	else
+		return 0;
+}
+
 void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time)
 {
 	struct htable *db = _db;

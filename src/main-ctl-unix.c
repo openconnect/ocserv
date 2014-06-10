@@ -610,7 +610,7 @@ static void ctl_handle_commands(main_server_st * s)
 		goto cleanup;
 	}
 
-	ret = check_upeer_id("ctl", cfd, 0, 0);
+	ret = check_upeer_id("ctl", cfd, 0, 0, NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
 		goto cleanup;

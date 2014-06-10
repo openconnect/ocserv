@@ -89,8 +89,8 @@ An example configuration file follows.
 #auth = "plain[/etc/ocserv/ocpasswd]"
 
 # Whether to enable the authentication method's session control (i.e., PAM).
-# That requires more resources on the server so don't enable unless you need
-# it.
+# That requires more resources on the server, and makes cookies one-time-use;
+# thus don't enable unless you need it.
 #session-control = true
 
 # A banner to be displayed on clients
@@ -642,11 +642,8 @@ doc-section = {
   ds-type = 'IMPLEMENTATION NOTES';
   ds-format = 'texi';
   ds-text   = <<-_EOT_
-The support for PAM is limited to authentication only. That is, PAM is
-used for authentication but not for session control.
-
-Note also, that while this server utilizes privilege separation and password
-authentication occurs on the main server, this does not apply for TLS client 
+Note that while this server utilizes privilege separation and password
+authentication occurs on the security module, this does not apply for TLS client 
 certificate authentication. That is because the worker has no way to 
 prove to the main server that it performed the certificate verification.
 _EOT_;

@@ -29,6 +29,8 @@
 #include <tlslib.h>
 #include "ipc.pb-c.h"
 #include <common.h>
+#include <sys/un.h>
+#include <sys/uio.h>
 
 #ifdef __FreeBSD__
 # include <limits.h>
@@ -111,6 +113,7 @@ typedef struct proc_st {
 
 	/* The SID present in the cookie. Used for session control only */
 	uint8_t sid[SID_SIZE];
+	unsigned active_sid;
 
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
@@ -193,6 +196,9 @@ typedef struct main_server_st {
 	char socket_file[_POSIX_PATH_MAX];
 	char full_socket_file[_POSIX_PATH_MAX];
 	pid_t sec_mod_pid;
+
+	struct sockaddr_un secmod_addr;
+	unsigned secmod_addr_len;
 	
 	unsigned active_clients;
 	time_t start_time;
@@ -228,6 +234,8 @@ int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
 
 int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
   			   const SessionResumeStoreReqMsg *);
+
+int session_openclose(main_server_st * s, struct proc_st *proc, unsigned open);
 
 void 
 __attribute__ ((format(printf, 4, 5)))

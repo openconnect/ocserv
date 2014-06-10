@@ -106,7 +106,7 @@ message session_info_msg
 /*
  * == Auth with username/password ==
  *
- *   main                     worker
+ *   sec-mod                        worker
  *                    <------     AUTH_INIT (username)
  * AUTH_REP(MSG,SID)  ------>
  *                    <------     AUTH_CONT (SID,password)
@@ -172,4 +172,23 @@ message cookie
 	required uint32 expiration = 6;
 	required uint32 ipv4_seed = 7;
 	required bytes sid = 8;
+}
+
+/*
+ * == Session Termination ==
+ *
+ *   main                           sec-mod
+ * SESSION_OPEN/CLOSE   ------>
+ *
+ */
+
+/* SEC_SESSION_CLOSE */
+message sec_auth_session_msg
+{
+	required bytes sid = 1;
+}
+
+message sec_auth_session_reply_msg
+{
+	required AUTH_REP reply = 1;
 }

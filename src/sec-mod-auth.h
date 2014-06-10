@@ -33,6 +33,10 @@ struct auth_mod_st {
 	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
 	int (*auth_group)(void* ctx, const char *suggested, char *groupname, int groupname_size);
 	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
+
+	int (*open_session)(void *ctx); /* optional, may be null */
+	void (*close_session)(void *ctx); /* optional */
+
 	void (*auth_deinit)(void* ctx);
 	void (*group_list)(void *pool, void *additional, char ***groupname, unsigned *groupname_size);
 };

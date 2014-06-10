@@ -65,6 +65,10 @@ static char tmp[32];
 		return "sm: decrypt";
 	case SM_CMD_SIGN:
 		return "sm: sign";
+	case SM_CMD_AUTH_SESSION_CLOSE:
+		return "sm: session close";
+	case SM_CMD_AUTH_SESSION_OPEN:
+		return "sm: session open";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

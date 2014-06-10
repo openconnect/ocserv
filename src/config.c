@@ -85,6 +85,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "session-control", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "auto-select-group", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "default-select-group", .type = OPTION_STRING, .mandatory = 0 },
 	/* this is alias for cisco-client-compat */
@@ -438,6 +439,8 @@ unsigned force_cert_auth;
 	READ_STRING("occtl-socket-file", config->occtl_socket_file);
 	if (config->occtl_socket_file == NULL)
 		config->occtl_socket_file = talloc_strdup(config, OCCTL_UNIX_SOCKET);
+
+	READ_TF("session-control", config->session_control, 0);
 
 	READ_STRING("banner", config->banner);
 	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);

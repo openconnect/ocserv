@@ -71,6 +71,17 @@ struct htable *db = _db;
 	talloc_free(db);
 }
 
+/* The number of elements */
+unsigned sec_mod_client_db_elems(void *_db)
+{
+struct htable *db = _db;
+
+	if (db)
+		return db->elems;
+	else
+		return 0;
+}
+
 client_entry_st *new_client_entry(void *_db, const char *ip)
 {
 	struct htable *db = _db;
@@ -129,6 +140,11 @@ static void clean_entry(client_entry_st * e)
 	talloc_free(e);
 }
 
+/* Allow few seconds prior to cleaning up entries, to avoid any race
+ * conditions when session control is enabled.
+ */
+#define SLACK_TIME 10
+
 void cleanup_client_entries(void *_db)
 {
 	struct htable *db = _db;
@@ -138,7 +154,8 @@ void cleanup_client_entries(void *_db)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if (now - t->time > MAX_AUTH_SECS) {
+		fprintf(stderr, "entry[%d]: %s\n", t->have_session, t->username);
+		if (t->have_session == 0 && now - t->time > MAX_AUTH_SECS + SLACK_TIME) {
 			htable_delval(db, &iter);
 			clean_entry(t);
 		}

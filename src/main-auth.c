@@ -192,6 +192,7 @@ struct cookie_entry_st *old;
 	memcpy(proc->dtls_session_id, cmsg->session_id.data, cmsg->session_id.len);
 	proc->dtls_session_id_size = cmsg->session_id.len;
 	memcpy(proc->sid, cmsg->sid.data, cmsg->sid.len);
+	proc->active_sid = 1;
 
 	/* cookie is good so far, now read config (in order to know
 	 * whether roaming is allowed or not */
@@ -268,6 +269,12 @@ struct cookie_entry_st *old;
 		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);
 
 	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
+
+	ret = session_openclose(s, proc, 1);
+	if (ret < 0) {
+		mslog(s, proc, LOG_INFO, "could not open session");
+		return -1;
+	}
 
 	return 0;
 }

@@ -279,7 +279,10 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 			return ret;
 		}
 
-		del_client_entry(sec->client_db, e);
+		ret = 0;
+		if (sec->config->session_control == 0 || module->open_session == NULL) {
+			del_client_entry(sec->client_db, e);
+		} /* else do nothing, and wait for session close/open messages */
 	} else {
 		e->status = PS_AUTH_FAILED;
 		add_ip_to_ban_list(sec->ban_db, e->ip, time(0) + sec->config->min_reauth_time);
@@ -299,6 +302,44 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 	}
 
 	return ret;
+}
+
+int handle_sec_auth_session_openclose(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd)
+{
+	client_entry_st *e;
+	int ret;
+
+	if (sec->config->session_control == 0 || module->open_session == NULL) {
+		seclog(LOG_ERR, "auth session open/close but session control is disabled!");
+		return 0;
+	}
+
+	if (req->sid.len != SID_SIZE) {
+		seclog(LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
+		       (int)req->sid.len);
+		return -1;
+	}
+
+	e = find_client_entry(sec->client_db, req->sid.data);
+	if (e == NULL) {
+		seclog(LOG_INFO, "session open/close but with non-existing sid!");
+		return -1;
+	}
+
+	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
+		ret = module->open_session(e->auth_ctx);
+		if (ret < 0) {
+			e->status = PS_AUTH_FAILED;
+			seclog(LOG_ERR, "could not open session.");
+			del_client_entry(sec->client_db, e);
+			return ret;
+		}
+		e->have_session = 1;
+	} else {
+		del_client_entry(sec->client_db, e);
+	}
+
+	return 0;
 }
 
 int handle_sec_auth_cont(sec_mod_st * sec, const SecAuthContMsg * req)
@@ -448,6 +489,9 @@ void sec_auth_user_deinit(client_entry_st * e)
 {
 	seclog(LOG_DEBUG, "auth deinit for user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
+		if (e->have_session) {
+			module->close_session(e->auth_ctx);
+		}
 		module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;
 	}

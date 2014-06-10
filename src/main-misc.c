@@ -163,6 +163,77 @@ struct proc_st *ctmp;
 	return ctmp;
 }
 
+int session_openclose(main_server_st * s, struct proc_st *proc, unsigned open)
+{
+	int sd, ret, e;
+	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
+	SecAuthSessionReplyMsg *msg = NULL;
+	unsigned type;
+
+	if (s->config->session_control == 0)
+		return 0;
+
+	if (open)
+		type = SM_CMD_AUTH_SESSION_OPEN;
+	else
+		type = SM_CMD_AUTH_SESSION_CLOSE;
+
+	sd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sd == -1) {
+		e = errno;
+		mslog(s, proc, LOG_ERR, "error opening unix socket (for sec-mod) %s",
+		      strerror(e));
+		return -1;
+	}
+
+	ret =
+	    connect(sd, (struct sockaddr *)&s->secmod_addr,
+		    s->secmod_addr_len);
+	if (ret < 0) {
+		e = errno;
+		close(sd);
+		mslog(s, proc, LOG_ERR,
+		      "error connecting to sec-mod socket '%s': %s",
+		      s->secmod_addr.sun_path, strerror(e));
+		return -1;
+	}
+
+	ireq.sid.data = proc->sid;
+	ireq.sid.len = sizeof(proc->sid);
+
+	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(type));
+
+	ret = send_msg(proc, sd, type,
+		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
+		(pack_func)sec_auth_session_msg__pack);
+	if (ret < 0) {
+		close(sd);
+		mslog(s, proc, LOG_ERR,
+		      "error sending message to sec-mod socket '%s'",
+		      s->secmod_addr.sun_path);
+		return -1;
+	}
+
+	if (open) {
+		ret = recv_msg(proc, sd, SM_CMD_AUTH_SESSION_REPLY,
+		       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack);
+		close(sd);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR, "error receiving auth reply message");
+			return ret;
+		}
+
+		if (msg->reply != AUTH__REP__OK) {
+			mslog(s, proc, LOG_INFO, "could not initiate session for '%s'", proc->username);
+			return -1;
+		}
+	} else {
+		close(sd);
+	}
+
+	return 0;
+}
+
 /* k: whether to kill the process
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
@@ -178,6 +249,11 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	remove_from_script_list(s, proc);
 	if (proc->username[0] != 0)
 		user_disconnected(s, proc);
+
+	/* close any pending sessions */
+	if (s->config->session_control != 0 && proc->active_sid) {
+		session_openclose(s, proc, 0);
+	}
 
 	/* close the intercomm fd */
 	if (proc->fd >= 0)
@@ -197,8 +273,15 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	if (proc->cookie_ptr) {
 		unsigned timeout = s->config->cookie_timeout;
 
-		proc->cookie_ptr->expiration = time(0) + timeout;
 		proc->cookie_ptr->proc = NULL;
+		if (s->config->session_control != 0) {
+			/* if we use session control and we closed the session we 
+			 * need to invalidate the cookie, so that a new session is 
+			 * used on the next connection */
+			proc->cookie_ptr->expiration = 1;
+		} else {
+			proc->cookie_ptr->expiration = time(0) + timeout;
+		}
 	}
 
 	close_tun(s, proc);

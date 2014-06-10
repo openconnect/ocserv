@@ -54,7 +54,7 @@ SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 /* Checks whether the peer in a socket has the expected @uid and @gid.
  * Returns zero on success.
  */
-int check_upeer_id(const char *mod, int cfd, int uid, int gid)
+int check_upeer_id(const char *mod, int cfd, uid_t uid, uid_t gid, uid_t *ruid)
 {
 	int e, ret;
 #if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
@@ -78,6 +78,9 @@ int check_upeer_id(const char *mod, int cfd, int uid, int gid)
 	       "%s: received request from pid %u and uid %u",
 	       mod, (unsigned)cr.pid, (unsigned)cr.uid);
 
+	if (ruid)
+		*ruid = cr.uid;
+
 	if (cr.uid != 0 && (cr.uid != uid || cr.gid != gid)) {
 		syslog(LOG_DEBUG,
 		       "%s: received unauthorized request from pid %u and uid %u",
@@ -85,7 +88,7 @@ int check_upeer_id(const char *mod, int cfd, int uid, int gid)
 		       return -1;
 	}
 #elif defined(HAVE_GETPEEREID)
-	pid_t euid;
+	uid_t euid;
 	gid_t egid;
 
 	ret = getpeereid(cfd, &euid, &egid);
@@ -96,6 +99,9 @@ int check_upeer_id(const char *mod, int cfd, int uid, int gid)
 			mod, strerror(e));
 		return -1;
 	}
+
+	if (ruid)
+		*ruid = euid;
 
 	syslog(LOG_DEBUG,
 	       "%s: received request from a processes with uid %u",

@@ -186,7 +186,7 @@ static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 
 static
 int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
-		   uint8_t * buffer, size_t buffer_size)
+		   uid_t uid, uint8_t * buffer, size_t buffer_size)
 {
 	unsigned i;
 	gnutls_datum_t data, out;
@@ -277,6 +277,43 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
 			return ret;
 		}
+	case SM_CMD_AUTH_SESSION_OPEN:
+	case SM_CMD_AUTH_SESSION_CLOSE:{
+			SecAuthSessionMsg *msg;
+			SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
+
+			if (uid != 0) {
+				seclog(LOG_INFO, "received session open/close from unauthorized uid (%u)\n", (unsigned)uid);
+				return -1;
+			}
+
+			msg =
+			    sec_auth_session_msg__unpack(&pa, data.size,
+						      data.data);
+			if (msg == NULL) {
+				seclog(LOG_INFO, "error unpacking session close\n");
+				return -1;
+			}
+
+			ret = handle_sec_auth_session_openclose(sec, msg, cmd);
+			sec_auth_session_msg__free_unpacked(msg, &pa);
+
+			if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
+				if (ret < 0)
+					rep.reply = AUTH__REP__FAILED;
+				else
+					rep.reply = AUTH__REP__OK;
+
+				ret = send_msg(pool, sec->fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
+					(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
+					(pack_func) sec_auth_session_reply_msg__pack);
+				if (ret < 0) {
+					seclog(LOG_WARNING, "sec-mod error in sending session reply");
+				}
+			}
+
+			return ret;
+		}
 	default:
 		seclog(LOG_WARNING, "unknown type 0x%.2x", cmd);
 		return -1;
@@ -314,7 +351,11 @@ static void check_other_work(sec_mod_st *sec)
 		seclog(LOG_DEBUG, "performing maintenance");
 		cleanup_client_entries(sec->client_db);
 		cleanup_banned_entries(sec->ban_db);
+		seclog(LOG_DEBUG, "active sessions %d, banned entries %d", 
+			sec_mod_client_db_elems(sec->client_db),
+			sec_mod_ban_db_elems(sec->ban_db));
 		alarm(MAINTAINANCE_TIME);
+		need_maintainance = 0;
 	}
 }
 
@@ -353,6 +394,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	int cfd, ret, e;
 	unsigned cmd, length;
 	unsigned i, buffer_size;
+	uid_t uid;
 	uint8_t *buffer, *tpool;
 	uint16_t l16;
 	struct pin_st pins;
@@ -521,7 +563,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 		/* do not allow unauthorized processes to issue commands
 		 */
-		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid);
+		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid, &uid);
 		if (ret < 0) {
 			seclog(LOG_INFO, "rejected unauthorized connection");
 			goto cont;
@@ -558,7 +600,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 		tpool = talloc_new(sec);
 		sec->fd = cfd;
-		ret = process_packet(tpool, sec, cmd, buffer, ret);
+		ret = process_packet(tpool, sec, cmd, uid, buffer, ret);
 		if (ret < 0) {
 			seclog(LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 		}

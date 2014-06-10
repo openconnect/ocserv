@@ -45,6 +45,8 @@ typedef struct client_entry_st {
 	 */
 	uint8_t sid[SID_SIZE];
 	void * auth_ctx; /* the context of authentication */
+	unsigned have_session; /* whether an auth session is initialized */
+
 	unsigned status; /* PS_AUTH_ */
 
 	char ip[MAX_IP_STR]; /* the user's IP */
@@ -61,6 +63,7 @@ typedef struct client_entry_st {
 
 void *sec_mod_client_db_init(void *pool);
 void sec_mod_client_db_deinit(void *db);
+unsigned sec_mod_client_db_elems(void *_db);
 client_entry_st * new_client_entry(void *_db, const char *ip);
 client_entry_st * find_client_entry(void *_db, uint8_t sid[SID_SIZE]);
 void del_client_entry(void *_db, client_entry_st * e);
@@ -74,10 +77,11 @@ void cleanup_client_entries(void *_db);
 #endif
 
 void sec_auth_init(struct cfg_st *config);
-void sec_auth_user_deinit(client_entry_st *e);
 
 int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
+int handle_sec_auth_session_openclose(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd);
+void sec_auth_user_deinit(client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
 		    uint8_t cookie_key[COOKIE_KEY_SIZE]);
@@ -87,5 +91,6 @@ unsigned check_if_banned(void *_db, const char *ip);
 void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time);
 void *sec_mod_ban_db_init(void *pool);
 void sec_mod_ban_db_deinit(void *_db);
+unsigned sec_mod_ban_db_elems(void *_db);
 
 #endif

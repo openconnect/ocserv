@@ -23,6 +23,7 @@
 
 # include <config.h>
 # include <signal.h>
+# include <unistd.h>
 
 #ifdef HAVE_SIGHANDLER_T
 # define SIGHANDLER_T sighandler_t
@@ -39,6 +40,6 @@ void kill_on_parent_kill(int sig);
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler);
 
-int check_upeer_id(const char *mod, int cfg, int uid, int gid);
+int check_upeer_id(const char *mod, int cfg, uid_t uid, uid_t gid, uid_t *ruid);
 
 #endif

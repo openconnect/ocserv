@@ -1,7 +1,7 @@
 * Version 0.8.1 (unreleased)
 
 - Fix endianess issue with internal messages.
-- FreeBSD system fixes, by Brian Chu.
+- FreeBSD system fixes, contributed by Brian Chu.
 - Added openconnect 3.20 compatibility.
 - Added support for session control (in PAM or any other potential
   authentication methods). That feature is disabled by default as it

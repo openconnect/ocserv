@@ -517,6 +517,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		exit(1);
 	}
 
+	/* FIXME: the private key isn't reloaded on reload */
 	sec->key_size = config->key_size;
 	sec->key = talloc_size(sec, sizeof(*sec->key) * config->key_size);
 	if (sec->key == NULL) {

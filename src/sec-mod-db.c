@@ -154,7 +154,6 @@ void cleanup_client_entries(void *_db)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		fprintf(stderr, "entry[%d]: %s\n", t->have_session, t->username);
 		if (t->have_session == 0 && now - t->time > MAX_AUTH_SECS + SLACK_TIME) {
 			htable_delval(db, &iter);
 			clean_entry(t);

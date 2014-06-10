@@ -187,6 +187,7 @@ struct cfg_st {
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
 	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
+	unsigned session_control; /* whether to use the session control part of authentication (PAM) */
 	char *auth_additional;	/* the additional string specified in the auth methode */
 	gnutls_certificate_request_t cert_req;
 	char *priorities;

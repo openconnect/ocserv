@@ -109,6 +109,9 @@ typedef struct proc_st {
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
 
+	/* The SID present in the cookie. Used for session control only */
+	uint8_t sid[SID_SIZE];
+
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
 	 */

@@ -161,7 +161,7 @@ message sec_op_msg
 	required bytes data = 2;
 }
 
-/* Not a real message, but a cookie */
+/* Not a real message, but the cookie */
 message cookie
 {
 	required string username = 1;
@@ -171,4 +171,5 @@ message cookie
 	required bytes session_id = 5;
 	required uint32 expiration = 6;
 	required uint32 ipv4_seed = 7;
+	required bytes sid = 8;
 }

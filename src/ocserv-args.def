@@ -88,6 +88,11 @@ An example configuration file follows.
 # to generate password entries.
 #auth = "plain[/etc/ocserv/ocpasswd]"
 
+# Whether to enable the authentication method's session control (i.e., PAM).
+# That requires more resources on the server so don't enable unless you need
+# it.
+#session-control = true
+
 # A banner to be displayed on clients
 #banner = "Welcome"
 

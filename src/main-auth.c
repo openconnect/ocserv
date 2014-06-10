@@ -186,8 +186,12 @@ struct cookie_entry_st *old;
 	if (cmsg->session_id.len != sizeof(proc->dtls_session_id))
 		return -1;
 
+	if (cmsg->sid.len != sizeof(proc->sid))
+		return -1;
+
 	memcpy(proc->dtls_session_id, cmsg->session_id.data, cmsg->session_id.len);
 	proc->dtls_session_id_size = cmsg->session_id.len;
+	memcpy(proc->sid, cmsg->sid.data, cmsg->sid.len);
 
 	/* cookie is good so far, now read config (in order to know
 	 * whether roaming is allowed or not */

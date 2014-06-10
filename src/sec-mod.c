@@ -49,6 +49,7 @@
 #define MAINTAINANCE_TIME 300
 
 static int need_maintainance = 0;
+static int need_reload = 0;
 static int need_exit = 0;
 
 struct pin_st {
@@ -327,6 +328,11 @@ static void handle_alarm(int signo)
 	need_maintainance = 1;
 }
 
+static void handle_sighup(int signo)
+{
+	need_reload = 1;
+}
+
 static void handle_sigterm(int signo)
 {
 	need_exit = 1;
@@ -345,6 +351,12 @@ static void check_other_work(sec_mod_st *sec)
 		sec_mod_ban_db_deinit(sec->ban_db);
 		talloc_free(sec);
 		exit(0);
+	}
+
+	if (need_reload) {
+		seclog(LOG_DEBUG, "reloading configuration");
+		reload_cfg_file(sec, sec->config);
+		need_reload = 0;
 	}
 
 	if (need_maintainance) {
@@ -433,7 +445,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	/* we no longer need the main pool after this point. */
 	talloc_free(main_pool);
 
-	ocsignal(SIGHUP, SIG_IGN);
+	ocsignal(SIGHUP, handle_sighup);
 	ocsignal(SIGINT, handle_sigterm);
 	ocsignal(SIGTERM, handle_sigterm);
 	ocsignal(SIGALRM, handle_alarm);

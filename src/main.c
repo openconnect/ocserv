@@ -754,6 +754,7 @@ unsigned total = 10;
 		reload_cfg_file(s->main_pool, s->config);
 		tls_reload_crl(s, s->creds);
 		reload_conf = 0;
+		kill(s->sec_mod_pid, SIGHUP);
 	}
 
 	if (need_children_cleanup != 0) {

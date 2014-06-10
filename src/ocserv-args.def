@@ -90,7 +90,8 @@ An example configuration file follows.
 
 # Whether to enable the authentication method's session control (i.e., PAM).
 # That requires more resources on the server, and makes cookies one-time-use;
-# thus don't enable unless you need it.
+# thus don't enable unless you need it. That should be used when you have an
+# accounting system in place with the PAM modules.
 #session-control = true
 
 # A banner to be displayed on clients

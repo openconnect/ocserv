@@ -2,6 +2,7 @@
 
 - Fix endianess issue with internal messages.
 - FreeBSD system fixes, by Brian Chu.
+- Added openconnect 3.20 compatibility.
 - ocpasswd: Added --delete parameter.
 
 

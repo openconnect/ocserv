@@ -6,6 +6,7 @@
 - Added support for session control (in PAM or any other potential
   authentication methods). That feature is disabled by default as it
   requires the security module to keep state for each connected user.
+- Corrected escaping of URL-encoded passwords. Patch by Hexchain Tong.
 - ocpasswd: Added --delete parameter.
 
 

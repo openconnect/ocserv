@@ -221,6 +221,9 @@ struct cfg_st {
 	unsigned rekey_method; /* REKEY_METHOD_ */
 
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
+
+	unsigned seccomp; /* whether seccomp should be enabled or not */
+
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned idle_timeout; /* timeout when idle */
 	unsigned mobile_idle_timeout; /* timeout when a mobile is idle */

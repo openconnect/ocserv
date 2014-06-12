@@ -94,6 +94,11 @@ An example configuration file follows.
 # accounting system in place with the PAM modules.
 #session-control = true
 
+# Whether to enable seccomp worker isolation. That restricts the number of 
+# system calls allowed to a worker process, in order to reduce damage from a
+# bug in the worker process. It is available on Linux systems at a performance cost.
+#use-seccomp = true
+
 # A banner to be displayed on clients
 #banner = "Welcome"
 

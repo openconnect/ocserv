@@ -84,6 +84,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "use-seccomp", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "session-control", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "auto-select-group", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -450,6 +451,7 @@ unsigned force_cert_auth;
 		config->cisco_client_compat = 1;
 	}
 
+	READ_TF("use-seccomp", config->seccomp, 0);
 	READ_TF("predictable-ips", config->predictable_ips, 1);
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);

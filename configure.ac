@@ -236,7 +236,7 @@ fi
 
 AC_ARG_ENABLE(seccomp,
   AS_HELP_STRING([--enable-seccomp], [enable seccomp support]),
-    seccomp_enabled=$enableval, seccomp_enabled=no)
+    seccomp_enabled=$enableval, seccomp_enabled=yes)
 
 if [ test "$seccomp_enabled" = "yes" ];then
 AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <seccomp.h>], [seccomp_init(0);])

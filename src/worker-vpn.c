@@ -691,10 +691,12 @@ void vpn_server(struct worker_st *ws)
 	if (ws->config->auth_timeout)
 		alarm(ws->config->auth_timeout);
 
-	ret = disable_system_calls(ws);
-	if (ret < 0) {
-		oclog(ws, LOG_INFO,
-		      "could not disable system calls, kernel might not support seccomp");
+	if (ws->config->seccomp != 0) {
+		ret = disable_system_calls(ws);
+		if (ret < 0) {
+			oclog(ws, LOG_INFO,
+			      "could not disable system calls, kernel might not support seccomp");
+		}
 	}
 
 	oclog(ws, LOG_DEBUG, "accepted connection");

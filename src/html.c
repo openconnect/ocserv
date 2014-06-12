@@ -86,8 +86,8 @@ char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 			char b[3];
 			unsigned int u;
 
-			b[0] = url[pos + 1];
-			b[1] = url[pos + 2];
+			b[0] = url[i + 1];
+			b[1] = url[i + 2];
 			b[2] = 0;
 
 			if (sscanf(b, "%02x", &u) <= 0) {

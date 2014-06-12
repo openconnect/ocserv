@@ -7,6 +7,7 @@
   authentication methods). That feature is disabled by default as it
   requires the security module to keep state for each connected user.
 - Corrected escaping of URL-encoded passwords. Patch by Hexchain Tong.
+- Seccomp is now compiled-in by default, and can be enabled at runtime.
 - ocpasswd: Added --delete parameter.
 
 

@@ -245,10 +245,34 @@ static int verify_certificate_cb(gnutls_session_t session)
 		return -1;
 	}
 
-	if (session == ws->dtls_session) /* no certificate is verified in DTLS */
-		return 0;
+	if (session == ws->dtls_session) {
+		oclog(ws, LOG_ERR, "unexpected issue; client shouldn't have offered a certificate in DTLS");
+		return GNUTLS_E_CERTIFICATE_ERROR;
+	}
 
 	ws->cert_auth_ok = 0;
+
+	/* now verify whether the username in the certificate matches the username of the session */
+	if (ws->cert_username[0] != 0) {
+		char prev_username[MAX_USERNAME_SIZE];
+		const gnutls_datum_t *cert;
+		unsigned cert_size;
+
+		cert = gnutls_certificate_get_peers(session, &cert_size);
+		if (cert != NULL) { /* it's ok for the user not to send any certificate on renegotiation */
+			memcpy(prev_username, ws->cert_username, MAX_USERNAME_SIZE);
+			ret = get_cert_names(ws, &cert[0]);
+			if (ret < 0) {
+				oclog(ws, LOG_ERR, "cannot parse certificate");
+				return GNUTLS_E_CERTIFICATE_ERROR;
+			}
+
+			if (strcmp(prev_username, ws->cert_username) != 0) {
+				oclog(ws, LOG_ERR, "user switched during renegotiation!");
+				return GNUTLS_E_CERTIFICATE_ERROR;
+			}
+		}
+	}
 
 	/* This verification function uses the trusted CAs in the credentials
 	 * structure. So you must have installed one or more CA certificates.
@@ -282,6 +306,8 @@ static int verify_certificate_cb(gnutls_session_t session)
 	/* notify gnutls to continue handshake normally */
 	return 0;
 fail:
+	/* In cisco client compatibility we don't hangup immediately, we
+	 * simply use the flag (ws->cert_auth_ok). */
 	if (ws->config->cisco_client_compat == 0)
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	else

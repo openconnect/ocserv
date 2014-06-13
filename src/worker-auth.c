@@ -378,7 +378,6 @@ int get_auth_handler(worker_st * ws, unsigned http_ver)
 	return get_auth_handler2(ws, http_ver, NULL);
 }
 
-static
 int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 {
 	gnutls_x509_crt_t crt;

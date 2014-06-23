@@ -797,6 +797,39 @@ unsigned i;
 	return;
 }
 
+void print_version(tOptions *opts, tOptDesc *desc)
+{
+	const char *p;
+
+	fputs(OCSERV_FULL_VERSION, stderr);
+	fprintf(stderr, "\n\nCompiled with ");
+#ifdef HAVE_LIBSECCOMP
+	fprintf(stderr, "seccomp, ");
+#endif
+#ifdef HAVE_LIBWRAP
+	fprintf(stderr, "tcp-wrappers, ");
+#endif
+#ifdef HAVE_PAM
+	fprintf(stderr, "PAM, ");
+#endif
+#ifdef HAVE_PKCS11
+	fprintf(stderr, "PKCS#11, ");
+#endif
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	fprintf(stderr, "AnyConnect, ");
+#endif
+	fprintf(stderr, "\n");
+
+	p = gnutls_check_version(NULL);
+	if (strcmp(p, GNUTLS_VERSION) != 0) {
+		fprintf(stderr, "GnuTLS version: %s (compiled with %s)\n", p, GNUTLS_VERSION);
+	} else {
+		fprintf(stderr, "GnuTLS version: %s\n", p);
+	}
+
+	exit(0);
+}
+
 void reload_cfg_file(void *pool, struct cfg_st* config)
 {
 	clear_cfg_file(config);

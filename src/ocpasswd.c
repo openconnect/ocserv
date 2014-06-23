@@ -66,9 +66,8 @@ crypt_int(const char *fpasswd, const char *username, const char *groupname,
 		exit(1);
 	}
 
-	memset(salt, 0, sizeof(salt));
-	p = salt;
-	p += snprintf(salt, sizeof(salt), "$5$");
+	strcpy(salt, "$5$");
+	p = salt + 3;
 
 	for (i = 0; i < sizeof(_salt); i++) {
 		*p = alphabet[_salt[i] % (sizeof(alphabet) - 1)];

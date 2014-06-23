@@ -877,6 +877,8 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 			     ws->config->banner);
 		if (size <= 0)
 			return -1;
+		/* snprintf() returns not a very useful value, so we need to recalculate */
+		size = strlen(msg);
 	} else {
 		msg[0] = 0;
 		size = 0;
@@ -964,8 +966,11 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 			field_size = xml_field_size;
 		}
 
-		temp1_len = snprintf(temp1, sizeof(temp1), "<%s>", field);
-		temp2_len = snprintf(temp2, sizeof(temp2), "</%s>", field);
+		snprintf(temp1, sizeof(temp1), "<%s>", field);
+		snprintf(temp2, sizeof(temp2), "</%s>", field);
+
+		temp1_len = strlen(temp1);
+		temp2_len = strlen(temp2);
 
 		/* body should contain <username>test</username><password>test</password> */
 		*value =
@@ -988,7 +993,8 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 			len++;
 		}
 	} else {		/* non-xml version */
-		temp1_len = snprintf(temp1, sizeof(temp1), "%s=", field);
+		snprintf(temp1, sizeof(temp1), "%s=", field);
+		temp1_len = strlen(temp1);
 
 		/* body should be "username=test&password=test" */
 		*value =

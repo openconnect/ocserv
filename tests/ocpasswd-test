@@ -1,0 +1,67 @@
+#!/bin/sh
+#
+# Copyright (C) 2014 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+OCPASSWD="${OCPASSWD:-../src/ocpasswd}"
+srcdir=${srcdir:-.}
+
+echo "Testing ocpasswd"
+
+rm -f passwd.out
+
+echo "Creating user... "
+echo test|$OCPASSWD -c passwd.out -g group test
+if test $? != 0;then
+	echo "Failed creating user test"
+	exit 1
+fi
+
+grep group passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed creating user test. Group 'group' was not found"
+	exit 1
+fi
+
+echo "Locking user... "
+$OCPASSWD -c passwd.out -l test
+if test $? != 0;then
+	echo "Failed locking user test"
+	exit 1
+fi
+
+grep -e "\:\!\$5" passwd.out >/dev/null 2>&1
+if test $? != 0;then
+	echo "Failed locking user test. The exclamation mark wasn't found"
+	exit 1
+fi
+
+echo "Deleting user... "
+$OCPASSWD -c passwd.out -d test
+if test $? != 0;then
+	echo "Failed deleting user test"
+	exit 1
+fi
+
+grep "test" passwd.out  >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed deleting user test. User was found in file"
+	exit 1
+fi
+
+exit 0

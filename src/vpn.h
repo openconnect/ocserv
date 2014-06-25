@@ -297,8 +297,6 @@ struct main_server_st;
 
 #define MAX_CONFIG_ENTRIES 64
 
-#define MAX_ROUTES 32
-
 #include <tun.h>
 
 char *human_addr2(const struct sockaddr *sa, socklen_t salen,

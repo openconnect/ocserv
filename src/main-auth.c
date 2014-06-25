@@ -52,11 +52,6 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 	unsigned i;
 	int ret;
 
-	if (proc->config.routes_size > MAX_ROUTES) {
-		mslog(s, proc, LOG_INFO, "note that the routes sent to the client (%d) exceed the maximum allowed (%d). Truncating.", (int)proc->config.routes_size, (int)MAX_ROUTES);
-		proc->config.routes_size = MAX_ROUTES;
-	}
-
 	if (r == AUTH__REP__OK && proc->tun_lease.name[0] != 0) {
 		char ipv6[MAX_IP_STR];
 		char ipv4[MAX_IP_STR];

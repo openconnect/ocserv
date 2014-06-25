@@ -225,11 +225,11 @@ typedef struct worker_st {
 	
 	/* additional data - received per user or per group */
 	unsigned routes_size;
-	char* routes[MAX_ROUTES];
+	char** routes;
 	unsigned dns_size;
-	char* dns[MAX_ROUTES];
+	char** dns;
 	unsigned nbns_size;
-	char* nbns[MAX_ROUTES];
+	char** nbns;
 
 	void *main_pool; /* to be used only on deinitialization */
 } worker_st;

@@ -584,37 +584,47 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				ws->config->udp_port = 0;
 
 			/* routes */
-			ws->routes_size = msg->n_routes;
+			ws->routes = talloc_size(ws, msg->n_routes*sizeof(char*));
+			if (ws->routes != NULL) {
+				ws->routes_size = msg->n_routes;
+				for (i = 0; i < ws->routes_size; i++) {
+					ws->routes[i] =
+					    talloc_strdup(ws, msg->routes[i]);
 
-			for (i = 0; i < ws->routes_size; i++) {
-				ws->routes[i] =
-				    talloc_strdup(ws, msg->routes[i]);
+					/* If a default route is detected */
+					if (ws->routes[i] != NULL &&
+					    (strcmp(ws->routes[i], "default") == 0 ||
+					     strcmp(ws->routes[i], "0.0.0.0/0") == 0)) {
 
-				/* If a default route is detected */
-				if (ws->routes[i] != NULL &&
-				    (strcmp(ws->routes[i], "default") == 0 ||
-				     strcmp(ws->routes[i], "0.0.0.0/0") == 0)) {
-
-				     /* disable all routes */
-				     ws->routes_size = 0;
-				     ws->default_route = 1;
-				     break;
+					     /* disable all routes */
+					     ws->routes_size = 0;
+					     ws->default_route = 1;
+					     break;
+					}
 				}
 			}
 
 			if (check_if_default_route(ws->routes, ws->routes_size))
 				ws->default_route = 1;
 
-			ws->dns_size = msg->n_dns;
-
-			for (i = 0; i < ws->dns_size; i++) {
-				ws->dns[i] = talloc_strdup(ws, msg->dns[i]);
+			ws->dns = talloc_size(ws, msg->n_dns*sizeof(char*));
+			if (ws->dns != NULL) {
+				ws->dns_size = msg->n_dns;
+				for (i = 0; i < ws->dns_size; i++) {
+					ws->dns[i] = talloc_strdup(ws, msg->dns[i]);
+				}
+				ws->vinfo.dns = ws->dns;
+				ws->vinfo.dns_size = ws->dns_size;
 			}
 
-			ws->nbns_size = msg->n_nbns;
-
-			for (i = 0; i < ws->nbns_size; i++) {
-				ws->nbns[i] = talloc_strdup(ws, msg->nbns[i]);
+			ws->nbns = talloc_size(ws, msg->n_nbns*sizeof(char*));
+			if (ws->nbns != NULL) {
+				ws->nbns_size = msg->n_nbns;
+				for (i = 0; i < ws->nbns_size; i++) {
+					ws->nbns[i] = talloc_strdup(ws, msg->nbns[i]);
+				}
+				ws->vinfo.nbns = ws->nbns;
+				ws->vinfo.nbns_size = ws->nbns_size;
 			}
 		} else {
 			oclog(ws, LOG_ERR, "error in received message");

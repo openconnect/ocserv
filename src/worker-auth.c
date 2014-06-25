@@ -613,8 +613,6 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				for (i = 0; i < ws->dns_size; i++) {
 					ws->dns[i] = talloc_strdup(ws, msg->dns[i]);
 				}
-				ws->vinfo.dns = ws->dns;
-				ws->vinfo.dns_size = ws->dns_size;
 			}
 
 			ws->nbns = talloc_size(ws, msg->n_nbns*sizeof(char*));
@@ -623,8 +621,6 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				for (i = 0; i < ws->nbns_size; i++) {
 					ws->nbns[i] = talloc_strdup(ws, msg->nbns[i]);
 				}
-				ws->vinfo.nbns = ws->nbns;
-				ws->vinfo.nbns_size = ws->nbns_size;
 			}
 		} else {
 			oclog(ws, LOG_ERR, "error in received message");

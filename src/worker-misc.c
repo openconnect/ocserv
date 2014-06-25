@@ -197,13 +197,23 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 		return -1;
 	}
 
-	vinfo->dns_size = ws->config->network.dns_size;
-	if (ws->config->network.dns_size > 0)
-		vinfo->dns = ws->config->network.dns;
+	if (ws->dns_size > 0) {
+		vinfo->dns_size = ws->dns_size;
+		vinfo->dns = ws->dns;
+	} else {
+		vinfo->dns_size = ws->config->network.dns_size;
+		if (ws->config->network.dns_size > 0)
+			vinfo->dns = ws->config->network.dns;
+	}
 
-	vinfo->nbns_size = ws->config->network.nbns_size;
-	if (ws->config->network.nbns_size > 0)
-		vinfo->nbns = ws->config->network.nbns;
+	if (ws->nbns_size > 0) {
+		vinfo->nbns_size = ws->nbns_size;
+		vinfo->nbns = ws->nbns;
+	} else {
+		vinfo->nbns_size = ws->config->network.nbns_size;
+		if (ws->config->network.nbns_size > 0)
+			vinfo->nbns = ws->config->network.nbns;
+	}
 
 	vinfo->routes_size = ws->config->network.routes_size;
 	if (ws->config->network.routes_size > 0)

@@ -1046,6 +1046,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 #define USERNAME_FIELD "username"
 #define PASSWORD_FIELD "password"
 #define GROUPNAME_FIELD "group%5flist"
+#define GROUPNAME_FIELD2 "group_list"
 #define GROUPNAME_FIELD_XML "group-select"
 
 #define MSG_INTERNAL_ERROR "Internal error"
@@ -1078,6 +1079,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
 					GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
 					&groupname);
+			if (ret < 0) {
+				ret = parse_reply(ws, req->body, req->body_length,
+						GROUPNAME_FIELD2, sizeof(GROUPNAME_FIELD2)-1,
+						GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
+						&groupname);
+			}
+
 			if (ret < 0) {
 				oclog(ws, LOG_DEBUG, "failed reading groupname");
 			} else if (ws->config->default_select_group == NULL ||

@@ -7,6 +7,8 @@
   authentication methods). That feature is disabled by default as it
   requires the security module to keep state for each connected user.
 - Corrected escaping of URL-encoded passwords. Patch by Hexchain Tong.
+- Forward the appropriate DNS and NBNS values when using a per-user/group
+  config. Reported by sskaje.
 - Seccomp is now compiled-in by default, and can be enabled at runtime.
 - ocpasswd: Added --delete parameter.
 

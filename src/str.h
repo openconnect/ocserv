@@ -53,6 +53,7 @@ inline static void str_reset(str_st * buf)
 	buf->length = 0;
 }
 
+int str_append_printf(str_st *dest, const char *fmt, ...);
 int str_append_str(str_st *, const char *str);
 int str_replace_str(str_st *, const char *what, const char *with);
 int str_append_data(str_st *, const void *data, size_t data_size);

@@ -28,6 +28,7 @@
 #include <minmax.h>
 #include <str.h>
 #include <main.h>
+#include "vasprintf.h"
 
 #define MEMSUB(x,y) ((ssize_t)((ptrdiff_t)x-(ptrdiff_t)y))
 
@@ -125,6 +126,27 @@ int str_append_str(str_st * dest, const char *src)
 		dest->length--;
 
 	return ret;
+}
+
+int
+str_append_printf(str_st *dest, const char *fmt, ...)
+{
+	va_list args;
+	int len;
+	char *str;
+
+	va_start(args, fmt);
+	len = vasprintf(&str, fmt, args);
+	va_end(args);
+
+	if (len < 0 || !str)
+		return -1;
+
+	len = str_append_str(dest, str);
+
+	free(str);
+
+	return len;
 }
 
 int str_replace_str(str_st *str, const char *what, const char *with)

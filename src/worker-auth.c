@@ -60,14 +60,13 @@ static const char ocv3_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UT
 
 static const char ocv3_success_msg_foot[] = "</auth>\n";
 
-
-static const char oc_login_msg_start[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    VERSION_MSG
-    "<auth id=\"main\">\n"
-    "<message>%s</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n";
+#define OC_LOGIN_MSG_START \
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
+    "<config-auth client=\"vpn\" type=\"auth-request\">\n" \
+    VERSION_MSG \
+    "<auth id=\"main\">\n" \
+    "<message>%s</message>\n" \
+    "<form method=\"post\" action=\"/auth\">\n"
 
 static const char oc_login_msg_end[] =
     "</form></auth>\n" "</config-auth>";
@@ -78,11 +77,11 @@ static const char login_msg_user[] =
 static const char login_msg_password[] =
     "<input type=\"password\" name=\"password\" label=\"Password:\" />\n";
 
-static const char ocv3_login_msg_start[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    "<auth id=\"main\">\n"
-    "<message>%s</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n";
+#define OCV3_LOGIN_MSG_START \
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
+    "<auth id=\"main\">\n" \
+    "<message>%s</message>\n" \
+    "<form method=\"post\" action=\"/auth\">\n"
 
 static const char ocv3_login_msg_end[] =
     "</form></auth>\n";
@@ -138,17 +137,16 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
 	char context[BASE64_LENGTH(SID_SIZE) + 1];
-	char temp[256];
 	unsigned int i, j;
 	str_st str;
 	const char *login_msg_start;
 	const char *login_msg_end;
 
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
-		login_msg_start = ocv3_login_msg_start;
+		login_msg_start = OCV3_LOGIN_MSG_START;
 		login_msg_end = ocv3_login_msg_end;
 	} else {
-		login_msg_start = oc_login_msg_start;
+		login_msg_start = OC_LOGIN_MSG_START;
 		login_msg_end = oc_login_msg_end;
 	}
 
@@ -188,8 +186,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		if (pmsg == NULL)
 			pmsg = "Please enter your password.";
 
-		snprintf(temp, sizeof(temp), login_msg_start, pmsg);
-		ret = str_append_str(&str, temp);
+		ret = str_append_printf(&str, login_msg_start, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -209,8 +206,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 	} else {
 		/* ask for username and groups */
-		snprintf(temp, sizeof(temp), login_msg_start, "Please enter your username");
-		ret = str_append_str(&str, temp);
+		ret = str_append_printf(&str, login_msg_start, "Please enter your username");
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -255,8 +251,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			}
 
 			if (ws->config->default_select_group) {
-				snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->config->default_select_group);
-				ret = str_append_str(&str, temp);
+				ret = str_append_printf(&str, "<option>%s</option>\n", ws->config->default_select_group);
 				if (ret < 0) {
 					ret = -1;
 					goto cleanup;
@@ -282,8 +277,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 					if (dup != 0)
 						continue;
 
-					snprintf(temp, sizeof(temp), "<option>%s</option>\n", ws->cert_groups[i]);
-					ret = str_append_str(&str, temp);
+					ret = str_append_printf(&str, "<option>%s</option>\n", ws->cert_groups[i]);
 					if (ret < 0) {
 						ret = -1;
 						goto cleanup;

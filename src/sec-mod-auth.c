@@ -217,7 +217,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 
 				snprintf(e->username, sizeof(e->username), "%s",
 					 cert_user);
-				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL)
+				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL && e->groupname[0] == 0)
 					snprintf(e->groupname, sizeof(e->groupname),
 						 "%s", cert_groups[0]);
 			} else {
@@ -473,7 +473,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	e->status = PS_AUTH_INIT;
-	seclog(LOG_DEBUG, "auth init for user '%s' from '%s'", e->username, req->ip);
+	seclog(LOG_DEBUG, "auth init for user '%s' (group: '%s') from '%s'", e->username, e->groupname, req->ip);
 
 	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		ret = ERR_AUTH_CONTINUE;

@@ -61,50 +61,30 @@ static const char ocv3_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UT
 static const char ocv3_success_msg_foot[] = "</auth>\n";
 
 
-static const char oc_login_msg_user_start[] =
+static const char oc_login_msg_start[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<config-auth client=\"vpn\" type=\"auth-request\">\n"
     VERSION_MSG
     "<auth id=\"main\">\n"
-    "<message>Please enter your username</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n"
-    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
+    "<message>%s</message>\n"
+    "<form method=\"post\" action=\"/auth\">\n";
 
-static const char oc_login_msg_user_end[] =
+static const char oc_login_msg_end[] =
     "</form></auth>\n" "</config-auth>";
 
-static const char oc_login_msg_no_user_start[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    "<config-auth client=\"vpn\" type=\"auth-request\">\n"
-    VERSION_MSG
-    "<auth id=\"main\">\n"
-    "<message>";
-
-static const char oc_login_msg_no_user_end[] =
-    "</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n"
-    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
-    "</form></auth></config-auth>\n";
-
-static const char ocv3_login_msg_user_start[] =
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    "<auth id=\"main\">\n"
-    "<message>Please enter your username</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n"
+static const char login_msg_user[] =
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
 
-static const char ocv3_login_msg_user_end[] =
-    "</form></auth>\n";
+static const char login_msg_password[] =
+    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n";
 
-static const char ocv3_login_msg_no_user_start[] =
+static const char ocv3_login_msg_start[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<auth id=\"main\">\n"
-    "<message>";
+    "<message>%s</message>\n"
+    "<form method=\"post\" action=\"/auth\">\n";
 
-static const char ocv3_login_msg_no_user_end[] =
-    "</message>\n"
-    "<form method=\"post\" action=\"/auth\">\n"
-    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
+static const char ocv3_login_msg_end[] =
     "</form></auth>\n";
 
 static int get_cert_info(worker_st * ws);
@@ -158,24 +138,18 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 {
 	int ret;
 	char context[BASE64_LENGTH(SID_SIZE) + 1];
-	char temp[128];
+	char temp[256];
 	unsigned int i, j;
 	str_st str;
-	const char *login_msg_user_start;
-	const char *login_msg_user_end;
-	const char *login_msg_no_user_start;
-	const char *login_msg_no_user_end;
+	const char *login_msg_start;
+	const char *login_msg_end;
 
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
-		login_msg_user_start = ocv3_login_msg_user_start;
-		login_msg_user_end = ocv3_login_msg_user_end;
-		login_msg_no_user_start = ocv3_login_msg_no_user_start;
-		login_msg_no_user_end = ocv3_login_msg_no_user_end;
+		login_msg_start = ocv3_login_msg_start;
+		login_msg_end = ocv3_login_msg_end;
 	} else {
-		login_msg_user_start = oc_login_msg_user_start;
-		login_msg_user_end = oc_login_msg_user_end;
-		login_msg_no_user_start = oc_login_msg_no_user_start;
-		login_msg_no_user_end = oc_login_msg_no_user_end;
+		login_msg_start = oc_login_msg_start;
+		login_msg_end = oc_login_msg_end;
 	}
 
 	str_init(&str, ws);
@@ -214,19 +188,20 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		if (pmsg == NULL)
 			pmsg = "Please enter your password.";
 
-		ret = str_append_str(&str, login_msg_no_user_start);
+		snprintf(temp, sizeof(temp), login_msg_start, pmsg);
+		ret = str_append_str(&str, temp);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
-		ret = str_append_str(&str, pmsg);
+		ret = str_append_str(&str, login_msg_password);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
-		ret = str_append_str(&str, login_msg_no_user_end);
+		ret = str_append_str(&str, login_msg_end);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -234,10 +209,19 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 	} else {
 		/* ask for username and groups */
-		ret = str_append_str(&str, login_msg_user_start);
+		snprintf(temp, sizeof(temp), login_msg_start, "Please enter your username");
+		ret = str_append_str(&str, temp);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
+		}
+
+		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+			ret = str_append_str(&str, login_msg_user);
+			if (ret < 0) {
+				ret = -1;
+				goto cleanup;
+			}
 		}
 
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
@@ -325,7 +309,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			}
 		}
 
-		ret = str_append_str(&str, login_msg_user_end);
+		ret = str_append_str(&str, login_msg_end);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -1074,27 +1058,28 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	if (ws->auth_state == S_AUTH_INACTIVE) {
 		SecAuthInitMsg ireq = SEC_AUTH_INIT_MSG__INIT;
 
-		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		ret = parse_reply(ws, req->body, req->body_length,
+				GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
+				GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
+				&groupname);
+		if (ret < 0) {
 			ret = parse_reply(ws, req->body, req->body_length,
-					GROUPNAME_FIELD, sizeof(GROUPNAME_FIELD)-1,
+					GROUPNAME_FIELD2, sizeof(GROUPNAME_FIELD2)-1,
 					GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
 					&groupname);
-			if (ret < 0) {
-				ret = parse_reply(ws, req->body, req->body_length,
-						GROUPNAME_FIELD2, sizeof(GROUPNAME_FIELD2)-1,
-						GROUPNAME_FIELD_XML, sizeof(GROUPNAME_FIELD_XML)-1,
-						&groupname);
-			}
+		}
 
-			if (ret < 0) {
-				oclog(ws, LOG_DEBUG, "failed reading groupname");
-			} else if (ws->config->default_select_group == NULL ||
-				   strcmp(groupname, ws->config->default_select_group) != 0) {
-				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
-				 	groupname);
-				ireq.group_name = ws->groupname;
-			}
-			talloc_free(groupname);
+		if (ret < 0) {
+			oclog(ws, LOG_DEBUG, "failed reading groupname");
+		} else if (ws->config->default_select_group == NULL ||
+			   strcmp(groupname, ws->config->default_select_group) != 0) {
+			snprintf(ws->groupname, sizeof(ws->groupname), "%s",
+			 	groupname);
+			ireq.group_name = ws->groupname;
+		}
+		talloc_free(groupname);
+
+		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 
 			ret = parse_reply(ws, req->body, req->body_length,
 					USERNAME_FIELD, sizeof(USERNAME_FIELD)-1,
@@ -1125,6 +1110,11 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				oclog(ws, LOG_ERR,
 				      "failed reading certificate info");
 				goto auth_fail;
+			}
+
+			if (ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
+				oclog(ws, LOG_DEBUG, "user haven't selected group");
+				goto ask_auth;
 			}
 
 			ireq.tls_auth_ok = 1;

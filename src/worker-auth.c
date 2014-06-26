@@ -184,7 +184,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ws->auth_state == S_AUTH_REQ) {
 		/* only ask password */
 		if (pmsg == NULL)
-			pmsg = "Please enter your password.";
+			pmsg = "Please enter your password";
 
 		ret = str_append_printf(&str, login_msg_start, pmsg);
 		if (ret < 0) {
@@ -205,8 +205,11 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		}
 
 	} else {
+		if (pmsg == NULL)
+			pmsg = "Please enter your username";
+
 		/* ask for username and groups */
-		ret = str_append_printf(&str, login_msg_start, "Please enter your username");
+		ret = str_append_printf(&str, login_msg_start, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -1108,7 +1111,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			if (ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
 				oclog(ws, LOG_DEBUG, "user haven't selected group");
-				goto ask_auth;
+				return get_auth_handler2(ws, http_ver, "Please select your group");
 			}
 
 			ireq.tls_auth_ok = 1;

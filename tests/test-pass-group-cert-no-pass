@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=6555
+
+. `dirname $0`/common.sh
+
+echo "Testing local backend with username-password and certificate... "
+
+launch_server -d 1 -f -c test-user-group-cert-no-pass.config & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+openconnect --authgroup group1 -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 &&
+	fail $PID "Connected without certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie - group1 (with certificate)... "
+openconnect --authgroup group1 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie - group2 (with certificate)... "
+openconnect --authgroup group2 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+echo -n "Connecting to obtain cookie - group3 (hidden) (with certificate)... "
+openconnect --authgroup group3 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+kill $PID
+wait
+
+
+exit 0

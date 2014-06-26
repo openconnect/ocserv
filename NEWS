@@ -9,6 +9,8 @@
 - Corrected escaping of URL-encoded passwords. Patch by Hexchain Tong.
 - Fix issue which prevented reading the selected group from AnyConnect
   clients.
+- Allow prompting the user for group selecting when groups are available
+  in the certificate.
 - Forward the appropriate DNS and NBNS values when using a per-user/group
   config. Reported by sskaje.
 - Seccomp is now compiled-in by default, and can be enabled at runtime.

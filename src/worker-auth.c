@@ -1110,7 +1110,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			if (ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
-				oclog(ws, LOG_DEBUG, "user haven't selected group");
+				oclog(ws, LOG_DEBUG, "user has not selected a group");
 				return get_auth_handler2(ws, http_ver, "Please select your group");
 			}
 

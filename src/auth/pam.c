@@ -45,7 +45,7 @@
 #include <pcl.h>
 #include <str.h>
 
-#define PAM_STACK_SIZE (128*1024)
+#define PAM_STACK_SIZE (96*1024)
 
 #define MAX_REPLIES 2
 

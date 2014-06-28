@@ -134,8 +134,8 @@ keepalive = 32400
 # could have his UDP connection stalled, for several minutes.
 dpd = 90
 
-# Dead peer detection for mobile clients. The needs to
-# be much higher to prevent such clients being awaken too 
+# Dead peer detection for mobile clients. That needs to
+# be higher to prevent such clients being awaken too 
 # often by the DPD messages, and save battery.
 # The mobile clients are distinguished from the header
 # 'X-AnyConnect-Identifier-DeviceType'.

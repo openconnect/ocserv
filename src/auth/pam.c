@@ -352,6 +352,11 @@ static int pam_auth_open_session(void* ctx)
 struct pam_ctx_st * pctx = ctx;
 int pret;
 
+	if (pctx->cr != NULL) {
+		co_delete(pctx->cr);
+		pctx->cr = NULL;
+	}
+
 	pret = pam_open_session(pctx->ph, PAM_SILENT);
 	if (pret != PAM_SUCCESS) {
 		syslog(LOG_AUTH, "PAM-auth: pam_open_session: %s", pam_strerror(pctx->ph, pret));

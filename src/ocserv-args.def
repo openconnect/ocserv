@@ -564,7 +564,6 @@ $ certtool --generate-privkey --outfile server-key.pem
 $ cat << _EOF_ >server.tmpl
 cn = "www.example.com"
 organization = "MyCompany"
-serial = 2
 expiration_days = 9999
 signing_key
 encryption_key #only if the generated key is an RSA one
@@ -588,7 +587,6 @@ $ certtool --generate-privkey --outfile server-key.pem
 $ cat << _EOF_ >server.tmpl
 cn = "www.example.com"
 organization = "MyCompany"
-serial = 2
 expiration_days = 9999
 signing_key
 encryption_key #only if the generated key is an RSA one
@@ -615,7 +613,6 @@ $ certtool --generate-privkey --outfile user-key.pem
 $ cat << _EOF_ >user.tmpl
 cn = "user"
 unit = "admins"
-serial = 1824
 expiration_days = 9999
 signing_key
 tls_www_client
@@ -635,7 +632,7 @@ $ certtool --to-p12 --load-privkey user-key.pem \
 To revoke the previous client certificate use:
 @example
 $ cat << _EOF_ >crl.tmpl
-crl_next_update = 999
+crl_next_update = 9999
 crl_number = 1
 _EOF_
 $ cat user-cert.pem >>revoked.pem

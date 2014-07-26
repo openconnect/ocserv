@@ -158,7 +158,7 @@ unsigned j;
 	return NULL;
 }
 
-#define READ_MULTI_LINE(name, s_name, num) \
+#define READ_MULTI_LINE(name, s_name, num) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
@@ -181,9 +181,9 @@ unsigned j;
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
-	}
+	}}
 
-#define READ_MULTI_BRACKET_LINE(name, s_name, s_name2, num) \
+#define READ_MULTI_BRACKET_LINE(name, s_name, s_name2, num) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL || s_name2 == NULL) { \
@@ -211,25 +211,25 @@ unsigned j;
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
-	}
+	}}
 
-#define READ_STRING(name, s_name) \
+#define READ_STRING(name, s_name) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
 		s_name = talloc_strdup(config, val->v.strVal); \
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
-	}
+	}}
 
-#define READ_STATIC_STRING(name, s_name) \
+#define READ_STATIC_STRING(name, s_name) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
 		snprintf(s_name, sizeof(s_name), "%s", val->v.strVal); \
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
-	}
+	}}
 
 #define READ_TF(name, s_name, def) \
 	{ char* tmp_tf = NULL; \
@@ -244,7 +244,7 @@ unsigned j;
 		talloc_free(tmp_tf); \
 	}
 
-#define READ_NUMERIC(name, s_name) \
+#define READ_NUMERIC(name, s_name) { \
 	val = get_option(name, &mand); \
 	if (val != NULL) { \
 		if (val->valType == OPARG_TYPE_NUMERIC) \
@@ -254,9 +254,9 @@ unsigned j;
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
-	}
+	}}
 
-#define READ_PRIO_TOS(name, s_name) \
+#define READ_PRIO_TOS(name, s_name) { \
 	val = get_option(name, &mand); \
 	if (val != NULL) { \
 		if (val->valType == OPARG_TYPE_STRING) { \
@@ -271,7 +271,7 @@ unsigned j;
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
-	}
+	}}
 
 
 static int handle_option(const tOptionValue* val)

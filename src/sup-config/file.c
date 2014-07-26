@@ -61,7 +61,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "cgroup", .type = OPTION_STRING, },
 };
 
-#define READ_RAW_MULTI_LINE(name, s_name, num) \
+#define READ_RAW_MULTI_LINE(name, s_name, num) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
@@ -77,26 +77,26 @@ static struct cfg_options available_options[] = {
 		        num++; \
 	      } while((val = optionNextValue(pov, val)) != NULL); \
 	      s_name[num] = NULL; \
-	}
+	}}
 
-#define READ_RAW_STRING(name, s_name) \
+#define READ_RAW_STRING(name, s_name) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name != NULL) \
 			talloc_free(s_name); \
 		s_name = talloc_strdup(proc, val->v.strVal); \
-	}
+	}}
 
-#define READ_RAW_NUMERIC(name, s_name) \
+#define READ_RAW_NUMERIC(name, s_name) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL) { \
 		if (val->valType == OPARG_TYPE_NUMERIC) \
 			s_name = val->v.longVal; \
 		else if (val->valType == OPARG_TYPE_STRING) \
 			s_name = atoi(val->v.strVal); \
-	}
+	}}
 
-#define READ_RAW_PRIO_TOS(name, s_name) \
+#define READ_RAW_PRIO_TOS(name, s_name) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL) { \
 		if (val->valType == OPARG_TYPE_STRING) { \
@@ -108,9 +108,9 @@ static struct cfg_options available_options[] = {
 				s_name++; \
 			} \
 		} \
-	}
+	}}
 
-#define READ_TF(name, s_name, def) \
+#define READ_TF(name, s_name, def) { \
 	{ char* tmp_tf = NULL; \
 		READ_RAW_STRING(name, tmp_tf); \
 		if (tmp_tf == NULL) s_name = def; \
@@ -121,7 +121,7 @@ static struct cfg_options available_options[] = {
 				s_name = 0; \
 		} \
 		talloc_free(tmp_tf); \
-	}
+	}}
 
 static int handle_option(const tOptionValue* val)
 {

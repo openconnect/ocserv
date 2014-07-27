@@ -393,8 +393,12 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 		ret = gnutls_x509_crt_get_dn(crt, ws->cert_username, &size);
 	}
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "cannot obtain user from certificate DN: %s",
-		      gnutls_strerror(ret));
+		if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER)
+			oclog(ws, LOG_ERR, "certificate's username exceed the maximum buffer size (%u)",
+			      (unsigned)sizeof(ws->cert_username));
+		else
+			oclog(ws, LOG_ERR, "cannot obtain user from certificate DN: %s",
+			      gnutls_strerror(ret));
 		goto fail;
 	}
 
@@ -761,8 +765,12 @@ int get_cert_info(worker_st * ws)
 
 	ret = get_cert_names(ws, cert);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "cannot get username (%s) from certificate",
-		      ws->config->cert_user_oid);
+		if (ws->config->cert_user_oid == NULL) {
+			oclog(ws, LOG_ERR, "cannot read username from certificate; no cert-user-oid is set");
+		} else {
+			oclog(ws, LOG_ERR, "cannot read username (%s) from certificate",
+			      ws->config->cert_user_oid);
+		}
 		return -1;
 	}
 

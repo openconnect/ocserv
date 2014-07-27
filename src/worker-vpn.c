@@ -122,7 +122,7 @@ const static struct known_urls_st known_urls[] = {
 	LL("/1/VPNManifest.xml", get_string_handler, NULL),
 	LL("/1/binaries/update.txt", get_string_handler, NULL),
 
-	LL("/profiles", get_config_handler, NULL),
+	LL_DIR("/profiles", get_config_handler, NULL),
 	LL("/+CSCOT+/", get_string_handler, NULL),
 	LL("/logout", get_empty_handler, NULL),
 #endif

@@ -11,7 +11,7 @@
 /*
  *  This file is part of AutoOpts, a companion to AutoGen.
  *  AutoOpts is free software.
- *  AutoOpts is Copyright (C) 1992-2013 by Bruce Korb - all rights reserved
+ *  AutoOpts is Copyright (C) 1992-2014 by Bruce Korb - all rights reserved
  *
  *  AutoOpts is available under any one of two licenses.  The license
  *  in use must be one of these two and the choice is under the control
@@ -32,6 +32,7 @@
 
 #ifndef AUTOGEN_AUTOOPTS_H
 #define AUTOGEN_AUTOOPTS_H
+#include <stdnoreturn.h>
 
 #define AO_NAME_LIMIT           127
 #define AO_NAME_SIZE            ((size_t)(AO_NAME_LIMIT + 1))
@@ -40,7 +41,7 @@
 #  ifdef PATH_MAX
 #    define AG_PATH_MAX         ((size_t)PATH_MAX)
 #  else
-#    define AG_PATH_MAX         ((size_t)4096)
+#    define AG_PATH_MAX         4096
 #  endif
 #else
 #  if defined(PATH_MAX) && (PATH_MAX > MAXPATHLEN)
@@ -381,6 +382,16 @@ ao_strdup(char const *str);
 extern char* strchr(char const *s, int c);
 extern char* strrchr(char const *s, int c);
 #endif
+
+/**
+ * INQUERY_CALL() tests whether the option handling function has been
+ * called by an inquery (help text needed, or option being reset),
+ * or called by a set-the-option operation.
+ */
+#define INQUERY_CALL(_o, _d) (                  \
+    ((_o) <= OPTPROC_EMIT_LIMIT)                \
+    || ((_d) == NULL)                           \
+    || (((_d)->fOptState & OPTST_RESET) != 0) )
 
 /**
  *  Define and initialize all the user visible strings.

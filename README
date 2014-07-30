@@ -40,10 +40,6 @@ $ ./configure && make
 When cross compiling it may be useful to add the --enable-local-libopts
 option to configure.
 
-To prevent ocserv's worker process from executing non authorized system 
-calls you may compile ocserv with the --enable-seccomp option. That is 
-currently experimental and not enabled by default.
-
 
 To build from the git repository use:
 

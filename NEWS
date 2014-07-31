@@ -1,3 +1,7 @@
+* Version 0.8.3 (unreleased)
+- user-profile is allowed in per-user configuration.
+
+
 * Version 0.8.2 (released 2014-07-26)
 - Solved issue with pid file being overwritten on server reload.
 - pam: reduced memory usage.

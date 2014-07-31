@@ -106,6 +106,10 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.no_udp = proc->config.no_udp;
 		}
 
+		if (proc->config.xml_config_file != NULL) {
+			msg.xml_config_file = proc->config.xml_config_file;
+		}
+
 		msg.n_dns = proc->config.dns_size;
 		for (i=0;i<proc->config.dns_size;i++) {
 			mslog(s, proc, LOG_DEBUG, "sending dns '%s'", proc->config.dns[i]);

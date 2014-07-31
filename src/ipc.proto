@@ -47,7 +47,7 @@ message auth_reply_msg
 	repeated string dns = 22;
 	repeated string nbns = 23;
 	optional bool no_udp = 24 [default = false];
-
+	optional string xml_config_file = 26;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

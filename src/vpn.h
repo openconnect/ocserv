@@ -143,6 +143,8 @@ struct group_cfg_st {
 	
 	char *cgroup;
 
+	char *xml_config_file;
+
 	size_t rx_per_sec;
 	size_t tx_per_sec;
 

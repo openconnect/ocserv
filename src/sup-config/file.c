@@ -55,10 +55,11 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-network", .type = OPTION_STRING },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC },
-	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC, },
-	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC, },
-	{ .name = "net-priority", .type = OPTION_STRING, },
-	{ .name = "cgroup", .type = OPTION_STRING, },
+	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC },
+	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC },
+	{ .name = "net-priority", .type = OPTION_STRING },
+	{ .name = "cgroup", .type = OPTION_STRING },
+	{ .name = "user-profile", .type = OPTION_STRING },
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) { \
@@ -212,6 +213,8 @@ struct group_cfg_st *sconfig = &proc->config;
 	/* net-priority will contain the actual priority + 1,
 	 * to allow having zero as uninitialized. */
 	READ_RAW_PRIO_TOS("net-priority", sconfig->net_priority);
+
+	READ_RAW_STRING("user-profile", sconfig->xml_config_file);
 
 	optionUnloadNested(pov);
 	

@@ -568,6 +568,11 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			if (msg->has_no_udp && msg->no_udp != 0)
 				ws->config->udp_port = 0;
 
+			if (msg->xml_config_file) {
+				talloc_free(ws->config->xml_config_file);
+				ws->config->xml_config_file = talloc_strdup(ws, msg->xml_config_file);
+			}
+
 			/* routes */
 			ws->routes = talloc_size(ws, msg->n_routes*sizeof(char*));
 			if (ws->routes != NULL) {

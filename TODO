@@ -31,3 +31,5 @@ Long term items:
   However, the complexity required to implement that may in fact reduce
   security rather than increase it.
 
+* Allow for a non-root mode where all networking is handled using something
+  like slirp (e.g., https://github.com/SPICE/slirp)

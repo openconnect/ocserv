@@ -1892,9 +1892,13 @@ static int connect_handler(worker_st * ws)
 
 		tls_pending = gnutls_record_check_pending(ws->session);
 
-		if (ws->dtls_session != NULL)
+		if (ws->dtls_session != NULL && ws->udp_state > UP_WAIT_FD) {
 			dtls_pending =
 			    gnutls_record_check_pending(ws->dtls_session);
+		} else {
+			dtls_pending = 0;
+		}
+
 		if (tls_pending == 0 && dtls_pending == 0) {
 #ifdef HAVE_PSELECT
 			tv.tv_nsec = 0;

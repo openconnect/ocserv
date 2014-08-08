@@ -1856,6 +1856,7 @@ static int connect_handler(worker_st * ws)
 	bandwidth_init(&ws->b_tx, ws->config->tx_per_sec);
 
 	session_info_send(ws);
+	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
 	/* worker main loop  */
 	for (;;) {

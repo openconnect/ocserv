@@ -106,7 +106,7 @@ int check_upeer_id(const char *mod, int cfd, uid_t uid, uid_t gid, uid_t *ruid)
 	syslog(LOG_DEBUG,
 	       "%s: received request from a processes with uid %u",
 		mod, (unsigned)euid);
-	if (euid != uid || egid != gid) {
+	if (euid != 0 && (euid != uid || egid != gid)) {
 		syslog(LOG_DEBUG,
 		       "%s: received unauthorized request from a process with uid %u",
 			mod, (unsigned)euid);

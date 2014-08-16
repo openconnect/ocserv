@@ -2,6 +2,7 @@
 - user-profile is allowed in per-user configuration.
 - Allow partial match of /profiles.
 - Fixes in the worker process main loop.
+- Fixed uid check in *BSD systems; reported by Kalle Carlbark.
 
 
 * Version 0.8.2 (released 2014-07-26)

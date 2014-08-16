@@ -1,5 +1,7 @@
 * Version 0.8.3 (unreleased)
 - user-profile is allowed in per-user configuration.
+- Allow partial match of /profiles.
+- Fixes in the worker process main loop.
 
 
 * Version 0.8.2 (released 2014-07-26)

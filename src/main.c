@@ -64,6 +64,7 @@ static unsigned int terminate = 0;
 static unsigned int reload_conf = 0;
 unsigned int need_maintenance = 0;
 static unsigned int need_children_cleanup = 0;
+sigset_t sig_default_set;
 
 static void ms_sleep(unsigned ms)
 {
@@ -974,7 +975,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	sigprocmask(SIG_BLOCK, &blockset, NULL);
+	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
 	alarm(MAINTAINANCE_TIME(s));
 
 	for (;;) {
@@ -1061,6 +1062,7 @@ int main(int argc, char** argv)
 					/* close any open descriptors, and erase
 					 * sensitive data before running the worker
 					 */
+					sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
 					close(cmd_fd[0]);
 					clear_lists(s);
 
@@ -1096,7 +1098,6 @@ int main(int argc, char** argv)
 					 * sensitive data have to be overwritten anyway. */
 					malloc_trim(0);
 #endif
-					sigprocmask(SIG_UNBLOCK, &blockset, NULL);
 					vpn_server(ws);
 					exit(0);
 				} else if (pid == -1) {

@@ -66,6 +66,8 @@ const char* script;
 		char local[64] = "";
 		char remote[64] = "";
 
+		sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
+
 		snprintf(real, sizeof(real), "%u", (unsigned)proc->pid);
 		setenv("ID", real, 1);
 

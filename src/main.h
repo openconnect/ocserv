@@ -39,6 +39,7 @@
 
 #define COOKIE_KEY_SIZE 16
 
+extern sigset_t sig_default_set;
 int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config);
 void reload_cfg_file(void *pool, struct cfg_st* config);
 void clear_cfg_file(struct cfg_st* config);

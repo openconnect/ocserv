@@ -139,6 +139,8 @@ int handle_worker_commands(struct worker_st *ws)
 						close(fd);
 						return 0;
 					}
+					if (ws->dtls_session != NULL)
+						gnutls_transport_set_ptr(ws->dtls_session, (gnutls_transport_ptr_t)(long)fd);
 				} else { /* received client hello */
 					ws->udp_state = UP_SETUP;
 				}

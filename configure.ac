@@ -366,6 +366,7 @@ AC_CONFIG_FILES([
 	src/pcl/Makefile
 	doc/Makefile
 	gl/Makefile
+	tests/docker-ocserv/Makefile
 	tests/Makefile
 ])
 AC_OUTPUT

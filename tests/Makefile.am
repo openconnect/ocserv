@@ -5,6 +5,8 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-group-pass.config user-group-cert.pem user-group-key.pem test-user-group-cert.config \
 	test-user-group-cert-no-pass.config
 
+SUBDIRS = docker-ocserv
+
 dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie test-pam test-stress full-test test-group-pass test-pass-group-cert \
 	ocpasswd-test test-pass-group-cert-no-pass

@@ -1078,7 +1078,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 	ret = gnutls_record_get_discarded(ws->dtls_session);
 	if (ret > 1000) {
 		ws->udp_state = UP_DISABLED;
-		break;
+		return 0;
 	}
 #endif
 	switch (ws->udp_state) {

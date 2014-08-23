@@ -1,8 +1,10 @@
-* Version 0.8.3 (unreleased)
+* Version 0.8.3 (released 2014-08-23)
 - user-profile is allowed in per-user configuration.
 - Allow partial match of /profiles.
 - Fixes in the worker process main loop.
 - Fixed uid check in *BSD systems; reported by Kalle Carlbark.
+- Added work-around for a possible infinite loop that could occur in
+  DTLS mode.
 
 
 * Version 0.8.2 (released 2014-07-26)

@@ -55,7 +55,7 @@ ocserv-args.h: ocserv-args.c
 
 PROTOBUF_SOURCES =
 if LOCAL_PROTOBUF_C
-PROTOBUF_SOURCES += protobuf/google/protobuf-c/protobuf-c.h protobuf/google/protobuf-c/protobuf-c.c
+PROTOBUF_SOURCES += protobuf/protobuf-c/protobuf-c.h protobuf/protobuf-c/protobuf-c.c
 endif
 
 # Files common to ocserv and occtl.

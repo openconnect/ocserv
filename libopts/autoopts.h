@@ -32,7 +32,14 @@
 
 #ifndef AUTOGEN_AUTOOPTS_H
 #define AUTOGEN_AUTOOPTS_H
-#include <stdnoreturn.h>
+
+#ifdef HAVE_STDNORETURN_H
+# include <stdnoreturn.h>
+#else
+# ifndef noreturn
+#  define noreturn
+# endif
+#endif
 
 #define AO_NAME_LIMIT           127
 #define AO_NAME_SIZE            ((size_t)(AO_NAME_LIMIT + 1))

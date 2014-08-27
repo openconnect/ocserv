@@ -53,14 +53,6 @@ if test $? != 0;then
 	exit 77
 fi
 
-grep without-protobuf $srcdir/../config.log >/dev/null 2>&1
-if test $? != 0;then
-	echo "****************************************************************"
-	echo "This test requires compiling ocserv using --without-protobuf"
-	echo "****************************************************************"
-	exit 77
-fi
-
 stop() {
 	$DOCKER stop test_ocserv
 	$DOCKER rm test_ocserv

@@ -1,9 +1,10 @@
 FROM tianon/debian:jessie
 
-RUN apt-get update
-RUN apt-get install -y libgnutls28
+RUN apt-get update;sleep 1
+RUN apt-get install -y libgnutls-deb0-28
+RUN apt-get install -y libprotobuf-c1
 RUN apt-get install -y libwrap0 libpam0g libseccomp2 libdbus-1-3 libreadline5 libnl-route-3-200
-RUN apt-get install -y libprotobuf-c0 libhttp-parser2.1 libpcl1 libopts25 autogen
+RUN apt-get install -y libhttp-parser2.1 libpcl1 libopts25 autogen
 RUN apt-get install -y libsystemd-daemon0 valgrind nuttcp openssh-server bash
 #RUN apt-get install -y inotify-tools
 RUN apt-get update
@@ -35,4 +36,4 @@ ADD myscript /usr/bin/
 # template, so we untar it from this archive.
 ADD dev-tun.tgz /dev/
 
-CMD nuttcp -S;/etc/init.d/ssh restart;mkdir -p /tmp/disconnect/;usr/sbin/ocserv -d 1 -f 
+CMD nuttcp -S;/etc/init.d/ssh restart;mkdir -p /tmp/disconnect/;usr/sbin/ocserv -d 1 -f;sleep 3600

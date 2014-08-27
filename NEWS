@@ -1,5 +1,6 @@
-* Version 0.8.4 (unreleased)
-- The bundled protobuf-c was updated to 1.0.1
+* Version 0.8.4 (released 2014-08-27)
+- The bundled protobuf-c was updated to 1.0.1.
+- Fixed a crash in the work-around for the infinite loop.
 
 
 * Version 0.8.3 (released 2014-08-23)

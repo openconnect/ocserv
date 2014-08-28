@@ -1062,6 +1062,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *groupname = NULL;
 	char ipbuf[128];
 	char msg[MAX_MSG_SIZE];
+	unsigned def_group = 0;
 
 	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
 	      req->body);
@@ -1085,11 +1086,15 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		if (ret < 0) {
 			oclog(ws, LOG_DEBUG, "failed reading groupname");
-		} else if (ws->config->default_select_group == NULL ||
-			   strcmp(groupname, ws->config->default_select_group) != 0) {
-			snprintf(ws->groupname, sizeof(ws->groupname), "%s",
-			 	groupname);
-			ireq.group_name = ws->groupname;
+		} else {
+			if (ws->config->default_select_group != NULL &&
+				   strcmp(groupname, ws->config->default_select_group) == 0) {
+				def_group = 1;
+			} else {
+				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
+				 	groupname);
+				ireq.group_name = ws->groupname;
+			}
 		}
 		talloc_free(groupname);
 
@@ -1126,7 +1131,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				goto auth_fail;
 			}
 
-			if (ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
+			if (def_group == 0 && ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
 				oclog(ws, LOG_DEBUG, "user has not selected a group");
 				return get_auth_handler2(ws, http_ver, "Please select your group");
 			}

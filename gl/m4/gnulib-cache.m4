@@ -27,7 +27,7 @@
 
 
 # Specification in the form of a command-line invocation:
-#   gnulib-tool --import --dir=. --lib=libgnu --source-base=gl --m4-base=gl/m4 --doc-base=doc --tests-base=gl/tests --aux-dir=build-aux --lgpl=2 --no-conditional-dependencies --no-libtool --macro-prefix=gl base64 c-ctype c-strcase cloexec getline getpass havelib memmem minmax
+#   gnulib-tool --import --dir=. --lib=libgnu --source-base=gl --m4-base=gl/m4 --doc-base=doc --tests-base=gl/tests --aux-dir=build-aux --lgpl=2 --no-conditional-dependencies --no-libtool --macro-prefix=gl base64 c-ctype c-strcase cloexec getline getpass havelib memmem minmax strcasestr
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([])
@@ -41,6 +41,7 @@ gl_MODULES([
   havelib
   memmem
   minmax
+  strcasestr
 ])
 gl_AVOID([])
 gl_SOURCE_BASE([gl])

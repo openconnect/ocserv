@@ -85,7 +85,9 @@ getpass (const char *prompt)
 {
   FILE *tty;
   FILE *in, *out;
+# if HAVE_TCGETATTR
   struct termios s, t;
+# endif
   bool tty_changed = false;
   static char *buf;
   static size_t bufsize;

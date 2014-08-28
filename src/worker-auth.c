@@ -946,6 +946,10 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 
 /* Returns the username and password in newly allocated
  * buffers.
+ *
+ * @body: is the string to search the xml field at, should be null-terminated.
+ * @xml_field: the XML field to check for (e.g., MYFIELD)
+ * @value: the value that was found
  */
 static
 int parse_reply(worker_st * ws, char *body, unsigned body_length,
@@ -972,9 +976,9 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		temp1_len = strlen(temp1);
 		temp2_len = strlen(temp2);
 
-		/* body should contain <username>test</username><password>test</password> */
+		/* body should contain <field>test</field> */
 		*value =
-		    memmem(body, body_length, temp1, temp1_len);
+		    strcasestr(body, temp1);
 		if (*value == NULL) {
 			oclog(ws, LOG_DEBUG,
 			      "cannot find '%s' in client XML message", field);
@@ -986,7 +990,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		len = 0;
 		while (*p != 0) {
 			if (*p == '<'
-			    && (strncmp(p, temp2, temp2_len) == 0)) {
+			    && (strncasecmp(p, temp2, temp2_len) == 0)) {
 				break;
 			}
 			p++;
@@ -998,7 +1002,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 
 		/* body should be "username=test&password=test" */
 		*value =
-		    memmem(body, body_length, temp1, temp1_len);
+		    strcasestr(body, temp1);
 		if (*value == NULL) {
 			oclog(ws, LOG_DEBUG,
 			      "cannot find '%s' in client message", field);

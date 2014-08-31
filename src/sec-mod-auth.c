@@ -309,7 +309,10 @@ int handle_sec_auth_session_openclose(sec_mod_st * sec, const SecAuthSessionMsg 
 	client_entry_st *e;
 	int ret;
 
-	if (sec->config->session_control == 0 || module->open_session == NULL) {
+	if (module->open_session == NULL)
+		return 0;
+
+	if (sec->config->session_control == 0) {
 		seclog(LOG_ERR, "auth session open/close but session control is disabled!");
 		return 0;
 	}

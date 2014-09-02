@@ -630,25 +630,31 @@ static void http_req_deinit(worker_st * ws)
 	ws->req.body = NULL;
 }
 
+static int send_stats_msg(worker_st * ws)
+{
+	CliStatsMsg msg = CLI_STATS_MSG__INIT;
+	int ret;
+
+	msg.bytes_in = ws->tun_bytes_in;
+	msg.bytes_out = ws->tun_bytes_out;
+
+	ret = send_msg_to_main(ws, CMD_CLI_STATS, &msg,
+			 (pack_size_func)
+			 cli_stats_msg__get_packed_size,
+			 (pack_func) cli_stats_msg__pack);
+	oclog(ws, LOG_DEBUG,
+	      "sending stats (in: %lu, out: %lu) to main",
+	      (unsigned long)msg.bytes_in,
+	      (unsigned long)msg.bytes_out);
+	return ret;
+}
+
 static
 void exit_worker(worker_st * ws)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		CliStatsMsg msg = CLI_STATS_MSG__INIT;
-
-		msg.bytes_in = ws->tun_bytes_in;
-		msg.bytes_out = ws->tun_bytes_out;
-
-		send_msg_to_main(ws, CMD_CLI_STATS, &msg,
-				 (pack_size_func)
-				 cli_stats_msg__get_packed_size,
-				 (pack_func) cli_stats_msg__pack);
-
-		oclog(ws, LOG_DEBUG,
-		      "sending stats (in: %lu, out: %lu) to main",
-		      (unsigned long)msg.bytes_in,
-		      (unsigned long)msg.bytes_out);
+		send_stats_msg(ws);
 	}
 	talloc_free(ws->main_pool);
 	closelog();
@@ -1025,6 +1031,11 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 			      max - mtu_overhead);
 			mtu_set(ws, MIN(ws->conn_mtu, max - mtu_overhead));
 		}
+	}
+
+	ret = send_stats_msg(ws);
+	if (ret < 0) {
+		oclog(ws, LOG_INFO, "error in sending stats");
 	}
 
  cleanup:

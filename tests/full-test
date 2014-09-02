@@ -92,19 +92,38 @@ rm -f pass.tmp
 sleep 5
 
 # The client IP depends on the username so it shouldn't change.
-ping -w 3 192.168.1.190
+ping -w 5 192.168.1.190
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping -w 3 192.168.1.190 -s 1500
+ping -w 5 192.168.1.190 -s 1500
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
+
+export SSH_ASKPASS="$srcdir/echo-admin"
+setsid ssh admin@192.168.1.190 occtl show user test >out.tmp 2>&1
+
+grep "RX data" out.tmp
+if test $? != 0;then
+	kill $PID
+	echo "could not find RX data"
+	stop
+fi
+
+grep "RX data: 0 " out.tmp
+if test $? = 0;then
+	kill $PID
+	echo "RX data was zero"
+	stop
+fi
+
+rm -f out.tmp
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.

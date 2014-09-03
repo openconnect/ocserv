@@ -1,3 +1,11 @@
+* Version 0.8.5 (unreleased)
+- the comparison of XML fields is now case insensitive; that
+  addresses issues with some anyconnect clients (report and fix
+  by sskaje).
+- fixed an infinite loop when asking for group if the default group
+  is selected.
+
+
 * Version 0.8.4 (released 2014-08-27)
 - The bundled protobuf-c was updated to 1.0.1.
 - Fixed a crash in the work-around for the infinite loop.

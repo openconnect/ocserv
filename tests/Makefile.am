@@ -3,7 +3,7 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	user-config/test test-pass-script.config test-multi-cookie.config test-pam.config \
 	test-stress.config user-cert-wrong.pem connect-script test-group.passwd \
 	test-group-pass.config user-group-cert.pem user-group-key.pem test-user-group-cert.config \
-	test-user-group-cert-no-pass.config echo-admin
+	test-user-group-cert-no-pass.config
 
 SUBDIRS = docker-ocserv
 

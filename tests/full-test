@@ -106,8 +106,29 @@ if test $? != 0;then
 	stop
 fi
 
-export SSH_ASKPASS="$srcdir/echo-admin"
-setsid ssh admin@192.168.1.190 occtl show user test >out.tmp 2>&1
+echo "Waiting for RX data to be sent to master"
+sleep 65
+
+echo "UserKnownHostsFile ./known-hosts.tmp" >config.tmp
+
+printf "#\!/bin/sh\n" >echo-admin.tmp
+printf "echo yes" >>echo-admin.tmp
+printf "echo root" >>echo-admin.tmp
+printf "\n" >>echo-admin.tmp
+chmod 755 echo-admin.tmp
+export SSH_ASKPASS="./echo-admin.tmp"
+setsid ssh -T -F config.tmp root@192.168.1.190 occtl show user test >out.tmp 2>&1
+cat out.tmp
+
+printf "#\!/bin/sh\n" >echo-admin.tmp
+printf "echo root" >>echo-admin.tmp
+printf "\n" >>echo-admin.tmp
+chmod 755 echo-admin.tmp
+setsid ssh -T -F config.tmp root@192.168.1.190 occtl show user test >out.tmp 2>&1
+cat out.tmp
+rm -f echo-admin.tmp
+rm -f config.tmp
+rm -f known-hosts.tmp
 
 grep "RX data" out.tmp
 if test $? != 0;then

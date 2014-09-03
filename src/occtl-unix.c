@@ -560,7 +560,6 @@ int common_info_cmd(UserListRep * args)
 	unsigned at_least_one = 0;
 	int ret = 1, r;
 	unsigned i;
-	char buf[32];
 
 	out = pager_start();
 
@@ -606,6 +605,7 @@ int common_info_cmd(UserListRep * args)
 
 		if (args->user[i]->rx_per_sec > 0 || args->user[i]->tx_per_sec > 0) {
 			/* print limits */
+			char buf[32];
 
 			if (args->user[i]->rx_per_sec > 0 && args->user[i]->tx_per_sec > 0) {
 				bytes2human(args->user[i]->rx_per_sec, buf, sizeof(buf), NULL);
@@ -623,12 +623,6 @@ int common_info_cmd(UserListRep * args)
 		}
 
 		print_iface_stats(args->user[i]->tun, args->user[i]->conn_time, out);
-
-		bytes2human(args->user[i]->rx_bytes, buf, sizeof(buf), NULL);
-		fprintf(out, "\tRX data: %s  ", buf);
-
-		bytes2human(args->user[i]->tx_bytes, buf, sizeof(buf), NULL);
-		fprintf(out, "\tTX data: %s\n", buf);
 
 		if (args->user[i]->hostname != NULL && args->user[i]->hostname[0] != 0)
 			fprintf(out, "\tHostname: %s\n", args->user[i]->hostname);

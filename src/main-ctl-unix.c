@@ -329,8 +329,6 @@ static int append_user_info(method_ctx *ctx,
 
 	rep->tls_ciphersuite = ctmp->tls_ciphersuite;
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;
-	rep->rx_bytes = ctmp->bytes_in;
-	rep->tx_bytes = ctmp->bytes_out;
 
 	if (single > 0) {
 		if (ctmp->config.rx_per_sec > 0)

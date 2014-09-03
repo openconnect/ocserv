@@ -106,11 +106,7 @@ if test $? != 0;then
 	stop
 fi
 
-echo "Waiting for RX data to be sent to master"
-sleep 65
-
 echo "UserKnownHostsFile ./known-hosts.tmp" >config.tmp
-
 printf "#\!/bin/sh\n" >echo-admin.tmp
 printf "echo yes" >>echo-admin.tmp
 printf "echo root" >>echo-admin.tmp
@@ -130,17 +126,10 @@ rm -f echo-admin.tmp
 rm -f config.tmp
 rm -f known-hosts.tmp
 
-grep "RX data" out.tmp
+grep "Username" out.tmp
 if test $? != 0;then
 	kill $PID
-	echo "could not find RX data"
-	stop
-fi
-
-grep "RX data: 0 " out.tmp
-if test $? = 0;then
-	kill $PID
-	echo "RX data was zero"
+	echo "could not find user information"
 	stop
 fi
 

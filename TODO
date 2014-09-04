@@ -8,8 +8,8 @@ Short term items:
   longer time (or should we drop this functionality altogether and rely
   on PAM handling that?)
 
-* Change into hashtables the lists that are used during a client
-  connection.
+* Change into hashtables the lists that are used during a UDP packet
+  receipt, i.e., forward_udp_to_owner().
 
 * Give each worker a limited number of accesses to the security module.
 

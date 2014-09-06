@@ -956,8 +956,8 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 #define XMLUSER_END "</username>"
 #define XMLPASS_END "</password>"
 
-/* Returns the username and password in newly allocated
- * buffers.
+/* Returns the contents of the provided fields in a newly allocated
+ * string, or a negative value on error.
  *
  * @body: is the string to search the xml field at, should be null-terminated.
  * @xml_field: the XML field to check for (e.g., MYFIELD)

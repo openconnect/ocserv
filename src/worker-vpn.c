@@ -1518,8 +1518,8 @@ static int connect_handler(worker_st * ws)
 			if (ws->vinfo.ipv6_netmask) {
 				ret =
 				    tls_printf(ws->session,
-					       "X-CSTP-Netmask: %s\r\n",
-					       ws->vinfo.ipv6_netmask);
+					       "X-CSTP-Netmask: %u\r\n",
+					       ws->vinfo.ipv6_prefix);
 				SEND_ERR(ret);
 			}
 		}

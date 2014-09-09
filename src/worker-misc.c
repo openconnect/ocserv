@@ -224,6 +224,9 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 	if (check_if_default_route(vinfo->routes, vinfo->routes_size))
 		ws->default_route = 1;
 
+	vinfo->ipv4_network = ws->config->network.ipv4_network;
+	vinfo->ipv6_network = ws->config->network.ipv6_network;
+
 	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
 	vinfo->ipv6_netmask = ws->config->network.ipv6_netmask;
 	vinfo->ipv6_prefix = ws->config->network.ipv6_prefix;

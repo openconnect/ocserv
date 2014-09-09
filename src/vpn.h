@@ -156,9 +156,11 @@ struct group_cfg_st {
 struct vpn_st {
 	char name[IFNAMSIZ];
 	char *ipv4_netmask;
+	char *ipv4_network;
 	char *ipv4;
 	char *ipv4_local; /* local IPv4 address */
 	char *ipv6_netmask;
+	char *ipv6_network;
 	unsigned ipv6_prefix;
 
 	char *ipv6;

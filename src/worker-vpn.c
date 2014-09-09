@@ -1514,14 +1514,14 @@ static int connect_handler(worker_st * ws)
 			    tls_printf(ws->session, "X-CSTP-Address: %s\r\n",
 				       ws->vinfo.ipv6);
 			SEND_ERR(ret);
+		}
 
-			if (ws->vinfo.ipv6_netmask) {
-				ret =
-				    tls_printf(ws->session,
-					       "X-CSTP-Netmask: %u\r\n",
-					       ws->vinfo.ipv6_prefix);
-				SEND_ERR(ret);
-			}
+		if (ws->vinfo.ipv6_network && ws->vinfo.ipv6_prefix != 0) {
+			ret =
+			    tls_printf(ws->session,
+				       "X-CSTP-Netmask: %s/%u\r\n",
+					       ws->vinfo.ipv6_network, ws->vinfo.ipv6_prefix);
+			SEND_ERR(ret);
 		}
 	}
 

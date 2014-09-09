@@ -48,6 +48,8 @@ message auth_reply_msg
 	repeated string nbns = 23;
 	optional bool no_udp = 24 [default = false];
 	optional string xml_config_file = 26;
+	optional string ipv4_network = 27;
+	optional string ipv6_network = 28;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

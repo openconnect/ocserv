@@ -85,6 +85,10 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 
 		msg.ipv4_netmask = proc->config.ipv4_netmask;
 		msg.ipv6_netmask = proc->config.ipv6_netmask;
+
+		msg.ipv4_network = proc->config.ipv4_network;
+		msg.ipv6_network = proc->config.ipv6_network;
+
 		msg.ipv6_prefix = proc->config.ipv6_prefix;
 		if (proc->config.rx_per_sec != 0) {
 			msg.has_rx_per_sec = 1;

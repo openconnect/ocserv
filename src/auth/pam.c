@@ -86,7 +86,7 @@ unsigned i;
 		switch (msg[i]->msg_style) {
 			case PAM_ERROR_MSG:
 			case PAM_TEXT_INFO:
-				syslog(LOG_INFO, "PAM-auth conv info: %s", msg[i]->msg);
+				syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
 
 				str_append_str(&pctx->msg, msg[i]->msg);
 				str_append_data(&pctx->msg, " ", 1);
@@ -94,7 +94,7 @@ unsigned i;
 				break;
 			case PAM_PROMPT_ECHO_OFF:
 			case PAM_PROMPT_ECHO_ON:
-				syslog(LOG_INFO, "PAM-auth conv: echo-%s, sent: %d", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", pctx->sent_msg);
+				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, sent: %d", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", pctx->sent_msg);
 
 				if (pctx->sent_msg == 0) {
 					/* no message, just asking for password */

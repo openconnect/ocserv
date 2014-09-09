@@ -210,7 +210,7 @@ int size;
 		co_call(pctx->cr);
 
 		if (pctx->cr_ret != PAM_SUCCESS) {
-			syslog(LOG_AUTH, "PAM-auth: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+			syslog(LOG_AUTH, "PAM-auth pam_auth_msg: %s", pam_strerror(pctx->ph, pctx->cr_ret));
 			return ERR_AUTH_FAIL;
 		}
 	}
@@ -252,7 +252,7 @@ struct pam_ctx_st * pctx = ctx;
 	co_call(pctx->cr);
 
 	if (pctx->cr_ret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "PAM-auth: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+		syslog(LOG_AUTH, "PAM-auth pam_auth_pass: %s", pam_strerror(pctx->ph, pctx->cr_ret));
 		return ERR_AUTH_FAIL;
 	}
 	

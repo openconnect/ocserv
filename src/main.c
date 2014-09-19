@@ -645,8 +645,11 @@ time_t now;
 	buffer_size = ret;
 	
 	/* obtain the session id */
-	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2)
+	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
+		mslog(s, NULL, LOG_INFO, "%s: too short packet",
+		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 		goto fail;
+	}
 
 	/* check version */
 	mslog(s, NULL, LOG_DEBUG, "new DTLS session from %s (record v%u.%u, hello v%u.%u)", 
@@ -656,11 +659,15 @@ time_t now;
 
 	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
 		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
-		mslog(s, NULL, LOG_INFO, "unknown DTLS version: %u.%u", (unsigned)buffer[1], (unsigned)buffer[2]);
+		mslog(s, NULL, LOG_INFO, "%s: unknown DTLS version: %u.%u", 
+		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
+		      (unsigned)buffer[1], (unsigned)buffer[2]);
 		goto fail;
 	}
 	if (buffer[0] != 22) {
-		mslog(s, NULL, LOG_INFO, "unexpected DTLS content type: %u", (unsigned int)buffer[0]);
+		mslog(s, NULL, LOG_INFO, "%s: unexpected DTLS content type: %u",
+		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
+		      (unsigned int)buffer[0]);
 		/* Here we received a non-client hello packet. It may be that
 		 * the client's NAT changed its UDP source port and the previous
 		 * connection is invalidated. Try to see if we can simply match
@@ -696,19 +703,23 @@ time_t now;
 		UdpFdMsg msg = UDP_FD_MSG__INIT;
 
 		if (matching_ips > 1) {
-			mslog(s, proc_to_send, LOG_INFO, "cannot associate with a client; more than a single clients from this IP");
+			mslog(s, proc_to_send, LOG_INFO, "cannot associate with a client; more than a single clients from %s",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 			goto fail;
 		}
 
 		if (now - proc_to_send->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
-			mslog(s, proc_to_send, LOG_DEBUG, "received UDP connection too soon");
+			mslog(s, proc_to_send, LOG_INFO, "received UDP connection too soon from %s",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 			goto fail;
 		}
 
 		ret = connect(listener->fd, (void*)&cli_addr, cli_addr_size);
 		if (ret == -1) {
 			e = errno;
-			mslog(s, proc_to_send, LOG_ERR, "connect UDP socket: %s", strerror(e));
+			mslog(s, proc_to_send, LOG_ERR, "connect UDP socket from %s: %s",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
+			      strerror(e));
 			goto fail;
 		}
 
@@ -722,10 +733,12 @@ time_t now;
 			(pack_size_func)udp_fd_msg__get_packed_size,
 			(pack_func)udp_fd_msg__pack);
 		if (ret < 0) {
-			mslog(s, proc_to_send, LOG_ERR, "error passing UDP socket");
+			mslog(s, proc_to_send, LOG_ERR, "error passing UDP socket from %s",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 			goto fail;
 		}
-		mslog(s, proc_to_send, LOG_DEBUG, "passed UDP socket");
+		mslog(s, proc_to_send, LOG_DEBUG, "passed UDP socket from %s",
+		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 		proc_to_send->udp_fd_receive_time = now;
 		connected = 1;
 

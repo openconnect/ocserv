@@ -417,6 +417,11 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	set_cloexec_flag(tunfd, 1);
 #endif
 
+	if (proc->tun_lease.name[0] == 0) {
+		mslog(s, NULL, LOG_ERR, "tun device with no name!");
+		goto fail;
+	}
+
 	/* set IP/mask */
 	ret = set_network_info(s, proc);
 	if (ret < 0) {

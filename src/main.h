@@ -255,7 +255,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 int open_tun(main_server_st* s, struct proc_st* proc);
-int close_tun(main_server_st* s, struct proc_st* proc);
+void close_tun(main_server_st* s, struct proc_st* proc);
 int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 
 int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,

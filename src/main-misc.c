@@ -128,11 +128,9 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 	 * The parent doesn't need to keep the tunfd, and if it does,
 	 * it causes issues to client.
 	 */
-	if (proc->tun_lease.name[0] != 0) {
-		if (proc->tun_lease.fd >= 0)
-			close(proc->tun_lease.fd);
-		proc->tun_lease.fd = -1;
-	}
+	if (proc->tun_lease.fd >= 0)
+		close(proc->tun_lease.fd);
+	proc->tun_lease.fd = -1;
 
 	return ret;
 }

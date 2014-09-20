@@ -436,9 +436,9 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	return -1;
 }
 
-int close_tun(main_server_st * s, struct proc_st *proc)
+void close_tun(main_server_st * s, struct proc_st *proc)
 {
-	int fd = -1, ret = 0;
+	int fd = -1;
 
 #ifdef SIOCIFDESTROY
 	int e;
@@ -463,5 +463,10 @@ int close_tun(main_server_st * s, struct proc_st *proc)
 
 	if (fd != -1)
 		close(fd);
-	return ret;
+
+	if (proc->tun_lease.fd >= 0) {
+		close(proc->tun_lease.fd);
+		proc->tun_lease.fd = -1;
+	}
+	return;
 }

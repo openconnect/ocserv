@@ -188,14 +188,14 @@ int _listen_ports(void *pool, struct cfg_st* config,
 
 		if (bind(s, ptr->ai_addr, ptr->ai_addrlen) < 0) {
 			perror("bind() failed");
-			close(s);
+			force_close(s);
 			continue;
 		}
 
 		if (ptr->ai_socktype == SOCK_STREAM) {
 			if (listen(s, 10) < 0) {
 				perror("listen() failed");
-				close(s);
+				force_close(s);
 				return -1;
 			}
 		}
@@ -368,7 +368,7 @@ int reopen_udp_port(struct listener_st *l)
 {
 int s, y, e;
 
-	close(l->fd);
+	force_close(l->fd);
 	l->fd = -1;
 
 	s = socket(l->family, l->socktype, l->protocol);
@@ -404,7 +404,7 @@ int s, y, e;
 	if (bind(s, (void*)&l->addr, l->addr_len) < 0) {
 		e = errno;
 		syslog(LOG_ERR, "bind() failed: %s", strerror(e));
-		close(s);
+		force_close(s);
 		return -1;
 	}
 	
@@ -558,7 +558,7 @@ void clear_lists(main_server_st *s)
 	struct script_wait_st *script_tmp = NULL, *script_pos;
 
 	list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
-		close(ltmp->fd);
+		force_close(ltmp->fd);
 		list_del(&ltmp->list);
 		talloc_free(ltmp);
 		s->listen_list.total--;
@@ -566,9 +566,9 @@ void clear_lists(main_server_st *s)
 
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->fd >= 0)
-			close(ctmp->fd);
+			force_close(ctmp->fd);
 		if (ctmp->tun_lease.fd >= 0)
-			close(ctmp->tun_lease.fd);
+			force_close(ctmp->tun_lease.fd);
 		if (ctmp->cookie_ptr)
 			ctmp->cookie_ptr->proc = NULL;
 		list_del(&ctmp->list);
@@ -1051,13 +1051,13 @@ int main(int argc, char** argv)
 				set_cloexec_flag (fd, 1);
 
 				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
-					close(fd);
+					force_close(fd);
 					mslog(s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", s->active_clients);
 					break;
 				}
 
 				if (check_tcp_wrapper(fd) < 0) {
-					close(fd);
+					force_close(fd);
 					mslog(s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts->[allow|deny])");
 					break;
 				}
@@ -1066,7 +1066,7 @@ int main(int argc, char** argv)
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
 				if (ret < 0) {
 					mslog(s, NULL, LOG_ERR, "Error creating command socket");
-					close(fd);
+					force_close(fd);
 					break;
 				}
 
@@ -1076,7 +1076,7 @@ int main(int argc, char** argv)
 					 * sensitive data before running the worker
 					 */
 					sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
-					close(cmd_fd[0]);
+					force_close(cmd_fd[0]);
 					clear_lists(s);
 
 					/* clear the cookie key */
@@ -1115,7 +1115,7 @@ int main(int argc, char** argv)
 					exit(0);
 				} else if (pid == -1) {
 fork_failed:
-					close(cmd_fd[0]);
+					force_close(cmd_fd[0]);
 				} else { /* parent */
 					/* add_proc */
 					ctmp = new_proc(s, pid, cmd_fd[0], 
@@ -1127,8 +1127,8 @@ fork_failed:
 					}
 
 				}
-				close(cmd_fd[1]);
-				close(fd);
+				force_close(cmd_fd[1]);
+				force_close(fd);
 
 				if (s->config->rate_limit_ms > 0)
 					ms_sleep(s->config->rate_limit_ms);

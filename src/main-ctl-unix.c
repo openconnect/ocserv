@@ -89,7 +89,7 @@ void ctl_handler_deinit(main_server_st * s)
 
 	if (s->ctl_fd >= 0) {
 		/*mslog(s, NULL, LOG_DEBUG, "closing unix socket connection");*/
-		close(s->ctl_fd);
+		force_close(s->ctl_fd);
 		/*remove(OCSERV_UNIX_NAME); */
 	}
 }
@@ -653,7 +653,7 @@ static void ctl_handle_commands(main_server_st * s)
  cleanup:
  	talloc_free(pool);
 	if (cfd != -1)
-		close(cfd);
+		force_close(cfd);
 }
 
 int ctl_handler_set_fds(main_server_st * s, fd_set * rd_set, fd_set * wr_set)

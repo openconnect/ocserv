@@ -122,7 +122,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	ret = 0;
  cleanup:
-	close(fd);
+	force_close(fd);
 
 	return ret;
 }
@@ -191,7 +191,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	ret = 0;
  cleanup:
-	close(fd);
+	force_close(fd);
 
 	return ret;
 }
@@ -289,7 +289,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 		}
 #endif
 
-		close(fd);
+		force_close(fd);
 		fd = -1;
 	}
 
@@ -312,7 +312,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 
  cleanup:
 	if (fd != -1)
-		close(fd);
+		force_close(fd);
 	return ret;
 }
 
@@ -432,13 +432,18 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 
 	return 0;
  fail:
-	close(tunfd);
+	force_close(tunfd);
 	return -1;
 }
 
 void close_tun(main_server_st * s, struct proc_st *proc)
 {
 	int fd = -1;
+
+	if (proc->tun_lease.fd >= 0) {
+		force_close(proc->tun_lease.fd);
+		proc->tun_lease.fd = -1;
+	}
 
 #ifdef SIOCIFDESTROY
 	int e;
@@ -462,11 +467,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 #endif
 
 	if (fd != -1)
-		close(fd);
+		force_close(fd);
 
-	if (proc->tun_lease.fd >= 0) {
-		close(proc->tun_lease.fd);
-		proc->tun_lease.fd = -1;
-	}
 	return;
 }

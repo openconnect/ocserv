@@ -124,8 +124,10 @@ max-same-clients = 2
 tcp-port = 3333
 udp-port = 3333
 
-# Accept connections using a socket file. The connections are
-# forwarded without SSL/TLS.
+# Accept connections using a socket file. It accepts HTTP
+# connections (i.e., without SSL/TLS), and uses it as
+# the primary channel. That option cannot be combined with
+# certificate authentication.
 #unix-conn-file = /var/run/ocserv-conn.socket
 
 # Keepalive in seconds

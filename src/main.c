@@ -137,13 +137,12 @@ int val;
 
 static 
 int _listen_ports(void *pool, struct cfg_st* config, 
-		struct addrinfo *res, struct listen_list_st *list, int udp)
+		struct addrinfo *res, struct listen_list_st *list)
 {
 	struct addrinfo *ptr;
-	int s, y, e, ret;
+	int s, y;
 	const char* type = NULL;
 	char buf[512];
-	struct sockaddr_un sa;
 
 	for (ptr = res; ptr != NULL; ptr = ptr->ai_next) {
 		if (ptr->ai_family != AF_INET && ptr->ai_family != AF_INET6)
@@ -210,8 +209,20 @@ int _listen_ports(void *pool, struct cfg_st* config,
 
 	}
 
+	fflush(stderr);
+
+	return 0;
+}
+
+static 
+int _listen_unix_ports(void *pool, struct cfg_st* config, 
+		       struct listen_list_st *list)
+{
+	int s, e, ret;
+	struct sockaddr_un sa;
+
 	/* open the UNIX domain socket to accept connections */
-	if (udp == 0 && config->unix_conn_file) {
+	if (config->unix_conn_file) {
 		memset(&sa, 0, sizeof(sa));
 		sa.sun_family = AF_UNIX;
 		snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", config->unix_conn_file);
@@ -342,37 +353,44 @@ listen_ports(void *pool, struct cfg_st* config,
 	}
 #endif
 
-	if (config->port == 0) {
+	if (config->port == 0 && config->unix_conn_file == NULL) {
 		fprintf(stderr, "tcp-port option is mandatory!\n");
 		return -1;
 	}
 
-	snprintf(portname, sizeof(portname), "%d", config->port);
+	if (config->port != 0) {
+		snprintf(portname, sizeof(portname), "%d", config->port);
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE
 #ifdef AI_ADDRCONFIG
-	    | AI_ADDRCONFIG
+		    | AI_ADDRCONFIG
 #endif
-	    ;
+		    ;
 
-	ret = getaddrinfo(config->name, portname, &hints, &res);
-	if (ret != 0) {
-		fprintf(stderr, "getaddrinfo() failed: %s\n",
-			gai_strerror(ret));
-		return -1;
+		ret = getaddrinfo(config->name, portname, &hints, &res);
+		if (ret != 0) {
+			fprintf(stderr, "getaddrinfo() failed: %s\n",
+				gai_strerror(ret));
+			return -1;
+		}
+
+		ret = _listen_ports(pool, config, res, list);
+		if (ret < 0) {
+			return -1;
+		}
+
+		freeaddrinfo(res);
 	}
 
-	ret = _listen_ports(pool, config, res, list, 0);
+	ret = _listen_unix_ports(pool, config, list);
 	if (ret < 0) {
 		return -1;
 	}
 
-	freeaddrinfo(res);
-
 	if (list->total == 0) {
-		fprintf(stderr, "Could not listen to any TCP ports\n");
+		fprintf(stderr, "Could not listen to any TCP or UNIX ports\n");
 		exit(1);
 	}
 
@@ -394,7 +412,7 @@ listen_ports(void *pool, struct cfg_st* config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list, 1);
+		ret = _listen_ports(pool, config, res, list);
 		if (ret < 0) {
 			return -1;
 		}

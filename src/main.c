@@ -229,7 +229,7 @@ int _listen_ports(void *pool, struct cfg_st* config,
 			return -1;
 		}
 
-		umask(066);
+		umask(006);
 		ret = bind(s, (struct sockaddr *)&sa, SUN_LEN(&sa));
 		if (ret == -1) {
 			e = errno;

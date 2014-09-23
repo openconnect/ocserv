@@ -52,7 +52,7 @@ extern unsigned int need_maintenance;
 struct listener_st {
 	struct list_node list;
 	int fd;
-	int socktype;
+	sock_type_t sock_type;
 
 	struct sockaddr_storage addr; /* local socket address */
 	socklen_t addr_len;

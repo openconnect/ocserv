@@ -44,6 +44,12 @@
 # define _ATTR_PACKED
 #endif
 
+typedef enum {
+	SOCK_TYPE_TCP,
+	SOCK_TYPE_UDP,
+	SOCK_TYPE_UNIX
+} sock_type_t;
+
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  2
 #define DEBUG_TRANSFERRED 5
@@ -181,6 +187,8 @@ struct cfg_st {
 	char *name; /* server name */
 	unsigned int port;
 	unsigned int udp_port;
+	char* unix_conn_file;
+
 	char *pin_file;
 	char *srk_pin_file;
 	char **cert;

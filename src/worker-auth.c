@@ -152,12 +152,12 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 	str_init(&str, ws);
 
-	tls_cork(ws->session);
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
@@ -166,7 +166,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			      sizeof(context));
 
 		ret =
-		    tls_printf(ws->session,
+		    cstp_printf(ws,
 			       "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
 			       context, (unsigned)MAX_AUTH_SECS);
 		if (ret < 0)
@@ -175,7 +175,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		oclog(ws, LOG_DEBUG, "sent sid: %s", context);
 	}
 
-	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
@@ -315,33 +315,33 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	}
 
 	ret =
-	    tls_printf(ws->session, "Content-Length: %u\r\n",
+	    cstp_printf(ws, "Content-Length: %u\r\n",
 		       (unsigned int)str.length);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 
-	ret = tls_puts(ws->session, "\r\n");
+	ret = cstp_puts(ws, "\r\n");
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 
-	ret = tls_send(ws->session, str.data, str.length);
+	ret = cstp_send(ws, str.data, str.length);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 
 
-	ret = tls_uncork(ws->session);
+	ret = cstp_uncork(ws);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
@@ -869,17 +869,17 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 		      (char *)str_cookie, str_cookie_size);
 
 	/* reply */
-	tls_cork(ws->session);
+	cstp_cork(ws);
 
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
 	if (ret < 0)
 		return -1;
 
@@ -898,16 +898,16 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 
 	size += success_msg_head_size + success_msg_foot_size;
 
-	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)size);
+	ret = cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
 		return -1;
 
 	ret =
-	    tls_printf(ws->session,
+	    cstp_printf(ws,
 		       "Set-Cookie: webvpn=%s; Secure\r\n",
 		       str_cookie);
 	if (ret < 0)
@@ -915,21 +915,21 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	ret =
-	    tls_puts(ws->session,
+	    cstp_puts(ws,
 		     "Set-Cookie: webvpnc=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
 	if (ret < 0)
 		return -1;
 
 	if (ws->config->xml_config_file) {
 		ret =
-		    tls_printf(ws->session,
+		    cstp_printf(ws,
 			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2F%s&fh:%s; path=/; Secure\r\n",
 			       ws->config->cert_hash,
 			       ws->config->xml_config_file,
 			       ws->config->xml_config_hash);
 	} else {
 		ret =
-		    tls_printf(ws->session,
+		    cstp_printf(ws,
 			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; Secure\r\n",
 			       ws->config->cert_hash);
 	}
@@ -939,12 +939,12 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 #endif
 
 	ret =
-	    tls_printf(ws->session,
+	    cstp_printf(ws,
 		       "\r\n%s%s%s", success_msg_head, msg, success_msg_foot);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_uncork(ws->session);
+	ret = cstp_uncork(ws);
 	if (ret < 0)
 		return -1;
 
@@ -1262,9 +1262,9 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 	if (sd != -1)
 		close(sd);
-	tls_printf(ws->session,
+	cstp_printf(ws,
 		   "HTTP/1.1 401 Unauthorized\r\nX-Reason: %s\r\n\r\n",
 		   reason);
-	tls_fatal_close(ws->session, GNUTLS_A_ACCESS_DENIED);
+	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 	exit(1);
 }

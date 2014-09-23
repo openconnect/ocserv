@@ -142,6 +142,7 @@ typedef struct worker_st {
 
 	int cmd_fd;
 	int conn_fd;
+	sock_type_t conn_type; /* AF_UNIX or something else */
 	
 	http_parser *parser;
 	struct cfg_st *config;

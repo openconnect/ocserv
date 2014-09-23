@@ -49,47 +49,47 @@ struct stat st;
 	oclog(ws, LOG_HTTP_DEBUG, "requested config: %s", ws->req.url); 
 	if (ws->config->xml_config_file == NULL) {
 		oclog(ws, LOG_INFO, "requested config but no config file is set");
-		tls_printf(ws->session, "HTTP/1.%u 404 Not found\r\n", http_ver);
+		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);
 		return -1;
 	}
 	
 	ret = stat( ws->config->xml_config_file, &st);
 	if (ret == -1) {
 		oclog(ws, LOG_INFO, "cannot load config file '%s'", ws->config->xml_config_file);
-		tls_printf(ws->session, "HTTP/1.%u 404 Not found\r\n", http_ver);
+		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);
 		return -1;
 	}
 
-	tls_cork(ws->session);
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned)st.st_size);
+	ret = cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)st.st_size);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "\r\n");
+	ret = cstp_puts(ws, "\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_uncork(ws->session);
+	ret = cstp_uncork(ws);
 	if (ret < 0)
 		return -1;
 	
-	ret = tls_send_file(ws->session, ws->config->xml_config_file);
+	ret = cstp_send_file(ws, ws->config->xml_config_file);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error sending file '%s': %s", ws->config->xml_config_file, gnutls_strerror(ret));
 		return -1;
@@ -116,32 +116,32 @@ int len;
 		len = sizeof(XML_START)-1;
 	}
 
-	tls_cork(ws->session);
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Content-Type: text/xml\r\n");
+	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_printf(ws->session, "Content-Length: %d\r\n\r\n", len);
+	ret = cstp_printf(ws, "Content-Length: %d\r\n\r\n", len);
 	if (ret < 0)
 		return -1;
 		
-	ret = tls_send(ws->session, data, len);
+	ret = cstp_send(ws, data, len);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_uncork(ws->session);
+	ret = cstp_uncork(ws);
 	if (ret < 0)
 		return -1;
 	
@@ -162,32 +162,32 @@ int len;
 	data = SH_SCRIPT;
 	len = sizeof(SH_SCRIPT)-1;
 
-	tls_cork(ws->session);
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Content-Type: application/x-shellscript\r\n");
+	ret = cstp_puts(ws, "Content-Type: application/x-shellscript\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_printf(ws->session, "Content-Length: %d\r\n\r\n", len);
+	ret = cstp_printf(ws, "Content-Length: %d\r\n\r\n", len);
 	if (ret < 0)
 		return -1;
 		
-	ret = tls_send(ws->session, data, len);
+	ret = cstp_send(ws, data, len);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_uncork(ws->session);
+	ret = cstp_uncork(ws);
 	if (ret < 0)
 		return -1;
 	
@@ -198,36 +198,36 @@ int get_empty_handler(worker_st *ws, unsigned http_ver)
 {
 int ret;
 
-	tls_cork(ws->session);
-	ret = tls_printf(ws->session, "HTTP/1.%u 200 OK\r\n", http_ver);
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Connection: Keep-Alive\r\n");
+	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "Content-Type: text/html\r\n");
+	ret = cstp_puts(ws, "Content-Type: text/html\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_printf(ws->session, "Content-Length: %u\r\n", (unsigned int)sizeof(empty_msg)-1);
+	ret = cstp_printf(ws, "Content-Length: %u\r\n", (unsigned int)sizeof(empty_msg)-1);
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "X-Transcend-Version: 1\r\n");
+	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_puts(ws->session, "\r\n");
+	ret = cstp_puts(ws, "\r\n");
 	if (ret < 0)
 		return -1;
 
-	ret = tls_send(ws->session, empty_msg, sizeof(empty_msg)-1);
+	ret = cstp_send(ws, empty_msg, sizeof(empty_msg)-1);
 	if (ret < 0)
 		return -1;
 	
-	ret = tls_uncork(ws->session);
+	ret = cstp_uncork(ws);
 	if (ret < 0)
 		return -1;
 	

@@ -41,56 +41,64 @@
 #include <common.h>
 #include <sys/un.h>
 #include <sys/uio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <c-ctype.h>
 
-ssize_t tls_send(gnutls_session_t session, const void *data,
+void cstp_cork(worker_st *ws)
+{
+	if (ws->session) {
+		gnutls_record_cork(ws->session);
+	} else {
+#ifdef __linux__
+		int state = 1;
+		setsockopt(ws->conn_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+#endif
+	}
+}
+
+int cstp_uncork(worker_st *ws)
+{
+	if (ws->session) {
+		return gnutls_record_uncork(ws->session, GNUTLS_RECORD_WAIT);
+	} else {
+#ifdef __linux__
+		int state = 0;
+		setsockopt(ws->conn_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+#endif
+		return 0;
+	}
+}
+
+
+ssize_t cstp_send(worker_st *ws, const void *data,
 			size_t data_size)
 {
 	int ret;
 	int left = data_size;
 	const uint8_t* p = data;
 
-	while(left > 0) {
-		ret = gnutls_record_send(session, p, data_size);
-		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
-			return ret;
-		}
+	if (ws->session != NULL) {
+		while(left > 0) {
+			ret = gnutls_record_send(ws->session, p, data_size);
+			if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
+				return ret;
+			}
 
-		if (ret > 0) {
-			left -= ret;
-			p += ret;
+			if (ret > 0) {
+				left -= ret;
+				p += ret;
+			}
 		}
+		return data_size;
+	} else {
+		return force_write(ws->conn_fd, data, data_size);
 	}
-
-	return data_size;
 }
 
-/* Same as tls_send() but will not retry on EAGAIN errors */
-ssize_t tls_send_nb(gnutls_session_t session, const void *data,
-			size_t data_size)
-{
-	int ret;
-	int left = data_size;
-	const uint8_t* p = data;
-
-	while(left > 0) {
-		ret = gnutls_record_send(session, p, data_size);
-		if (ret < 0 && ret != GNUTLS_E_INTERRUPTED) {
-			if (ret == GNUTLS_E_AGAIN)
-			  return data_size;
-			return ret;
-		}
-
-		if (ret > 0) {
-			left -= ret;
-			p += ret;
-		}
-	}
-
-	return data_size;
-}
-
-ssize_t tls_send_file(gnutls_session_t session, const char *file)
+ssize_t cstp_send_file(worker_st *ws, const char *file)
 {
 FILE* fp;
 char buf[512];
@@ -102,8 +110,8 @@ int ret;
 		return GNUTLS_E_FILE_ERROR;
 
 	while (	(len = fread( buf, 1, sizeof(buf), fp)) > 0) {
-		ret = tls_send(session, buf, len);
-		GNUTLS_FATAL_ERR(ret);
+		ret = cstp_send(ws, buf, len);
+		FATAL_ERR(ws, ret);
 
 		total += ret;
 	}
@@ -113,13 +121,30 @@ int ret;
 	return total;
 }
 
-ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size)
+ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 {
 	int ret;
 
-	do {
-		ret = gnutls_record_recv(session, data, data_size);
-	} while (ret < 0 && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
+	if (ws->session != NULL) {
+		do {
+			ret = gnutls_record_recv(ws->session, data, data_size);
+		} while (ret < 0 && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
+	} else {
+		ret = force_read_timeout(ws->conn_fd, data, data_size, 10);
+	}
+
+	return ret;
+}
+
+ssize_t cstp_recv_nb(worker_st *ws, void *data, size_t data_size)
+{
+	int ret;
+
+	if (ws->session != NULL) {
+		ret = gnutls_record_recv(ws->session, data, data_size);
+	} else {
+		ret = recv(ws->conn_fd, data, data_size, 0);
+	}
 
 	return ret;
 }
@@ -131,6 +156,9 @@ unsigned tls_has_session_cert(struct worker_st * ws)
 {
 	unsigned int list_size = 0;
 	const gnutls_datum_t * certs;
+
+	if (ws->session == NULL)
+		return 0;
 
 	if (ws->cert_auth_ok)
 		return 1;
@@ -147,7 +175,7 @@ unsigned tls_has_session_cert(struct worker_st * ws)
 }
 
 int __attribute__ ((format(printf, 2, 3)))
-    tls_printf(gnutls_session_t session, const char *fmt, ...)
+    cstp_printf(worker_st *ws, const char *fmt, ...)
 {
 	char buf[1024];
 	va_list args;
@@ -158,21 +186,57 @@ int __attribute__ ((format(printf, 2, 3)))
 	va_start(args, fmt);
 	s = vsnprintf(buf, 1023, fmt, args);
 	va_end(args);
-	return tls_send(session, buf, s);
+	return cstp_send(ws, buf, s);
 
 }
 
-void tls_close(gnutls_session_t session)
+void cstp_close(worker_st *ws)
 {
-	gnutls_bye(session, GNUTLS_SHUT_WR);
-	gnutls_deinit(session);
+	if (ws->session) {
+		gnutls_bye(ws->session, GNUTLS_SHUT_WR);
+		gnutls_deinit(ws->session);
+	} else {
+		force_close(ws->conn_fd);
+	}
 }
 
-void tls_fatal_close(gnutls_session_t session,
+void cstp_fatal_close(worker_st *ws,
 			    gnutls_alert_description_t a)
 {
-	gnutls_alert_send(session, GNUTLS_AL_FATAL, a);
-	gnutls_deinit(session);
+	if (ws->session) {
+		gnutls_alert_send(ws->session, GNUTLS_AL_FATAL, a);
+		gnutls_deinit(ws->session);
+	} else {
+		force_close(ws->conn_fd);
+	}
+}
+
+ssize_t dtls_send(worker_st *ws, const void *data,
+			size_t data_size)
+{
+	int ret;
+	int left = data_size;
+	const uint8_t* p = data;
+
+	while(left > 0) {
+		ret = gnutls_record_send(ws->dtls_session, p, data_size);
+		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
+			return ret;
+		}
+
+		if (ret > 0) {
+			left -= ret;
+			p += ret;
+		}
+	}
+
+	return data_size;
+}
+
+void dtls_close(worker_st *ws)
+{
+	gnutls_bye(ws->dtls_session, GNUTLS_SHUT_WR);
+	gnutls_deinit(ws->dtls_session);
 }
 
 static size_t rehash(const void *_e, void *unused)

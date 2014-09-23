@@ -25,6 +25,7 @@
 #include <gnutls/pkcs11.h>
 #include <vpn.h>
 #include <ccan/htable/htable.h>
+#include <errno.h>
 
 typedef struct 
 {
@@ -32,6 +33,7 @@ typedef struct
 	unsigned int entries;
 } tls_sess_db_st;
 
+#if 0
 #define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
 	
 int __attribute__ ((format(printf, 2, 3)))
@@ -47,6 +49,9 @@ ssize_t tls_send_nb(gnutls_session_t session, const void *data,
 void tls_cork(gnutls_session_t session);
 int tls_uncork(gnutls_session_t session);
 
+ssize_t tls_send_file(gnutls_session_t session, const char *file);
+#endif
+
 typedef struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
@@ -58,17 +63,7 @@ void tls_global_init(struct tls_st *creds);
 void tls_global_deinit(struct tls_st *creds);
 void tls_load_certs(struct main_server_st* s, struct tls_st *creds);
 
-ssize_t tls_send_file(gnutls_session_t session, const char *file);
 size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
-
-#define GNUTLS_FATAL_ERR(x) \
-        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-                if (syslog_open) \
-                	syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-                else \
-                        fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
-                exit(1); \
-        }
 
 #define GNUTLS_FATAL_ERR_CMD(x, CMD) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
@@ -78,6 +73,29 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
                         fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
                 CMD; \
         }
+
+#define GNUTLS_FATAL_ERR(x) GNUTLS_FATAL_ERR_CMD(x, exit(1))
+
+#define FATAL_ERR_CMD(ws, x, CMD) \
+        if (ws->session != NULL) { \
+	        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
+        	        if (syslog_open) \
+                		syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
+	                else \
+        	                fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+	                CMD; \
+	        } \
+	} else { \
+	        if (x < 0 && errno != EINTR && errno != EAGAIN) { \
+        	        if (syslog_open) \
+                		syslog(LOG_ERR, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
+	                else \
+        	                fprintf(stderr, "socket error (at %s:%d): %s\n", __FILE__, __LINE__, strerror(errno)); \
+	                CMD; \
+	        } \
+	}
+
+#define FATAL_ERR(ws, x) FATAL_ERR_CMD(ws, x, exit(1))
 
 #define GNUTLS_S_FATAL_ERR(session, x) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
@@ -119,5 +137,25 @@ typedef struct
 void tls_cache_init(void *pool, tls_sess_db_st* db);
 void tls_cache_deinit(tls_sess_db_st* db);
 void *calc_sha1_hash(void *pool, char* file, unsigned cert);
+
+/* TLS API */
+int __attribute__ ((format(printf, 2, 3)))
+    cstp_printf(struct worker_st *ws, const char *fmt, ...);
+void cstp_close(struct worker_st *ws);
+void cstp_fatal_close(struct worker_st *ws,
+			    gnutls_alert_description_t a);
+ssize_t cstp_recv(struct worker_st *ws, void *data, size_t data_size);
+ssize_t cstp_recv_nb(struct worker_st *ws, void *data, size_t data_size);
+ssize_t cstp_send_file(struct worker_st *ws, const char *file);
+ssize_t cstp_send(struct worker_st *ws, const void *data,
+			size_t data_size);
+#define cstp_puts(s, str) cstp_send(s, str, sizeof(str)-1)
+
+void cstp_cork(struct worker_st *ws);
+int cstp_uncork(struct worker_st *ws);
+
+/* DTLS API */
+void dtls_close(struct worker_st *ws);
+ssize_t dtls_send(struct worker_st *ws, const void *data, size_t data_size);
 
 #endif

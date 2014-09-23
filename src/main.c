@@ -31,6 +31,8 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <cloexec.h>
 #ifdef HAVE_MALLOC_TRIM
 # include <malloc.h> /* for malloc_trim() */
@@ -90,7 +92,7 @@ static void add_listener(void *pool, struct listen_list_st *list,
 	tmp = talloc_zero(pool, struct listener_st);
 	tmp->fd = fd;
 	tmp->family = family;
-	tmp->socktype = socktype;
+	tmp->sock_type = socktype;
 	tmp->protocol = protocol;
 	
 	tmp->addr_len = addr_len;
@@ -135,12 +137,13 @@ int val;
 
 static 
 int _listen_ports(void *pool, struct cfg_st* config, 
-		struct addrinfo *res, struct listen_list_st *list)
+		struct addrinfo *res, struct listen_list_st *list, int udp)
 {
 	struct addrinfo *ptr;
-	int s, y;
+	int s, y, e, ret;
 	const char* type = NULL;
 	char buf[512];
+	struct sockaddr_un sa;
 
 	for (ptr = res; ptr != NULL; ptr = ptr->ai_next) {
 		if (ptr->ai_family != AF_INET && ptr->ai_family != AF_INET6)
@@ -193,7 +196,7 @@ int _listen_ports(void *pool, struct cfg_st* config,
 		}
 
 		if (ptr->ai_socktype == SOCK_STREAM) {
-			if (listen(s, 10) < 0) {
+			if (listen(s, 1024) < 0) {
 				perror("listen() failed");
 				force_close(s);
 				return -1;
@@ -202,11 +205,55 @@ int _listen_ports(void *pool, struct cfg_st* config,
 
 		set_common_socket_options(s);
 		
-		add_listener(pool, list, s, ptr->ai_family, ptr->ai_socktype,
+		add_listener(pool, list, s, ptr->ai_family, ptr->ai_socktype==SOCK_STREAM?SOCK_TYPE_TCP:SOCK_TYPE_UDP,
 			ptr->ai_protocol, ptr->ai_addr, ptr->ai_addrlen);
 
 	}
-	
+
+	/* open the UNIX domain socket to accept connections */
+	if (udp == 0 && config->unix_conn_file) {
+		memset(&sa, 0, sizeof(sa));
+		sa.sun_family = AF_UNIX;
+		snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", config->unix_conn_file);
+		remove(sa.sun_path);
+
+		if (config->foreground != 0)
+			fprintf(stderr, "listening (UNIX) on %s...\n",
+				sa.sun_path);
+
+		s = socket(AF_UNIX, SOCK_STREAM, 0);
+		if (s == -1) {
+			e = errno;
+			fprintf(stderr, "could not create socket '%s': %s", sa.sun_path,
+			       strerror(e));
+			return -1;
+		}
+
+		umask(066);
+		ret = bind(s, (struct sockaddr *)&sa, SUN_LEN(&sa));
+		if (ret == -1) {
+			e = errno;
+			fprintf(stderr, "could not bind socket '%s': %s", sa.sun_path,
+			       strerror(e));
+			return -1;
+		}
+
+		ret = chown(sa.sun_path, config->uid, config->gid);
+		if (ret == -1) {
+			e = errno;
+			fprintf(stderr, "could not chown socket '%s': %s", sa.sun_path,
+			       strerror(e));
+		}
+
+		ret = listen(s, 1024);
+		if (ret == -1) {
+			e = errno;
+			fprintf(stderr, "could not listen to socket '%s': %s",
+			       sa.sun_path, strerror(e));
+			exit(1);
+		}
+		add_listener(pool, list, s, AF_UNIX, SOCK_TYPE_UNIX, 0, (struct sockaddr *)&sa, sizeof(sa));
+	}
 	fflush(stderr);
 
 	return 0;
@@ -280,7 +327,7 @@ listen_ports(void *pool, struct cfg_st* config,
 					config->udp_port = ntohs(((struct sockaddr_in6*)&tmp_sock)->sin6_port);
 			}
 
-			add_listener(pool, list, fd, family, type, 0, (struct sockaddr*)&tmp_sock, tmp_sock_len);
+			add_listener(pool, list, fd, family, type==SOCK_STREAM?SOCK_TYPE_TCP:SOCK_TYPE_UDP, 0, (struct sockaddr*)&tmp_sock, tmp_sock_len);
 		}
 
 		if (list->total == 0) {
@@ -317,7 +364,7 @@ listen_ports(void *pool, struct cfg_st* config,
 		return -1;
 	}
 
-	ret = _listen_ports(pool, config, res, list);
+	ret = _listen_ports(pool, config, res, list, 0);
 	if (ret < 0) {
 		return -1;
 	}
@@ -347,7 +394,7 @@ listen_ports(void *pool, struct cfg_st* config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list);
+		ret = _listen_ports(pool, config, res, list, 1);
 		if (ret < 0) {
 			return -1;
 		}
@@ -371,7 +418,7 @@ int s, y, e;
 	force_close(l->fd);
 	l->fd = -1;
 
-	s = socket(l->family, l->socktype, l->protocol);
+	s = socket(l->family, SOCK_DGRAM, l->protocol);
 	if (s < 0) {
 		perror("socket() failed");
 		return -1;
@@ -1039,8 +1086,10 @@ int main(int argc, char** argv)
 		/* Check for new connections to accept */
 		list_for_each(&s->listen_list.head, ltmp, list) {
 			set = FD_ISSET(ltmp->fd, &rd_set);
-			if (set && ltmp->socktype == SOCK_STREAM) {
+			if (set && (ltmp->sock_type == SOCK_TYPE_TCP || ltmp->sock_type == SOCK_TYPE_UNIX)) {
 				/* connection on TCP port */
+				int stype = ltmp->sock_type;
+
 				ws->remote_addr_len = sizeof(ws->remote_addr);
 				fd = accept(ltmp->fd, (void*)&ws->remote_addr, &ws->remote_addr_len);
 				if (fd < 0) {
@@ -1095,6 +1144,7 @@ int main(int argc, char** argv)
 					ws->tun_fd = -1;
 					ws->udp_fd = -1;
 					ws->conn_fd = fd;
+					ws->conn_type = stype;
 					ws->creds = &creds;
 
 					/* Drop privileges after this point */
@@ -1132,7 +1182,7 @@ fork_failed:
 
 				if (s->config->rate_limit_ms > 0)
 					ms_sleep(s->config->rate_limit_ms);
-			} else if (set && ltmp->socktype == SOCK_DGRAM) {
+			} else if (set && ltmp->sock_type == SOCK_TYPE_UDP) {
 				/* connection on UDP port */
 				ret = forward_udp_to_owner(s, ltmp);
 				if (ret < 0) {

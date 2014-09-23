@@ -438,6 +438,11 @@ unsigned force_cert_auth;
 		READ_STATIC_STRING("pid-file", pid_file);
 
 	READ_STRING("unix-conn-file", config->unix_conn_file);
+	if (config->unix_conn_file != NULL && (config->auth_types & AUTH_TYPE_CERTIFICATE)) {
+		fprintf(stderr, "The option 'unix-conn-file' cannot be combined with 'auth=certificate'\n");
+		exit(1);
+	}
+
 	READ_STRING("socket-file", config->socket_file_prefix);
 	READ_STRING("occtl-socket-file", config->occtl_socket_file);
 	if (config->occtl_socket_file == NULL)

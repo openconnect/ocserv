@@ -1,47 +1,83 @@
 /*
- * Copyright (C) 2014 Nikos Mavrogiannopoulos
+ * Copyright © 2008-2014 Intel Corporation.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Authors: David Woodhouse <dwmw2@infradead.org>
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * version 2.1, as published by the Free Software Foundation.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  */
 
 #include <config.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdarg.h>
 #include "vasprintf.h"
 
 #ifndef HAVE_VASPRINTF
 
-#define MAX_BSIZE 1024
-#define NO_MORE_MAX (16*MAX_BSIZE)
-
 int _ocserv_vasprintf(char **strp, const char *fmt, va_list ap)
 {
-	char *buf;
-	int ret, max;
+	va_list ap2;
+	char *res = NULL;
+	int len = 160, len2;
+	int ret = 0;
+	int errno_save = -ENOMEM;
 
-	max = MAX_BSIZE / 2;
+	res = malloc(160);
+	if (!res)
+		goto err;
 
-	do {
-		max *= 2;
+	/* Use a copy of 'ap', preserving it in case we need to retry into
+	   a larger buffer. 160 characters should be sufficient for most
+	   strings in openconnect. */
+#ifdef HAVE_VA_COPY
+	va_copy(ap2, ap);
+#elif defined(HAVE___VA_COPY)
+	__va_copy(ap2, ap);
+#else
+#error No va_copy()!
+	/* You could try this. */
+	ap2 = ap;
+	/* Or this */
+	*ap2 = *ap;
+#endif
+	len = vsnprintf(res, 160, fmt, ap2);
+	va_end(ap2);
 
-		buf = malloc(max);
-		if (buf == NULL)
-			return -1;
-
-		ret = vsnprintf(buf, max, fmt, ap);
+	if (len < 0) {
+	printf_err:
+		errno_save = errno;
+		free(res);
+		res = NULL;
+		goto err;
 	}
-	while (ret > max && max < NO_MORE_MAX);
+	if (len >= 0 && len < 160)
+		goto out;
 
+	free(res);
+	res = malloc(len+1);
+	if (!res)
+		goto err;
+
+	len2 = vsnprintf(res, len+1, fmt, ap);
+	if (len2 < 0 || len2 > len)
+		goto printf_err;
+
+	ret = 0;
+	goto out;
+
+ err:
+	errno = errno_save;
+	ret = -1;
+ out:
+	*strp = res;
 	return ret;
 }
 

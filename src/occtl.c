@@ -7,7 +7,7 @@
  *
  * ocserv is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
+ * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
  *
  * ocserv is distributed in the hope that it will be useful, but
@@ -167,7 +167,7 @@ void version(void)
 	fprintf(stderr,
 		"and you are welcome to redistribute it under the conditions of the\n");
 	fprintf(stderr,
-		"GNU General Public License version 3.\n");
+		"GNU General Public License version 2.\n");
 	fprintf(stderr, "\nFor help type ? or 'help'\n");
 	fprintf(stderr,
 		"==================================================================\n");

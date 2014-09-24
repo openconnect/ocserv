@@ -20,7 +20,7 @@ copyright = {
     owner = "Red Hat";
     author = "Nikos Mavrogiannopoulos";
     eaddr  = "openconnect-devel@lists.infradead.org";
-    type  = gpl;
+    type  = gplv2;
 };
 
 help-value    = h;

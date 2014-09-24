@@ -265,6 +265,12 @@ struct cookie_entry_st *old;
 			return -1;
 	}
 
+	if (proc->config.require_cert != 0 && cmsg->tls_auth_ok == 0) {
+		mslog(s, proc, LOG_ERR,
+		      "certificate is required for user '%s'", proc->username);
+		return -1;
+	}
+
 	if (cmsg->groupname)
 		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
 

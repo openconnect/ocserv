@@ -4,6 +4,7 @@
  *   main                              worker
  *                      <------     AUTH_COOKIE_REQ
  * AUTH_REP(OK/FAILED)  ------>
+ *  +user config
  *
  */
 
@@ -17,7 +18,6 @@ enum AUTH_REP {
 message auth_cookie_request_msg
 {
 	required bytes cookie = 1;
-	required bool tls_auth_ok = 2 [default = false];
 }
 
 /* AUTH_REP */
@@ -127,7 +127,6 @@ message session_info_msg
 /* SEC_AUTH_INIT */
 message sec_auth_init_msg
 {
-	required bool user_present = 1;
 	required bool tls_auth_ok = 2 [default = false];
 	required string user_name = 3;
 	optional string group_name = 4; /* selected group name */
@@ -174,6 +173,7 @@ message cookie
 	required uint32 expiration = 6;
 	required uint32 ipv4_seed = 7;
 	required bytes sid = 8;
+	required bool tls_auth_ok = 9;
 }
 
 /*

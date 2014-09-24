@@ -43,6 +43,7 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "no-udp", .type = OPTION_BOOLEAN },
 	{ .name = "deny-roaming", .type = OPTION_BOOLEAN },
+	{ .name = "require-cert", .type = OPTION_BOOLEAN },
 	{ .name = "route", .type = OPTION_MULTI_LINE },
 	{ .name = "iroute", .type = OPTION_MULTI_LINE },
 	{ .name = "dns", .type = OPTION_MULTI_LINE },
@@ -172,6 +173,7 @@ struct group_cfg_st *sconfig = &proc->config;
 
 	READ_TF("no-udp", sconfig->no_udp, (global_config->udp_port!=0)?0:1);
 	READ_TF("deny-roaming", sconfig->deny_roaming, global_config->deny_roaming);
+	READ_TF("require-cert", sconfig->require_cert, 0);
 
 	READ_RAW_MULTI_LINE("route", sconfig->routes, sconfig->routes_size);
 	READ_RAW_MULTI_LINE("iroute", sconfig->iroutes, sconfig->iroutes_size);

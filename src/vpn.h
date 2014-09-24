@@ -73,8 +73,9 @@ extern int syslog_open;
 /* the first is generic, for the methods that require a username password */
 #define AUTH_TYPE_USERNAME_PASS (1<<0)
 #define AUTH_TYPE_PAM (1<<1 | AUTH_TYPE_USERNAME_PASS)
-#define AUTH_TYPE_CERTIFICATE (1<<2)
-#define AUTH_TYPE_PLAIN (1<<3 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_PLAIN (1<<2 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_CERTIFICATE (1<<3)
+#define AUTH_TYPE_CERTIFICATE_OPT (1<<4|AUTH_TYPE_CERTIFICATE)
 
 #define ERR_SUCCESS 0
 #define ERR_BAD_COMMAND -2
@@ -157,6 +158,7 @@ struct group_cfg_st {
 	unsigned deny_roaming; /* whether the user is allowed to re-use cookies from another IP */
 	unsigned net_priority;
 	unsigned no_udp; /* whether to disable UDP for this user */
+	unsigned require_cert; /* when optional certificate auth is selected require a certificate */
 };
 
 struct vpn_st {

@@ -389,6 +389,8 @@ unsigned force_cert_auth;
 			config->auth_types |= AUTH_TYPE_PLAIN;
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
+		} else if (c_strcasecmp(auth[j], "optional-certificate") == 0) {
+			config->auth_types |= AUTH_TYPE_CERTIFICATE_OPT;
 		} else {
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
 			exit(1);
@@ -652,7 +654,7 @@ static void check_cfg(struct cfg_st *config)
 	}
 
 	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (config->cisco_client_compat == 0)
+		if (config->cisco_client_compat == 0 && ((config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT))
 			config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;

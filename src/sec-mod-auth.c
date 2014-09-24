@@ -83,6 +83,7 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 	msg.groupname = entry->groupname;
 	msg.hostname = entry->hostname;
 	msg.ip = entry->ip;
+	msg.tls_auth_ok = entry->tls_auth_ok;
 
 	/* Fixme: possibly we should allow for completely random seeds */
 	if (sec->config->predictable_ips != 0) {
@@ -200,14 +201,21 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 				   unsigned cert_groups_size)
 {
 	unsigned found, i;
+	unsigned need_cert = 1;
+
 
 	if (sec->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (tls_auth_ok == 0) {
+		if ((sec->config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) == AUTH_TYPE_CERTIFICATE_OPT) {
+			need_cert = 0;
+		}
+
+		if (tls_auth_ok == 0 && need_cert != 0) {
 			seclog(LOG_INFO, "user '%s' presented no certificate",
 			       e->username);
 			return -1;
 		}
 
+		e->tls_auth_ok = tls_auth_ok;
 		if (tls_auth_ok != 0) {
 			if (e->username[0] == 0 && sec->config->cert_user_oid != NULL) {
 				if (cert_user == NULL) {

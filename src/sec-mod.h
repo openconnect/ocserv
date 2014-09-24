@@ -46,6 +46,7 @@ typedef struct client_entry_st {
 	uint8_t sid[SID_SIZE];
 	void * auth_ctx; /* the context of authentication */
 	unsigned have_session; /* whether an auth session is initialized */
+	unsigned tls_auth_ok;
 
 	unsigned status; /* PS_AUTH_ */
 

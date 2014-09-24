@@ -75,8 +75,10 @@ An example configuration file follows.
 
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
-# multiple auth directives. Available options: certificate, plain, pam. 
+# multiple auth directives. Available options: certificate, optional-certificate,
+# plain, pam. 
 #auth = "certificate"
+#auth = "optional-certificate"
 #auth = "pam"
 
 # The gid-min option is used by auto-select-group option, in order to
@@ -397,7 +399,7 @@ route = 192.168.5.0/255.255.255.0
 # or the groupname.
 # The options allowed in the configuration files are dns, nbns,
 #  ipv?-network, ipv4-netmask, ipv6-prefix, rx/tx-per-sec, iroute, route,
-#  net-priority, deny-roaming, no-udp, user-profile, and cgroup.
+#  net-priority, deny-roaming, no-udp, user-profile, require-cert, and cgroup.
 #
 # Note that the 'iroute' option allows to add routes on the server
 # based on a user or group. The syntax depends on the input accepted
@@ -412,6 +414,11 @@ route = 192.168.5.0/255.255.255.0
 # matches, then utilize the following configuration.
 #default-user-config = /etc/ocserv/defaults/user.conf
 #default-group-config = /etc/ocserv/defaults/group.conf
+
+# This option is only valid in a user/group configuration file. If the
+# auth mode is optional-certificate, it requires a certificate for this
+# particular user or group.
+#require-cert = true
 
 # The system command to use to setup a route. %{R} will be replaced with the
 # route/mask and %{D} with the (tun) device.

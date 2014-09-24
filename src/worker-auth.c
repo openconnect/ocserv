@@ -805,19 +805,19 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 
 	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE)
 	    && ws->config->cisco_client_compat == 0) {
-		if (ws->cert_auth_ok == 0) {
+		if (((ws->config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0)) {
 			oclog(ws, LOG_INFO,
 			      "no certificate provided for cookie authentication");
 			return -1;
 		}
 
-		ret = get_cert_info(ws);
-		if (ret < 0) {
-			oclog(ws, LOG_INFO, "cannot obtain certificate info");
-			return -1;
+		if (ws->cert_auth_ok != 0) {
+			ret = get_cert_info(ws);
+			if (ret < 0) {
+				oclog(ws, LOG_INFO, "cannot obtain certificate info");
+				return -1;
+			}
 		}
-
-		msg.tls_auth_ok = 1;
 	}
 
 	msg.cookie.data = cookie;
@@ -1128,19 +1128,21 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-			if (ws->cert_auth_ok == 0) {
+			if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0) {
 				reason = MSG_NO_CERT_ERROR;
 				oclog(ws, LOG_INFO,
 				      "no certificate provided for authentication");
 				goto auth_fail;
 			}
 
-			ret = get_cert_info(ws);
-			if (ret < 0) {
-				reason = MSG_CERT_READ_ERROR;
-				oclog(ws, LOG_ERR,
-				      "failed reading certificate info");
-				goto auth_fail;
+			if (ws->cert_auth_ok != 0) {
+				ret = get_cert_info(ws);
+				if (ret < 0) {
+					reason = MSG_CERT_READ_ERROR;
+					oclog(ws, LOG_ERR,
+					      "failed reading certificate info");
+					goto auth_fail;
+				}
 			}
 
 			if (def_group == 0 && ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
@@ -1148,7 +1150,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				return get_auth_handler2(ws, http_ver, "Please select your group");
 			}
 
-			ireq.tls_auth_ok = 1;
+			ireq.tls_auth_ok = ws->cert_auth_ok;
 			ireq.cert_user_name = ws->cert_username;
 			ireq.cert_group_names = ws->cert_groups;
 			ireq.n_cert_group_names = ws->cert_groups_size;

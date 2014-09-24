@@ -197,7 +197,6 @@ typedef struct worker_st {
 
 	/* the following are set only if authentication is complete */
 
-
 	char username[MAX_USERNAME_SIZE];
 	char groupname[MAX_GROUPNAME_SIZE];
 

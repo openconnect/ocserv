@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# Copyright (C) 2014 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+TMPFILE=${srcdir}/outfile.$$
+PORT=8445
+
+. `dirname $0`/common.sh
+
+connect()
+{
+opts=$1
+pass=$2
+COOKIE=''
+eval `echo "$pass" | openconnect -q localhost:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate`
+if [ -z "$COOKIE" ];then
+	return 1
+fi
+
+rm -f $TMPFILE
+echo "$pass" | openconnect -q localhost:$PORT $opts -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pidx >$TMPFILE 2>&1 &
+CPID=$!
+
+sleep 3
+grep "Established DTLS" $TMPFILE >/dev/null 2>&1
+if test $? != 0;then
+	rm -f $TMPFILE
+	return 1
+fi
+
+rm -f $TMPFILE
+kill $CPID
+return 0
+}
+
+echo "Testing local backend with username-password and optional certificate... "
+
+launch_server -d 1 -f -c test-pass-opt-cert.config & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (user without certificate)... "
+connect "-u test2" "test2"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without certificate!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+connect "-u test" "test"
+if test $? = 0;then
+	fail $PID "Connected without certificate!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+connect "-u test --sslkey ./user-key.pem -c ./user-cert.pem" "test"
+if test $? != 0;then
+	fail $PID "Failed to connect with certificate!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (with incorrect certificate)... "
+connect "-u test --sslkey ./user-key.pem -c ./user-cert-wrong.pem" "test"
+if test $? = 0;then
+	fail $PID "Should not have connected with wrong certificate!"
+fi
+echo ok
+
+#echo "Normal connection... "
+#( echo "test" | openconnect -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#	fail $PID "Could not connect to server"
+
+kill $PID
+wait
+
+exit 0

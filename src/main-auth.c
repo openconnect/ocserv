@@ -281,7 +281,7 @@ struct cookie_entry_st *old;
 
 	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
 
-	ret = session_openclose(s, proc, 1);
+	ret = session_open(s, proc);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;

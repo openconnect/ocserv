@@ -312,7 +312,9 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 	return ret;
 }
 
-int handle_sec_auth_session_openclose(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd)
+/* opens or closes a session.
+ */
+int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd)
 {
 	client_entry_st *e;
 	int ret;

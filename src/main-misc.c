@@ -161,7 +161,8 @@ struct proc_st *ctmp;
 	return ctmp;
 }
 
-int session_openclose(main_server_st * s, struct proc_st *proc, unsigned open)
+static
+int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 {
 	int sd, ret, e;
 	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
@@ -232,6 +233,16 @@ int session_openclose(main_server_st * s, struct proc_st *proc, unsigned open)
 	return 0;
 }
 
+int session_open(main_server_st * s, struct proc_st *proc)
+{
+	return session_cmd(s, proc, 1);
+}
+
+int session_close(main_server_st * s, struct proc_st *proc)
+{
+	return session_cmd(s, proc, 0);
+}
+
 /* k: whether to kill the process
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
@@ -250,7 +261,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 
 	/* close any pending sessions */
 	if (s->config->session_control != 0 && proc->active_sid) {
-		session_openclose(s, proc, 0);
+		session_close(s, proc);
 	}
 
 	/* close the intercomm fd */

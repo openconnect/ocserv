@@ -236,7 +236,8 @@ int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
 int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
   			   const SessionResumeStoreReqMsg *);
 
-int session_openclose(main_server_st * s, struct proc_st *proc, unsigned open);
+int session_open(main_server_st * s, struct proc_st *proc);
+int session_close(main_server_st * s, struct proc_st *proc);
 
 void 
 __attribute__ ((format(printf, 4, 5)))

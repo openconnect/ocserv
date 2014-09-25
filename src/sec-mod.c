@@ -296,7 +296,7 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_session_openclose(sec, msg, cmd);
+			ret = handle_sec_auth_session_cmd(sec, msg, cmd);
 			sec_auth_session_msg__free_unpacked(msg, &pa);
 
 			if (cmd == SM_CMD_AUTH_SESSION_OPEN) {

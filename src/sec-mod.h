@@ -81,7 +81,7 @@ void sec_auth_init(struct cfg_st *config);
 
 int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
-int handle_sec_auth_session_openclose(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd);
+int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd);
 void sec_auth_user_deinit(client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,

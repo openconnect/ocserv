@@ -197,6 +197,11 @@ struct cookie_entry_st *old;
 	memcpy(proc->sid, cmsg->sid.data, cmsg->sid.len);
 	proc->active_sid = 1;
 
+	/* override the group name in order to load the correct configuration in
+	 * case his group is specified in the certificate */
+	if (cmsg->groupname)
+		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
+
 	/* cookie is good so far, now read config (in order to know
 	 * whether roaming is allowed or not */
 	memset(&proc->config, 0, sizeof(proc->config));
@@ -270,9 +275,6 @@ struct cookie_entry_st *old;
 		      "certificate is required for user '%s'", proc->username);
 		return -1;
 	}
-
-	if (cmsg->groupname)
-		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
 
 	if (cmsg->hostname)
 		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);

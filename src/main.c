@@ -829,7 +829,7 @@ static void check_other_work(main_server_st *s)
 unsigned total = 10;
 
 	if (reload_conf != 0) {
-		mslog(s, NULL, LOG_DEBUG, "reloading configuration");
+		mslog(s, NULL, LOG_INFO, "reloading configuration");
 		reload_cfg_file(s->main_pool, s->config);
 		tls_reload_crl(s, s->creds);
 		reload_conf = 0;
@@ -841,7 +841,7 @@ unsigned total = 10;
 	}
 
 	if (terminate != 0) {
-		mslog(s, NULL, LOG_DEBUG, "termination request received; waiting for children to die");
+		mslog(s, NULL, LOG_INFO, "termination request received; waiting for children to die");
 		kill_children(s);
 		remove(s->full_socket_file);
 		remove(s->config->occtl_socket_file);
@@ -849,7 +849,7 @@ unsigned total = 10;
 
 		while (waitpid(-1, NULL, WNOHANG) == 0) {
 			if (total == 0) {
-				mslog(s, NULL, LOG_DEBUG, "not everyone died; forcing kill");
+				mslog(s, NULL, LOG_INFO, "not everyone died; forcing kill");
 				kill(0, SIGKILL);
 			}
 			ms_sleep(500);

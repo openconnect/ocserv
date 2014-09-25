@@ -847,7 +847,7 @@ unsigned total = 10;
 		remove(s->config->occtl_socket_file);
 		remove_pid_file();
 
-		while (waitpid(-1, NULL, WNOHANG) == 0) {
+		while (waitpid(-1, NULL, WNOHANG) >= 0) {
 			if (total == 0) {
 				mslog(s, NULL, LOG_INFO, "not everyone died; forcing kill");
 				kill(0, SIGKILL);

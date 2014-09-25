@@ -389,7 +389,7 @@ unsigned force_cert_auth;
 			config->auth_types |= AUTH_TYPE_PLAIN;
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
-		} else if (c_strcasecmp(auth[j], "optional-certificate") == 0) {
+		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE_OPT;
 		} else {
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);

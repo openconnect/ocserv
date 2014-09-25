@@ -78,8 +78,12 @@ An example configuration file follows.
 # multiple auth directives. Available options: certificate, optional-certificate,
 # plain, pam. 
 #auth = "certificate"
-#auth = "optional-certificate"
 #auth = "pam"
+
+# This indicates that a user may present a certificate. When that option
+# is set, individual users or user groups can be forced to present a valid
+# certificate by using "require-cert=true".
+#auth = "certificate[optional]"
 
 # The gid-min option is used by auto-select-group option, in order to
 # select the minimum valid group ID.
@@ -416,7 +420,7 @@ route = 192.168.5.0/255.255.255.0
 #default-group-config = /etc/ocserv/defaults/group.conf
 
 # This option is only valid in a user/group configuration file. If the
-# auth mode is optional-certificate, it requires a certificate for this
+# auth mode is certificate[optional], it requires a certificate for this
 # particular user or group.
 #require-cert = true
 

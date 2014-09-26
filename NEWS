@@ -4,7 +4,7 @@
   by sskaje).
 - fixed an infinite loop when asking for group if the default group
   is selected.
-- Added the unix-conn-file configuration option. That allows obtaining
+- Added the listen-file configuration option. That allows obtaining
   plaintext HTTP sessions through a unix domain socket. That is useful
   when combined with a forwarder HTTPS server like nginx, nxweb or haproxy.
 - Added the certificate[optional] auth configuration option. That option

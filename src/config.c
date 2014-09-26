@@ -82,7 +82,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "disconnect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
-	{ .name = "unix-conn-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "listen-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "use-seccomp", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -439,9 +439,9 @@ unsigned force_cert_auth;
 	if (reload == 0 && pid_file[0] == 0)
 		READ_STATIC_STRING("pid-file", pid_file);
 
-	READ_STRING("unix-conn-file", config->unix_conn_file);
+	READ_STRING("listen-file", config->unix_conn_file);
 	if (config->unix_conn_file != NULL && (config->auth_types & AUTH_TYPE_CERTIFICATE)) {
-		fprintf(stderr, "The option 'unix-conn-file' cannot be combined with 'auth=certificate'\n");
+		fprintf(stderr, "The option 'listen-file' cannot be combined with 'auth=certificate'\n");
 		exit(1);
 	}
 

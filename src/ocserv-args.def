@@ -110,10 +110,6 @@ An example configuration file follows.
 # A banner to be displayed on clients
 #banner = "Welcome"
 
-# Use listen-host to limit to specific IPs or to the IPs of a provided 
-# hostname.
-#listen-host = [IP|HOSTNAME]
-
 # Limit the number of clients. Unset or set to zero for unlimited.
 #max-clients = 1024
 max-clients = 16
@@ -126,15 +122,19 @@ max-clients = 16
 # multiple times). Unset or set to zero for unlimited.
 max-same-clients = 2
 
+# Use listen-host to limit to specific IPs or to the IPs of a provided 
+# hostname.
+#listen-host = [IP|HOSTNAME]
+
 # TCP and UDP port number
 tcp-port = 3333
 udp-port = 3333
 
 # Accept connections using a socket file. It accepts HTTP
-# connections (i.e., without SSL/TLS), and uses it as
-# the primary channel. That option cannot be combined with
-# certificate authentication.
-#unix-conn-file = /var/run/ocserv-conn.socket
+# connections (i.e., without SSL/TLS unlike its TCP counterpart),
+# and uses it as the primary channel. That option cannot be
+# combined with certificate authentication.
+#listen-file = /var/run/ocserv-conn.socket
 
 # Keepalive in seconds
 keepalive = 32400

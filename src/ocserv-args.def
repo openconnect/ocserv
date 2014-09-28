@@ -134,7 +134,7 @@ udp-port = 3333
 # connections (i.e., without SSL/TLS unlike its TCP counterpart),
 # and uses it as the primary channel. That option cannot be
 # combined with certificate authentication.
-#listen-file = /var/run/ocserv-conn.socket
+#listen-clear-file = /var/run/ocserv-conn.socket
 
 # Keepalive in seconds
 keepalive = 32400

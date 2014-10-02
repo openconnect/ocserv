@@ -88,7 +88,7 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 
 	ret = 0;
  fail:
-	force_close(fd);
+	close(fd);
 	return ret;
 }
 
@@ -129,7 +129,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 	 * it causes issues to client.
 	 */
 	if (proc->tun_lease.fd >= 0)
-		force_close(proc->tun_lease.fd);
+		close(proc->tun_lease.fd);
 	proc->tun_lease.fd = -1;
 
 	return ret;
@@ -190,7 +190,7 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 		    s->secmod_addr_len);
 	if (ret < 0) {
 		e = errno;
-		force_close(sd);
+		close(sd);
 		mslog(s, proc, LOG_ERR,
 		      "error connecting to sec-mod socket '%s': %s",
 		      s->secmod_addr.sun_path, strerror(e));
@@ -206,7 +206,7 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
 		(pack_func)sec_auth_session_msg__pack);
 	if (ret < 0) {
-		force_close(sd);
+		close(sd);
 		mslog(s, proc, LOG_ERR,
 		      "error sending message to sec-mod socket '%s'",
 		      s->secmod_addr.sun_path);
@@ -216,7 +216,7 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 	if (open) {
 		ret = recv_msg(proc, sd, SM_CMD_AUTH_SESSION_REPLY,
 		       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack);
-		force_close(sd);
+		close(sd);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR, "error receiving auth reply message");
 			return ret;
@@ -227,7 +227,7 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 			return -1;
 		}
 	} else {
-		force_close(sd);
+		close(sd);
 	}
 
 	return 0;
@@ -266,7 +266,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 
 	/* close the intercomm fd */
 	if (proc->fd >= 0)
-		force_close(proc->fd);
+		close(proc->fd);
 	proc->fd = -1;
 	proc->pid = -1;
 

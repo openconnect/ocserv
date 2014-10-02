@@ -24,23 +24,12 @@
 #include <sys/socket.h>
 #include <ipc.pb-c.h>
 #include <talloc.h>
-#include <unistd.h>
-#include <errno.h>
 
 void _talloc_free2(void *ctx, void *ptr);
 void *_talloc_size2(void *ctx, size_t size);
 
 #define PROTOBUF_ALLOCATOR(name, pool) \
 	ProtobufCAllocator name = {.alloc = _talloc_size2, .free = _talloc_free2, .allocator_data = pool}
-
-inline static
-void force_close(int fd)
-{
-	int ret;
-	do {
-		ret = close(fd);
-	} while(ret == -1 && errno != EBADF);
-}
 
 ssize_t force_write(int sockfd, const void *buf, size_t len);
 ssize_t force_read(int sockfd, void *buf, size_t len);

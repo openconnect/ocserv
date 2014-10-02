@@ -196,7 +196,7 @@ void cstp_close(worker_st *ws)
 		gnutls_bye(ws->session, GNUTLS_SHUT_WR);
 		gnutls_deinit(ws->session);
 	} else {
-		force_close(ws->conn_fd);
+		close(ws->conn_fd);
 	}
 }
 
@@ -207,7 +207,7 @@ void cstp_fatal_close(worker_st *ws,
 		gnutls_alert_send(ws->session, GNUTLS_AL_FATAL, a);
 		gnutls_deinit(ws->session);
 	} else {
-		force_close(ws->conn_fd);
+		close(ws->conn_fd);
 	}
 }
 

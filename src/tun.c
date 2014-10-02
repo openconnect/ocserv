@@ -122,7 +122,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	ret = 0;
  cleanup:
-	force_close(fd);
+	close(fd);
 
 	return ret;
 }
@@ -191,7 +191,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	ret = 0;
  cleanup:
-	force_close(fd);
+	close(fd);
 
 	return ret;
 }
@@ -289,7 +289,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 		}
 #endif
 
-		force_close(fd);
+		close(fd);
 		fd = -1;
 	}
 
@@ -312,7 +312,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 
  cleanup:
 	if (fd != -1)
-		force_close(fd);
+		close(fd);
 	return ret;
 }
 
@@ -432,7 +432,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 
 	return 0;
  fail:
-	force_close(tunfd);
+	close(tunfd);
 	return -1;
 }
 
@@ -441,7 +441,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	int fd = -1;
 
 	if (proc->tun_lease.fd >= 0) {
-		force_close(proc->tun_lease.fd);
+		close(proc->tun_lease.fd);
 		proc->tun_lease.fd = -1;
 	}
 
@@ -467,7 +467,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 #endif
 
 	if (fd != -1)
-		force_close(fd);
+		close(fd);
 
 	return;
 }

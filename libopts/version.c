@@ -135,7 +135,7 @@ emit_copy_note(tOptions * opts, FILE * fp)
  * is being requested and select the correct printing routine.
  */
 static void
-print_ver(tOptions * opts, tOptDesc * od, FILE * fp)
+print_ver(tOptions * opts, tOptDesc * od, FILE * fp, bool call_exit)
 {
     char ch;
 
@@ -174,11 +174,11 @@ print_ver(tOptions * opts, tOptDesc * od, FILE * fp)
         fserr_exit(opts->pzProgName, zwriting,
                    (fp == stdout) ? zstdout_name : zstderr_name);
 
-    option_exits(EXIT_SUCCESS);
+    if (call_exit)
+        option_exits(EXIT_SUCCESS);
 }
 
 /*=export_func  optionPrintVersion
- * private:
  *
  * what:  Print the program version
  * arg:   + tOptions* + opts + program options descriptor +
@@ -190,7 +190,25 @@ print_ver(tOptions * opts, tOptDesc * od, FILE * fp)
 void
 optionPrintVersion(tOptions * opts, tOptDesc * od)
 {
-    print_ver(opts, od, print_exit ? stderr : stdout);
+    print_ver(opts, od, print_exit ? stderr : stdout, true);
+}
+
+/*=export_func  optionPrintVersionAndReturn
+ *
+ * what:  Print the program version
+ * arg:   + tOptions* + opts + program options descriptor +
+ * arg:   + tOptDesc* + od   + the descriptor for this arg +
+ *
+ * doc:
+ *  This routine will print the version to stdout and return
+ *  instead of exiting.  Please see the source for the
+ *  @code{print_ver} funtion for details on selecting how
+ *  verbose to be after this function returns.
+=*/
+void
+optionPrintVersionAndReturn(tOptions * opts, tOptDesc * od)
+{
+    print_ver(opts, od, print_exit ? stderr : stdout, false);
 }
 
 /*=export_func  optionVersionStderr
@@ -206,7 +224,7 @@ optionPrintVersion(tOptions * opts, tOptDesc * od)
 void
 optionVersionStderr(tOptions * opts, tOptDesc * od)
 {
-    print_ver(opts, od, stderr);
+    print_ver(opts, od, stderr, true);
 }
 
 /** @}

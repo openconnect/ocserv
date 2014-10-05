@@ -79,18 +79,12 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 #define FATAL_ERR_CMD(ws, x, CMD) \
         if (ws->session != NULL) { \
 	        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-        	        if (syslog_open) \
-                		syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-	                else \
-        	                fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
+               		oclog(ws, LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
 	                CMD; \
 	        } \
 	} else { \
 	        if (x < 0 && errno != EINTR && errno != EAGAIN) { \
-        	        if (syslog_open) \
-                		syslog(LOG_ERR, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
-	                else \
-        	                fprintf(stderr, "socket error (at %s:%d): %s\n", __FILE__, __LINE__, strerror(errno)); \
+               		oclog(ws, LOG_ERR, "socket error (at %s:%d): %s", __FILE__, __LINE__, strerror(errno)); \
 	                CMD; \
 	        } \
 	}

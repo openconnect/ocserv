@@ -149,6 +149,7 @@ int handle_worker_commands(struct worker_st *ws)
 					close(ws->udp_fd);
 				}
 				ws->udp_fd = fd;
+				set_non_block(fd);
 
 				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
 				return 0;

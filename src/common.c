@@ -87,6 +87,8 @@ const uint8_t * p = buf;
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
+			else
+				ms_sleep(50);
 		}
 
 		if (ret > 0) {

@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <ipc.pb-c.h>
 #include <talloc.h>
+#include <time.h>
 
 void _talloc_free2(void *ctx, void *ptr);
 void *_talloc_size2(void *ctx, size_t size);
@@ -80,5 +81,20 @@ void safe_memset(void *data, int c, size_t size)
 		} while(vdata[volatile_zero] != c);
 }
 
-#endif
+inline static
+void ms_sleep(unsigned ms)
+{
+  struct timespec tv;
 
+  tv.tv_sec = 0;
+  tv.tv_nsec = ms * 1000 * 1000;
+
+  while(tv.tv_nsec >= 1000000000) {
+  	tv.tv_nsec -= 1000000000;
+  	tv.tv_sec++;
+  }
+  
+  nanosleep(&tv, NULL);
+}
+
+#endif

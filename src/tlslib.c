@@ -83,8 +83,13 @@ ssize_t cstp_send(worker_st *ws, const void *data,
 	if (ws->session != NULL) {
 		while(left > 0) {
 			ret = gnutls_record_send(ws->session, p, data_size);
-			if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
-				return ret;
+			if (ret < 0) {
+				if (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED) {
+					return ret;
+				} else {
+					/* do not cause mayhem */
+					ms_sleep(50);
+				}
 			}
 
 			if (ret > 0) {
@@ -223,8 +228,13 @@ ssize_t dtls_send(worker_st *ws, const void *data,
 
 	while(left > 0) {
 		ret = gnutls_record_send(ws->dtls_session, p, data_size);
-		if (ret < 0 && (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED)) {
-			return ret;
+		if (ret < 0) {
+			if (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED) {
+				return ret;
+			} else {
+				/* do not cause mayhem */
+				ms_sleep(50);
+			}
 		}
 
 		if (ret > 0) {

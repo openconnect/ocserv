@@ -1745,6 +1745,7 @@ static int connect_handler(worker_st * ws)
 			      "setsockopt(TCP, SO_SNDBUF) to %u, failed.", t);
 	}
 
+	set_non_block(ws->conn_fd);
 	set_net_priority(ws, ws->conn_fd, ws->config->net_priority);
 
 	if (ws->udp_state != UP_DISABLED) {

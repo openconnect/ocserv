@@ -31,9 +31,12 @@ void *_talloc_size2(void *ctx, size_t size);
 #define PROTOBUF_ALLOCATOR(name, pool) \
 	ProtobufCAllocator name = {.alloc = _talloc_size2, .free = _talloc_free2, .allocator_data = pool}
 
+#define DEFAULT_SOCKET_TIMEOUT 10
+
 ssize_t force_write(int sockfd, const void *buf, size_t len);
 ssize_t force_read(int sockfd, void *buf, size_t len);
 ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec);
+ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n);
 char* ipv6_prefix_to_mask(void *pool, unsigned prefix);
 

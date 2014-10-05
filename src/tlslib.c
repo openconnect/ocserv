@@ -133,7 +133,7 @@ ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 			counter--;
 		} while (ret == GNUTLS_E_AGAIN && counter > 0);
 	} else {
-		ret = force_read_timeout(ws->conn_fd, data, data_size, 10);
+		ret = recv_timeout(ws->conn_fd, data, data_size, DEFAULT_SOCKET_TIMEOUT);
 	}
 
 	return ret;
@@ -146,7 +146,7 @@ ssize_t cstp_recv_nb(worker_st *ws, void *data, size_t data_size)
 	if (ws->session != NULL) {
 		ret = gnutls_record_recv(ws->session, data, data_size);
 	} else {
-		ret = force_read_timeout(ws->conn_fd, data, data_size, 10);
+		ret = recv_timeout(ws->conn_fd, data, data_size, DEFAULT_SOCKET_TIMEOUT);
 	}
 
 	return ret;

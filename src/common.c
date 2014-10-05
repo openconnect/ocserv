@@ -93,7 +93,7 @@ const uint8_t * p = buf;
 			p += ret;
 		}
 	}
-	
+
 	return len;
 }
 
@@ -115,7 +115,7 @@ uint8_t * p = buf;
 			p += ret;
 		}
 	}
-	
+
 	return len;
 }
 
@@ -129,7 +129,7 @@ fd_set set;
 
 	tv.tv_sec = sec;
 	tv.tv_usec = 0;
-	
+
 	FD_ZERO(&set);
 	FD_SET(sockfd, &set);
 
@@ -150,14 +150,38 @@ fd_set set;
 			errno = ENOENT;
 			return -1;
 		}
-		
+
 		if (ret > 0) {
 			left -= ret;
 			p += ret;
 		}
 	}
-	
+
 	return len;
+}
+
+ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)
+{
+int ret;
+struct timeval tv;
+fd_set set;
+
+	tv.tv_sec = sec;
+	tv.tv_usec = 0;
+
+	FD_ZERO(&set);
+	FD_SET(sockfd, &set);
+
+	do {
+		ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+	} while (ret == -1 && errno == EINTR);
+
+	if (ret == -1 || ret == 0) {
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	return recv(sockfd, buf, len, 0);
 }
 
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n)
@@ -212,7 +236,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
-	
+
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
@@ -247,7 +271,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	if (socketfd != -1) {
 		hdr.msg_control = control_un.control;
 		hdr.msg_controllen = sizeof(control_un.control);
-	
+
 		cmptr = CMSG_FIRSTHDR(&hdr);
 		cmptr->cmsg_len = CMSG_LEN(sizeof(int));
 		cmptr->cmsg_level = SOL_SOCKET;
@@ -316,7 +340,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__, __LINE__);
 		return ERR_PEER_TERMINATED;
 	}
-	
+
 	if (rcmd != cmd) {
 		return ERR_BAD_COMMAND;
 	}
@@ -357,7 +381,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 			goto cleanup;
 		}
 	}
-	
+
 	ret = 0;
 
 cleanup:

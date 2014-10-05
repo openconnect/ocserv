@@ -122,16 +122,7 @@ int y;
 
 static void set_common_socket_options(int fd)
 {
-int val;
-
-	val = fcntl(fd, F_GETFL, 0);
-	if ((val == -1)
-	    || (fcntl(fd, F_SETFL, val | O_NONBLOCK) < 0)) {
-		int e = errno;
-		fprintf(stderr, "fcntl() error: %s", strerror(e));
-		exit(1);
-	}
-
+	set_non_block(fd);
 	set_cloexec_flag (fd, 1);
 }
 

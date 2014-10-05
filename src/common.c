@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 #include <vpn.h>
 #include <sys/socket.h>
@@ -158,6 +159,14 @@ fd_set set;
 	}
 
 	return len;
+}
+
+void set_non_block(int fd)
+{
+int val;
+
+	val = fcntl(fd, F_GETFL, 0);
+	fcntl(fd, F_SETFL, val | O_NONBLOCK);
 }
 
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)

@@ -1,5 +1,8 @@
+* Version 0.8.6 (unreleased)
+- Fixes in socket handling
+
 * Version 0.8.5 (released 2014-10-03)
-- the comparison of XML fields is now case insensitive; that
+- The comparison of XML fields is now case insensitive; that
   addresses issues with some anyconnect clients (report and fix
   by sskaje).
 - fixed an infinite loop when asking for group if the default group

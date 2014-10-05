@@ -1,5 +1,6 @@
-* Version 0.8.6 (unreleased)
+* Version 0.8.6 (released 2014-10-05)
 - Fixes in socket handling
+
 
 * Version 0.8.5 (released 2014-10-03)
 - The comparison of XML fields is now case insensitive; that

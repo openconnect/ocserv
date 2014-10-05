@@ -121,14 +121,17 @@ int ret;
 	return total;
 }
 
+/* Restores gnutls_record_recv() on EAGAIN */
 ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 {
 	int ret;
+	int counter = 5;
 
 	if (ws->session != NULL) {
 		do {
 			ret = gnutls_record_recv(ws->session, data, data_size);
-		} while (ret < 0 && (ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN));
+			counter--;
+		} while (ret == GNUTLS_E_AGAIN && counter > 0);
 	} else {
 		ret = force_read_timeout(ws->conn_fd, data, data_size, 10);
 	}
@@ -143,7 +146,7 @@ ssize_t cstp_recv_nb(worker_st *ws, void *data, size_t data_size)
 	if (ws->session != NULL) {
 		ret = gnutls_record_recv(ws->session, data, data_size);
 	} else {
-		ret = recv(ws->conn_fd, data, data_size, 0);
+		ret = force_read_timeout(ws->conn_fd, data, data_size, 10);
 	}
 
 	return ret;

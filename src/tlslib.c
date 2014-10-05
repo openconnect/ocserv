@@ -88,7 +88,7 @@ ssize_t cstp_send(worker_st *ws, const void *data,
 					return ret;
 				} else {
 					/* do not cause mayhem */
-					ms_sleep(50);
+					ms_sleep(20);
 				}
 			}
 
@@ -135,10 +135,19 @@ ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 	if (ws->session != NULL) {
 		do {
 			ret = gnutls_record_recv(ws->session, data, data_size);
-			counter--;
+			if (ret == GNUTLS_E_AGAIN) {
+				counter--;
+				ms_sleep(20);
+			}
 		} while (ret == GNUTLS_E_AGAIN && counter > 0);
 	} else {
-		ret = recv_timeout(ws->conn_fd, data, data_size, DEFAULT_SOCKET_TIMEOUT);
+		do {
+			ret = recv(ws->conn_fd, data, data_size, 0);
+			if (ret == -1 && errno == EAGAIN) {
+				counter--;
+				ms_sleep(20);
+			}
+		} while(ret == -1 && errno == EAGAIN && counter > 0);
 	}
 
 	return ret;
@@ -151,7 +160,7 @@ ssize_t cstp_recv_nb(worker_st *ws, void *data, size_t data_size)
 	if (ws->session != NULL) {
 		ret = gnutls_record_recv(ws->session, data, data_size);
 	} else {
-		ret = recv_timeout(ws->conn_fd, data, data_size, DEFAULT_SOCKET_TIMEOUT);
+		ret = recv(ws->conn_fd, data, data_size, 0);
 	}
 
 	return ret;
@@ -233,7 +242,7 @@ ssize_t dtls_send(worker_st *ws, const void *data,
 				return ret;
 			} else {
 				/* do not cause mayhem */
-				ms_sleep(50);
+				ms_sleep(20);
 			}
 		}
 

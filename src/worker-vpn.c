@@ -980,7 +980,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 	if (ws->udp_state == UP_ACTIVE &&
 	    now - ws->last_msg_udp > DPD_TRIES * dpd && dpd > 0) {
 		oclog(ws, LOG_ERR,
-		      "have not received UDP any message or DPD for long (%d secs, DPD is %d)",
+		      "have not received any UDP message or DPD for long (%d secs, DPD is %d)",
 		      (int)(now - ws->last_msg_udp), dpd);
 
 		ws->buffer[0] = AC_PKT_DPD_OUT;

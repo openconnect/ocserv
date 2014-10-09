@@ -1,5 +1,5 @@
 * Version 0.8.7 (unreleased)
-- Networking sockets were switch to non-blocking in worker process.
+- Networking sockets were switched to non-blocking in worker process.
 
 
 * Version 0.8.6 (released 2014-10-05)

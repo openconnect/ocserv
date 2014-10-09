@@ -1,9 +1,5 @@
 Short term items:
 
-* Think for ways for ocserv to co-exist on the same system with
-  an HTTPS server (while sharing the same port). A possible way is
-  through sniproxy -for low-traffic sites.
-
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time (or should we drop this functionality altogether and rely
   on PAM handling that?)

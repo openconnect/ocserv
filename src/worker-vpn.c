@@ -545,7 +545,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 	/* DTLS cookie verified.
 	 * Initialize session.
 	 */
-	ret = gnutls_init(&session, GNUTLS_SERVER | GNUTLS_DATAGRAM);
+	ret = gnutls_init(&session, GNUTLS_SERVER|GNUTLS_DATAGRAM|GNUTLS_NONBLOCK);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not initialize TLS session: %s",
 		      gnutls_strerror(ret));

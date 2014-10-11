@@ -171,7 +171,7 @@ int send_sec_auth_reply_msg(sec_mod_st * sec, client_entry_st * e)
 
 	int ret;
 
-	if (e->auth_ctx == NULL)
+	if (module == NULL || e->auth_ctx == NULL)
 		return -1;
 
 	ret = module->auth_msg(e->auth_ctx, tmp, sizeof(tmp));
@@ -288,7 +288,7 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 		}
 
 		ret = 0;
-		if (sec->config->session_control == 0 || module->open_session == NULL) {
+		if (module != NULL && (sec->config->session_control == 0 || module->open_session == NULL)) {
 			del_client_entry(sec->client_db, e);
 		} /* else do nothing, and wait for session close/open messages */
 	} else {
@@ -319,7 +319,7 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 	client_entry_st *e;
 	int ret;
 
-	if (module->open_session == NULL)
+	if (module == NULL || module->open_session == NULL)
 		return 0;
 
 	if (sec->config->session_control == 0) {
@@ -500,6 +500,9 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 
 void sec_auth_user_deinit(client_entry_st * e)
 {
+	if (module == NULL)
+		return;
+
 	seclog(LOG_DEBUG, "auth deinit for user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
 		if (e->have_session) {

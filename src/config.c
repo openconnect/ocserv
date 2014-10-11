@@ -450,7 +450,9 @@ unsigned force_cert_auth;
 	if (config->occtl_socket_file == NULL)
 		config->occtl_socket_file = talloc_strdup(config, OCCTL_UNIX_SOCKET);
 
-	READ_TF("session-control", config->session_control, 0);
+	if (config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		READ_TF("session-control", config->session_control, 0);
+	}
 
 	READ_STRING("banner", config->banner);
 	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);

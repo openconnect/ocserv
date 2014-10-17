@@ -211,11 +211,13 @@ server-key = /path/to/key.pem
 # See the manual to generate an empty CRL initially.
 #crl = /path/to/crl.pem
 
-# GnuTLS priority string
-tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT"
+# GnuTLS priority string; note that SSL 3.0 is disabled by default
+# as there are no openconnect (and possibly anyconnect clients) using
+# that protocol.
+tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-VERS-SSL3.0"
 
 # To enforce perfect forward secrecy (PFS) on the main channel.
-#tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA"
+#tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0"
 
 # The time (in seconds) that a client is allowed to stay connected prior
 # to authentication

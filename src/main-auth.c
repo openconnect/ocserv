@@ -35,6 +35,7 @@
 #include <tlslib.h>
 #include <script-list.h>
 #include <ip-lease.h>
+#include <proc-search.h>
 #include <main-sup-config.h>
 #include "str.h"
 
@@ -286,6 +287,9 @@ struct cookie_entry_st *old;
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;
 	}
+
+	/* add the links to proc hash */
+	proc_table_add(s, proc);
 
 	return 0;
 }

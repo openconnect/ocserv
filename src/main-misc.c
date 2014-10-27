@@ -43,6 +43,7 @@
 #include <sec-mod.h>
 #include <route-add.h>
 #include <ip-lease.h>
+#include <proc-search.h>
 #include <ipc.pb-c.h>
 #include <script-list.h>
 #include <main-sup-config.h>
@@ -294,6 +295,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	}
 
 	close_tun(s, proc);
+	proc_table_del(s, proc);
 
 	talloc_free(proc);
 }

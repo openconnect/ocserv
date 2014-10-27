@@ -56,6 +56,7 @@
 #include <route-add.h>
 #include <worker.h>
 #include <cookies.h>
+#include <proc-search.h>
 #include <tun.h>
 #include <grp.h>
 #include <ip-lease.h>
@@ -625,6 +626,7 @@ void clear_lists(main_server_st *s)
 
 	tls_cache_deinit(&s->tls_db);
 	ip_lease_deinit(&s->ip_leases);
+	proc_table_deinit(s);
 	ctl_handler_deinit(s);
 	cookie_db_deinit(&s->cookies);
 }
@@ -664,7 +666,7 @@ static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
 {
 int ret, e;
 struct sockaddr_storage cli_addr;
-struct proc_st *ctmp = NULL, *proc_to_send = NULL;
+struct proc_st *proc_to_send = NULL;
 socklen_t cli_addr_size;
 uint8_t buffer[1024];
 char tbuf[64];
@@ -672,7 +674,7 @@ uint8_t  *session_id = NULL;
 int session_id_size = 0;
 ssize_t buffer_size;
 int connected = 0;
-int match_ip_only = 0, matching_ips;
+int match_ip_only = 0;
 time_t now;
 
 	/* first receive from the correct client and connect socket */
@@ -723,31 +725,15 @@ time_t now;
 
 	/* search for the IP and the session ID in all procs */
 	now = time(0);
-	matching_ips = 0;
 
-	list_for_each(&s->proc_list.head, ctmp, list) {
-		if (match_ip_only == 0 && session_id_size == ctmp->dtls_session_id_size &&
-			memcmp(session_id, ctmp->dtls_session_id, session_id_size) == 0) {
-
-			proc_to_send = ctmp;
-			break;
-		} else if (match_ip_only != 0 && cli_addr_size == ctmp->remote_addr_len &&
-			memcmp(SA_IN_P_GENERIC(&cli_addr, cli_addr_size), 
-				SA_IN_P_GENERIC(&ctmp->remote_addr, ctmp->remote_addr_len),
-				SA_IN_SIZE(ctmp->remote_addr_len)) == 0) {
-			matching_ips++;
-			proc_to_send = ctmp;
-		}
+	if (match_ip_only == 0) {
+		proc_to_send = proc_search_sid(s, session_id, session_id_size);
+	} else {
+		proc_to_send = proc_search_ip(s, &cli_addr, cli_addr_size);
 	}
 
 	if (proc_to_send != 0) {
 		UdpFdMsg msg = UDP_FD_MSG__INIT;
-
-		if (matching_ips > 1) {
-			mslog(s, proc_to_send, LOG_INFO, "cannot associate with a client; more than a single clients from %s",
-			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
-			goto fail;
-		}
 
 		if (now - proc_to_send->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
 			mslog(s, proc_to_send, LOG_INFO, "received UDP connection too soon from %s",
@@ -921,6 +907,7 @@ int main(int argc, char** argv)
 	tls_cache_init(s, &s->tls_db);
 	cookie_db_init(s, &s->cookies);
 	ip_lease_init(&s->ip_leases);
+	proc_table_init(s);
 
 	sigemptyset(&blockset);
 	sigemptyset(&emptyset);

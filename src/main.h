@@ -179,6 +179,12 @@ struct cookie_entry_db_st {
 	unsigned total;
 };
 
+struct proc_hash_db_st {
+	struct htable *db_ip;
+	struct htable *db_sid;
+	unsigned total;
+};
+
 typedef struct main_server_st {
 	struct cfg_st *config;
 	
@@ -193,6 +199,8 @@ typedef struct main_server_st {
 	struct listen_list_st listen_list;
 	struct proc_list_st proc_list;
 	struct script_list_st script_list;
+	/* maps DTLS session IDs to proc entries */
+	struct proc_hash_db_st proc_table;
 	
 	char socket_file[_POSIX_PATH_MAX];
 	char full_socket_file[_POSIX_PATH_MAX];

@@ -98,7 +98,6 @@ extern int syslog_open;
 
 #define MAX_AUTH_SECS 40
 #define MAX_CIPHERSUITE_NAME 64
-#define MAX_DTLS_CIPHERSUITE_NAME 24
 #define MAX_MSG_SIZE 256
 #define SID_SIZE 12
 

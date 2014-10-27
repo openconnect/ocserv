@@ -131,7 +131,7 @@ typedef struct proc_st {
 	 * purposes (from main-ctl-handler). */
 	char user_agent[MAX_AGENT_NAME];
 	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
-	char dtls_ciphersuite[MAX_DTLS_CIPHERSUITE_NAME];
+	char dtls_ciphersuite[MAX_CIPHERSUITE_NAME];
 
 	/* pointer to the cookie used by this session */
 	struct cookie_entry_st *cookie_ptr;

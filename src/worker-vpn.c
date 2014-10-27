@@ -883,9 +883,9 @@ void session_info_send(worker_st * ws)
 		msg.tls_ciphersuite = gnutls_session_get_desc(ws->session);
 	}
 
-	if (ws->udp_state != UP_DISABLED) {
+	if (ws->udp_state != UP_DISABLED && ws->dtls_session) {
 		msg.dtls_ciphersuite =
-		    (char *)ws->req.selected_ciphersuite->oc_name;
+		    gnutls_session_get_desc(ws->dtls_session);
 	}
 
 	if (ws->req.user_agent[0] != 0) {
@@ -897,6 +897,7 @@ void session_info_send(worker_st * ws)
 			 (pack_func) session_info_msg__pack);
 
 	gnutls_free(msg.tls_ciphersuite);
+	gnutls_free(msg.dtls_ciphersuite);
 }
 
 /* mtu_set: Sets the MTU for the session
@@ -1212,6 +1213,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			oclog(ws, LOG_DEBUG,
 			      "DTLS handshake completed (plaintext MTU: %u)\n",
 			      ws->conn_mtu);
+			session_info_send(ws);
 		}
 
 		break;

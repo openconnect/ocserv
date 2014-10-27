@@ -1,3 +1,8 @@
+* Version 0.8.8 (unreleased)
+- When selecting a DTLS ciphersuite, try to match the TLS ciphersuite
+  if possible.
+
+
 * Version 0.8.7 (released 2014-10-26)
 - Networking sockets were switched to non-blocking in worker process.
 - Fixed a crash when session control is enabled but not password

@@ -191,7 +191,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = CS_AES128_GCM,
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
@@ -199,7 +199,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = CS_AES256_GCM,
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION:+SIGN-ALL",
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
@@ -209,7 +209,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = "AES128-SHA",
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT",
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
@@ -218,7 +218,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = "DES-CBC3-SHA",
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT:%DISABLE_SAFE_RENEGOTIATION",
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT",
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
 	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,

@@ -233,6 +233,9 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	size_t nlen, value_length;
 	char *token, *value;
 	char *str, *p;
+	const dtls_ciphersuite_st *cand = NULL;
+	gnutls_cipher_algorithm_t want_cipher;
+	gnutls_mac_algorithm_t want_mac;
 
 	if (req->value.length <= 0)
 		return;
@@ -296,6 +299,14 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
+		if (ws->session != NULL) {
+			want_mac = gnutls_mac_get(ws->session);
+			want_cipher = gnutls_cipher_get(ws->session);
+		} else {
+			want_mac = -1;
+			want_cipher = -1;
+		}
+
 		req->selected_ciphersuite = NULL;
 
 		str = (char *)value;
@@ -304,17 +315,25 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
 			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
-					if (req->selected_ciphersuite == NULL ||
-					    req->
-					    selected_ciphersuite->server_prio <
+					if (cand == NULL ||
+					    cand->server_prio <
 					    ciphersuites[i].server_prio) {
-						req->selected_ciphersuite =
+						cand =
 						    &ciphersuites[i];
+
+						/* if our candidate matches the TLS session
+						 * ciphersuite, we are finished */
+						if (want_cipher != -1) {
+							if (want_cipher == cand->gnutls_cipher &&
+							    want_mac == cand->gnutls_mac)
+							    break;
+						}
 					}
 				}
 			}
 			str = NULL;
 		}
+	        req->selected_ciphersuite = cand;
 
 		break;
 

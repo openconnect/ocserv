@@ -75,7 +75,7 @@ An example configuration file follows.
 
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
-# multiple auth directives. Available options: certificate, optional-certificate,
+# multiple auth directives. Available options: certificate, certificate[optional],
 # plain, pam. 
 #auth = "certificate"
 #auth = "pam"

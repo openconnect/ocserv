@@ -2,6 +2,9 @@
 - When selecting a DTLS ciphersuite, try to match the TLS ciphersuite
   if possible.
 - Use consistent ciphersuite names in occtl for TLS and DTLS
+- Report the user's name on log messages.
+- UDP session initialization utilizes hash tables to speed up the
+  finding the corresponding TCP/TLS session.
 
 
 * Version 0.8.7 (released 2014-10-26)

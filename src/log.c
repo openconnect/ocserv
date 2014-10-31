@@ -118,7 +118,10 @@ void __attribute__ ((format(printf, 3, 4)))
 	va_end(args);
 
 	if (ip) {
-		syslog(priority, "worker: %s %s", ip, buf);
+		if (ws->username[0] == 0)
+			syslog(priority, "worker: %s %s", ip, buf);
+		else
+			syslog(priority, "worker: %s[%s] %s", ip, ws->username, buf);
 	} else {
 		syslog(priority, "worker: [unknown] %s", buf);
 	}
@@ -161,7 +164,10 @@ void __attribute__ ((format(printf, 4, 5)))
 	va_end(args);
 
 	if (ip) {
-		syslog(priority, "main: %s %s", ip, buf);
+		if (proc->username[0] == 0)
+			syslog(priority, "main: %s %s", ip, buf);
+		else
+			syslog(priority, "main: %s[%s] %s", ip, proc->username, buf);
 	} else {
 		syslog(priority, "main: %s", buf);
 	}

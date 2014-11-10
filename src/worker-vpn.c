@@ -57,10 +57,6 @@
 
 #define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:257)
 
-/* after that time (secs) of inactivity in the UDP part, connection switches to 
- * TCP (if activity occurs there).
- */
-#define UDP_SWITCH_TIME 15
 #define PERIODIC_CHECK_TIME 30
 
 /* The number of DPD packets a client skips before he's kicked */

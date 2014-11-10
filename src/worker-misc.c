@@ -48,8 +48,6 @@
 # include <sys/mman.h>
 #endif
 
-#define ACTIVE_SESSION_TIMEOUT 30
-
 int handle_worker_commands(struct worker_st *ws)
 {
 	struct iovec iov[3];
@@ -134,7 +132,7 @@ int handle_worker_commands(struct worker_st *ws)
 				if (hello == 0) {
 					/* only replace our session if we are inactive for more than 60 secs */
 					if ((ws->udp_state != UP_ACTIVE && ws->udp_state != UP_INACTIVE) ||
-						time(0) - ws->last_msg_udp < ACTIVE_SESSION_TIMEOUT) {
+						time(0) - ws->last_msg_udp < UDP_SWITCH_TIME) {
 						oclog(ws, LOG_INFO, "received UDP fd message but our session is active!");
 						close(fd);
 						return 0;

@@ -658,7 +658,7 @@ void request_reload(int signo)
 /* A UDP fd will not be forwarded to worker process before this number of
  * seconds has passed. That is to prevent a duplicate message messing the worker.
  */
-#define UDP_FD_RESEND_TIME 60
+#define UDP_FD_RESEND_TIME 35
 
 #define RECORD_PAYLOAD_POS 13
 #define HANDSHAKE_SESSION_ID_POS 46
@@ -708,7 +708,7 @@ time_t now;
 		goto fail;
 	}
 	if (buffer[0] != 22) {
-		mslog(s, NULL, LOG_INFO, "%s: unexpected DTLS content type: %u",
+		mslog(s, NULL, LOG_DEBUG, "%s: unexpected DTLS content type: %u; a firewall disassociated a UDP session",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
 		      (unsigned int)buffer[0]);
 		/* Here we received a non-client hello packet. It may be that
@@ -736,7 +736,7 @@ time_t now;
 		UdpFdMsg msg = UDP_FD_MSG__INIT;
 
 		if (now - proc_to_send->udp_fd_receive_time <= UDP_FD_RESEND_TIME) {
-			mslog(s, proc_to_send, LOG_INFO, "received UDP connection too soon from %s",
+			mslog(s, proc_to_send, LOG_DEBUG, "received UDP connection too soon from %s",
 			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 			goto fail;
 		}
@@ -1165,10 +1165,7 @@ fork_failed:
 					ms_sleep(s->config->rate_limit_ms);
 			} else if (set && ltmp->sock_type == SOCK_TYPE_UDP) {
 				/* connection on UDP port */
-				ret = forward_udp_to_owner(s, ltmp);
-				if (ret < 0) {
-					mslog(s, NULL, LOG_INFO, "could not determine the owner of received UDP packet");
-				}
+				forward_udp_to_owner(s, ltmp);
 
 				if (s->config->rate_limit_ms > 0)
 					ms_sleep(s->config->rate_limit_ms);

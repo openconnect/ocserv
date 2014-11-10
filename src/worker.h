@@ -279,4 +279,9 @@ int send_msg_to_main(worker_st *ws, uint8_t cmd,
 	return send_msg(ws, ws->cmd_fd, cmd, msg, get_size, pack);
 }
 
+/* after that time (secs) of inactivity in the UDP part, connection switches to 
+ * TCP (if activity occurs there).
+ */
+#define UDP_SWITCH_TIME 15
+
 #endif

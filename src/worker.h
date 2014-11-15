@@ -283,5 +283,6 @@ int send_msg_to_main(worker_st *ws, uint8_t cmd,
  * TCP (if activity occurs there).
  */
 #define UDP_SWITCH_TIME 15
+#define ACTIVE_SESSION_TIMEOUT 30
 
 #endif

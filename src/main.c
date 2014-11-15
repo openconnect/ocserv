@@ -689,7 +689,7 @@ time_t now;
 	
 	/* obtain the session id */
 	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
-		mslog(s, NULL, LOG_INFO, "%s: too short packet",
+		mslog(s, NULL, LOG_INFO, "%s: too short UDP packet",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 		goto fail;
 	}
@@ -704,7 +704,7 @@ time_t now;
 
 	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
 		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
-		mslog(s, NULL, LOG_INFO, "%s: unknown DTLS version: %u.%u", 
+		mslog(s, NULL, LOG_INFO, "%s: unknown DTLS record version: %u.%u", 
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
 		      (unsigned)buffer[1], (unsigned)buffer[2]);
 		goto fail;

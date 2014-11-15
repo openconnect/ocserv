@@ -1,5 +1,9 @@
 Short term items:
 
+* Enhance the current accounting modules to allow, native radius support 
+  with real-time accounting (e.g., sending periodically the transferred
+  bytes). Use radius for testing it.
+
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time (or should we drop this functionality altogether and rely
   on PAM handling that?)

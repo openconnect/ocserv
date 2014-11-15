@@ -695,10 +695,12 @@ time_t now;
 	}
 
 	/* check version */
-	mslog(s, NULL, LOG_DEBUG, "new DTLS session from %s (record v%u.%u, hello v%u.%u)", 
-		human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
-		(unsigned int)buffer[1], (unsigned int)buffer[2],
-		(unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
+	if (buffer[0] == 22) {
+		mslog(s, NULL, LOG_DEBUG, "new DTLS session from %s (record v%u.%u, hello v%u.%u)", 
+			human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
+			(unsigned int)buffer[1], (unsigned int)buffer[2],
+			(unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
+	}
 
 	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
 		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
@@ -707,6 +709,7 @@ time_t now;
 		      (unsigned)buffer[1], (unsigned)buffer[2]);
 		goto fail;
 	}
+
 	if (buffer[0] != 22) {
 		mslog(s, NULL, LOG_DEBUG, "%s: unexpected DTLS content type: %u; possibly a firewall disassociated a UDP session",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),

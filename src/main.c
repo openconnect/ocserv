@@ -708,7 +708,7 @@ time_t now;
 		goto fail;
 	}
 	if (buffer[0] != 22) {
-		mslog(s, NULL, LOG_DEBUG, "%s: unexpected DTLS content type: %u; a firewall disassociated a UDP session",
+		mslog(s, NULL, LOG_DEBUG, "%s: unexpected DTLS content type: %u; possibly a firewall disassociated a UDP session",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
 		      (unsigned int)buffer[0]);
 		/* Here we received a non-client hello packet. It may be that
@@ -717,6 +717,10 @@ time_t now;
 		 * the IP address and forward the socket.
 		 */
 		match_ip_only = 1;
+
+		/* don't bother IP matching when the listen-clear-file is in use */
+		if (s->config->unix_conn_file)
+			goto fail;
 	} else {
 		/* read session_id */
 		session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];

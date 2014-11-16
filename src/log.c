@@ -199,3 +199,28 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 
 	return;
 }
+
+void  oclog_hex(const worker_st* ws, int priority,
+		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64)
+{
+	char buf[512];
+	int ret;
+	size_t buf_size;
+	gnutls_datum_t data = {bin, bin_size};
+
+	if (priority == LOG_DEBUG && ws->config->debug == 0)
+		return;
+
+	if (b64) {
+		base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+	} else {
+		buf_size = sizeof(buf);
+		ret = gnutls_hex_encode(&data, buf, &buf_size);
+		if (ret < 0)
+			return;
+	}
+
+	_oclog(ws, priority, "%s %s", prefix, buf);
+
+	return;
+}

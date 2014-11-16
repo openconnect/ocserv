@@ -262,6 +262,9 @@ void __attribute__ ((format(printf, 3, 4)))
 # define oclog _oclog
 #endif
 
+void  oclog_hex(const worker_st* ws, int priority,
+		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
+
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
 unsigned check_if_default_route(char **routes, unsigned routes_size);

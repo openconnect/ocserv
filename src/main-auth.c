@@ -187,14 +187,15 @@ struct cookie_entry_st *old;
 		return -1;
 	snprintf(proc->username, sizeof(proc->username), "%s", cmsg->username);
 
+	if (cmsg->sid.len != sizeof(proc->sid))
+		return -1;
+
 	/* generate a new DTLS session ID for each connection, to allow
 	 * openconnect of distinguishing when the DTLS key has switched. */
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, proc->dtls_session_id, sizeof(proc->dtls_session_id));
 	if (ret < 0)
 		return -1;
-
-	if (cmsg->sid.len != sizeof(proc->sid))
-		return -1;
+	proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
 
 	memcpy(proc->sid, cmsg->sid.data, cmsg->sid.len);
 	proc->active_sid = 1;

@@ -169,7 +169,6 @@ message cookie
 	required string groupname = 2;
 	required string hostname = 3;
 	required string ip = 4;
-	required bytes session_id = 5;
 	required uint32 expiration = 6;
 	required uint32 ipv4_seed = 7;
 	required bytes sid = 8;

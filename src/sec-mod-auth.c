@@ -69,15 +69,6 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 {
 	int ret;
 	Cookie msg = COOKIE__INIT;
-	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
-
-	ret =
-	    gnutls_rnd(GNUTLS_RND_NONCE, session_id, sizeof(session_id));
-	if (ret < 0)
-		return -1;
-
-	msg.session_id.data = session_id;
-	msg.session_id.len = sizeof(session_id);
 
 	msg.username = entry->username;
 	msg.groupname = entry->groupname;

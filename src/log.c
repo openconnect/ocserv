@@ -121,7 +121,7 @@ void __attribute__ ((format(printf, 3, 4)))
 		if (ws->username[0] == 0)
 			syslog(priority, "worker: %s %s", ip, buf);
 		else
-			syslog(priority, "worker: %s[%s] %s", ip, ws->username, buf);
+			syslog(priority, "worker[%s]: %s %s", ws->username, ip, buf);
 	} else {
 		syslog(priority, "worker: [unknown] %s", buf);
 	}
@@ -167,7 +167,7 @@ void __attribute__ ((format(printf, 4, 5)))
 		if (proc->username[0] == 0)
 			syslog(priority, "main: %s %s", ip, buf);
 		else
-			syslog(priority, "main: %s[%s] %s", ip, proc->username, buf);
+			syslog(priority, "main[%s]: %s %s", proc->username, ip, buf);
 	} else {
 		syslog(priority, "main: %s", buf);
 	}

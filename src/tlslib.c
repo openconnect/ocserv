@@ -52,9 +52,11 @@ void cstp_cork(worker_st *ws)
 	if (ws->session) {
 		gnutls_record_cork(ws->session);
 	} else {
-#ifdef __linux__
 		int state = 1;
+#ifdef __linux__
 		setsockopt(ws->conn_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+#elif defined(TCP_NOPUSH)
+		setsockopt(ws->conn_fd, IPPROTO_TCP, TCP_NOPUSH, &state, sizeof(state));
 #endif
 	}
 }
@@ -64,9 +66,11 @@ int cstp_uncork(worker_st *ws)
 	if (ws->session) {
 		return gnutls_record_uncork(ws->session, GNUTLS_RECORD_WAIT);
 	} else {
-#ifdef __linux__
 		int state = 0;
+#if defined(__linux__)
 		setsockopt(ws->conn_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+#elif defined(TCP_NOPUSH)
+		setsockopt(ws->conn_fd, IPPROTO_TCP, TCP_NOPUSH, &state, sizeof(state));
 #endif
 		return 0;
 	}

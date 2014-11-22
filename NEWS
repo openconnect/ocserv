@@ -1,4 +1,4 @@
-* Version 0.8.8 (unreleased)
+* Version 0.8.8 (released 2014-11-22)
 - When selecting a DTLS ciphersuite, try to match the TLS ciphersuite
   if possible.
 - Use consistent ciphersuite names in occtl for TLS and DTLS

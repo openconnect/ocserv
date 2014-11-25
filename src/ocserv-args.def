@@ -216,7 +216,9 @@ server-key = /path/to/key.pem
 # that protocol.
 tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-VERS-SSL3.0:-ARCFOUR-128"
 
-# To enforce perfect forward secrecy (PFS) on the main channel.
+# More combinations in priority strings are available, check
+# http://gnutls.org/manual/html_node/Priority-Strings.html
+# E.g., to enforce perfect forward secrecy (PFS) on the main channel:
 #tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0:-ARCFOUR-128"
 
 # The time (in seconds) that a client is allowed to stay connected prior

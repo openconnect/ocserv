@@ -477,7 +477,9 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	e->status = PS_AUTH_INIT;
-	seclog(LOG_DEBUG, "auth init for user '%s' (group: '%s') from '%s'", e->username, e->groupname, req->ip);
+	seclog(LOG_DEBUG, "auth init %sfor user '%s' (group: '%s') from '%s'", 
+	       req->tls_auth_ok?"(with cert) ":"",
+	       e->username, e->groupname, req->ip);
 
 	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
 		ret = ERR_AUTH_CONTINUE;

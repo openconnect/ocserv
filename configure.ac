@@ -190,7 +190,8 @@ fi
 
 gl_INIT
 
-AC_LIB_HAVE_LINKFLAGS(crypt,, [#include <unistd.h>], [crypt(0,0);])
+AC_LIB_HAVE_LINKFLAGS(crypt,, [#define _XOPEN_SOURCE
+#include <unistd.h>], [crypt(0,0);])
 
 AC_ARG_WITH(utmp,
   AS_HELP_STRING([--without-utmp], [do not use libutil for utmp support]),

@@ -23,6 +23,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE
+#endif
 #include <unistd.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>	/* for random */

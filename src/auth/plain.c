@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE
+#endif
 #include <unistd.h>
 #include <vpn.h>
 #include <c-ctype.h>

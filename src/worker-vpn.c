@@ -1650,6 +1650,13 @@ static int connect_handler(worker_st * ws)
 		     "X-CSTP-Smartcard-Removal-Disconnect: true\r\n");
 	SEND_ERR(ret);
 
+	if (ws->config->is_dyndns != 0) {
+		ret =
+		    cstp_puts(ws,
+			     "X-CSTP-DynDNS: true\r\n");
+		SEND_ERR(ret);
+	}
+
 	if (ws->config->rekey_time > 0) {
 		unsigned method;
 

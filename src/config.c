@@ -60,6 +60,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -403,6 +404,7 @@ unsigned force_cert_auth;
 	 * reload_cfg_file();
 	 */
 	READ_STRING("listen-host", config->name);
+	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
 
 	READ_NUMERIC("tcp-port", config->port);
 	READ_NUMERIC("udp-port", config->udp_port);

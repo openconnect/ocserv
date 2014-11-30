@@ -1,3 +1,9 @@
+* Version 0.8.9 (unreleased)
+- Added configuration option 'listen-host-is-dyndns'. That,
+  if set, notifies the client with "X-CSTP-DynDNS: true", in
+  CSTP headers.
+
+
 * Version 0.8.8 (released 2014-11-22)
 - When selecting a DTLS ciphersuite, try to match the TLS ciphersuite
   if possible.

@@ -2,6 +2,8 @@
 - Added configuration option 'listen-host-is-dyndns'. That,
   if set, notifies the client with "X-CSTP-DynDNS: true", in
   CSTP headers.
+- When a client's IP is re-used by the same client connecting with
+  the cookie (e.g., when roaming), call the disconnect script.
 
 
 * Version 0.8.8 (released 2014-11-22)

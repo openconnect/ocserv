@@ -111,7 +111,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 		/* fill message */
 		ret = generate_cookie(sec, entry);
 		if (ret < 0) {
-			seclog(LOG_INFO, "cannot generate cookie");
+			seclog(sec, LOG_INFO, "cannot generate cookie");
 			return ret;
 		}
 
@@ -147,7 +147,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 
 	if (ret < 0) {
 		int e = errno;
-		seclog(LOG_ERR, "send_msg: %s", strerror(e));
+		seclog(sec, LOG_ERR, "send_msg: %s", strerror(e));
 		return ret;
 	}
 
@@ -180,7 +180,7 @@ int send_sec_auth_reply_msg(sec_mod_st * sec, client_entry_st * e)
 		       (pack_size_func) sec_auth_reply_msg__get_packed_size,
 		       (pack_func) sec_auth_reply_msg__pack);
 	if (ret < 0) {
-		seclog(LOG_ERR, "send_auth_reply_msg error");
+		seclog(sec, LOG_ERR, "send_auth_reply_msg error");
 	}
 
 	return ret;
@@ -201,7 +201,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 		}
 
 		if (tls_auth_ok == 0 && need_cert != 0) {
-			seclog(LOG_INFO, "user '%s' presented no certificate",
+			seclog(sec, LOG_INFO, "user '%s' presented no certificate",
 			       e->username);
 			return -1;
 		}
@@ -210,7 +210,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 		if (tls_auth_ok != 0) {
 			if (e->username[0] == 0 && sec->config->cert_user_oid != NULL) {
 				if (cert_user == NULL) {
-					seclog(LOG_INFO, "no username in the certificate!");
+					seclog(sec, LOG_INFO, "no username in the certificate!");
 					return -1;
 				}
 
@@ -221,7 +221,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 						 "%s", cert_groups[0]);
 			} else {
 				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->username, cert_user) != 0) {
-					seclog(LOG_INFO,
+					seclog(sec, LOG_INFO,
 					       "user '%s' presented a certificate from user '%s'",
 					       e->username, cert_user);
 					return -1;
@@ -236,7 +236,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 						}
 					}
 					if (found == 0) {
-						seclog(LOG_INFO,
+						seclog(sec, LOG_INFO,
 							"user '%s' presented a certificate from group '%s' but he isn't a member of it",
 							e->username, e->groupname);
 							return -1;
@@ -264,7 +264,7 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 		ret = send_sec_auth_reply_msg(sec, e);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
-			seclog(LOG_ERR, "could not send reply auth cmd.");
+			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
 		}
 		return 0;	/* wait for another command */
@@ -274,28 +274,28 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 		ret = send_sec_auth_reply(sec, e, AUTH__REP__OK);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
-			seclog(LOG_ERR, "could not send reply auth cmd.");
+			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
 		}
 
 		ret = 0;
 		if (module != NULL && (sec->config->session_control == 0 || module->open_session == NULL)) {
-			del_client_entry(sec->client_db, e);
+			del_client_entry(sec, e);
 		} /* else do nothing, and wait for session close/open messages */
 	} else {
 		e->status = PS_AUTH_FAILED;
-		add_ip_to_ban_list(sec->ban_db, e->ip, time(0) + sec->config->min_reauth_time);
+		add_ip_to_ban_list(sec, e->ip, time(0) + sec->config->min_reauth_time);
 
 		ret = send_sec_auth_reply(sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {
-			seclog(LOG_ERR, "could not send reply auth cmd.");
+			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
 		}
 
 		if (result < 0) {
 			ret = result;
 		} else {
-			seclog(LOG_ERR, "unexpected auth result: %d\n", result);
+			seclog(sec, LOG_ERR, "unexpected auth result: %d\n", result);
 			ret = ERR_BAD_COMMAND;
 		}
 	}
@@ -314,19 +314,19 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 		return 0;
 
 	if (sec->config->session_control == 0) {
-		seclog(LOG_ERR, "auth session open/close but session control is disabled!");
+		seclog(sec, LOG_ERR, "auth session open/close but session control is disabled!");
 		return 0;
 	}
 
 	if (req->sid.len != SID_SIZE) {
-		seclog(LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
+		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
 		       (int)req->sid.len);
 		return -1;
 	}
 
-	e = find_client_entry(sec->client_db, req->sid.data);
+	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(LOG_INFO, "session open/close but with non-existing sid!");
+		seclog(sec, LOG_INFO, "session open/close but with non-existing sid!");
 		return -1;
 	}
 
@@ -334,13 +334,13 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 		ret = module->open_session(e->auth_ctx);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
-			seclog(LOG_ERR, "could not open session.");
-			del_client_entry(sec->client_db, e);
+			seclog(sec, LOG_ERR, "could not open session.");
+			del_client_entry(sec, e);
 			return ret;
 		}
 		e->have_session = 1;
 	} else {
-		del_client_entry(sec->client_db, e);
+		del_client_entry(sec, e);
 	}
 
 	return 0;
@@ -351,33 +351,33 @@ int handle_sec_auth_cont(sec_mod_st * sec, const SecAuthContMsg * req)
 	client_entry_st *e;
 	int ret;
 
-	if (check_if_banned(sec->ban_db, req->ip) != 0) {
-		seclog(LOG_INFO,
+	if (check_if_banned(sec, req->ip) != 0) {
+		seclog(sec, LOG_INFO,
 		       "IP '%s' is banned", req->ip);
 		return -1;
 	}
 
 	if (req->sid.len != SID_SIZE) {
-		seclog(LOG_ERR, "auth cont but with illegal sid size (%d)!",
+		seclog(sec, LOG_ERR, "auth cont but with illegal sid size (%d)!",
 		       (int)req->sid.len);
 		return -1;
 	}
 
-	e = find_client_entry(sec->client_db, req->sid.data);
+	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(LOG_ERR, "auth cont but with non-existing sid!");
+		seclog(sec, LOG_ERR, "auth cont but with non-existing sid!");
 		return -1;
 	}
 
 	if (e->status != PS_AUTH_INIT) {
-		seclog(LOG_ERR, "auth cont received but we are on state %u!", e->status);
+		seclog(sec, LOG_ERR, "auth cont received but we are on state %u!", e->status);
 		return -1;
 	}
 
-	seclog(LOG_DEBUG, "auth cont for user '%s'", e->username);
+	seclog(sec, LOG_DEBUG, "auth cont for user '%s'", e->username);
 
 	if (req->password == NULL) {
-		seclog(LOG_ERR, "no password given in auth cont for user '%s'",
+		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s'",
 		       e->username);
 		return -1;
 	}
@@ -386,7 +386,7 @@ int handle_sec_auth_cont(sec_mod_st * sec, const SecAuthContMsg * req)
 	    module->auth_pass(e->auth_ctx, req->password,
 			      strlen(req->password));
 	if (ret < 0) {
-		seclog(LOG_DEBUG,
+		seclog(sec, LOG_DEBUG,
 		       "error in password given in auth cont for user '%s'",
 		       e->username);
 	}
@@ -399,22 +399,22 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 	int ret = -1;
 	client_entry_st *e;
 
-	if (check_if_banned(sec->ban_db, req->ip) != 0) {
-		seclog(LOG_INFO,
+	if (check_if_banned(sec, req->ip) != 0) {
+		seclog(sec, LOG_INFO,
 		       "IP '%s' is banned", req->ip);
 		return -1;
 	}
 
 	if ((req->user_name == NULL || req->user_name[0] == 0)
 	    && (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS)) {
-		seclog(LOG_DEBUG,
+		seclog(sec, LOG_DEBUG,
 		       "auth init from '%s' with no username present", req->ip);
 		return -1;
 	}
 
-	e = new_client_entry(sec->client_db, req->ip);
+	e = new_client_entry(sec, req->ip);
 	if (e == NULL) {
-		seclog(LOG_ERR, "cannot initialize memory");
+		seclog(sec, LOG_ERR, "cannot initialize memory");
 		return -1;
 	}
 
@@ -461,7 +461,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 			}
 
 			if (found == 0) {
-				seclog(LOG_AUTH, "user '%s' requested group '%s' but is not included on his certificate groups",
+				seclog(sec, LOG_AUTH, "user '%s' requested group '%s' but is not included on his certificate groups",
 					req->user_name, req->group_name);
 				return -1;
 			}
@@ -477,7 +477,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	e->status = PS_AUTH_INIT;
-	seclog(LOG_DEBUG, "auth init %sfor user '%s' (group: '%s') from '%s'", 
+	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' (group: '%s') from '%s'", 
 	       req->tls_auth_ok?"(with cert) ":"",
 	       e->username, e->groupname, req->ip);
 
@@ -491,12 +491,12 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 	return handle_sec_auth_res(sec, e, ret);
 }
 
-void sec_auth_user_deinit(client_entry_st * e)
+void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 {
 	if (module == NULL)
 		return;
 
-	seclog(LOG_DEBUG, "auth deinit for user '%s'", e->username);
+	seclog(sec, LOG_DEBUG, "auth deinit for user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
 		if (e->have_session) {
 			module->close_session(e->auth_ctx);

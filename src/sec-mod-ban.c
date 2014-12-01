@@ -54,20 +54,21 @@ static size_t rehash(const void *_e, void *unused)
 
 }
 
-void *sec_mod_ban_db_init(void *pool)
+void *sec_mod_ban_db_init(sec_mod_st *sec)
 {
-	struct htable *db = talloc(pool, struct htable);
+	struct htable *db = talloc(sec, struct htable);
 	if (db == NULL)
 		return NULL;
 
 	htable_init(db, rehash, NULL);
+	sec->ban_db = db;
 
 	return db;
 }
 
-void sec_mod_ban_db_deinit(void *_db)
+void sec_mod_ban_db_deinit(sec_mod_st *sec)
 {
-struct htable *db = _db;
+struct htable *db = sec->ban_db;
 
 	if (db != NULL) {
 		htable_clear(db);
@@ -75,9 +76,9 @@ struct htable *db = _db;
 	}
 }
 
-unsigned sec_mod_ban_db_elems(void *_db)
+unsigned sec_mod_ban_db_elems(sec_mod_st *sec)
 {
-struct htable *db = _db;
+struct htable *db = sec->ban_db;
 
 	if (db)
 		return db->elems;
@@ -85,9 +86,9 @@ struct htable *db = _db;
 		return 0;
 }
 
-void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time)
+void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, time_t reenable_time)
 {
-	struct htable *db = _db;
+	struct htable *db = sec->ban_db;
 	struct ban_entry_st *e;
 
 	if (db == NULL)
@@ -102,12 +103,12 @@ void add_ip_to_ban_list(void *_db, const char *ip, time_t reenable_time)
 	e->expires = reenable_time;
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {
-		seclog(LOG_INFO,
+		seclog(sec, LOG_INFO,
 		       "could not add ban entry to hash table");
 		goto fail;
 	}
 
-	seclog(LOG_INFO,"added IP '%s' to ban list, will be removed at: %u", ip, (unsigned)reenable_time);
+	seclog(sec, LOG_INFO,"added IP '%s' to ban list, will be removed at: %u", ip, (unsigned)reenable_time);
 	return;
  fail:
 	talloc_free(e);
@@ -127,9 +128,9 @@ static bool ban_entry_cmp(const void *_c1, void *_c2)
 	return 0;
 }
 
-unsigned check_if_banned(void *_db, const char *ip)
+unsigned check_if_banned(sec_mod_st *sec, const char *ip)
 {
-	struct htable *db = _db;
+	struct htable *db = sec->ban_db;
 	ban_entry_st t;
 
 	if (db == NULL || ip == NULL || ip[0] == 0)
@@ -144,9 +145,9 @@ unsigned check_if_banned(void *_db, const char *ip)
 	return 0;
 }
 
-void cleanup_banned_entries(void *_db)
+void cleanup_banned_entries(sec_mod_st *sec)
 {
-	struct htable *db = _db;
+	struct htable *db = sec->ban_db;
 	ban_entry_st *t;
 	struct htable_iter iter;
 	time_t now = time(0);

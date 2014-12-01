@@ -52,29 +52,30 @@ static size_t rehash(const void *_e, void *unused)
 	return hash_any(e->sid, sizeof(e->sid), 0);
 }
 
-void *sec_mod_client_db_init(void *pool)
+void *sec_mod_client_db_init(sec_mod_st *sec)
 {
-	struct htable *db = talloc(pool, struct htable);
+	struct htable *db = talloc(sec, struct htable);
 	if (db == NULL)
 		return NULL;
 
 	htable_init(db, rehash, NULL);
+	sec->client_db = db;
 
 	return db;
 }
 
-void sec_mod_client_db_deinit(void *_db)
+void sec_mod_client_db_deinit(sec_mod_st *sec)
 {
-struct htable *db = _db;
+struct htable *db = sec->client_db;
 
 	htable_clear(db);
 	talloc_free(db);
 }
 
 /* The number of elements */
-unsigned sec_mod_client_db_elems(void *_db)
+unsigned sec_mod_client_db_elems(sec_mod_st *sec)
 {
-struct htable *db = _db;
+struct htable *db = sec->client_db;
 
 	if (db)
 		return db->elems;
@@ -82,9 +83,9 @@ struct htable *db = _db;
 		return 0;
 }
 
-client_entry_st *new_client_entry(void *_db, const char *ip)
+client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 {
-	struct htable *db = _db;
+	struct htable *db = sec->client_db;
 	client_entry_st *e;
 	int ret;
 
@@ -96,13 +97,13 @@ client_entry_st *new_client_entry(void *_db, const char *ip)
 	snprintf(e->ip, sizeof(e->ip), "%s", ip);
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));
 	if (ret < 0) {
-		seclog(LOG_ERR, "error generating SID");
+		seclog(sec, LOG_ERR, "error generating SID");
 		goto fail;
 	}
 	e->time = time(0);
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {
-		seclog(LOG_ERR,
+		seclog(sec, LOG_ERR,
 		       "could not add client entry to hash table");
 		goto fail;
 	}
@@ -124,9 +125,9 @@ static bool client_entry_cmp(const void *_c1, void *_c2)
 	return 0;
 }
 
-client_entry_st *find_client_entry(void *_db, uint8_t sid[SID_SIZE])
+client_entry_st *find_client_entry(sec_mod_st *sec, uint8_t sid[SID_SIZE])
 {
-	struct htable *db = _db;
+	struct htable *db = sec->client_db;
 	client_entry_st t;
 
 	memcpy(t.sid, sid, SID_SIZE);
@@ -134,9 +135,9 @@ client_entry_st *find_client_entry(void *_db, uint8_t sid[SID_SIZE])
 	return htable_get(db, rehash(&t, NULL), client_entry_cmp, &t);
 }
 
-static void clean_entry(client_entry_st * e)
+static void clean_entry(sec_mod_st *sec, client_entry_st * e)
 {
-	sec_auth_user_deinit(e);
+	sec_auth_user_deinit(sec, e);
 	talloc_free(e);
 }
 
@@ -145,9 +146,9 @@ static void clean_entry(client_entry_st * e)
  */
 #define SLACK_TIME 10
 
-void cleanup_client_entries(void *_db)
+void cleanup_client_entries(sec_mod_st *sec)
 {
-	struct htable *db = _db;
+	struct htable *db = sec->client_db;
 	client_entry_st *t;
 	struct htable_iter iter;
 	time_t now = time(0);
@@ -156,17 +157,17 @@ void cleanup_client_entries(void *_db)
 	while (t != NULL) {
 		if (t->have_session == 0 && now - t->time > MAX_AUTH_SECS + SLACK_TIME) {
 			htable_delval(db, &iter);
-			clean_entry(t);
+			clean_entry(sec, t);
 		}
 		t = htable_next(db, &iter);
 
 	}
 }
 
-void del_client_entry(void *_db, client_entry_st * e)
+void del_client_entry(sec_mod_st *sec, client_entry_st * e)
 {
-	struct htable *db = _db;
+	struct htable *db = sec->client_db;
 
 	htable_del(db, rehash(e, NULL), e);
-	clean_entry(e);
+	clean_entry(sec, e);
 }

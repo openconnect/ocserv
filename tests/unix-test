@@ -170,15 +170,15 @@ rm -f ./not-ok
 
 ret=0
 
-rm -f ./ok
-$DOCKER cp test_unix:/tmp/disconnect/ok ./
-if ! test -f ./ok;then
+rm -f ./tmp-unix/ok
+$DOCKER cp test_ocserv:/tmp/disconnect/ok ./tmp-unix/
+if ! test -f ./tmp-unix/ok;then
 	echo "Don't know if stats were received"
 	ret=77
 else
 	echo -n "stats: "
-	echo `cat ./ok`
-	rm -f ./ok
+	echo `cat ./tmp-unix/ok`
+	rm -rf ./tmp-unix/
 fi
 
 $DOCKER stop test_unix

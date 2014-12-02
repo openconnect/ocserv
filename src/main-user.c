@@ -135,7 +135,7 @@ const char* script;
 			setenv("REASON", "disconnect", 1);
 		}
 
-		mslog(s, proc, LOG_DEBUG, "executing script %s", script);
+		mslog(s, proc, LOG_DEBUG, "executing script %s %s", up?"up":"down", script);
 		ret = execl(script, script, NULL);
 		if (ret == -1) {
 			mslog(s, proc, LOG_ERR, "Could not execute script %s", script);

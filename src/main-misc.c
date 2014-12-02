@@ -257,8 +257,9 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 		kill(proc->pid, SIGTERM);
 
 	remove_from_script_list(s, proc);
-	if (proc->username[0] != 0)
+	if (proc->status == PS_AUTH_COMPLETED) {
 		user_disconnected(s, proc);
+	}
 
 	/* close any pending sessions */
 	if (s->config->session_control != 0 && proc->active_sid) {

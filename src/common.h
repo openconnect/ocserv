@@ -42,6 +42,22 @@ ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n);
 char* ipv6_prefix_to_mask(void *pool, unsigned prefix);
+inline static int valid_ipv6_prefix(unsigned prefix)
+{
+	switch (prefix) {
+		case 16:
+		case 32:
+		case 48:
+		case 64:
+		case 80:
+		case 96:
+		case 112:
+		case 128:
+			return 1;
+		default:
+			return 0;
+	}
+}
 
 typedef size_t (*pack_func)(const void*, uint8_t *);
 typedef size_t (*pack_size_func)(const void*);

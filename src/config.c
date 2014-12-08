@@ -561,10 +561,9 @@ unsigned force_cert_auth;
 
 	READ_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) {
-		config->network.ipv6_netmask = ipv6_prefix_to_mask(config, prefix);
 		config->network.ipv6_prefix = prefix;
 
-		if (config->network.ipv6_netmask == NULL) {
+		if (valid_ipv6_prefix(prefix) == 0) {
 			fprintf(stderr, "invalid IPv6 prefix: %u\n", prefix);
 			exit(1);
 		}
@@ -642,8 +641,8 @@ static void check_cfg(struct cfg_st *config)
 		exit(1);
 	}
 
-	if (config->network.ipv6 != NULL && config->network.ipv6_netmask == NULL) {
-		fprintf(stderr, "No mask found for IPv6 network.\n");
+	if (config->network.ipv6 != NULL && config->network.ipv6_prefix == 0) {
+		fprintf(stderr, "No prefix found for IPv6 network.\n");
 		exit(1);
 	}
 
@@ -775,7 +774,6 @@ unsigned i;
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);
 	DEL(config->network.ipv6);
-	DEL(config->network.ipv6_netmask);
 	for (i=0;i<config->network.routes_size;i++)
 		DEL(config->network.routes[i]);
 	DEL(config->network.routes);

@@ -199,10 +199,9 @@ struct group_cfg_st *sconfig = &proc->config;
 
 	READ_RAW_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) {
-		sconfig->ipv6_netmask = ipv6_prefix_to_mask(proc, prefix);
 		sconfig->ipv6_prefix = prefix;
 
-		if (sconfig->ipv6_netmask == NULL) {
+		if (valid_ipv6_prefix(prefix) == 0) {
 			syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);
 		}
 	}
@@ -307,7 +306,6 @@ unsigned i;
 	talloc_free(config->ipv4_network);
 	talloc_free(config->ipv6_network);
 	talloc_free(config->ipv4_netmask);
-	talloc_free(config->ipv6_netmask);
 	safe_memset(config, 0, sizeof(*config));
 }
 

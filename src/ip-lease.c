@@ -273,15 +273,16 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	struct sockaddr_storage tmp, mask, network, rnd;
 	unsigned i, max_loops = MAX_IP_TRIES;
 	int ret;
-	const char* c_network, *c_netmask;
+	const char* c_network;
+	char *c_netmask = NULL;
 	char buf[64];
 
-	if (proc->config.ipv6_network && proc->config.ipv6_netmask) {
+	if (proc->config.ipv6_network && proc->config.ipv6_prefix) {
 		c_network = proc->config.ipv6_network;
-		c_netmask = proc->config.ipv6_netmask;
+		c_netmask = ipv6_prefix_to_mask(proc, proc->config.ipv6_prefix);
 	} else {
 		c_network = s->config->network.ipv6;
-		c_netmask = s->config->network.ipv6_netmask;
+		c_netmask = ipv6_prefix_to_mask(proc, proc->config.ipv6_prefix);
 	}
 
 	if (c_network && c_netmask) {
@@ -392,6 +393,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	return 0;
 fail:
 	talloc_free(proc->ipv6);
+	talloc_free(c_netmask);
 	proc->ipv6 = NULL;
 
 	return ret;

@@ -548,12 +548,6 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				    talloc_strdup(ws, msg->ipv4_netmask);
 			}
 
-			if (msg->ipv6_netmask != NULL) {
-				talloc_free(ws->config->network.ipv6_netmask);
-				ws->config->network.ipv6_netmask =
-				    talloc_strdup(ws, msg->ipv6_netmask);
-			}
-
 			if (msg->ipv4_network != NULL) {
 				talloc_free(ws->config->network.ipv4_network);
 				ws->config->network.ipv4_network =

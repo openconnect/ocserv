@@ -27,11 +27,11 @@
 #include <main.h>
 #include <common.h>
 #include <vpn.h>
-#include <main-sup-config.h>
+#include <sec-mod-sup-config.h>
 #include <sup-config/file.h>
 
-void sup_config_init(main_server_st *s)
+void sup_config_init(sec_mod_st *sec)
 {
-	s->config_module = &file_sup_config;
+	sec->config_module = &file_sup_config;
 }
 

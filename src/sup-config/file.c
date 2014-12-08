@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2014 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +34,7 @@
 
 #include <vpn.h>
 #include <main.h>
-#include <main-sup-config.h>
+#include <sec-mod-sup-config.h>
 
 struct cfg_options {
 	const char* name;
@@ -68,14 +69,14 @@ static struct cfg_options available_options[] = {
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL) { \
 			num = 0; \
-			s_name = talloc_size(proc, sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			s_name = talloc_size(pool, sizeof(char*)*MAX_CONFIG_ENTRIES); \
 		} \
 		do { \
 		        if (num >= MAX_CONFIG_ENTRIES) \
 			        break; \
 		        if (val && !strcmp(val->pzName, name)==0) \
 				continue; \
-		        s_name[num] = talloc_strdup(proc, val->v.strVal); \
+		        s_name[num] = talloc_strdup(pool, val->v.strVal); \
 		        num++; \
 	      } while((val = optionNextValue(pov, val)) != NULL); \
 	      s_name[num] = NULL; \
@@ -86,28 +87,33 @@ static struct cfg_options available_options[] = {
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name != NULL) \
 			talloc_free(s_name); \
-		s_name = talloc_strdup(proc, val->v.strVal); \
+		s_name = talloc_strdup(pool, val->v.strVal); \
 	}}
 
-#define READ_RAW_NUMERIC(name, s_name) { \
+#define READ_RAW_NUMERIC(name, s_name, def) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL) { \
-		if (val->valType == OPARG_TYPE_NUMERIC) \
+		if (val->valType == OPARG_TYPE_NUMERIC) {\
 			s_name = val->v.longVal; \
-		else if (val->valType == OPARG_TYPE_STRING) \
+			def = 1; \
+		} else if (val->valType == OPARG_TYPE_STRING) {\
 			s_name = atoi(val->v.strVal); \
+			def = 1; \
+		} \
 	}}
 
-#define READ_RAW_PRIO_TOS(name, s_name) { \
+#define READ_RAW_PRIO_TOS(name, s_name, def) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL) { \
 		if (val->valType == OPARG_TYPE_STRING) { \
 			if (strncmp(val->v.strVal, "0x", 2) == 0) { \
 				s_name = strtol(val->v.strVal, NULL, 16); \
 				s_name = TOS_PACK(s_name); \
+				def = 1; \
 			} else { \
 				s_name = atoi(val->v.strVal); \
 				s_name++; \
+				def = 1; \
 			} \
 		} \
 	}}
@@ -115,12 +121,13 @@ static struct cfg_options available_options[] = {
 #define READ_TF(name, s_name, def) { \
 	{ char* tmp_tf = NULL; \
 		READ_RAW_STRING(name, tmp_tf); \
-		if (tmp_tf == NULL) s_name = def; \
-		else { \
+		if (tmp_tf == NULL) { def = 0; \
+		} else { \
 			if (c_strcasecmp(tmp_tf, "true") == 0 || c_strcasecmp(tmp_tf, "yes") == 0) \
 				s_name = 1; \
 			else \
 				s_name = 0; \
+			def = 1; \
 		} \
 		talloc_free(tmp_tf); \
 	}}
@@ -143,13 +150,13 @@ unsigned j;
  * already allocated using this function.
  */
 static
-int parse_group_cfg_file(struct cfg_st *global_config, struct proc_st *proc,
+int parse_group_cfg_file(struct cfg_st *global_config,
+			 SecAuthSessionReplyMsg *msg, void *pool,
 			 const char* file)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
 unsigned prefix = 0;
-struct group_cfg_st *sconfig = &proc->config;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
@@ -171,59 +178,58 @@ struct group_cfg_st *sconfig = &proc->config;
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
-	READ_TF("no-udp", sconfig->no_udp, (global_config->udp_port!=0)?0:1);
-	READ_TF("deny-roaming", sconfig->deny_roaming, global_config->deny_roaming);
-	READ_TF("require-cert", sconfig->require_cert, 0);
+	READ_TF("no-udp", msg->no_udp, msg->has_no_udp);
+	READ_TF("deny-roaming", msg->deny_roaming, msg->has_deny_roaming);
+	READ_TF("require-cert", msg->require_cert, msg->has_require_cert);
 
-	READ_RAW_MULTI_LINE("route", sconfig->routes, sconfig->routes_size);
-	READ_RAW_MULTI_LINE("iroute", sconfig->iroutes, sconfig->iroutes_size);
+	READ_RAW_MULTI_LINE("route", msg->routes, msg->n_routes);
+	READ_RAW_MULTI_LINE("iroute", msg->iroutes, msg->n_iroutes);
 
-	READ_RAW_MULTI_LINE("dns", sconfig->dns, sconfig->dns_size);
-	if (sconfig->dns_size == 0) {
+	READ_RAW_MULTI_LINE("dns", msg->dns, msg->n_dns);
+	if (msg->n_dns == 0) {
 		/* try aliases */
-		READ_RAW_MULTI_LINE("ipv6-dns", sconfig->dns, sconfig->dns_size);
-		READ_RAW_MULTI_LINE("ipv4-dns", sconfig->dns, sconfig->dns_size);
+		READ_RAW_MULTI_LINE("ipv6-dns", msg->dns, msg->n_dns);
+		READ_RAW_MULTI_LINE("ipv4-dns", msg->dns, msg->n_dns);
 	}
 
-	READ_RAW_MULTI_LINE("nbns", sconfig->nbns, sconfig->nbns_size);
-	if (sconfig->nbns_size == 0) {
+	READ_RAW_MULTI_LINE("nbns", msg->nbns, msg->n_nbns);
+	if (msg->n_nbns == 0) {
 		/* try aliases */
-		READ_RAW_MULTI_LINE("ipv6-nbns", sconfig->nbns, sconfig->nbns_size);
-		READ_RAW_MULTI_LINE("ipv4-nbns", sconfig->nbns, sconfig->nbns_size);
+		READ_RAW_MULTI_LINE("ipv6-nbns", msg->nbns, msg->n_nbns);
+		READ_RAW_MULTI_LINE("ipv4-nbns", msg->nbns, msg->n_nbns);
 	}
 
-	READ_RAW_STRING("cgroup", sconfig->cgroup);
-	READ_RAW_STRING("ipv4-network", sconfig->ipv4_network);
-	READ_RAW_STRING("ipv6-network", sconfig->ipv6_network);
-	READ_RAW_STRING("ipv4-netmask", sconfig->ipv4_netmask);
+	READ_RAW_STRING("cgroup", msg->cgroup);
+	READ_RAW_STRING("ipv4-network", msg->ipv4_net);
+	READ_RAW_STRING("ipv6-network", msg->ipv6_net);
+	READ_RAW_STRING("ipv4-netmask", msg->ipv4_netmask);
 
-	READ_RAW_NUMERIC("ipv6-prefix", prefix);
-	if (prefix > 0) {
-		sconfig->ipv6_prefix = prefix;
-
-		if (valid_ipv6_prefix(prefix) == 0) {
+	READ_RAW_NUMERIC("ipv6-prefix", msg->ipv6_prefix, msg->has_ipv6_prefix);
+	if (msg->has_ipv6_prefix != 0) {
+		if (valid_ipv6_prefix(msg->ipv6_prefix) == 0) {
 			syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);
 		}
 	}
 
-	READ_RAW_NUMERIC("rx-data-per-sec", sconfig->rx_per_sec);
-	READ_RAW_NUMERIC("tx-data-per-sec", sconfig->tx_per_sec);
-	sconfig->rx_per_sec /= 1000; /* in kb */
-	sconfig->tx_per_sec /= 1000; /* in kb */
+	READ_RAW_NUMERIC("rx-data-per-sec", msg->rx_per_sec, msg->has_rx_per_sec);
+	READ_RAW_NUMERIC("tx-data-per-sec", msg->tx_per_sec, msg->has_tx_per_sec);
+	msg->rx_per_sec /= 1000; /* in kb */
+	msg->tx_per_sec /= 1000; /* in kb */
 	
 	/* net-priority will contain the actual priority + 1,
 	 * to allow having zero as uninitialized. */
-	READ_RAW_PRIO_TOS("net-priority", sconfig->net_priority);
+	READ_RAW_PRIO_TOS("net-priority", msg->net_priority, msg->has_net_priority);
 
-	READ_RAW_STRING("user-profile", sconfig->xml_config_file);
+	READ_RAW_STRING("user-profile", msg->xml_config_file);
 
 	optionUnloadNested(pov);
 	
 	return 0;
 }
 
-static int read_sup_config_file(struct cfg_st *global_config, struct proc_st *proc,
-				       const char *file, const char *fallback, const char *type)
+static int read_sup_config_file(struct cfg_st *global_config,
+				SecAuthSessionReplyMsg *msg, void *pool,
+				const char *file, const char *fallback, const char *type)
 {
 	int ret;
 
@@ -231,44 +237,41 @@ static int read_sup_config_file(struct cfg_st *global_config, struct proc_st *pr
 		syslog(LOG_DEBUG, "Loading %s configuration '%s'", type,
 		      file);
 
-		ret = parse_group_cfg_file(global_config, proc, file);
+		ret = parse_group_cfg_file(global_config, msg, pool, file);
 		if (ret < 0)
 			return ERR_READ_CONFIG;
 	} else {
 		if (fallback != NULL) {
 			syslog(LOG_DEBUG, "Loading default %s configuration '%s'", type, fallback);
 
-			ret = parse_group_cfg_file(global_config, proc, fallback);
+			ret = parse_group_cfg_file(global_config, msg, pool, fallback);
 			if (ret < 0)
 				return ERR_READ_CONFIG;
-		} else {
-			syslog(LOG_DEBUG, "No %s configuration for '%s'", type,
-			      proc->username);
 		}
 	}
 
 	return 0;
 }
 
-static int get_sup_config(struct cfg_st *global_config, struct proc_st *proc)
+static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
+			  SecAuthSessionReplyMsg *msg, void *pool)
 {
 	char file[_POSIX_PATH_MAX];
 	int ret;
 
-	if (global_config->per_group_dir != NULL && proc->groupname[0] != 0) {
-		snprintf(file, sizeof(file), "%s/%s", global_config->per_group_dir,
-			 proc->groupname);
+	if (cfg->per_group_dir != NULL && entry->groupname[0] != 0) {
+		snprintf(file, sizeof(file), "%s/%s", cfg->per_group_dir,
+			 entry->groupname);
 
-		ret = read_sup_config_file(global_config, proc, file, global_config->default_group_conf, "group");
+		ret = read_sup_config_file(cfg, msg, pool, file, cfg->default_group_conf, "group");
 		if (ret < 0)
 			return ret;
 	}
 
-	if (global_config->per_user_dir != NULL) {
-		snprintf(file, sizeof(file), "%s/%s", global_config->per_user_dir,
-			 proc->username);
-
-		ret = read_sup_config_file(global_config, proc, file, global_config->default_user_conf, "user");
+	if (cfg->per_user_dir != NULL) {
+		snprintf(file, sizeof(file), "%s/%s", cfg->per_user_dir,
+			 entry->username);
+		ret = read_sup_config_file(cfg, msg, pool, file, cfg->default_user_conf, "user");
 		if (ret < 0)
 			return ret;
 	}
@@ -276,40 +279,6 @@ static int get_sup_config(struct cfg_st *global_config, struct proc_st *proc)
 	return 0;
 }
 
-
-static
-void clear_sup_config(struct group_cfg_st* config)
-{
-unsigned i;
-
-	for(i=0;i<config->routes_size;i++) {
-		talloc_free(config->routes[i]);
-	}
-	talloc_free(config->routes);
-
-	for(i=0;i<config->iroutes_size;i++) {
-		talloc_free(config->iroutes[i]);
-	}
-	talloc_free(config->iroutes);
-
-	for(i=0;i<config->dns_size;i++) {
-		talloc_free(config->dns[i]);
-	}
-	talloc_free(config->dns);
-
-	for(i=0;i<config->nbns_size;i++) {
-		talloc_free(config->nbns[i]);
-	}
-	talloc_free(config->nbns);
-
-	talloc_free(config->cgroup);
-	talloc_free(config->ipv4_network);
-	talloc_free(config->ipv6_network);
-	talloc_free(config->ipv4_netmask);
-	safe_memset(config, 0, sizeof(*config));
-}
-
 struct config_mod_st file_sup_config = {
 	.get_sup_config = get_sup_config,
-	.clear_sup_config = clear_sup_config,
 };

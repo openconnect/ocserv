@@ -213,7 +213,6 @@ typedef struct main_server_st {
 	time_t start_time;
 
 	void * auth_extra;
-	struct config_mod_st *config_module;
 
 #ifdef HAVE_DBUS
 	void * ctl_ctx;

@@ -36,7 +36,6 @@
 #include <script-list.h>
 #include <ip-lease.h>
 #include <proc-search.h>
-#include <main-sup-config.h>
 #include "str.h"
 
 #include <vpn.h>
@@ -209,17 +208,16 @@ struct cookie_entry_st *old;
 	memset(&proc->config, 0, sizeof(proc->config));
 	apply_default_sup_config(s->config, proc);
 
-	if (s->config_module) {
-		ret = s->config_module->get_sup_config(s->config, proc);
-		if (ret < 0) {
-			mslog(s, proc, LOG_ERR,
-			      "error reading additional configuration");
-			return ERR_READ_CONFIG;
-		}
+	/* loads sup config */
+	ret = session_open(s, proc);
+	if (ret < 0) {
+		mslog(s, proc, LOG_INFO, "could not open session");
+		return -1;
+	}
 
-	        if (proc->config.cgroup != NULL) {
-	        	put_into_cgroup(s, proc->config.cgroup, proc->pid);
-		}
+	/* Put into right cgroup */
+        if (proc->config.cgroup != NULL) {
+        	put_into_cgroup(s, proc->config.cgroup, proc->pid);
 	}
 
 	/* check whether the cookie IP matches */
@@ -282,12 +280,6 @@ struct cookie_entry_st *old;
 		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);
 
 	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
-
-	ret = session_open(s, proc);
-	if (ret < 0) {
-		mslog(s, proc, LOG_INFO, "could not open session");
-		return -1;
-	}
 
 	/* add the links to proc hash */
 	proc_table_add(s, proc);

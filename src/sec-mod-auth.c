@@ -49,6 +49,7 @@
 #include <auth/pam.h>
 #include <sec-mod.h>
 #include <vpn.h>
+#include <sec-mod-sup-config.h>
 
 static const struct auth_mod_st *module = NULL;
 
@@ -106,6 +107,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 {
 	SecAuthReplyMsg msg = SEC_AUTH_REPLY_MSG__INIT;
 	int ret;
+	void *pool = NULL;
 
 	if (r == AUTH__REP__OK) {
 		/* fill message */
@@ -135,6 +137,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 			       (pack_size_func)
 			       sec_auth_reply_msg__get_packed_size,
 			       (pack_func) sec_auth_reply_msg__pack);
+		talloc_free(pool);
 	} else {
 		msg.reply = AUTH__REP__FAILED;
 
@@ -279,9 +282,6 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 		}
 
 		ret = 0;
-		if (module != NULL && (sec->config->session_control == 0 || module->open_session == NULL)) {
-			del_client_entry(sec, e);
-		} /* else do nothing, and wait for session close/open messages */
 	} else {
 		e->status = PS_AUTH_FAILED;
 		add_ip_to_ban_list(sec, e->ip, time(0) + sec->config->min_reauth_time);
@@ -305,18 +305,11 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 
 /* opens or closes a session.
  */
-int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd)
+int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
+				unsigned cmd, client_entry_st **r_entry)
 {
 	client_entry_st *e;
 	int ret;
-
-	if (module == NULL || module->open_session == NULL)
-		return 0;
-
-	if (sec->config->session_control == 0) {
-		seclog(sec, LOG_ERR, "auth session open/close but session control is disabled!");
-		return 0;
-	}
 
 	if (req->sid.len != SID_SIZE) {
 		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
@@ -331,6 +324,13 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 	}
 
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
+		if (r_entry) {
+			*r_entry = e;
+		}
+
+		if (module == NULL || module->open_session == NULL)
+			return 0;
+
 		ret = module->open_session(e->auth_ctx);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;

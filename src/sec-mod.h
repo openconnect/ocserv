@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef SEC_MOD_H
+# define SEC_MOD_H
 
 #include <cookies.h>
 #include <gnutls/abstract.h>
@@ -33,6 +34,8 @@ typedef struct sec_mod_st {
 	unsigned key_size;
 	struct htable *client_db;
 	struct htable *ban_db;
+
+	struct config_mod_st *config_module;
 
 	int fd;
 } sec_mod_st;
@@ -87,7 +90,7 @@ void sec_auth_init(struct cfg_st *config);
 
 int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
-int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd);
+int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd, client_entry_st **_e);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,

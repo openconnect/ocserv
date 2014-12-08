@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2014 Red Hat, Inc.
  *
  * Author: Nikos Mavrogiannopoulos
  *

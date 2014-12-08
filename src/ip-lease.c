@@ -141,7 +141,34 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 	int ret;
 	const char* c_network, *c_netmask;
 	char buf[64];
+
+	if (proc->config.explicit_ipv4) {
+		/* if an explicit IP is given for that client, then
+		 * don't do any IP accounting */
+		ret =
+		    inet_pton(AF_INET, proc->config.explicit_ipv4, SA_IN_P(&network));
+
+		if (ret != 1) {
+			mslog(s, NULL, LOG_ERR, "error reading explicit IP: %s", proc->config.explicit_ipv4);
+			return -1;
+		}
+
+		proc->ipv4 = talloc_zero(proc, struct ip_lease_st);
+		if (proc->ipv4 == NULL)
+			return ERR_MEM;
+
+        	((struct sockaddr_in*)&network)->sin_family = AF_INET;
+        	((struct sockaddr_in*)&network)->sin_port = 0;
+		memcpy(&proc->ipv4->lip, &network, sizeof(struct sockaddr_in));
+       		proc->ipv4->lip_len = sizeof(struct sockaddr_in);
 	
+		memcpy(&proc->ipv4->rip, &network, sizeof(struct sockaddr_in));
+       		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
+	
+       		return 0;
+	}
+
+	/* Our IP accounting */
 	if (proc->config.ipv4_network && proc->config.ipv4_netmask) {
 		c_network = proc->config.ipv4_network;
 		c_netmask = proc->config.ipv4_netmask;
@@ -277,6 +304,32 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	char *c_netmask = NULL;
 	char buf[64];
 
+	if (proc->config.explicit_ipv6) {
+		/* if an explicit IP is given for that client, then
+		 * don't do any IP accounting */
+		ret =
+		    inet_pton(AF_INET6, proc->config.explicit_ipv6, SA_IN6_P(&network));
+
+		if (ret != 1) {
+			mslog(s, NULL, LOG_ERR, "error reading explicit IP: %s", proc->config.explicit_ipv6);
+			return -1;
+		}
+
+		proc->ipv6 = talloc_zero(proc, struct ip_lease_st);
+		if (proc->ipv6 == NULL)
+			return ERR_MEM;
+
+        	((struct sockaddr_in6*)&network)->sin6_family = AF_INET6;
+        	((struct sockaddr_in6*)&network)->sin6_port = 0;
+		memcpy(&proc->ipv6->lip, &network, sizeof(struct sockaddr_in6));
+       		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
+	
+		memcpy(&proc->ipv6->rip, &network, sizeof(struct sockaddr_in6));
+       		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
+	
+       		return 0;
+	}
+
 	if (proc->config.ipv6_network && proc->config.ipv6_prefix) {
 		c_network = proc->config.ipv6_network;
 		c_netmask = ipv6_prefix_to_mask(proc, proc->config.ipv6_prefix);
@@ -401,7 +454,7 @@ fail:
 }
 
 static
-int unref_ip_lease(struct ip_lease_st * lease)
+int unref_ip_lease(struct ip_lease_st *lease)
 {
 	if (lease->db) {
 		htable_del(&lease->db->ht, rehash(lease, NULL), lease);
@@ -409,7 +462,7 @@ int unref_ip_lease(struct ip_lease_st * lease)
 	return 0;
 }
 
-int get_ip_leases(main_server_st* s, struct proc_st* proc)
+int get_ip_leases(main_server_st *s, struct proc_st *proc)
 {
 int ret;
 char buf[128];
@@ -419,7 +472,7 @@ char buf[128];
 		if (ret < 0)
 			return ret;
 
-		if (proc->ipv4) {
+		if (proc->ipv4 && proc->ipv4->db) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv4, NULL), proc->ipv4) == 0) {
 				mslog(s, proc, LOG_ERR, "could not add IPv4 lease to hash table.");
 				return -1;
@@ -433,7 +486,7 @@ char buf[128];
 		if (ret < 0)
 			return ret;
 
-		if (proc->ipv6) {
+		if (proc->ipv6 && proc->ipv4->db) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
 				mslog(s, proc, LOG_ERR, "could not add IPv6 lease to hash table.");
 				return -1;

@@ -51,7 +51,6 @@
 # include <systemd/sd-daemon.h>
 #endif
 #include <main.h>
-#include <main-sup-config.h>
 #include <main-ctl.h>
 #include <route-add.h>
 #include <worker.h>
@@ -986,8 +985,6 @@ int main(int argc, char** argv)
 	write_pid_file();
 	
 	run_sec_mod(s);
-
-	sup_config_init(s);
 
 	ret = ctl_handler_init(s);
 	if (ret < 0) {

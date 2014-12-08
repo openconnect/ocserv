@@ -46,7 +46,6 @@
 #include <proc-search.h>
 #include <ipc.pb-c.h>
 #include <script-list.h>
-#include <main-sup-config.h>
 
 #ifdef HAVE_MALLOC_TRIM
 # include <malloc.h>
@@ -168,10 +167,8 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 	int sd, ret, e;
 	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
 	SecAuthSessionReplyMsg *msg = NULL;
-	unsigned type;
-
-	if (s->config->session_control == 0)
-		return 0;
+	unsigned type, i;
+	PROTOBUF_ALLOCATOR(pa, proc);
 
 	if (open)
 		type = SM_CMD_AUTH_SESSION_OPEN;
@@ -227,6 +224,86 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 			mslog(s, proc, LOG_INFO, "could not initiate session for '%s'", proc->username);
 			return -1;
 		}
+
+		/* fill in group_cfg_st */
+		if (msg->has_no_udp)
+			proc->config.no_udp = msg->no_udp;
+
+		if (msg->has_deny_roaming)
+			proc->config.deny_roaming = msg->deny_roaming;
+
+		if (msg->has_require_cert)
+			proc->config.require_cert = msg->require_cert;
+
+		if (msg->has_ipv6_prefix)
+			proc->config.ipv6_prefix = msg->ipv6_prefix;
+
+		if (msg->rx_per_sec)
+			proc->config.rx_per_sec = msg->rx_per_sec;
+		if (msg->tx_per_sec)
+			proc->config.tx_per_sec = msg->tx_per_sec;
+
+		if (msg->net_priority)
+			proc->config.net_priority = msg->net_priority;
+
+		if (msg->ipv4_net) {
+			proc->config.ipv4_network = talloc_strdup(proc, msg->ipv4_net);
+		}
+		if (msg->ipv4_netmask) {
+			proc->config.ipv4_netmask = talloc_strdup(proc, msg->ipv4_netmask);
+		}
+		if (msg->ipv6_net) {
+			proc->config.ipv6_network = talloc_strdup(proc, msg->ipv6_net);
+		}
+
+		if (msg->cgroup) {
+			proc->config.cgroup = talloc_strdup(proc, msg->cgroup);
+		}
+
+		if (msg->xml_config_file) {
+			proc->config.xml_config_file = talloc_strdup(proc, msg->xml_config_file);
+		}
+
+		if (msg->explicit_ipv4) {
+			proc->config.explicit_ipv4 = talloc_strdup(proc, msg->explicit_ipv4);
+		}
+
+		if (msg->explicit_ipv6) {
+			proc->config.explicit_ipv6 = talloc_strdup(proc, msg->explicit_ipv6);
+		}
+
+		if (msg->n_routes > 0) {
+			proc->config.routes = talloc_size(proc, sizeof(char*)*msg->n_routes);
+			for (i=0;i<msg->n_routes;i++) {
+				proc->config.routes[i] = talloc_strdup(proc, msg->routes[i]);
+			}
+			proc->config.routes_size = msg->n_routes;
+		}
+
+		if (msg->n_iroutes > 0) {
+			proc->config.iroutes = talloc_size(proc, sizeof(char*)*msg->n_iroutes);
+			for (i=0;i<msg->n_iroutes;i++) {
+				proc->config.iroutes[i] = talloc_strdup(proc, msg->iroutes[i]);
+			}
+			proc->config.iroutes_size = msg->n_iroutes;
+		}
+
+		if (msg->n_dns > 0) {
+			proc->config.dns = talloc_size(proc, sizeof(char*)*msg->n_dns);
+			for (i=0;i<msg->n_dns;i++) {
+				proc->config.dns[i] = talloc_strdup(proc, msg->dns[i]);
+			}
+			proc->config.dns_size = msg->n_dns;
+		}
+
+		if (msg->n_nbns > 0) {
+			proc->config.nbns = talloc_size(proc, sizeof(char*)*msg->n_nbns);
+			for (i=0;i<msg->n_nbns;i++) {
+				proc->config.nbns[i] = talloc_strdup(proc, msg->nbns[i]);
+			}
+			proc->config.nbns_size = msg->n_nbns;
+		}
+		sec_auth_session_reply_msg__free_unpacked(msg, &pa);
 	} else {
 		close(sd);
 	}
@@ -262,7 +339,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	}
 
 	/* close any pending sessions */
-	if (s->config->session_control != 0 && proc->active_sid) {
+	if (proc->active_sid) {
 		session_close(s, proc);
 	}
 
@@ -273,26 +350,17 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	proc->pid = -1;
 
 	remove_iroutes(s, proc);
-	if (s->config_module) {
-		s->config_module->clear_sup_config(&proc->config);
-	}
 
 	if (proc->ipv4 || proc->ipv6)
 		remove_ip_leases(s, proc);
 
 	/* expire any available cookies */
 	if (proc->cookie_ptr) {
-		unsigned timeout = s->config->cookie_timeout;
-
 		proc->cookie_ptr->proc = NULL;
-		if (s->config->session_control != 0) {
-			/* if we use session control and we closed the session we 
-			 * need to invalidate the cookie, so that a new session is 
-			 * used on the next connection */
-			proc->cookie_ptr->expiration = 1;
-		} else {
-			proc->cookie_ptr->expiration = time(0) + timeout;
-		}
+		/* if we use session control and we closed the session we 
+		 * need to invalidate the cookie, so that a new session is 
+		 * used on the next connection */
+		proc->cookie_ptr->expiration = 1;
 	}
 
 	close_tun(s, proc);

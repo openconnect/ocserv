@@ -40,6 +40,7 @@
 #include <sec-mod.h>
 #include <tlslib.h>
 #include <ipc.pb-c.h>
+#include <sec-mod-sup-config.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/abstract.h>
@@ -281,7 +282,9 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 	case SM_CMD_AUTH_SESSION_OPEN:
 	case SM_CMD_AUTH_SESSION_CLOSE:{
 			SecAuthSessionMsg *msg;
+			void *lpool = NULL;
 			SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
+			client_entry_st *e = NULL;
 
 			if (uid != 0) {
 				seclog(sec, LOG_INFO, "received session open/close from unauthorized uid (%u)\n", (unsigned)uid);
@@ -296,14 +299,28 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_session_cmd(sec, msg, cmd);
+			ret = handle_sec_auth_session_cmd(sec, msg, cmd, &e);
 			sec_auth_session_msg__free_unpacked(msg, &pa);
 
 			if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
-				if (ret < 0)
+				if (ret < 0 || e == NULL)
 					rep.reply = AUTH__REP__FAILED;
 				else
 					rep.reply = AUTH__REP__OK;
+
+				if (sec->config_module && e != NULL) {
+					lpool = talloc_new(e);
+					if (lpool == NULL) {
+						return ERR_MEM;
+					}
+
+					ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
+					if (ret < 0) {
+						seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
+						talloc_free(lpool);
+						return ERR_READ_CONFIG;
+					}
+				}
 
 				ret = send_msg(pool, sec->fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
 					(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
@@ -311,6 +328,7 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				if (ret < 0) {
 					seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
 				}
+				talloc_free(lpool);
 			}
 
 			return ret;
@@ -434,6 +452,8 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	sec->dcookie_key.data = sec->cookie_key;
 	sec->dcookie_key.size = COOKIE_KEY_SIZE;
 	sec->config = talloc_steal(sec, config);
+
+	sup_config_init(sec);
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;

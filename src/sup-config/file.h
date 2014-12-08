@@ -21,7 +21,7 @@
 #ifndef SUP_CONFIG_FILE_H
 #define SUP_CONFIG_FILE_H
 
-#include <main-sup-config.h>
+#include <sec-mod-sup-config.h>
 
 extern struct config_mod_st file_sup_config;
 

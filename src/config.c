@@ -452,8 +452,9 @@ unsigned force_cert_auth;
 	if (config->occtl_socket_file == NULL)
 		config->occtl_socket_file = talloc_strdup(config, OCCTL_UNIX_SOCKET);
 
-	if (config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		READ_TF("session-control", config->session_control, 0);
+	val = get_option("session-control", NULL);
+	if (val != NULL) {
+		fprintf(stderr, "The option 'session-control' is deprecated\n");
 	}
 
 	READ_STRING("banner", config->banner);

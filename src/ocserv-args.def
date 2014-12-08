@@ -76,7 +76,7 @@ An example configuration file follows.
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, certificate[optional],
-# plain, pam. 
+# plain, pam, radius[config]. 
 #auth = "certificate"
 #auth = "pam"
 
@@ -95,6 +95,10 @@ An example configuration file follows.
 # One entry must be listed per line, and 'ocpasswd' can be used
 # to generate password entries.
 #auth = "plain[/etc/ocserv/ocpasswd]"
+
+# The radius option requires specifying freeradius-client configuration
+# file.
+#auth = "radius[/etc/radiusclient/radiusclient.conf]"
 
 # Whether to enable seccomp worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a

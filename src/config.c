@@ -32,6 +32,7 @@
 #include <c-strcase.h>
 #include <c-ctype.h>
 #include <auth/pam.h>
+#include <auth/radius.h>
 #include <auth/plain.h>
 
 #include <vpn.h>
@@ -45,6 +46,7 @@
 
 static char pid_file[_POSIX_PATH_MAX] = "";
 static const char* cfg_file = DEFAULT_CFG_FILE;
+static const struct auth_mod_st *amod = NULL;
 
 struct cfg_options {
 	const char* name;
@@ -324,6 +326,11 @@ static char *get_brackets_string(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
+const struct auth_mod_st *get_auth_mod(void)
+{
+	return amod;
+}
+
 static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
 {
 tOptionValue const * pov;
@@ -332,7 +339,6 @@ unsigned j, i, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned prefix = 0, auto_select_group = 0;
-const struct auth_mod_st *amod = NULL;
 char *tmp;
 unsigned force_cert_auth;
 
@@ -369,7 +375,7 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 #ifdef HAVE_PAM
-			config->auth_types |= AUTH_TYPE_PAM;
+			config->auth_types |= amod->type;
 			amod = &pam_auth_funcs;
 #else
 			fprintf(stderr, "PAM support is disabled\n");
@@ -387,7 +393,25 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 			amod = &plain_auth_funcs;
-			config->auth_types |= AUTH_TYPE_PLAIN;
+			config->auth_types |= amod->type;
+		} else if (strncasecmp(auth[j], "radius", 6) == 0) {
+			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
+				exit(1);
+			}
+
+#ifdef HAVE_RADIUS
+			config->auth_additional = get_brackets_string(config, auth[j]+6);
+			if (config->auth_additional == NULL) {
+				fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
+				exit(1);
+			}
+			amod = &radius_auth_funcs;
+			config->auth_types |= amod->type;
+#else
+			fprintf(stderr, "Radius support is disabled\n");
+			exit(1);
+#endif
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
@@ -820,6 +844,9 @@ void print_version(tOptions *opts, tOptDesc *desc)
 #endif
 #ifdef HAVE_LIBWRAP
 	fprintf(stderr, "tcp-wrappers, ");
+#endif
+#ifdef HAVE_RADIUS
+	fprintf(stderr, "radius, ");
 #endif
 #ifdef HAVE_PAM
 	fprintf(stderr, "PAM, ");

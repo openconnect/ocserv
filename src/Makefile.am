@@ -62,7 +62,8 @@ endif
 COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
 
 # Authentication module sources
-AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h
+AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
+	auth/common.c auth/common.h
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \
@@ -87,7 +88,8 @@ ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
-	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON) $(LIBTALLOC_LIBS)
+	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD_DAEMON) $(LIBTALLOC_LIBS) \
+	$(FREERADIUS_CLIENT_LIBS)
 
 
 if PCL

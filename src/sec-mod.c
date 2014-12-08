@@ -472,7 +472,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 	alarm(MAINTAINANCE_TIME);
 
-	sec_auth_init(config);
+	sec_auth_init(sec, config);
 
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();

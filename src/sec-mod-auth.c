@@ -53,16 +53,12 @@
 
 static const struct auth_mod_st *module = NULL;
 
-void sec_auth_init(struct cfg_st *config)
+void sec_auth_init(void *pool, struct cfg_st *config)
 {
-#ifdef HAVE_PAM
-	if ((config->auth_types & pam_auth_funcs.type) == pam_auth_funcs.type)
-		module = &pam_auth_funcs;
-	else
-#endif
-	if ((config->auth_types & plain_auth_funcs.type) ==
-		    plain_auth_funcs.type) {
-		module = &plain_auth_funcs;
+	module = get_auth_mod();
+
+	if (module->global_init) {
+		module->global_init(pool, config->auth_additional);
 	}
 }
 

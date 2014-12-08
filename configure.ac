@@ -188,6 +188,32 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 LIBS="$oldlibs"
 fi
 
+AC_ARG_WITH(radius,
+  AS_HELP_STRING([--without-radius], [do not include Radius support]),
+  test_for_radius=$withval,
+  test_for_radius=yes)
+
+radius_enabled=no
+
+if test "$test_for_radius" = yes;then
+LIBS="$oldlibs -lfreeradius-client"
+AC_MSG_CHECKING([for freeradius client library])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+		   #include <freeradius-client.h>],[
+		   rc_read_config(0);])],
+		  [AC_MSG_RESULT(yes)
+		   AC_SUBST([FREERADIUS_CLIENT_LIBS], [-lfreeradius-client])
+		   AC_SUBST([FREERADIUS_CLIENT_CFLAGS], [])
+		   radius_enabled=yes
+		   AC_DEFINE([HAVE_RADIUS], 1, [Enable the Radius library])],
+		  [AC_MSG_RESULT(no)
+   	           AC_MSG_WARN([[
+*** 
+*** libfreeradius-client was not found. Radius support will be disabled.
+*** ]])])
+LIBS="$oldlibs"
+fi
+
 gl_INIT
 
 AC_LIB_HAVE_LINKFLAGS(crypt,, [#define _XOPEN_SOURCE
@@ -381,6 +407,7 @@ Summary of build options:
   CFlags:               ${CFLAGS}
   
   PAM auth backend:     ${pam_enabled}
+  Radius auth backend:  ${radius_enabled}
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}
   (socket activation)

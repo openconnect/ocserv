@@ -304,4 +304,6 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 void request_reload(int signo);
 void request_stop(int signo);
 
+const struct auth_mod_st *get_auth_mod(void);
+
 #endif

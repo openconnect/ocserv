@@ -29,9 +29,14 @@
 #include <vpn.h>
 #include <sec-mod-sup-config.h>
 #include <sup-config/file.h>
+#include <sup-config/radius.h>
 
 void sup_config_init(sec_mod_st *sec)
 {
-	sec->config_module = &file_sup_config;
+	if (sec->config->sup_config_type == SUP_CONFIG_FILE) {
+		sec->config_module = &file_sup_config;
+	} else if (sec->config->sup_config_type == SUP_CONFIG_RADIUS) {
+		sec->config_module = &radius_sup_config;
+	}
 }
 

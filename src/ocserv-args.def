@@ -76,7 +76,7 @@ An example configuration file follows.
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, certificate[optional],
-# plain, pam, radius[config]. 
+# plain, pam, radius[configfile,groupconfig]. 
 #auth = "certificate"
 #auth = "pam"
 
@@ -97,8 +97,9 @@ An example configuration file follows.
 #auth = "plain[/etc/ocserv/ocpasswd]"
 
 # The radius option requires specifying freeradius-client configuration
-# file.
-#auth = "radius[/etc/radiusclient/radiusclient.conf]"
+# file. If the groupconfig option is set, then config-per-user will be overriden,
+# and all configuration will be read from radius.
+#auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
 
 # Whether to enable seccomp worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a

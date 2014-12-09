@@ -18,22 +18,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef SUP_CONFIG_H
-# define SUP_CONFIG_H
+#ifndef SUP_CONFIG_RADIUS_H
+#define SUP_CONFIG_RADIUS_H
 
-#include <sec-mod.h>
+#include <sec-mod-sup-config.h>
 
-#define SUP_CONFIG_FILE 1
-#define SUP_CONFIG_RADIUS 2
-
-/* The get_sup_config() should read any additional configuration for
- * proc->username/proc->groupname and save it in proc->config.
- */
-struct config_mod_st {
-	int (*get_sup_config)(struct cfg_st *global_config, client_entry_st *entry,
-	                      SecAuthSessionReplyMsg *msg, void *pool);
-};
-
-void sup_config_init(sec_mod_st *sec);
+extern struct config_mod_st radius_sup_config;
 
 #endif

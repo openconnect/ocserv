@@ -33,25 +33,19 @@
 
 #include <freeradius-client.h>
 
+#if !defined(PW_FRAMED_IPV6_ADDRESS) && defined(PW_TYPE_IPV6ADDR)
+#define PW_FRAMED_IPV6_ADDRESS          168
+#define PW_DNS_SERVER_IPV6_ADDRESS 	169
+#endif
+
 #define RAD_GROUP_NAME 1030
+#define RAD_IPV4_DNS1 ((311<<16)|(28))
+#define RAD_IPV4_DNS2 ((311<<16)|(29))
 
 int rc_aaa(rc_handle *rh, uint32_t client_port, VALUE_PAIR *send, VALUE_PAIR **received,
     char *msg, int add_nas_port, int request_type);
 
 static rc_handle *rh = NULL;
-
-struct radius_ctx_st {
-	char username[MAX_USERNAME_SIZE*2];
-	char groupname[MAX_GROUPNAME_SIZE];
-	char msg[4096];
-
-	char ipv4[MAX_IP_STR];
-	char ipv6[MAX_IP_STR];
-
-	const char *config;	/* radius config file */
-	const char *pass_msg;
-	unsigned retries;
-};
 
 static void radius_global_init(void *pool, void *additional)
 {
@@ -170,6 +164,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	if (ret == OK_RC) {
 		VALUE_PAIR *vp = recvd;
+		uint32_t ip;
 		while(vp != NULL) {
 			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
 				syslog(LOG_ERR,
@@ -177,9 +172,35 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				       (int)vp->lvalue);
 				goto fail;
 			} else if (vp->attribute == RAD_GROUP_NAME && vp->type == PW_TYPE_STRING) {
+				/* Group-Name */
 				snprintf(pctx->groupname, sizeof(pctx->groupname), "%s", vp->strvalue);
+#ifdef PW_FRAMED_IPV6_ADDRESS
+			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
+				/* Framed-IPv6-Address */
+				inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6));
+			} else if (vp->attribute == PW_DNS_SERVER_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
+				/* DNS-Server-IPv6-Address */
+				if (pctx->ipv6_dns1[0] == 0)
+					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns1, sizeof(pctx->ipv6_dns1));
+				else
+					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns2, sizeof(pctx->ipv6_dns2));
+#endif
 			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS && vp->type == PW_TYPE_IPADDR) {
-				inet_ntop(AF_INET, &vp->lvalue, pctx->ipv4, sizeof(pctx->ipv4));
+				/* Framed-IP-Address */
+				ip = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ip, pctx->ipv4, sizeof(pctx->ipv4));
+			} else if (vp->attribute == PW_FRAMED_IP_NETMASK && vp->type == PW_TYPE_IPADDR) {
+				/* Framed-IP-Netmask */
+				ip = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ip, pctx->ipv4_mask, sizeof(pctx->ipv4_mask));
+			} else if (vp->attribute == RAD_IPV4_DNS1 && vp->type == PW_TYPE_IPADDR) {
+				/* MS-Primary-DNS-Server */
+				ip = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ip, pctx->ipv4_dns1, sizeof(pctx->ipv4_dns1));
+			} else if (vp->attribute == RAD_IPV4_DNS2 && vp->type == PW_TYPE_IPADDR) {
+				/* MS-Secondary-DNS-Server */
+				ip = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ip, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
 			} else {
 				syslog(LOG_DEBUG, "radius: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
 			}

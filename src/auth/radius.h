@@ -23,6 +23,27 @@
 
 #include <sec-mod-auth.h>
 
+struct radius_ctx_st {
+	char username[MAX_USERNAME_SIZE*2];
+	char groupname[MAX_GROUPNAME_SIZE];
+	char msg[4096];
+
+	/* variables for configuration */
+	char ipv4[MAX_IP_STR];
+	char ipv4_mask[MAX_IP_STR];
+	char ipv4_dns1[MAX_IP_STR];
+	char ipv4_dns2[MAX_IP_STR];
+
+	char ipv6[MAX_IP_STR];
+	uint16_t ipv6_prefix;
+	char ipv6_dns1[MAX_IP_STR];
+	char ipv6_dns2[MAX_IP_STR];
+
+	const char *config;	/* radius config file */
+	const char *pass_msg;
+	unsigned retries;
+};
+
 extern const struct auth_mod_st radius_auth_funcs;
 
 #endif

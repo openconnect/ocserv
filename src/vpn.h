@@ -192,6 +192,7 @@ struct cfg_st {
 	unsigned int udp_port;
 	unsigned int is_dyndns;
 	char* unix_conn_file;
+	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
 
 	char *pin_file;
 	char *srk_pin_file;

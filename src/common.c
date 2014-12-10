@@ -56,6 +56,8 @@ static char tmp[32];
 	case CMD_CLI_STATS:
 		return "cli stats";
 
+	case SM_CMD_CLI_STATS:
+		return "sm: cli stats";
 	case SM_CMD_AUTH_INIT:
 		return "sm: auth init";
 	case SM_CMD_AUTH_CONT:

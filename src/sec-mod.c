@@ -251,7 +251,6 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 
 	case SM_CMD_CLI_STATS:{
 			CliStatsMsg *tmsg;
-			client_entry_st *e;
 
 			tmsg = cli_stats_msg__unpack(&pa, data.size, data.data);
 			if (tmsg == NULL) {
@@ -260,28 +259,9 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			if (tmsg->has_sid == 0 || tmsg->sid.len != SID_SIZE) {
-				cli_stats_msg__free_unpacked(tmsg, &pa);
-				seclog(sec, LOG_INFO, "error in SID received by client (size: %d)",
-				       (int)tmsg->sid.len);
-				return -1;
-			}
-
-			e = find_client_entry(sec, tmsg->sid.data);
-			if (e == NULL) {
-				cli_stats_msg__free_unpacked(tmsg, &pa);
-				seclog(sec, LOG_INFO, "session stats received with non-existing sid!");
-				return -1;
-			}
+			ret = handle_sec_auth_stats_cmd(sec, tmsg);
 			cli_stats_msg__free_unpacked(tmsg, &pa);
-
-			if (e->status != PS_AUTH_COMPLETED) {
-				seclog(sec, LOG_ERR, "session stats received in unauthenticated client!");
-				return -1;
-			}
-
-			e->bytes_in = tmsg->bytes_in;
-			e->bytes_out = tmsg->bytes_out;
+			return ret;
 		}
 		break;
 

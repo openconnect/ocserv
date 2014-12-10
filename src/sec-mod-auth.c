@@ -327,7 +327,7 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 		if (module == NULL || module->open_session == NULL)
 			return 0;
 
-		ret = module->open_session(e->auth_ctx);
+		ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_ERR, "could not open session.");
@@ -339,6 +339,37 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 		del_client_entry(sec, e);
 	}
 
+	return 0;
+}
+
+int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
+{
+	client_entry_st *e;
+
+	if (req->sid.len != SID_SIZE) {
+		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
+		       (int)req->sid.len);
+		return -1;
+	}
+
+	e = find_client_entry(sec, req->sid.data);
+	if (e == NULL) {
+		seclog(sec, LOG_INFO, "session open/close but with non-existing sid!");
+		return -1;
+	}
+
+	if (e->status != PS_AUTH_COMPLETED) {
+		seclog(sec, LOG_ERR, "session stats received in unauthenticated client!");
+		return -1;
+	}
+
+	e->bytes_in = req->bytes_in;
+	e->bytes_out = req->bytes_out;
+
+	if (module == NULL || module->session_stats == NULL)
+		return 0;
+
+	module->session_stats(e->auth_ctx, e->bytes_in, e->bytes_out);
 	return 0;
 }
 

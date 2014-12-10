@@ -149,7 +149,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		syslog(LOG_ERR,
 		       "%s:%u: user '%s' auth error", __func__, __LINE__,
 		       pctx->username);
-		return ERR_AUTH_FAIL;
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
 	}
 
 	service = PW_AUTHENTICATE_ONLY;
@@ -157,7 +158,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		syslog(LOG_ERR,
 		       "%s:%u: user '%s' auth error", __func__, __LINE__,
 		       pctx->username);
-		return ERR_AUTH_FAIL;
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
 	}
 
 	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCESS_REQUEST);
@@ -207,18 +209,24 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			vp = vp->next;
 		}
 
+		ret = 0;
+ cleanup:
+		rc_avpair_free(send);
 		if (recvd != NULL)
 			rc_avpair_free(recvd);
-		return 0;
+		return ret;
 	} else {
  fail:
+		if (send != NULL)
+			rc_avpair_free(send);
+
 		if (recvd != NULL)
 			rc_avpair_free(recvd);
 
 		if (ret == PW_ACCESS_CHALLENGE) {
 			pctx->pass_msg = pass_msg_second;
 			return ERR_AUTH_CONTINUE;
-		} else if ( pctx->retries++ < MAX_TRIES) {
+		} else if (pctx->retries++ < MAX_TRIES) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {
@@ -245,7 +253,74 @@ static void radius_auth_deinit(void *ctx)
 }
 
 
-static int radius_auth_open_session(void* ctx)
+static void radius_auth_session_stats(void* ctx, uint64_t bytes_in, uint64_t bytes_out)
+{
+struct radius_ctx_st * pctx = ctx;
+int ret;
+uint32_t status_type;
+VALUE_PAIR *send = NULL, *recvd = NULL;
+uint32_t uin, uout;
+
+	status_type = PW_STATUS_ALIVE;
+
+	syslog(LOG_DEBUG, "sending radius session interim update");
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	uin = bytes_in;
+	uout = bytes_out;
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_INPUT_OCTETS, &uin, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_OUTPUT_OCTETS, &uout, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	uin = bytes_in / 4294967296;
+	if (rc_avpair_add(rh, &send, PW_ACCT_INPUT_GIGAWORDS, &uin, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	uout = bytes_in / 4294967296;
+	if (rc_avpair_add(rh, &send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCOUNTING_REQUEST);
+
+	if (recvd != NULL)
+		rc_avpair_free(recvd);
+
+	if (ret != OK_RC) {
+		syslog(LOG_AUTH, "radius-auth: radius_open_session: %d", ret);
+		goto cleanup;
+	}
+
+ cleanup:
+	rc_avpair_free(send);
+	return;
+}
+
+static int radius_auth_open_session(void* ctx, const void *sid, unsigned sid_size)
 {
 struct radius_ctx_st * pctx = ctx;
 int ret;
@@ -254,20 +329,45 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 
 	status_type = PW_STATUS_START;
 
-	syslog(LOG_DEBUG, "opening session with radius");
-	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL)
+	if (sid_size != SID_SIZE) {
+		syslog(LOG_DEBUG, "incorrect sid size");
 		return -1;
+	}
+
+	base64_encode((char *)sid, sid_size, (char *)pctx->sid, sizeof(pctx->sid));
+
+	syslog(LOG_DEBUG, "opening session %s with radius", pctx->sid);
+
+	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
 
 	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCOUNTING_REQUEST);
+
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
 		syslog(LOG_AUTH, "radius-auth: radius_open_session: %d", ret);
-		return -1;
+		ret = -1;
+		goto cleanup;
 	}
 
-	return 0;
+	ret = 0;
+ cleanup:
+	rc_avpair_free(send);
+	return ret;
 }
 
 static void radius_auth_close_session(void* ctx)
@@ -283,15 +383,26 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL)
 		return;
 
+	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
+		goto cleanup;
+	}
+
+
 	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCOUNTING_REQUEST);
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
 		syslog(LOG_INFO, "radius-auth: radius_close_session: %d", ret);
-		return;
+		goto cleanup;
 	}
 
+ cleanup:
+ 	rc_avpair_free(send);
 	return;
 }
 
@@ -307,6 +418,7 @@ const struct auth_mod_st radius_auth_funcs = {
 	.auth_group = radius_auth_group,
 	.open_session = radius_auth_open_session,
 	.close_session = radius_auth_close_session,
+	.session_stats = radius_auth_session_stats,
 	.group_list = NULL
 };
 

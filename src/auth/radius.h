@@ -22,10 +22,13 @@
 #define RADIUS_H
 
 #include <sec-mod-auth.h>
+#include <base64.h>
 
 struct radius_ctx_st {
 	char username[MAX_USERNAME_SIZE*2];
 	char groupname[MAX_GROUPNAME_SIZE];
+	char sid[BASE64_LENGTH(SID_SIZE) + 1];
+
 	char msg[4096];
 
 	/* variables for configuration */

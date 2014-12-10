@@ -348,7 +348,7 @@ struct pam_ctx_st * pctx = ctx;
 	talloc_free(pctx);
 }
 
-static int pam_auth_open_session(void* ctx)
+static int pam_auth_open_session(void* ctx, const void *sid, unsigned sid_size)
 {
 struct pam_ctx_st * pctx = ctx;
 int pret;

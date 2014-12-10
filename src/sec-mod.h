@@ -52,6 +52,11 @@ typedef struct client_entry_st {
 	unsigned have_session; /* whether an auth session is initialized */
 	unsigned tls_auth_ok;
 
+	/* these are filled in after the worker process dies, using the
+	 * Cli stats message. */
+	uint64_t bytes_in;
+	uint64_t bytes_out;
+
 	unsigned status; /* PS_AUTH_ */
 
 	char ip[MAX_IP_STR]; /* the user's IP */

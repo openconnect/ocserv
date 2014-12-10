@@ -992,6 +992,34 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 
 	}
 
+	if (ws->config->stats_report_time > 0 &&
+	    now - ws->last_stats_msg >= ws->config->stats_report_time &&
+	    ws->sid_set) {
+		CliStatsMsg msg = CLI_STATS_MSG__INIT;
+		int sd;
+
+		ws->last_stats_msg = now;
+
+		sd = connect_to_secmod(ws);
+		if (sd >= 0) {
+			msg.bytes_in = ws->tun_bytes_in;
+			msg.bytes_out = ws->tun_bytes_out;
+			msg.sid.len = sizeof(ws->sid);
+			msg.sid.data = ws->sid;
+			msg.has_sid = 1;
+
+			send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
+					 (pack_size_func)cli_stats_msg__get_packed_size,
+					 (pack_func) cli_stats_msg__pack);
+			close(sd);
+
+			oclog(ws, LOG_DEBUG,
+			      "sending periodic stats (in: %lu, out: %lu) to sec-mod",
+			      (unsigned long)msg.bytes_in,
+			      (unsigned long)msg.bytes_out);
+		}
+	}
+
 	/* check DPD. Otherwise exit */
 	if (ws->udp_state == UP_ACTIVE &&
 	    now - ws->last_msg_udp > DPD_TRIES * dpd && dpd > 0) {

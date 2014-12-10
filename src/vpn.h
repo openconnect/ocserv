@@ -123,6 +123,7 @@ typedef enum {
 	SM_CMD_AUTH_SESSION_OPEN,
 	SM_CMD_AUTH_SESSION_CLOSE,
 	SM_CMD_AUTH_SESSION_REPLY,
+	SM_CMD_CLI_STATS,
 } cmd_request_t;
 
 #define MAX_IP_STR 46
@@ -193,6 +194,7 @@ struct cfg_st {
 	unsigned int is_dyndns;
 	char* unix_conn_file;
 	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
+	unsigned int stats_report_time;
 
 	char *pin_file;
 	char *srk_pin_file;

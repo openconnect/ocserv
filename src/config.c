@@ -109,6 +109,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "net-priority", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "stats-report-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-method", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -576,6 +577,8 @@ unsigned force_cert_auth;
 	config->tx_per_sec /= 1000;
 
 	READ_TF("deny-roaming", config->deny_roaming, 0);
+
+	READ_NUMERIC("stats-report-time", config->stats_report_time);
 
 	config->rekey_time = -1;
 	READ_NUMERIC("rekey-time", config->rekey_time);

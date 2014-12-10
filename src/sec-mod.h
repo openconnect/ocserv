@@ -89,7 +89,8 @@ void cleanup_client_entries(sec_mod_st *sec);
 	}
 #endif
 
-void sec_auth_init(void *pool, struct cfg_st *config);
+void sec_auth_init(sec_mod_st *sec, struct cfg_st *config);
+void sec_auth_reinit(sec_mod_st *sec, struct cfg_st *config);
 
 int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);

@@ -53,12 +53,22 @@
 
 static const struct auth_mod_st *module = NULL;
 
-void sec_auth_init(void *pool, struct cfg_st *config)
+void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 {
 	module = get_auth_mod();
 
 	if (module && module->global_init) {
-		module->global_init(pool, config->auth_additional);
+		module->global_init(sec, config->auth_additional);
+	}
+}
+
+void sec_auth_reinit(sec_mod_st * sec, struct cfg_st *config)
+{
+	if (module) {
+		if (module != get_auth_mod()) {
+			seclog(sec, LOG_ERR, "Cannot change authentication method on reload");
+			exit(1);
+		}
 	}
 }
 

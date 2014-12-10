@@ -358,6 +358,7 @@ static void check_other_work(sec_mod_st *sec)
 	if (need_reload) {
 		seclog(sec, LOG_DEBUG, "reloading configuration");
 		reload_cfg_file(sec, sec->config);
+		sec_auth_reinit(sec, sec->config);
 		need_reload = 0;
 	}
 

@@ -407,79 +407,75 @@ unsigned force_cert_auth;
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
-	/* authentication information is only read on first load, as
-	 * it cannot be safely switched */
-	if (reload == 0) {
-		config->sup_config_type = SUP_CONFIG_FILE;
+	config->sup_config_type = SUP_CONFIG_FILE;
 
-		READ_MULTI_LINE("auth", auth, auth_size);
-		for (j=0;j<auth_size;j++) {
-			if (c_strncasecmp(auth[j], "pam", 3) == 0) {
-				config->auth_additional = get_brackets_string(config, auth[j]+3);
-				if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
-					fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
-					exit(1);
-				}
-#ifdef HAVE_PAM
-				config->auth_types |= amod->type;
-				amod = &pam_auth_funcs;
-#else
-				fprintf(stderr, "PAM support is disabled\n");
-				exit(1);
-#endif
-			} else if (strncasecmp(auth[j], "plain", 5) == 0) {
-				if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
-					fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
-					exit(1);
-				}
-
-				config->auth_additional = get_brackets_string(config, auth[j]+5);
-				if (config->auth_additional == NULL) {
-					fprintf(stderr, "Format error in %s\n", auth[j]);
-					exit(1);
-				}
-				amod = &plain_auth_funcs;
-				config->auth_types |= amod->type;
-			} else if (strncasecmp(auth[j], "radius", 6) == 0) {
-				const char *p;
-				if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
-					fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
-					exit(1);
-				}
-
-#ifdef HAVE_RADIUS
-				config->auth_additional = get_brackets_string1(config, auth[j]+6);
-				if (config->auth_additional == NULL) {
-					fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
-					exit(1);
-				}
-
-				p = get_brackets_string2(config, auth[j]+6);
-				if (p != NULL) {
-					if (strcasecmp(p, "groupconfig") != 0) {
-						fprintf(stderr, "No known configuration option: %s\n", p);
-						exit(1);
-					}
-					config->sup_config_type = SUP_CONFIG_RADIUS;
-				}
-				amod = &radius_auth_funcs;
-				config->auth_types |= amod->type;
-#else
-				fprintf(stderr, "Radius support is disabled\n");
-				exit(1);
-#endif
-			} else if (c_strcasecmp(auth[j], "certificate") == 0) {
-				config->auth_types |= AUTH_TYPE_CERTIFICATE;
-			} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
-				config->auth_types |= AUTH_TYPE_CERTIFICATE_OPT;
-			} else {
-				fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
+	READ_MULTI_LINE("auth", auth, auth_size);
+	for (j=0;j<auth_size;j++) {
+		if (c_strncasecmp(auth[j], "pam", 3) == 0) {
+			config->auth_additional = get_brackets_string(config, auth[j]+3);
+			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
 				exit(1);
 			}
-			talloc_free(auth[j]);
+#ifdef HAVE_PAM
+			config->auth_types |= amod->type;
+			amod = &pam_auth_funcs;
+#else
+			fprintf(stderr, "PAM support is disabled\n");
+			exit(1);
+#endif
+		} else if (strncasecmp(auth[j], "plain", 5) == 0) {
+			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
+				exit(1);
+			}
+
+			config->auth_additional = get_brackets_string(config, auth[j]+5);
+			if (config->auth_additional == NULL) {
+				fprintf(stderr, "Format error in %s\n", auth[j]);
+				exit(1);
+			}
+			amod = &plain_auth_funcs;
+			config->auth_types |= amod->type;
+		} else if (strncasecmp(auth[j], "radius", 6) == 0) {
+			const char *p;
+			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
+				exit(1);
+			}
+
+#ifdef HAVE_RADIUS
+			config->auth_additional = get_brackets_string1(config, auth[j]+6);
+			if (config->auth_additional == NULL) {
+				fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
+				exit(1);
+			}
+
+			p = get_brackets_string2(config, auth[j]+6);
+			if (p != NULL) {
+				if (strcasecmp(p, "groupconfig") != 0) {
+					fprintf(stderr, "No known configuration option: %s\n", p);
+					exit(1);
+				}
+				config->sup_config_type = SUP_CONFIG_RADIUS;
+			}
+			amod = &radius_auth_funcs;
+			config->auth_types |= amod->type;
+#else
+			fprintf(stderr, "Radius support is disabled\n");
+			exit(1);
+#endif
+		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
+			config->auth_types |= AUTH_TYPE_CERTIFICATE;
+		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
+			config->auth_types |= AUTH_TYPE_CERTIFICATE_OPT;
+		} else {
+			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
+			exit(1);
 		}
-		talloc_free(auth);
+		talloc_free(auth[j]);
 	}
+	talloc_free(auth);
 
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
@@ -931,6 +927,7 @@ void print_version(tOptions *opts, tOptDesc *desc)
 void reload_cfg_file(void *pool, struct cfg_st* config)
 {
 	clear_cfg_file(config);
+
 	memset(config, 0, sizeof(*config));
 
 	parse_cfg_file(cfg_file, config, 1);

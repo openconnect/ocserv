@@ -171,7 +171,7 @@ rm -f ./not-ok
 ret=0
 
 rm -f ./tmp-unix/ok
-$DOCKER cp test_ocserv:/tmp/disconnect/ok ./tmp-unix/
+$DOCKER cp test_unix:/tmp/disconnect/ok ./tmp-unix/
 if ! test -f ./tmp-unix/ok;then
 	echo "Don't know if stats were received"
 	ret=77

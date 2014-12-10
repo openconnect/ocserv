@@ -57,7 +57,7 @@ void sec_auth_init(void *pool, struct cfg_st *config)
 {
 	module = get_auth_mod();
 
-	if (module->global_init) {
+	if (module && module->global_init) {
 		module->global_init(pool, config->auth_additional);
 	}
 }

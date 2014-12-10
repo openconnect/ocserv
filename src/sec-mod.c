@@ -167,7 +167,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 	return 0;
 }
 
-static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
+static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 		     size_t rep_size)
 {
 	SecOpMsg msg = SEC_OP_MSG__INIT;
@@ -176,7 +176,7 @@ static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 	msg.data.data = rep;
 	msg.data.len = rep_size;
 
-	ret = send_msg(pool, sec->fd, type, &msg,
+	ret = send_msg(pool, cfd, type, &msg,
 		       (pack_size_func) sec_op_msg__get_packed_size,
 		       (pack_func) sec_op_msg__pack);
 	if (ret < 0) {
@@ -187,7 +187,7 @@ static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 }
 
 static
-int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
+int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
 		   uid_t uid, uint8_t * buffer, size_t buffer_size)
 {
 	unsigned i;
@@ -244,7 +244,7 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 			return -1;
 		}
 
-		ret = handle_op(pool, sec, cmd, out.data, out.size);
+		ret = handle_op(pool, cfd, sec, cmd, out.data, out.size);
 		gnutls_free(out.data);
 
 		return ret;
@@ -276,7 +276,7 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_init(sec, auth_init);
+			ret = handle_sec_auth_init(cfd, sec, auth_init);
 			sec_auth_init_msg__free_unpacked(auth_init, &pa);
 			return ret;
 		}
@@ -291,16 +291,13 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_cont(sec, auth_cont);
+			ret = handle_sec_auth_cont(cfd, sec, auth_cont);
 			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
 			return ret;
 		}
 	case SM_CMD_AUTH_SESSION_OPEN:
 	case SM_CMD_AUTH_SESSION_CLOSE:{
 			SecAuthSessionMsg *msg;
-			void *lpool = NULL;
-			SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
-			client_entry_st *e = NULL;
 
 			if (uid != 0) {
 				seclog(sec, LOG_INFO, "received session open/close from unauthorized uid (%u)\n", (unsigned)uid);
@@ -315,37 +312,8 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_session_cmd(sec, msg, cmd, &e);
+			ret = handle_sec_auth_session_cmd(cfd, sec, msg, cmd);
 			sec_auth_session_msg__free_unpacked(msg, &pa);
-
-			if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
-				if (ret < 0 || e == NULL)
-					rep.reply = AUTH__REP__FAILED;
-				else
-					rep.reply = AUTH__REP__OK;
-
-				if (sec->config_module && e != NULL) {
-					lpool = talloc_new(e);
-					if (lpool == NULL) {
-						return ERR_MEM;
-					}
-
-					ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
-					if (ret < 0) {
-						seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
-						talloc_free(lpool);
-						return ERR_READ_CONFIG;
-					}
-				}
-
-				ret = send_msg(pool, sec->fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
-					(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
-					(pack_func) sec_auth_session_reply_msg__pack);
-				if (ret < 0) {
-					seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
-				}
-				talloc_free(lpool);
-			}
 
 			return ret;
 		}
@@ -405,14 +373,13 @@ static void check_other_work(sec_mod_st *sec)
 	}
 }
 
-/* serves a new requst.
- * the provided buffer is also pool for other allocations */
 static
 void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
 	uint16_t l16;
+	void *pool = buffer;
 
 	/* read request */
 	ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
@@ -443,13 +410,13 @@ void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigne
 		goto leave;
 	}
 
-	sec->fd = cfd;
-	ret = process_packet(buffer, sec, cmd, uid, buffer, ret);
+	ret = process_packet(pool, cfd, sec, cmd, uid, buffer, ret);
 	if (ret < 0) {
 		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
 	
  leave:
+ 	talloc_free(pool);
 	close(cfd);
 	return;
 }

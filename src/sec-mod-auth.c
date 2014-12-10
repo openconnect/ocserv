@@ -99,7 +99,7 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 }
 
 static
-int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
+int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 {
 	SecAuthReplyMsg msg = SEC_AUTH_REPLY_MSG__INIT;
 	int ret;
@@ -127,7 +127,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 		msg.dtls_session_id.data = entry->dtls_session_id;
 		msg.dtls_session_id.len = sizeof(entry->dtls_session_id);
 
-		ret = send_msg(entry, sec->fd, SM_CMD_AUTH_REP,
+		ret = send_msg(entry, cfd, SM_CMD_AUTH_REP,
 			       &msg,
 			       (pack_size_func)
 			       sec_auth_reply_msg__get_packed_size,
@@ -135,7 +135,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 	} else {
 		msg.reply = AUTH__REP__FAILED;
 
-		ret = send_msg(entry, sec->fd, SM_CMD_AUTH_REP,
+		ret = send_msg(entry, cfd, SM_CMD_AUTH_REP,
 			       &msg,
 			       (pack_size_func)
 			       sec_auth_reply_msg__get_packed_size,
@@ -152,7 +152,7 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 }
 
 static
-int send_sec_auth_reply_msg(sec_mod_st * sec, client_entry_st * e)
+int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 {
 	SecAuthReplyMsg msg = SEC_AUTH_REPLY_MSG__INIT;
 	char tmp[MAX_MSG_SIZE] = "";
@@ -173,7 +173,7 @@ int send_sec_auth_reply_msg(sec_mod_st * sec, client_entry_st * e)
 	msg.sid.data = e->sid;
 	msg.sid.len = sizeof(e->sid);
 
-	ret = send_msg(e, sec->fd, SM_CMD_AUTH_REP, &msg,
+	ret = send_msg(e, cfd, SM_CMD_AUTH_REP, &msg,
 		       (pack_size_func) sec_auth_reply_msg__get_packed_size,
 		       (pack_func) sec_auth_reply_msg__pack);
 	if (ret < 0) {
@@ -253,12 +253,12 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
  * @result: the auth result
  */
 static
-int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
+int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int result)
 {
 	int ret;
 
 	if (result == ERR_AUTH_CONTINUE) {
-		ret = send_sec_auth_reply_msg(sec, e);
+		ret = send_sec_auth_reply_msg(cfd, sec, e);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
@@ -268,7 +268,7 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 	} else if (result == 0) {
 		e->status = PS_AUTH_COMPLETED;
 
-		ret = send_sec_auth_reply(sec, e, AUTH__REP__OK);
+		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__OK);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
@@ -280,7 +280,7 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 		e->status = PS_AUTH_FAILED;
 		add_ip_to_ban_list(sec, e->ip, time(0) + sec->config->min_reauth_time);
 
-		ret = send_sec_auth_reply(sec, e, AUTH__REP__FAILED);
+		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {
 			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
@@ -299,10 +299,11 @@ int handle_sec_auth_res(sec_mod_st * sec, client_entry_st * e, int result)
 
 /* opens or closes a session.
  */
-int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
-				unsigned cmd, client_entry_st **r_entry)
+int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionMsg * req,
+				unsigned cmd)
 {
 	client_entry_st *e;
+	void *lpool;
 	int ret;
 
 	if (req->sid.len != SID_SIZE) {
@@ -318,9 +319,7 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 	}
 
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
-		if (r_entry) {
-			*r_entry = e;
-		}
+		SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 
 		if (module == NULL || module->open_session == NULL)
 			return 0;
@@ -330,9 +329,31 @@ int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req,
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_ERR, "could not open session.");
 			del_client_entry(sec, e);
-			return ret;
+			rep.reply = AUTH__REP__FAILED;
+		} else {
+			e->have_session = 1;
+			rep.reply = AUTH__REP__OK;
 		}
-		e->have_session = 1;
+
+		lpool = talloc_new(e);
+		if (lpool == NULL) {
+			return ERR_MEM;
+		}
+
+		ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
+		if (ret < 0) {
+			seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
+			talloc_free(lpool);
+			return ERR_READ_CONFIG;
+		}
+
+		ret = send_msg(lpool, cfd, SM_CMD_AUTH_SESSION_REPLY, &rep,
+				(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
+				(pack_func) sec_auth_session_reply_msg__pack);
+		if (ret < 0) {
+			seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
+		}
+		talloc_free(lpool);
 	} else {
 		del_client_entry(sec, e);
 	}
@@ -371,7 +392,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	return 0;
 }
 
-int handle_sec_auth_cont(sec_mod_st * sec, const SecAuthContMsg * req)
+int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 {
 	client_entry_st *e;
 	int ret;
@@ -416,10 +437,10 @@ int handle_sec_auth_cont(sec_mod_st * sec, const SecAuthContMsg * req)
 		       e->username);
 	}
 
-	return handle_sec_auth_res(sec, e, ret);
+	return handle_sec_auth_res(cfd, sec, e, ret);
 }
 
-int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
+int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 {
 	int ret = -1;
 	client_entry_st *e;
@@ -513,7 +534,7 @@ int handle_sec_auth_init(sec_mod_st * sec, const SecAuthInitMsg * req)
 
 	ret = 0;
  cleanup:
-	return handle_sec_auth_res(sec, e, ret);
+	return handle_sec_auth_res(cfd, sec, e, ret);
 }
 
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)

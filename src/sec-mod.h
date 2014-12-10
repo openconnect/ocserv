@@ -36,8 +36,6 @@ typedef struct sec_mod_st {
 	struct htable *ban_db;
 
 	struct config_mod_st *config_module;
-
-	int fd;
 } sec_mod_st;
 
 
@@ -93,9 +91,9 @@ void cleanup_client_entries(sec_mod_st *sec);
 
 void sec_auth_init(void *pool, struct cfg_st *config);
 
-int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
-int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
-int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd, client_entry_st **_e);
+int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req);
+int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);
+int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req, unsigned cmd);
 int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 

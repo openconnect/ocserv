@@ -18,11 +18,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef SUP_CONFIG_FILE_H
-#define SUP_CONFIG_FILE_H
+#ifndef SUP_CONFIG_RADIUS_H
+#define SUP_CONFIG_RADIUS_H
 
 #include <sec-mod-sup-config.h>
 
-extern struct config_mod_st file_sup_config;
+extern struct config_mod_st radius_sup_config;
 
 #endif

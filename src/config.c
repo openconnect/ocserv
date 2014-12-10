@@ -32,7 +32,9 @@
 #include <c-strcase.h>
 #include <c-ctype.h>
 #include <auth/pam.h>
+#include <auth/radius.h>
 #include <auth/plain.h>
+#include <sec-mod-sup-config.h>
 
 #include <vpn.h>
 #include <cookies.h>
@@ -45,6 +47,7 @@
 
 static char pid_file[_POSIX_PATH_MAX] = "";
 static const char* cfg_file = DEFAULT_CFG_FILE;
+static const struct auth_mod_st *amod = NULL;
 
 struct cfg_options {
 	const char* name;
@@ -106,6 +109,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "net-priority", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "stats-report-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-method", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -143,7 +147,9 @@ static struct cfg_options available_options[] = {
 	{ .name = "default-group-config", .type = OPTION_STRING, .mandatory = 0 },
 };
 
-static char *get_brackets_string(void *pool, const char *str);
+#define get_brackets_string get_brackets_string1
+static char *get_brackets_string1(void *pool, const char *str);
+static char *get_brackets_string2(void *pool, const char *str);
 
 static const tOptionValue* get_option(const char* name, unsigned * mand)
 {
@@ -300,7 +306,7 @@ unsigned j;
 	}
 }
 
-static char *get_brackets_string(void *pool, const char *str)
+static char *get_brackets_string1(void *pool, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -313,15 +319,57 @@ static char *get_brackets_string(void *pool, const char *str)
 	while (c_isspace(*p))
 		p++;
 
-	p2 = strchr(p, ']');
+	p2 = strchr(p, ',');
 	if (p2 == NULL) {
-		fprintf(stderr, "error parsing %s\n", str);
-		exit(1);
+		p2 = strchr(p, ']');
+		if (p2 == NULL) {
+			fprintf(stderr, "error parsing %s\n", str);
+			exit(1);
+		}
 	}
 
 	len = p2 - p;
 
 	return talloc_strndup(pool, p, len);
+}
+
+static char *get_brackets_string2(void *pool, const char *str)
+{
+	char *p, *p2;
+	unsigned len;
+
+	p = strchr(str, '[');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+
+	p = strchr(p, ',');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+
+	while (c_isspace(*p))
+		p++;
+
+	p2 = strchr(p, ',');
+	if (p2 == NULL) {
+		p2 = strchr(p, ']');
+		if (p2 == NULL) {
+			fprintf(stderr, "error parsing %s\n", str);
+			exit(1);
+		}
+	}
+
+	len = p2 - p;
+
+	return talloc_strndup(pool, p, len);
+}
+
+const struct auth_mod_st *get_auth_mod(void)
+{
+	return amod;
 }
 
 static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
@@ -332,7 +380,6 @@ unsigned j, i, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned prefix = 0, auto_select_group = 0;
-const struct auth_mod_st *amod = NULL;
 char *tmp;
 unsigned force_cert_auth;
 
@@ -360,6 +407,8 @@ unsigned force_cert_auth;
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
+	config->sup_config_type = SUP_CONFIG_FILE;
+
 	READ_MULTI_LINE("auth", auth, auth_size);
 	for (j=0;j<auth_size;j++) {
 		if (c_strncasecmp(auth[j], "pam", 3) == 0) {
@@ -369,7 +418,7 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 #ifdef HAVE_PAM
-			config->auth_types |= AUTH_TYPE_PAM;
+			config->auth_types |= amod->type;
 			amod = &pam_auth_funcs;
 #else
 			fprintf(stderr, "PAM support is disabled\n");
@@ -387,7 +436,35 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 			amod = &plain_auth_funcs;
-			config->auth_types |= AUTH_TYPE_PLAIN;
+			config->auth_types |= amod->type;
+		} else if (strncasecmp(auth[j], "radius", 6) == 0) {
+			const char *p;
+			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
+				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
+				exit(1);
+			}
+
+#ifdef HAVE_RADIUS
+			config->auth_additional = get_brackets_string1(config, auth[j]+6);
+			if (config->auth_additional == NULL) {
+				fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
+				exit(1);
+			}
+
+			p = get_brackets_string2(config, auth[j]+6);
+			if (p != NULL) {
+				if (strcasecmp(p, "groupconfig") != 0) {
+					fprintf(stderr, "No known configuration option: %s\n", p);
+					exit(1);
+				}
+				config->sup_config_type = SUP_CONFIG_RADIUS;
+			}
+			amod = &radius_auth_funcs;
+			config->auth_types |= amod->type;
+#else
+			fprintf(stderr, "Radius support is disabled\n");
+			exit(1);
+#endif
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
@@ -452,8 +529,9 @@ unsigned force_cert_auth;
 	if (config->occtl_socket_file == NULL)
 		config->occtl_socket_file = talloc_strdup(config, OCCTL_UNIX_SOCKET);
 
-	if (config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		READ_TF("session-control", config->session_control, 0);
+	val = get_option("session-control", NULL);
+	if (val != NULL) {
+		fprintf(stderr, "The option 'session-control' is deprecated\n");
 	}
 
 	READ_STRING("banner", config->banner);
@@ -495,6 +573,8 @@ unsigned force_cert_auth;
 	config->tx_per_sec /= 1000;
 
 	READ_TF("deny-roaming", config->deny_roaming, 0);
+
+	READ_NUMERIC("stats-report-time", config->stats_report_time);
 
 	config->rekey_time = -1;
 	READ_NUMERIC("rekey-time", config->rekey_time);
@@ -561,10 +641,9 @@ unsigned force_cert_auth;
 
 	READ_NUMERIC("ipv6-prefix", prefix);
 	if (prefix > 0) {
-		config->network.ipv6_netmask = ipv6_prefix_to_mask(config, prefix);
 		config->network.ipv6_prefix = prefix;
 
-		if (config->network.ipv6_netmask == NULL) {
+		if (valid_ipv6_prefix(prefix) == 0) {
 			fprintf(stderr, "invalid IPv6 prefix: %u\n", prefix);
 			exit(1);
 		}
@@ -642,8 +721,8 @@ static void check_cfg(struct cfg_st *config)
 		exit(1);
 	}
 
-	if (config->network.ipv6 != NULL && config->network.ipv6_netmask == NULL) {
-		fprintf(stderr, "No mask found for IPv6 network.\n");
+	if (config->network.ipv6 != NULL && config->network.ipv6_prefix == 0) {
+		fprintf(stderr, "No prefix found for IPv6 network.\n");
 		exit(1);
 	}
 
@@ -775,7 +854,6 @@ unsigned i;
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);
 	DEL(config->network.ipv6);
-	DEL(config->network.ipv6_netmask);
 	for (i=0;i<config->network.routes_size;i++)
 		DEL(config->network.routes[i]);
 	DEL(config->network.routes);
@@ -822,6 +900,9 @@ void print_version(tOptions *opts, tOptDesc *desc)
 #ifdef HAVE_LIBWRAP
 	fprintf(stderr, "tcp-wrappers, ");
 #endif
+#ifdef HAVE_RADIUS
+	fprintf(stderr, "radius, ");
+#endif
 #ifdef HAVE_PAM
 	fprintf(stderr, "PAM, ");
 #endif
@@ -846,6 +927,7 @@ void print_version(tOptions *opts, tOptDesc *desc)
 void reload_cfg_file(void *pool, struct cfg_st* config)
 {
 	clear_cfg_file(config);
+
 	memset(config, 0, sizeof(*config));
 
 	parse_cfg_file(cfg_file, config, 1);

@@ -172,6 +172,9 @@ typedef struct worker_st {
 	time_t last_tls_rehandshake;
 	time_t last_dtls_rehandshake;
 
+	/* the time the last stats message was sent */
+	time_t last_stats_msg;
+
 	/* for mtu trials */
 	unsigned last_good_mtu;
 	unsigned last_bad_mtu;
@@ -273,6 +276,17 @@ int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);
 int disable_system_calls(struct worker_st *ws);
 void ocsigaltstack(struct worker_st *ws);
+
+int connect_to_secmod(worker_st * ws);
+inline static
+int send_msg_to_secmod(worker_st * ws, int sd, uint8_t cmd,
+		       const void *msg, pack_size_func get_size, pack_func pack)
+{
+	oclog(ws, LOG_DEBUG, "sending message '%s' to secmod",
+	      cmd_request_to_str(cmd));
+
+	return send_msg(ws, sd, cmd, msg, get_size, pack);
+}
 
 inline static
 int send_msg_to_main(worker_st *ws, uint8_t cmd, 

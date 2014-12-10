@@ -21,16 +21,19 @@
 #ifndef SUP_CONFIG_H
 # define SUP_CONFIG_H
 
-#include <main.h>
+#include <sec-mod.h>
+
+#define SUP_CONFIG_FILE 1
+#define SUP_CONFIG_RADIUS 2
 
 /* The get_sup_config() should read any additional configuration for
  * proc->username/proc->groupname and save it in proc->config.
  */
 struct config_mod_st {
-	int (*get_sup_config)(struct cfg_st *global_config, struct proc_st *proc);
-	void (*clear_sup_config)(struct group_cfg_st *out);
+	int (*get_sup_config)(struct cfg_st *global_config, client_entry_st *entry,
+	                      SecAuthSessionReplyMsg *msg, void *pool);
 };
 
-void sup_config_init(main_server_st *s);
+void sup_config_init(sec_mod_st *sec);
 
 #endif

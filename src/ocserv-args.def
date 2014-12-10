@@ -76,7 +76,7 @@ An example configuration file follows.
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, certificate[optional],
-# plain, pam. 
+# plain, pam, radius[configfile,groupconfig]. 
 #auth = "certificate"
 #auth = "pam"
 
@@ -96,11 +96,13 @@ An example configuration file follows.
 # to generate password entries.
 #auth = "plain[/etc/ocserv/ocpasswd]"
 
-# Whether to enable the authentication method's session control (i.e., PAM).
-# That requires more resources on the server, and makes cookies one-time-use;
-# thus don't enable unless you need it. That should be used when you have an
-# accounting system in place with the PAM modules.
-#session-control = true
+# The radius option requires specifying freeradius-client configuration
+# file. If the groupconfig option is set, then config-per-user will be overriden,
+# and all configuration will be read from radius. The supported atributes for
+# radius configuration are:
+# Group-Name, Framed-IPv6-Address, DNS-Server-IPv6-Address, Framed-IP-Address,
+# Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
+#auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
 
 # Whether to enable seccomp worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a
@@ -140,6 +142,12 @@ udp-port = 3333
 # and uses it as the primary channel. That option cannot be
 # combined with certificate authentication.
 #listen-clear-file = /var/run/ocserv-conn.socket
+
+# Stats report time. The number of seconds after which each
+# worker process will report its usage statistics (number of
+# bytes transferred etc). This is useful when accounting like
+# radius is in use.
+#stats-report-time = 360
 
 # Keepalive in seconds
 keepalive = 32400

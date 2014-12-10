@@ -28,13 +28,16 @@
 
 struct auth_mod_st {
 	unsigned int type;
+	void (*global_init)(void *pool, void* additional);
+	void (*global_deinit)(void);
 	int (*auth_init)(void** ctx, void *pool, const char* username, const char* ip, void* additional);
 	int (*auth_msg)(void* ctx, char* msg, size_t msg_size);
 	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
 	int (*auth_group)(void* ctx, const char *suggested, char *groupname, int groupname_size);
 	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
 
-	int (*open_session)(void *ctx); /* optional, may be null */
+	int (*open_session)(void *ctx, const void *sid, unsigned sid_size); /* optional, may be null */
+	void (*session_stats)(void *ctx, uint64_t bytes_in, uint64_t bytes_out); /* optional, may be null */
 	void (*close_session)(void *ctx); /* optional */
 
 	void (*auth_deinit)(void* ctx);

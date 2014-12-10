@@ -29,14 +29,11 @@
 #include <vpn.h>
 #include <c-ctype.h>
 #include "plain.h"
+#include "auth/common.h"
 #include <ccan/htable/htable.h>
 #include <ccan/hash/hash.h>
 
 #define MAX_CPASS_SIZE 128
-#define MAX_TRIES 3
-
-const char* pass_msg_first = "Please enter your password.";
-const char* pass_msg_failed = "Login failed.\nPlease enter your password.";
 
 struct plain_ctx_st {
 	char username[MAX_USERNAME_SIZE];

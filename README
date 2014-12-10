@@ -30,6 +30,9 @@ libopts25-dev      / autogen-libopts-devel
 autogen            / autogen
 
 
+For radius support the freeradius-client library is required. Currently
+(2014-12-10) the best would be to use the version from the git repository
+at: https://github.com/FreeRADIUS/freeradius-client
 
 === Build instructions ===
 

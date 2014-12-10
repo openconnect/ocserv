@@ -1,8 +1,7 @@
 Short term items:
 
-* Enhance the current accounting modules to allow, native radius support 
-  with real-time accounting (e.g., sending periodically the transferred
-  bytes). Use radius for testing it.
+* Use the UDP address to report the client's IP when sniproxy or haproxy
+  are being used.
 
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time (or should we drop this functionality altogether and rely

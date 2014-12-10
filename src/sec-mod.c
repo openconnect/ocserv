@@ -40,6 +40,7 @@
 #include <sec-mod.h>
 #include <tlslib.h>
 #include <ipc.pb-c.h>
+#include <sec-mod-sup-config.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/abstract.h>
@@ -166,7 +167,7 @@ int load_pins(struct cfg_st *config, struct pin_st *s)
 	return 0;
 }
 
-static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
+static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 		     size_t rep_size)
 {
 	SecOpMsg msg = SEC_OP_MSG__INIT;
@@ -175,7 +176,7 @@ static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 	msg.data.data = rep;
 	msg.data.len = rep_size;
 
-	ret = send_msg(pool, sec->fd, type, &msg,
+	ret = send_msg(pool, cfd, type, &msg,
 		       (pack_size_func) sec_op_msg__get_packed_size,
 		       (pack_func) sec_op_msg__pack);
 	if (ret < 0) {
@@ -186,7 +187,7 @@ static int handle_op(void *pool, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 }
 
 static
-int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
+int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
 		   uid_t uid, uint8_t * buffer, size_t buffer_size)
 {
 	unsigned i;
@@ -243,10 +244,26 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 			return -1;
 		}
 
-		ret = handle_op(pool, sec, cmd, out.data, out.size);
+		ret = handle_op(pool, cfd, sec, cmd, out.data, out.size);
 		gnutls_free(out.data);
 
 		return ret;
+
+	case SM_CMD_CLI_STATS:{
+			CliStatsMsg *tmsg;
+
+			tmsg = cli_stats_msg__unpack(&pa, data.size, data.data);
+			if (tmsg == NULL) {
+				seclog(sec, LOG_ERR, "error unpacking data");
+				ret = ERR_BAD_COMMAND;
+				return -1;
+			}
+
+			ret = handle_sec_auth_stats_cmd(sec, tmsg);
+			cli_stats_msg__free_unpacked(tmsg, &pa);
+			return ret;
+		}
+		break;
 
 	case SM_CMD_AUTH_INIT:{
 			SecAuthInitMsg *auth_init;
@@ -259,7 +276,7 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_init(sec, auth_init);
+			ret = handle_sec_auth_init(cfd, sec, auth_init);
 			sec_auth_init_msg__free_unpacked(auth_init, &pa);
 			return ret;
 		}
@@ -274,14 +291,13 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_cont(sec, auth_cont);
+			ret = handle_sec_auth_cont(cfd, sec, auth_cont);
 			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
 			return ret;
 		}
 	case SM_CMD_AUTH_SESSION_OPEN:
 	case SM_CMD_AUTH_SESSION_CLOSE:{
 			SecAuthSessionMsg *msg;
-			SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 
 			if (uid != 0) {
 				seclog(sec, LOG_INFO, "received session open/close from unauthorized uid (%u)\n", (unsigned)uid);
@@ -296,22 +312,8 @@ int process_packet(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_session_cmd(sec, msg, cmd);
+			ret = handle_sec_auth_session_cmd(cfd, sec, msg, cmd);
 			sec_auth_session_msg__free_unpacked(msg, &pa);
-
-			if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
-				if (ret < 0)
-					rep.reply = AUTH__REP__FAILED;
-				else
-					rep.reply = AUTH__REP__OK;
-
-				ret = send_msg(pool, sec->fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
-					(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
-					(pack_func) sec_auth_session_reply_msg__pack);
-				if (ret < 0) {
-					seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
-				}
-			}
 
 			return ret;
 		}
@@ -356,6 +358,7 @@ static void check_other_work(sec_mod_st *sec)
 	if (need_reload) {
 		seclog(sec, LOG_DEBUG, "reloading configuration");
 		reload_cfg_file(sec, sec->config);
+		sec_auth_reinit(sec, sec->config);
 		need_reload = 0;
 	}
 
@@ -369,6 +372,54 @@ static void check_other_work(sec_mod_st *sec)
 		alarm(MAINTAINANCE_TIME);
 		need_maintainance = 0;
 	}
+}
+
+static
+void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigned buffer_size)
+{
+	int ret, e;
+	unsigned cmd, length;
+	uint16_t l16;
+	void *pool = buffer;
+
+	/* read request */
+	ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
+	if (ret == 0)
+		goto leave;
+	else if (ret < 3) {
+		e = errno;
+		seclog(sec, LOG_INFO, "error receiving msg head: %s",
+		       strerror(e));
+		goto leave;
+	}
+
+	cmd = buffer[0];
+	memcpy(&l16, &buffer[1], 2);
+	length = l16;
+
+	if (length > buffer_size - 4) {
+		seclog(sec, LOG_INFO, "too big message (%d)", length);
+		goto leave;
+	}
+
+	/* read the body */
+	ret = force_read_timeout(cfd, buffer, length, MAX_WAIT_SECS);
+	if (ret < 0) {
+		e = errno;
+		seclog(sec, LOG_INFO, "error receiving msg body: %s",
+		       strerror(e));
+		goto leave;
+	}
+
+	ret = process_packet(pool, cfd, sec, cmd, uid, buffer, ret);
+	if (ret < 0) {
+		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
+	}
+	
+ leave:
+ 	talloc_free(pool);
+	close(cfd);
+	return;
 }
 
 /* sec_mod_server:
@@ -404,11 +455,9 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	struct sockaddr_un sa;
 	socklen_t sa_len;
 	int cfd, ret, e;
-	unsigned cmd, length;
 	unsigned i, buffer_size;
 	uid_t uid;
-	uint8_t *buffer, *tpool;
-	uint16_t l16;
+	uint8_t *buffer;
 	struct pin_st pins;
 	int sd;
 	sec_mod_st *sec;
@@ -435,6 +484,8 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	sec->dcookie_key.size = COOKIE_KEY_SIZE;
 	sec->config = talloc_steal(sec, config);
 
+	sup_config_init(sec);
+
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
 	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
@@ -452,7 +503,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 	alarm(MAINTAINANCE_TIME);
 
-	sec_auth_init(config);
+	sec_auth_init(sec, config);
 
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();
@@ -469,13 +520,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 	if (config->min_reauth_time > 0)
 		sec_mod_ban_db_init(sec);
-
-	buffer_size = 8 * 1024;
-	buffer = talloc_size(sec, buffer_size);
-	if (buffer == NULL) {
-		seclog(sec, LOG_ERR, "error in memory allocation");
-		exit(1);
-	}
 
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -578,50 +622,18 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid, &uid);
 		if (ret < 0) {
 			seclog(sec, LOG_INFO, "rejected unauthorized connection");
-			goto cont;
+		} else {
+			buffer_size = 8 * 1024;
+			buffer = talloc_size(sec, buffer_size);
+			if (buffer == NULL) {
+				seclog(sec, LOG_ERR, "error in memory allocation");
+				close(cfd);
+			} else {
+				serve_request(sec, uid, cfd, buffer, buffer_size);
+			}
 		}
-
-		/* read request */
-		ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
-		if (ret == 0)
-			goto cont;
-		else if (ret < 3) {
-			e = errno;
-			seclog(sec, LOG_INFO, "error receiving msg head: %s",
-			       strerror(e));
-			goto cont;
-		}
-
-		cmd = buffer[0];
-		memcpy(&l16, &buffer[1], 2);
-		length = l16;
-
-		if (length > buffer_size - 4) {
-			seclog(sec, LOG_INFO, "too big message (%d)", length);
-			goto cont;
-		}
-
-		/* read the body */
-		ret = force_read_timeout(cfd, buffer, length, MAX_WAIT_SECS);
-		if (ret < 0) {
-			e = errno;
-			seclog(sec, LOG_INFO, "error receiving msg body: %s",
-			       strerror(e));
-			goto cont;
-		}
-
-		tpool = talloc_new(sec);
-		sec->fd = cfd;
-		ret = process_packet(tpool, sec, cmd, uid, buffer, ret);
-		if (ret < 0) {
-			seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
-		}
-		talloc_free(tpool);
-
 #ifdef DEBUG_LEAKS
 		talloc_report_full(sec, stderr);
 #endif
- cont:
-		close(cfd);
 	}
 }

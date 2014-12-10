@@ -548,12 +548,6 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				    talloc_strdup(ws, msg->ipv4_netmask);
 			}
 
-			if (msg->ipv6_netmask != NULL) {
-				talloc_free(ws->config->network.ipv6_netmask);
-				ws->config->network.ipv6_netmask =
-				    talloc_strdup(ws, msg->ipv6_netmask);
-			}
-
 			if (msg->ipv4_network != NULL) {
 				talloc_free(ws->config->network.ipv4_network);
 				ws->config->network.ipv4_network =
@@ -647,7 +641,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 }
 
 /* returns the fd */
-static int connect_to_secmod(worker_st * ws)
+int connect_to_secmod(worker_st * ws)
 {
 	int sd, ret, e;
 
@@ -671,16 +665,6 @@ static int connect_to_secmod(worker_st * ws)
 		return -1;
 	}
 	return sd;
-}
-
-static
-int send_msg_to_secmod(worker_st * ws, int sd, uint8_t cmd,
-		       const void *msg, pack_size_func get_size, pack_func pack)
-{
-	oclog(ws, LOG_DEBUG, "sending message '%s' to secmod",
-	      cmd_request_to_str(cmd));
-
-	return send_msg(ws, sd, cmd, msg, get_size, pack);
 }
 
 static int recv_auth_reply(worker_st * ws, int sd, char *txt,

@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef SEC_MOD_H
+# define SEC_MOD_H
 
 #include <cookies.h>
 #include <gnutls/abstract.h>
@@ -34,7 +35,7 @@ typedef struct sec_mod_st {
 	struct htable *client_db;
 	struct htable *ban_db;
 
-	int fd;
+	struct config_mod_st *config_module;
 } sec_mod_st;
 
 
@@ -48,6 +49,11 @@ typedef struct client_entry_st {
 	void * auth_ctx; /* the context of authentication */
 	unsigned have_session; /* whether an auth session is initialized */
 	unsigned tls_auth_ok;
+
+	/* these are filled in after the worker process dies, using the
+	 * Cli stats message. */
+	uint64_t bytes_in;
+	uint64_t bytes_out;
 
 	unsigned status; /* PS_AUTH_ */
 
@@ -83,11 +89,13 @@ void cleanup_client_entries(sec_mod_st *sec);
 	}
 #endif
 
-void sec_auth_init(struct cfg_st *config);
+void sec_auth_init(sec_mod_st *sec, struct cfg_st *config);
+void sec_auth_reinit(sec_mod_st *sec, struct cfg_st *config);
 
-int handle_sec_auth_init(sec_mod_st *sec, const SecAuthInitMsg * req);
-int handle_sec_auth_cont(sec_mod_st *sec, const SecAuthContMsg * req);
-int handle_sec_auth_session_cmd(sec_mod_st * sec, const SecAuthSessionMsg * req, unsigned cmd);
+int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req);
+int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);
+int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req, unsigned cmd);
+int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,

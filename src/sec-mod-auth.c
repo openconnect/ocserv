@@ -321,17 +321,18 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
 		SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 
-		if (module == NULL || module->open_session == NULL)
-			return 0;
-
-		ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
-		if (ret < 0) {
-			e->status = PS_AUTH_FAILED;
-			seclog(sec, LOG_ERR, "could not open session.");
-			del_client_entry(sec, e);
-			rep.reply = AUTH__REP__FAILED;
+		if (module != NULL && module->open_session != NULL) {
+			ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
+			if (ret < 0) {
+				e->status = PS_AUTH_FAILED;
+				seclog(sec, LOG_ERR, "could not open session.");
+				del_client_entry(sec, e);
+				rep.reply = AUTH__REP__FAILED;
+			} else {
+				e->have_session = 1;
+				rep.reply = AUTH__REP__OK;
+			}
 		} else {
-			e->have_session = 1;
 			rep.reply = AUTH__REP__OK;
 		}
 
@@ -340,11 +341,13 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			return ERR_MEM;
 		}
 
-		ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
-		if (ret < 0) {
-			seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
-			talloc_free(lpool);
-			return ERR_READ_CONFIG;
+		if (sec->config_module && sec->config_module->get_sup_config) {
+			ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
+			if (ret < 0) {
+				seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
+				talloc_free(lpool);
+				return ERR_READ_CONFIG;
+			}
 		}
 
 		ret = send_msg(lpool, cfd, SM_CMD_AUTH_SESSION_REPLY, &rep,

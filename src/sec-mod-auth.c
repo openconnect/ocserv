@@ -103,7 +103,6 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 {
 	SecAuthReplyMsg msg = SEC_AUTH_REPLY_MSG__INIT;
 	int ret;
-	void *pool = NULL;
 
 	if (r == AUTH__REP__OK) {
 		/* fill message */
@@ -133,7 +132,6 @@ int send_sec_auth_reply(sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 			       (pack_size_func)
 			       sec_auth_reply_msg__get_packed_size,
 			       (pack_func) sec_auth_reply_msg__pack);
-		talloc_free(pool);
 	} else {
 		msg.reply = AUTH__REP__FAILED;
 

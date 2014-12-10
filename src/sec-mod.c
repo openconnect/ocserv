@@ -405,6 +405,55 @@ static void check_other_work(sec_mod_st *sec)
 	}
 }
 
+/* serves a new requst.
+ * the provided buffer is also pool for other allocations */
+static
+void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigned buffer_size)
+{
+	int ret, e;
+	unsigned cmd, length;
+	uint16_t l16;
+
+	/* read request */
+	ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
+	if (ret == 0)
+		goto leave;
+	else if (ret < 3) {
+		e = errno;
+		seclog(sec, LOG_INFO, "error receiving msg head: %s",
+		       strerror(e));
+		goto leave;
+	}
+
+	cmd = buffer[0];
+	memcpy(&l16, &buffer[1], 2);
+	length = l16;
+
+	if (length > buffer_size - 4) {
+		seclog(sec, LOG_INFO, "too big message (%d)", length);
+		goto leave;
+	}
+
+	/* read the body */
+	ret = force_read_timeout(cfd, buffer, length, MAX_WAIT_SECS);
+	if (ret < 0) {
+		e = errno;
+		seclog(sec, LOG_INFO, "error receiving msg body: %s",
+		       strerror(e));
+		goto leave;
+	}
+
+	sec->fd = cfd;
+	ret = process_packet(buffer, sec, cmd, uid, buffer, ret);
+	if (ret < 0) {
+		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
+	}
+	
+ leave:
+	close(cfd);
+	return;
+}
+
 /* sec_mod_server:
  * @config: server configuration
  * @socket_file: the name of the socket
@@ -438,11 +487,9 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	struct sockaddr_un sa;
 	socklen_t sa_len;
 	int cfd, ret, e;
-	unsigned cmd, length;
 	unsigned i, buffer_size;
 	uid_t uid;
-	uint8_t *buffer, *tpool;
-	uint16_t l16;
+	uint8_t *buffer;
 	struct pin_st pins;
 	int sd;
 	sec_mod_st *sec;
@@ -505,13 +552,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 	if (config->min_reauth_time > 0)
 		sec_mod_ban_db_init(sec);
-
-	buffer_size = 8 * 1024;
-	buffer = talloc_size(sec, buffer_size);
-	if (buffer == NULL) {
-		seclog(sec, LOG_ERR, "error in memory allocation");
-		exit(1);
-	}
 
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -614,50 +654,18 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid, &uid);
 		if (ret < 0) {
 			seclog(sec, LOG_INFO, "rejected unauthorized connection");
-			goto cont;
+		} else {
+			buffer_size = 8 * 1024;
+			buffer = talloc_size(sec, buffer_size);
+			if (buffer == NULL) {
+				seclog(sec, LOG_ERR, "error in memory allocation");
+				close(cfd);
+			} else {
+				serve_request(sec, uid, cfd, buffer, buffer_size);
+			}
 		}
-
-		/* read request */
-		ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
-		if (ret == 0)
-			goto cont;
-		else if (ret < 3) {
-			e = errno;
-			seclog(sec, LOG_INFO, "error receiving msg head: %s",
-			       strerror(e));
-			goto cont;
-		}
-
-		cmd = buffer[0];
-		memcpy(&l16, &buffer[1], 2);
-		length = l16;
-
-		if (length > buffer_size - 4) {
-			seclog(sec, LOG_INFO, "too big message (%d)", length);
-			goto cont;
-		}
-
-		/* read the body */
-		ret = force_read_timeout(cfd, buffer, length, MAX_WAIT_SECS);
-		if (ret < 0) {
-			e = errno;
-			seclog(sec, LOG_INFO, "error receiving msg body: %s",
-			       strerror(e));
-			goto cont;
-		}
-
-		tpool = talloc_new(sec);
-		sec->fd = cfd;
-		ret = process_packet(tpool, sec, cmd, uid, buffer, ret);
-		if (ret < 0) {
-			seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
-		}
-		talloc_free(tpool);
-
 #ifdef DEBUG_LEAKS
 		talloc_report_full(sec, stderr);
 #endif
- cont:
-		close(cfd);
 	}
 }

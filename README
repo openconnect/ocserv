@@ -33,6 +33,7 @@ autogen            / autogen
 For radius support the freeradius-client library is required. Currently
 (2014-12-10) the best would be to use the version from the git repository
 at: https://github.com/FreeRADIUS/freeradius-client
+See doc/README.radius for more information on its configuration.
 
 === Build instructions ===
 

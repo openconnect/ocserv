@@ -418,8 +418,8 @@ unsigned force_cert_auth;
 				exit(1);
 			}
 #ifdef HAVE_PAM
-			config->auth_types |= amod->type;
 			amod = &pam_auth_funcs;
+			config->auth_types |= amod->type;
 #else
 			fprintf(stderr, "PAM support is disabled\n");
 			exit(1);

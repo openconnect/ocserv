@@ -162,7 +162,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		goto cleanup;
 	}
 
-	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCESS_REQUEST);
+	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {
 		VALUE_PAIR *vp = recvd;
@@ -305,7 +305,7 @@ uint32_t uin, uout;
 		goto cleanup;
 	}
 
-	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
@@ -353,7 +353,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 		goto cleanup;
 	}
 
-	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
@@ -392,7 +392,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	}
 
 
-	ret = rc_aaa(rh, 0, send, &recvd, pctx->msg, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
 

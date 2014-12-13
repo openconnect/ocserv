@@ -200,6 +200,9 @@ LIBS="$oldlibs -lfreeradius-client"
 AC_MSG_CHECKING([for freeradius client library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		   #include <freeradius-client.h>],[
+#ifndef PW_MAX_MSG_SIZE
+#error 1
+#endif
 		   rc_read_config(0);])],
 		  [AC_MSG_RESULT(yes)
 		   AC_SUBST([FREERADIUS_CLIENT_LIBS], [-lfreeradius-client])
@@ -209,7 +212,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		  [AC_MSG_RESULT(no)
    	           AC_MSG_WARN([[
 *** 
-*** libfreeradius-client was not found. Radius support will be disabled.
+*** libfreeradius-client git-20141213 was not found. Radius support will be disabled.
 *** ]])])
 LIBS="$oldlibs"
 fi

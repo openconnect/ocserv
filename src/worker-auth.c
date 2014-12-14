@@ -490,14 +490,11 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				goto cleanup;
 			}
 
-			snprintf(ws->vinfo.name, sizeof(ws->vinfo.name), "%s",
-				 msg->vname);
-			snprintf(ws->username, sizeof(ws->username), "%s",
-				 msg->user_name);
+			strlcpy(ws->vinfo.name, msg->vname, sizeof(ws->vinfo.name));
+			strlcpy(ws->username, msg->user_name, sizeof(ws->username));
 
 			if (msg->group_name != NULL) {
-				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
-					 msg->group_name);
+				strlcpy(ws->groupname, msg->group_name, sizeof(ws->groupname));
 			} else {
 				ws->groupname[0] = 0;
 			}
@@ -691,7 +688,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 			return ERR_AUTH_FAIL;
 		}
 
-		snprintf(txt, max_txt_size, "%s", msg->msg);
+		strlcpy(txt, msg->msg, max_txt_size);
 		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
 			/* update our sid */
 			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
@@ -706,8 +703,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 			goto cleanup;
 		}
 
-		snprintf(ws->username, sizeof(ws->username), "%s",
-			 msg->user_name);
+		strlcpy(ws->username, msg->user_name, sizeof(ws->username));
 
 		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
 			/* update our sid */
@@ -1087,8 +1083,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				   strcmp(groupname, ws->config->default_select_group) == 0) {
 				def_group = 1;
 			} else {
-				snprintf(ws->groupname, sizeof(ws->groupname), "%s",
-				 	groupname);
+				strlcpy(ws->groupname, groupname, sizeof(ws->groupname));
 				ireq.group_name = ws->groupname;
 			}
 		}
@@ -1105,8 +1100,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				goto ask_auth;
 			}
 
-			snprintf(ws->username, sizeof(ws->username), "%s",
-				 username);
+			strlcpy(ws->username, username, sizeof(ws->username));
 			talloc_free(username);
 			ireq.user_name = ws->username;
 		}

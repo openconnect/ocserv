@@ -644,7 +644,7 @@ struct key_cb_data * cdata;
 
 		memset(&cdata->sa, 0, sizeof(cdata->sa));
 		cdata->sa.sun_family = AF_UNIX;
-		snprintf(cdata->sa.sun_path, sizeof(cdata->sa.sun_path), "%s", s->socket_file);
+		strlcpy(cdata->sa.sun_path, s->socket_file, sizeof(cdata->sa.sun_path));
 		cdata->sa_len = SUN_LEN(&cdata->sa);
 
 		/* load the private key */

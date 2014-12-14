@@ -108,7 +108,7 @@ int ctl_handler_init(main_server_st * s)
 	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s", s->config->occtl_socket_file);
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", s->config->occtl_socket_file);
+	strlcpy(sa.sun_path, s->config->occtl_socket_file, sizeof(sa.sun_path));
 	remove(s->config->occtl_socket_file);
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);

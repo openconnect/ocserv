@@ -99,7 +99,7 @@ void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, time_t reenable_time)
 		return;
 	}
 
-	snprintf(e->ip, sizeof(e->ip), "%s", ip);
+	strlcpy(e->ip, ip, sizeof(e->ip));
 	e->expires = reenable_time;
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {
@@ -138,7 +138,7 @@ unsigned check_if_banned(sec_mod_st *sec, const char *ip)
 
 	/* pass the current time somehow */
 	t.expires = time(0);
-	snprintf(t.ip, sizeof(t.ip), "%s", ip);
+	strlcpy(t.ip, ip, sizeof(t.ip));
 
 	if (htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t) != 0)
 		return 1;

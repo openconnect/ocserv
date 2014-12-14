@@ -114,4 +114,9 @@ void ms_sleep(unsigned ms)
   nanosleep(&tv, NULL);
 }
 
+#ifndef HAVE_STRLCPY
+size_t oc_strlcpy(char *dst, char const *src, size_t siz);
+# define strlcpy oc_strlcpy
+#endif
+
 #endif

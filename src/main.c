@@ -201,7 +201,7 @@ int _listen_unix_ports(void *pool, struct cfg_st* config,
 	if (config->unix_conn_file) {
 		memset(&sa, 0, sizeof(sa));
 		sa.sun_family = AF_UNIX;
-		snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", config->unix_conn_file);
+		strlcpy(sa.sun_path, config->unix_conn_file, sizeof(sa.sun_path));
 		remove(sa.sun_path);
 
 		if (config->foreground != 0)
@@ -1004,7 +1004,7 @@ int main(int argc, char** argv)
 	tls_load_certs(s, &creds);
 
 	s->secmod_addr.sun_family = AF_UNIX;
-	snprintf(s->secmod_addr.sun_path, sizeof(s->secmod_addr.sun_path), "%s", s->socket_file);
+	strlcpy(s->secmod_addr.sun_path, s->socket_file, sizeof(s->secmod_addr.sun_path));
 	s->secmod_addr_len = SUN_LEN(&s->secmod_addr);
 
 	/* initialize memory for worker process */

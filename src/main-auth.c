@@ -183,7 +183,7 @@ struct cookie_entry_st *old;
 
 	if (cmsg->username == NULL)
 		return -1;
-	snprintf(proc->username, sizeof(proc->username), "%s", cmsg->username);
+	strlcpy(proc->username, cmsg->username, sizeof(proc->username));
 
 	if (cmsg->sid.len != sizeof(proc->sid))
 		return -1;
@@ -201,7 +201,7 @@ struct cookie_entry_st *old;
 	/* override the group name in order to load the correct configuration in
 	 * case his group is specified in the certificate */
 	if (cmsg->groupname)
-		snprintf(proc->groupname, sizeof(proc->groupname), "%s", cmsg->groupname);
+		strlcpy(proc->groupname, cmsg->groupname, sizeof(proc->groupname));
 
 	/* cookie is good so far, now read config (in order to know
 	 * whether roaming is allowed or not */
@@ -277,7 +277,7 @@ struct cookie_entry_st *old;
 	}
 
 	if (cmsg->hostname)
-		snprintf(proc->hostname, sizeof(proc->hostname), "%s", cmsg->hostname);
+		strlcpy(proc->hostname, cmsg->hostname, sizeof(proc->hostname));
 
 	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
 

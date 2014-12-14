@@ -94,7 +94,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 		return NULL;
 	}
 
-	snprintf(e->ip, sizeof(e->ip), "%s", ip);
+	strlcpy(e->ip, ip, sizeof(e->ip));
 	ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error generating SID");

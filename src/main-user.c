@@ -169,8 +169,8 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc)
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = USER_PROCESS;
 	entry.ut_pid = proc->pid;
-	snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->tun_lease.name);
-	snprintf(entry.ut_user, sizeof(entry.ut_user), "%s", proc->username);
+	strlcpy(entry.ut_line, proc->tun_lease.name, sizeof(entry.ut_line));
+	strlcpy(entry.ut_user, proc->username, sizeof(entry.ut_user));
 #ifdef __linux__
 	if (proc->remote_addr_len == sizeof(struct sockaddr_in))
 		memcpy(entry.ut_addr_v6, SA_IN_P(&proc->remote_addr), sizeof(struct in_addr));
@@ -207,7 +207,7 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 	memset(&entry, 0, sizeof(entry));
 	entry.ut_type = DEAD_PROCESS;
 	if (proc->tun_lease.name[0] != 0)
-		snprintf(entry.ut_line, sizeof(entry.ut_line), "%s", proc->tun_lease.name);
+		strlcpy(entry.ut_line, proc->tun_lease.name, sizeof(entry.ut_line));
 	entry.ut_pid = proc->pid;
 
 	setutxent();

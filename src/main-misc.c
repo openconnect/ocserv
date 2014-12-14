@@ -74,7 +74,7 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 		return -1;
 
 	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", name);
+	strlcpy(ifr.ifr_name, name, IFNAMSIZ);
 	ifr.ifr_mtu = mtu;
 
 	ret = ioctl(fd, SIOCSIFMTU, &ifr);
@@ -580,17 +580,14 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			}
 
 			if (tmsg->tls_ciphersuite)
-				snprintf(proc->tls_ciphersuite,
-					 sizeof(proc->tls_ciphersuite), "%s",
-					 tmsg->tls_ciphersuite);
+				strlcpy(proc->tls_ciphersuite, tmsg->tls_ciphersuite,
+					 sizeof(proc->tls_ciphersuite));
 			if (tmsg->dtls_ciphersuite)
-				snprintf(proc->dtls_ciphersuite,
-					 sizeof(proc->dtls_ciphersuite), "%s",
-					 tmsg->dtls_ciphersuite);
+				strlcpy(proc->dtls_ciphersuite, tmsg->dtls_ciphersuite,
+					 sizeof(proc->dtls_ciphersuite));
 			if (tmsg->user_agent)
-				snprintf(proc->user_agent,
-					 sizeof(proc->user_agent), "%s",
-					 tmsg->user_agent);
+				strlcpy(proc->user_agent, tmsg->user_agent,
+					 sizeof(proc->user_agent));
 
 			session_info_msg__free_unpacked(tmsg, &pa);
 		}
@@ -759,8 +756,7 @@ void run_sec_mod(main_server_st * s)
 		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
 			 s->config->chroot_dir, s->socket_file);
 	} else {
-		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s",
-			 s->socket_file);
+		strlcpy(s->full_socket_file, s->socket_file, sizeof(s->full_socket_file));
 	}
 	p = s->full_socket_file;
 
@@ -800,7 +796,7 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 
 #ifdef __linux__
 	/* format: cpu,memory:cgroup-name */
-	snprintf(cgroup, sizeof(cgroup), "%s", _cgroup);
+	strlcpy(cgroup, _cgroup, sizeof(cgroup));
 
 	name = strchr(cgroup, ':');
 	if (name == NULL) {

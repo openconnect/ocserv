@@ -488,7 +488,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	snprintf(sa.sun_path, sizeof(sa.sun_path), "%s", socket_file);
+	strlcpy(sa.sun_path, socket_file, sizeof(sa.sun_path));
 	remove(socket_file);
 
 #define SOCKET_FILE sa.sun_path

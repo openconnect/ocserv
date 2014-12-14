@@ -77,7 +77,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 	ret = ioctl(fd, SIOGIFINDEX, &ifr);
 	if (ret != 0) {
@@ -108,7 +108,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = AF_INET6;
 	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret != 0) {
@@ -146,7 +146,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	}
 
 	memset(&ifr6, 0, sizeof(ifr6));
-	snprintf(ifr6.ifra_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+	strlcpy(ifr6.ifra_name, proc->tun_lease.name, IFNAMSIZ);
 
 	memcpy(&ifr6.ifra_addr.sin6_addr, SA_IN6_P(&proc->ipv6->lip),
 	       SA_IN_SIZE(proc->ipv6->lip_len));
@@ -177,7 +177,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = AF_INET6;
 	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+	strlcpy(ifr.ifr_name, oroc->tun_lease.name, IFNAMSIZ);
 
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret != 0) {
@@ -221,7 +221,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 			return -1;
 
 #ifdef SIOCAIFADDR
-		snprintf(ifr.ifra_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+		strlcpy(ifr.ifra_name, proc->tun_lease.name, IFNAMSIZ);
 
 		memcpy(&ifr.ifra_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
 		ifr.ifra_addr.sin_len = sizeof(struct sockaddr_in);
@@ -244,7 +244,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 			goto cleanup;
 		}
 #else
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 		memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
 		ifr.ifr_addr.sa_family = AF_INET;
 
@@ -259,7 +259,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 
 		memset(&ifr, 0, sizeof(ifr));
 
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 		memcpy(&ifr.ifr_dstaddr, &proc->ipv4->rip, proc->ipv4->rip_len);
 		ifr.ifr_dstaddr.sa_family = AF_INET;
 
@@ -277,7 +277,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 		memset(&ifr, 0, sizeof(ifr));
 		ifr.ifr_addr.sa_family = AF_INET;
 		ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 		ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 		if (ret != 0) {
@@ -410,8 +410,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 			goto fail;
 		}
 
-		snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name),
-			 "%s", devname(st.st_rdev, S_IFCHR));
+		strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
 	}
 
 	set_cloexec_flag(tunfd, 1);
@@ -455,7 +454,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 			return -1;
 
 		memset(&ifr, 0, sizeof(struct ifreq));
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%s", proc->tun_lease.name);
+		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 		ret = ioctl(fd, SIOCIFDESTROY, &ifr);
 		if (ret != 0) {

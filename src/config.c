@@ -233,7 +233,7 @@ unsigned j;
 #define READ_STATIC_STRING(name, s_name) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
-		snprintf(s_name, sizeof(s_name), "%s", val->v.strVal); \
+		strlcpy(s_name, val->v.strVal, sizeof(s_name)); \
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
@@ -796,7 +796,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 		(*config)->foreground = 1;
 
 	if (HAVE_OPT(PID_FILE)) {
-		snprintf(pid_file, sizeof(pid_file), "%s", OPT_ARG(PID_FILE));
+		strlcpy(pid_file, OPT_ARG(PID_FILE), sizeof(pid_file));
 	}
 
 	if (HAVE_OPT(DEBUG))

@@ -221,11 +221,9 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 					return -1;
 				}
 
-				snprintf(e->username, sizeof(e->username), "%s",
-					 cert_user);
+				strlcpy(e->username, cert_user, sizeof(e->username));
 				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL && e->groupname[0] == 0)
-					snprintf(e->groupname, sizeof(e->groupname),
-						 "%s", cert_groups[0]);
+					strlcpy(e->groupname, cert_groups[0], sizeof(e->groupname));
 			} else {
 				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->username, cert_user) != 0) {
 					seclog(sec, LOG_INFO,
@@ -482,7 +480,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	if (req->hostname != NULL) {
-		snprintf(e->hostname, sizeof(e->hostname), "%s", req->hostname);
+		strlcpy(e->hostname, req->hostname, sizeof(e->hostname));
 	}
 
 	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
@@ -506,8 +504,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		    module->auth_user(e->auth_ctx, e->username,
 				      sizeof(e->username));
 		if (ret != 0 && req->user_name != NULL) {
-			snprintf(e->username, sizeof(e->username), "%s",
-				 req->user_name);
+			strlcpy(e->username, req->user_name, sizeof(e->username));
 		}
 	}
 
@@ -517,7 +514,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 
 			for (i=0;i<req->n_cert_group_names;i++) {
 				if (strcmp(req->group_name, req->cert_group_names[i]) == 0) {
-					snprintf(e->groupname, sizeof(e->groupname), "%s", req->cert_group_names[i]);
+					strlcpy(e->groupname, req->cert_group_names[i], sizeof(e->groupname));
 					found = 1;
 					break;
 				}

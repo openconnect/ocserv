@@ -29,6 +29,8 @@ struct radius_ctx_st {
 	char groupname[MAX_GROUPNAME_SIZE];
 	char sid[BASE64_LENGTH(SID_SIZE) + 1];
 
+	char remote_ip[MAX_IP_STR];
+
 	/* variables for configuration */
 	char ipv4[MAX_IP_STR];
 	char ipv4_mask[MAX_IP_STR];

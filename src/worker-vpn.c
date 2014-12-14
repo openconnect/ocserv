@@ -713,6 +713,7 @@ void vpn_server(struct worker_st *ws)
 			      "could not disable system calls, kernel might not support seccomp");
 		}
 	}
+	ws->session_start_time = time(0);
 
 	oclog(ws, LOG_DEBUG, "accepted connection");
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
@@ -1004,6 +1005,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		if (sd >= 0) {
 			msg.bytes_in = ws->tun_bytes_in;
 			msg.bytes_out = ws->tun_bytes_out;
+			msg.uptime = now - ws->session_start_time;
 			msg.sid.len = sizeof(ws->sid);
 			msg.sid.data = ws->sid;
 			msg.has_sid = 1;

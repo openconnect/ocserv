@@ -22,6 +22,7 @@
 # define AUTH_H
 
 #include <main.h>
+#include <sec-mod.h>
 
 #define MAX_AUTH_REQS 8
 #define MAX_GROUPS 32
@@ -37,8 +38,8 @@ struct auth_mod_st {
 	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
 
 	int (*open_session)(void *ctx, const void *sid, unsigned sid_size); /* optional, may be null */
-	void (*session_stats)(void *ctx, uint64_t bytes_in, uint64_t bytes_out); /* optional, may be null */
-	void (*close_session)(void *ctx); /* optional */
+	void (*session_stats)(void *ctx, struct stats_st *stats); /* optional, may be null */
+	void (*close_session)(void *ctx, struct stats_st *stats); /* optional may be null */
 
 	void (*auth_deinit)(void* ctx);
 	void (*group_list)(void *pool, void *additional, char ***groupname, unsigned *groupname_size);

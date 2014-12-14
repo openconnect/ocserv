@@ -72,6 +72,7 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 		return ERR_AUTH_FAIL;
 
 	snprintf(pctx->username, sizeof(pctx->username), "%s", username);
+	snprintf(pctx->remote_ip, sizeof(pctx->remote_ip), "%s", ip);
 	pctx->config = additional;
 	pctx->pass_msg = pass_msg_first;
 
@@ -145,6 +146,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		goto cleanup;
 	}
 
+	if (rc_avpair_add(rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
+		syslog(LOG_ERR,
+		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       pctx->username);
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
+	}
+
 	service = PW_AUTHENTICATE_ONLY;
 	if (rc_avpair_add(rh, &send, PW_SERVICE_TYPE, &service, -1, 0) == NULL) {
 		syslog(LOG_ERR,
@@ -168,7 +177,6 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == RAD_GROUP_NAME && vp->type == PW_TYPE_STRING) {
 				/* Group-Name */
 				snprintf(pctx->groupname, sizeof(pctx->groupname), "%s", vp->strvalue);
-#ifdef PW_FRAMED_IPV6_ADDRESS
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
 				inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6));
@@ -178,7 +186,6 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns1, sizeof(pctx->ipv6_dns1));
 				else
 					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns2, sizeof(pctx->ipv6_dns2));
-#endif
 			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS && vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Address */
 				ip = htonl(vp->lvalue);
@@ -244,14 +251,100 @@ static void radius_auth_deinit(void *ctx)
 	talloc_free(pctx);
 }
 
+static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
+{
+uint32_t uin, uout;
 
-static void radius_auth_session_stats(void* ctx, uint64_t bytes_in, uint64_t bytes_out)
+	if (stats->uptime) {
+		uin = stats->uptime;
+		if (rc_avpair_add(rh, send, PW_ACCT_SESSION_TIME, &uin, -1, 0) == NULL) {
+			return;
+		}
+	}
+
+	uin = stats->bytes_in;
+	uout = stats->bytes_out;
+
+	if (rc_avpair_add(rh, send, PW_ACCT_INPUT_OCTETS, &uin, -1, 0) == NULL) {
+		return;
+	}
+
+	if (rc_avpair_add(rh, send, PW_ACCT_OUTPUT_OCTETS, &uout, -1, 0) == NULL) {
+		return;
+	}
+
+	uin = stats->bytes_in / 4294967296;
+	if (rc_avpair_add(rh, send, PW_ACCT_INPUT_GIGAWORDS, &uin, -1, 0) == NULL) {
+		return;
+	}
+
+	uout = stats->bytes_in / 4294967296;
+	if (rc_avpair_add(rh, send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0) == NULL) {
+		return;
+	}
+
+	return;
+}
+
+static void append_acct_standard(struct radius_ctx_st * pctx, rc_handle *rh,
+			    VALUE_PAIR **send)
+{
+	int i;
+
+	if (rc_avpair_add(rh, send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
+		return;
+	}
+
+	i = PW_FRAMED;
+	if (rc_avpair_add(rh, send, PW_SERVICE_TYPE, &i, -1, 0) == NULL) {
+		return;
+	}
+
+	i = PW_PPP;
+	if (rc_avpair_add(rh, send, PW_FRAMED_PROTOCOL, &i, -1, 0) == NULL) {
+		return;
+	}
+
+	if (pctx->ipv4[0] != 0) {
+		struct in_addr in;
+		inet_pton(AF_INET, pctx->ipv4, &in);
+		in.s_addr = ntohl(in.s_addr);
+		if (rc_avpair_add(rh, send, PW_FRAMED_IP_ADDRESS, &in, sizeof(in), 0) == NULL) {
+			return;
+		}
+	}
+
+	if (pctx->ipv6[0] != 0) {
+		struct in6_addr in;
+		inet_pton(AF_INET6, pctx->ipv6, &in);
+		if (rc_avpair_add(rh, send, PW_FRAMED_IPV6_ADDRESS, &in, sizeof(in), 0) == NULL) {
+			return;
+		}
+	}
+
+	if (rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
+		return;
+	}
+
+	i = PW_RADIUS;
+	if (rc_avpair_add(rh, send, PW_ACCT_AUTHENTIC, &i, -1, 0) == NULL) {
+		return;
+	}
+
+	i = PW_ASYNC;
+	if (rc_avpair_add(rh, send, PW_NAS_PORT_TYPE, &i, -1, 0) == NULL) {
+		return;
+	}
+
+	return;
+}
+
+static void radius_auth_session_stats(void* ctx, stats_st *stats)
 {
 struct radius_ctx_st * pctx = ctx;
 int ret;
 uint32_t status_type;
 VALUE_PAIR *send = NULL, *recvd = NULL;
-uint32_t uin, uout;
 
 	status_type = PW_STATUS_ALIVE;
 
@@ -262,40 +355,8 @@ uint32_t uin, uout;
 		goto cleanup;
 	}
 
-	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	if (rc_avpair_add(rh, &send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	uin = bytes_in;
-	uout = bytes_out;
-
-	if (rc_avpair_add(rh, &send, PW_ACCT_INPUT_OCTETS, &uin, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	if (rc_avpair_add(rh, &send, PW_ACCT_OUTPUT_OCTETS, &uout, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	uin = bytes_in / 4294967296;
-	if (rc_avpair_add(rh, &send, PW_ACCT_INPUT_GIGAWORDS, &uin, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	uout = bytes_in / 4294967296;
-	if (rc_avpair_add(rh, &send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
+	append_acct_standard(pctx, rh, &send);
+	append_stats(rh, &send, stats);
 
 	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 
@@ -330,20 +391,12 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 
 	syslog(LOG_DEBUG, "opening session %s with radius", pctx->sid);
 
-	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
-	if (rc_avpair_add(rh, &send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
-		ret = -1;
-		goto cleanup;
-	}
-
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		ret = -1;
 		goto cleanup;
 	}
+
+	append_acct_standard(pctx, rh, &send);
 
 	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 
@@ -362,7 +415,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	return ret;
 }
 
-static void radius_auth_close_session(void* ctx)
+static void radius_auth_close_session(void* ctx, stats_st *stats)
 {
 struct radius_ctx_st * pctx = ctx;
 int ret;
@@ -375,14 +428,13 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL)
 		return;
 
-	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
+	ret = PW_USER_REQUEST;
+	if (rc_avpair_add(rh, &send, PW_ACCT_TERMINATE_CAUSE, &ret, -1, 0) == NULL) {
 		goto cleanup;
 	}
 
-	if (rc_avpair_add(rh, &send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
-		goto cleanup;
-	}
-
+	append_acct_standard(pctx, rh, &send);
+	append_stats(rh, &send, stats);
 
 	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 	if (recvd != NULL)

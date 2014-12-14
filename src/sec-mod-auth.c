@@ -368,6 +368,9 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 		}
 		talloc_free(lpool);
 	} else {
+		if (req->has_uptime) {
+			e->stats.uptime = req->uptime;
+		}
 		del_client_entry(sec, e);
 	}
 
@@ -395,13 +398,14 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 		return -1;
 	}
 
-	e->bytes_in = req->bytes_in;
-	e->bytes_out = req->bytes_out;
+	e->stats.bytes_in = req->bytes_in;
+	e->stats.bytes_out = req->bytes_out;
+	e->stats.uptime = req->uptime;
 
 	if (module == NULL || module->session_stats == NULL)
 		return 0;
 
-	module->session_stats(e->auth_ctx, e->bytes_in, e->bytes_out);
+	module->session_stats(e->auth_ctx, &e->stats);
 	return 0;
 }
 
@@ -558,7 +562,7 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 	seclog(sec, LOG_DEBUG, "auth deinit for user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
 		if (e->have_session) {
-			module->close_session(e->auth_ctx);
+			module->close_session(e->auth_ctx, &e->stats);
 		}
 		module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;

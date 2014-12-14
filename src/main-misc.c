@@ -195,6 +195,8 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 		return -1;
 	}
 
+	ireq.uptime = time(0)-proc->conn_time;
+	ireq.has_uptime = 1;
 	ireq.sid.data = proc->sid;
 	ireq.sid.len = sizeof(proc->sid);
 

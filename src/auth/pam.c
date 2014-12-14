@@ -367,7 +367,7 @@ int pret;
 	return 0;
 }
 
-static void pam_auth_close_session(void* ctx)
+static void pam_auth_close_session(void* ctx, stats_st *stats)
 {
 struct pam_ctx_st * pctx = ctx;
 int pret;

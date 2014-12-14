@@ -38,6 +38,11 @@ typedef struct sec_mod_st {
 	struct config_mod_st *config_module;
 } sec_mod_st;
 
+typedef struct stats_st {
+	uint64_t bytes_in;
+	uint64_t bytes_out;
+	time_t uptime;
+} stats_st;
 
 typedef struct client_entry_st {
 	/* A unique session identifier used to distinguish sessions
@@ -50,10 +55,7 @@ typedef struct client_entry_st {
 	unsigned have_session; /* whether an auth session is initialized */
 	unsigned tls_auth_ok;
 
-	/* these are filled in after the worker process dies, using the
-	 * Cli stats message. */
-	uint64_t bytes_in;
-	uint64_t bytes_out;
+	stats_st stats;
 
 	unsigned status; /* PS_AUTH_ */
 

@@ -33,17 +33,9 @@
 
 #include <freeradius-client.h>
 
-#if !defined(PW_FRAMED_IPV6_ADDRESS) && defined(PW_TYPE_IPV6ADDR)
-#define PW_FRAMED_IPV6_ADDRESS          168
-#define PW_DNS_SERVER_IPV6_ADDRESS 	169
-#endif
-
 #define RAD_GROUP_NAME 1030
 #define RAD_IPV4_DNS1 ((311<<16)|(28))
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
-
-int rc_aaa(rc_handle *rh, uint32_t client_port, VALUE_PAIR *send, VALUE_PAIR **received,
-    char *msg, int add_nas_port, int request_type);
 
 static rc_handle *rh = NULL;
 

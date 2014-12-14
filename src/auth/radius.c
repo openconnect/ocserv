@@ -71,8 +71,8 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
-	snprintf(pctx->username, sizeof(pctx->username), "%s", username);
-	snprintf(pctx->remote_ip, sizeof(pctx->remote_ip), "%s", ip);
+	strlcpy(pctx->username, username, sizeof(pctx->username));
+	strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
 	pctx->config = additional;
 	pctx->pass_msg = pass_msg_first;
 
@@ -99,7 +99,7 @@ static int radius_auth_group(void *ctx, const char *suggested, char *groupname, 
 
 	if (suggested != NULL) {
 		if (strcmp(suggested, pctx->groupname) == 0) {
-			snprintf(groupname, groupname_size, "%s", pctx->groupname);
+			strlcpy(groupname, pctx->groupname, groupname_size);
 			return 0;
 		}
 
@@ -110,7 +110,7 @@ static int radius_auth_group(void *ctx, const char *suggested, char *groupname, 
 	}
 
 	if (pctx->groupname[0] != 0 && groupname[0] == 0) {
-		snprintf(groupname, groupname_size, "%s", pctx->groupname);
+		strlcpy(groupname, pctx->groupname, groupname_size);
 	}
 	return 0;
 }
@@ -176,7 +176,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				goto fail;
 			} else if (vp->attribute == RAD_GROUP_NAME && vp->type == PW_TYPE_STRING) {
 				/* Group-Name */
-				snprintf(pctx->groupname, sizeof(pctx->groupname), "%s", vp->strvalue);
+				strlcpy(pctx->groupname, vp->strvalue, sizeof(pctx->groupname));
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
 				inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6));
@@ -241,7 +241,7 @@ static int radius_auth_msg(void *ctx, char *msg, size_t msg_size)
 {
 	struct radius_ctx_st *pctx = ctx;
 
-	snprintf(msg, msg_size, "%s", pctx->pass_msg);
+	strlcpy(msg, pctx->pass_msg, msg_size);
 	return 0;
 }
 

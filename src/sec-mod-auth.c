@@ -366,8 +366,14 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 		}
 		talloc_free(lpool);
 	} else {
-		if (req->has_uptime) {
-			e->stats.uptime = req->uptime;
+		if (req->has_uptime && req->uptime > e->stats.uptime) {
+				e->stats.uptime = req->uptime;
+		}
+		if (req->has_bytes_in && req->bytes_in > e->stats.bytes_in) {
+				e->stats.bytes_in = req->bytes_in;
+		}
+		if (req->has_bytes_out && req->bytes_out > e->stats.bytes_out) {
+				e->stats.bytes_out = req->bytes_out;
 		}
 		del_client_entry(sec, e);
 	}
@@ -396,9 +402,13 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 		return -1;
 	}
 
-	e->stats.bytes_in = req->bytes_in;
-	e->stats.bytes_out = req->bytes_out;
-	e->stats.uptime = req->uptime;
+	/* stats only increase */
+	if (req->bytes_in > e->stats.bytes_in)
+		e->stats.bytes_in = req->bytes_in;
+	if (req->bytes_out > e->stats.bytes_out)
+		e->stats.bytes_out = req->bytes_out;
+	if (req->uptime > e->stats.uptime)
+		e->stats.uptime = req->uptime;
 
 	if (module == NULL || module->session_stats == NULL)
 		return 0;

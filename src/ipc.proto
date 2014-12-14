@@ -189,7 +189,10 @@ message cookie
 message sec_auth_session_msg
 {
 	required bytes sid = 1;
-	optional uint32 uptime = 3; /* on close */
+	/* on close */
+	optional uint32 uptime = 3;
+	optional uint64 bytes_in = 4;
+	optional uint64 bytes_out = 5;
 }
 
 message sec_auth_session_reply_msg

@@ -127,10 +127,10 @@ static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned
 	char *p;
 
 	/* accept route/mask */
-	if (strchr(route, '/') == 0)
+	if ((p=strchr(route, '/')) == 0)
 		return;
 
-	p = strchr(route, ' ');
+	p = strchr(p, ' ');
 	if (p != NULL) {
 		len = p - route;
 	}

@@ -42,7 +42,7 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 			  SecAuthSessionReplyMsg *msg, void *pool)
 {
 	struct radius_ctx_st *pctx = entry->auth_ctx;
-	unsigned dns = 0;
+	unsigned dns = 0, i;
 
 	if (pctx == NULL)
 		return 0;
@@ -53,6 +53,16 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 
 	if (pctx->ipv4_mask[0] != 0) {
 		msg->ipv4_netmask = talloc_strdup(pool, pctx->ipv4_mask);
+	}
+
+	if (pctx->routes_size > 0) {
+		msg->routes = talloc_size(pool, pctx->routes_size*sizeof(char*));
+		if (msg->routes != NULL) {
+			for (i=0;i<pctx->routes_size;i++) {
+				msg->routes[i] = talloc_strdup(pool, pctx->routes[i]);
+			}
+			msg->n_routes = pctx->routes_size;
+		}
 	}
 
 	if (pctx->ipv4_dns1[0] != 0)

@@ -42,6 +42,9 @@ struct radius_ctx_st {
 	char ipv6_dns1[MAX_IP_STR];
 	char ipv6_dns2[MAX_IP_STR];
 
+	char **routes;
+	unsigned routes_size;
+
 	const char *config;	/* radius config file */
 	const char *pass_msg;
 	unsigned retries;

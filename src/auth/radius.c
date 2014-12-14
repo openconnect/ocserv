@@ -121,6 +121,35 @@ static int radius_auth_user(void *ctx, char *username, int username_size)
 	return -1;
 }
 
+static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned len)
+{
+	unsigned i;
+	char *p;
+
+	/* accept route/mask */
+	if (strchr(route, '/') == 0)
+		return;
+
+	p = strchr(route, ' ');
+	if (p != NULL) {
+		len = p - route;
+	}
+
+	if (pctx->routes_size == 0) {
+		pctx->routes = talloc_size(pctx, sizeof(char*));
+	} else {
+		pctx->routes = talloc_realloc_size(pctx, pctx->routes,
+						   (pctx->routes_size+1)*sizeof(char*));
+	}
+
+	if (pctx->routes != NULL) {
+		i = pctx->routes_size;
+		pctx->routes[i] = talloc_strndup(pctx, route, len);
+		if (pctx->routes[i] != NULL)
+			pctx->routes_size++;
+	}
+}
+
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
 static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
@@ -202,6 +231,12 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				/* MS-Secondary-DNS-Server */
 				ip = htonl(vp->lvalue);
 				inet_ntop(AF_INET, &ip, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
+			} else if (vp->attribute == PW_FRAMED_ROUTE && vp->type == PW_TYPE_STRING) {
+				/* Framed-Route */
+				append_route(pctx, vp->strvalue, vp->lvalue);
+			} else if (vp->attribute == PW_FRAMED_IPV6_ROUTE && vp->type == PW_TYPE_STRING) {
+				/* Framed-IPv6-Route */
+				append_route(pctx, vp->strvalue, vp->lvalue);
 			} else {
 				syslog(LOG_DEBUG, "radius: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
 			}

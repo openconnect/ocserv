@@ -557,7 +557,9 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				    talloc_strdup(ws, msg->ipv6_network);
 			}
 
-			ws->config->network.ipv6_prefix = msg->ipv6_prefix;
+			if (msg->has_ipv6_prefix) {
+				ws->config->network.ipv6_prefix = msg->ipv6_prefix;
+			}
 
 			if (msg->has_rx_per_sec)
 				ws->config->rx_per_sec = msg->rx_per_sec;

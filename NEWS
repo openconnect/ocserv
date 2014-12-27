@@ -2,7 +2,8 @@
 - Added native support for radius. That adds the new auth configuration
   option "radius", which has as parameters the freeradius-client
   configuration file and optionally the groupconfig option which
-  instructs to use interim-updates. That adds the dependency to
+  instructs to read configuration from radius; the stats-report-time
+  option enables interim-updates. That adds the dependency to
   freeradius-client.
 
 

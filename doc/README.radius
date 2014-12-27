@@ -20,6 +20,21 @@ The dictionary should contain at least the attributes shown below,
 and the servers file should contain the radius server to use.
 
 ============================================
+	Ocserv configuration
+============================================
+
+For authentication the following line should be enabled.
+#auth = "radius[/path/to/radiusclient.conf,groupconfig]"
+
+Check the ocserv manpage for the meaning of the various options
+such as groupconfig.
+
+To enable accounting, set the following option to the time (in
+seconds), that accounting information should be reported.
+#stats-report-time = 360
+
+
+============================================
 	Dictionary
 ============================================
 

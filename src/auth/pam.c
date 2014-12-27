@@ -126,6 +126,7 @@ int pret;
 
 	pret = pam_authenticate(pctx->ph, 0);
 	if (pret != PAM_SUCCESS) {
+		syslog(LOG_INFO, "PAM authenticate error: %s", pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
@@ -140,6 +141,7 @@ int pret;
 	}
 	
 	if (pret != PAM_SUCCESS) {
+		syslog(LOG_INFO, "PAM acct-mgmt error: %s", pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}

@@ -1545,16 +1545,8 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
-	/* If we are in CISCO client compatibility mode, do not send
-	 * any IPv6 information, unless the client can really handle it.
-	 */
-	if (ws->full_ipv6 == 0 && ws->config->cisco_client_compat != 0 &&
-	    req->user_agent_type != AGENT_OPENCONNECT) {
-		req->no_ipv6 = 1;
-	}
-
-	if (ws->vinfo.ipv6 && req->no_ipv6 == 0) {
-		oclog(ws, LOG_DEBUG, "sending IPv6 %s", ws->vinfo.ipv6);
+	if (ws->vinfo.ipv6 && req->no_ipv6 == 0 && ws->vinfo.ipv6_prefix != 0) {
+		oclog(ws, LOG_DEBUG, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
 		if (ws->full_ipv6 && ws->vinfo.ipv6_prefix) {
 			ret =
 			    cstp_printf(ws,
@@ -1563,16 +1555,8 @@ static int connect_handler(worker_st * ws)
 			SEND_ERR(ret);
 		} else {
 			ret =
-			    cstp_printf(ws, "X-CSTP-Address: %s\r\n",
-				       ws->vinfo.ipv6);
-			SEND_ERR(ret);
-		}
-
-		if (ws->vinfo.ipv6_network && ws->vinfo.ipv6_prefix != 0) {
-			ret =
-			    cstp_printf(ws,
-				       "X-CSTP-Netmask: %s/%u\r\n",
-					       ws->vinfo.ipv6_network, ws->vinfo.ipv6_prefix);
+			    cstp_printf(ws, "X-CSTP-Address: %s/%u\r\n",
+				       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
 			SEND_ERR(ret);
 		}
 	}

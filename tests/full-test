@@ -114,20 +114,21 @@ rm -f out.tmp
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
+if test "$FEDORA" = 1;then
+nuttcp -T 10 -t 192.168.1.190
+if test $? != 0;then
+	kill $PID
+	echo "Cannot send to ocserv"
+	stop
+fi
 
-#nuttcp -T 10 -t 192.168.1.190
-#if test $? != 0;then
-#	kill $PID
-#	echo "Cannot send to ocserv"
-#	stop
-#fi
-
-#nuttcp -T 10 -r 192.168.1.190
-#if test $? != 0;then
-#	kill $PID
-#	echo "Cannot recv from ocserv"
-#	stop
-#fi
+nuttcp -T 10 -r 192.168.1.190
+if test $? != 0;then
+	kill $PID
+	echo "Cannot recv from ocserv"
+	stop
+fi
+fi
 
 sleep 2
 

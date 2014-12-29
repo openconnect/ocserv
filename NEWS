@@ -5,6 +5,7 @@
   instructs to read configuration from radius; the stats-report-time
   option enables interim-updates. That adds the dependency to
   freeradius-client.
+- Simplify the input of IPv6 network addresses.
 
 
 * Version 0.8.9 (released 2014-12-10)

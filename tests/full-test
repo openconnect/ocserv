@@ -26,23 +26,8 @@ if [ $? != 0 ];then
 	exit 77
 fi
 
-if test -x /usr/bin/docker;then
-DOCKER=/usr/bin/docker
-else
-DOCKER=/usr/bin/docker.io
-fi
-
-if ! test -x $DOCKER;then
-	echo "The docker program is needed to perform this test"
-	exit 77
-fi
-
-if ! test -f /etc/debian_version;then
-	echo "******************************************************"
-	echo "This test requires compiling ocserv in a Debian system"
-	echo "******************************************************"
-	exit 77
-fi
+IMAGE=ocserv-test1
+. ./docker-common.sh
 
 stop() {
 	$DOCKER stop test_ocserv
@@ -50,30 +35,13 @@ stop() {
 	exit 1
 }
 
-$DOCKER pull tianon/debian:jessie
-if test $? != 0;then
-	echo "Cannot pull docker image"
-	exit 1
-fi
-
-cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
-
-cp docker-ocserv/Dockerfile-tcp docker-ocserv/Dockerfile
-$DOCKER build -t ocserv-test1 docker-ocserv/
-if test $? != 0;then
-	echo "Cannot build docker image"
-	exit 1
-fi
-
-$DOCKER stop test_ocserv >/dev/null 2>&1
-$DOCKER rm test_ocserv >/dev/null 2>&1
-
-$DOCKER run -P --privileged=true -p 5000:5000/udp -p 5001:5001/udp -p 22 -p 5551:5551/udp --tty=false -d --name test_ocserv ocserv-test1
+$DOCKER run -P --privileged=true -p 5000:5000/udp -p 5001:5001/udp -p 22 -p 5551:5551/udp --tty=false -d --name test_ocserv $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
 fi
 
+echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
@@ -82,9 +50,10 @@ if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
 fi
+echo "Detected IP: $IP"
 
 printf "test\ntest\n" >pass.tmp
-openconnect $IP:5551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &
+openconnect $IP:5551 -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &
 PID=$!
 
 rm -f pass.tmp
@@ -104,6 +73,13 @@ ping -w 5 192.168.1.190 -s 1500
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
+	stop
+fi
+
+ping6 -w 5 fd91:6d87:7341:db6a:0:52:190c:be00
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping the IPv6 of ocserv"
 	stop
 fi
 

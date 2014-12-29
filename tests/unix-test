@@ -26,23 +26,9 @@ if [ $? != 0 ];then
 	exit 77
 fi
 
-if test -x /usr/bin/docker;then
-DOCKER=/usr/bin/docker
-else
-DOCKER=/usr/bin/docker.io
-fi
-
-if ! test -x $DOCKER;then
-	echo "The docker program is needed to perform this test"
-	exit 77
-fi
-
-if ! test -f /etc/debian_version;then
-	echo "******************************************************"
-	echo "This test requires compiling ocserv in a Debian system"
-	echo "******************************************************"
-	exit 77
-fi
+UNIX=1
+IMAGE=ocserv-test2
+. ./docker-common.sh
 
 stop() {
 	$DOCKER stop test_unix
@@ -50,26 +36,7 @@ stop() {
 	exit 1
 }
 
-$DOCKER pull tianon/debian:jessie
-if test $? != 0;then
-	echo "Cannot pull docker image"
-	exit 1
-fi
-
-cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
-
-cp docker-ocserv/Dockerfile-unix docker-ocserv/Dockerfile
-$DOCKER build -t ocserv-test2 docker-ocserv/
-#$DOCKER build --no-cache=true -t ocserv-test2 docker-ocserv/
-if test $? != 0;then
-	echo "Cannot build docker image"
-	exit 1
-fi
-
-$DOCKER stop test_unix >/dev/null 2>&1
-$DOCKER rm test_unix >/dev/null 2>&1
-
-$DOCKER run -P --privileged=true -p 6000:6000/udp -p 6001:6001/udp -p 22 -p 6551:6551/udp --tty=false -d --name test_unix ocserv-test2
+$DOCKER run -P --privileged=true -p 6000:6000/udp -p 6001:6001/udp -p 22 -p 6551:6551/udp --tty=false -d --name test_unix $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1

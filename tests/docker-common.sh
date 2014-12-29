@@ -1,0 +1,74 @@
+if test -x /usr/bin/docker;then
+DOCKER=/usr/bin/docker
+else
+DOCKER=/usr/bin/docker.io
+fi
+
+if ! test -x $DOCKER;then
+	echo "The docker program is needed to perform this test"
+	exit 77
+fi
+
+if test -f /etc/debian_version;then
+	DEBIAN=1
+fi
+
+if test -f /etc/fedora-release;then
+	FEDORA=1
+fi
+
+if test -z $FEDORA && test -z $DEBIAN;then
+	echo "******************************************************"
+	echo "This test requires compiling ocserv in a Debian or Fedora systems"
+	echo "******************************************************"
+	exit 77
+fi
+
+lockfile docker.lock
+if test "$UNIX" = 1;then
+	$DOCKER stop test_unix >/dev/null 2>&1
+	$DOCKER rm test_unix >/dev/null 2>&1
+else
+	$DOCKER stop test_ocserv >/dev/null 2>&1
+	$DOCKER rm test_ocserv >/dev/null 2>&1
+fi
+
+if test "$FEDORA" = 1;then
+	echo "Using the fedora image"
+	$DOCKER pull fedora:21
+	if test $? != 0;then
+		echo "Cannot pull docker image"
+		rm -f docker.lock
+		exit 1
+	fi
+	if test "$UNIX" = 1;then
+		cp docker-ocserv/Dockerfile-fedora-unix docker-ocserv/Dockerfile
+	else
+		cp docker-ocserv/Dockerfile-fedora-tcp docker-ocserv/Dockerfile
+	fi
+else #DEBIAN
+	echo "Using the Debian image"
+	$DOCKER pull debian:jessie
+	if test $? != 0;then
+		echo "Cannot pull docker image"
+		rm -f docker.lock
+		exit 1
+	fi
+	if test "$UNIX" = 1;then
+		cp docker-ocserv/Dockerfile-debian-unix docker-ocserv/Dockerfile
+	else
+		cp docker-ocserv/Dockerfile-debian-tcp docker-ocserv/Dockerfile
+	fi
+fi
+
+cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
+
+echo "Creating image $IMAGE"
+$DOCKER build -t $IMAGE docker-ocserv/
+if test $? != 0;then
+	echo "Cannot build docker image"
+	rm -f docker.lock
+	exit 1
+fi
+
+rm -f docker.lock

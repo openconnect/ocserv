@@ -543,6 +543,13 @@ unsigned force_cert_auth;
 	}
 
 	READ_TF("use-seccomp", config->seccomp, 0);
+#ifndef HAVE_LIBSECCOMP
+	if (config->seccomp != 0) {
+		fprintf(stderr, "error: 'use-seccomp' is set to true, but not compiled with seccomp support\n");
+		exit(1);
+	}
+#endif
+
 	READ_TF("predictable-ips", config->predictable_ips, 1);
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);

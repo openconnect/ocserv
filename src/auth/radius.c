@@ -77,7 +77,7 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	pctx->pass_msg = pass_msg_first;
 
 	default_realm = rc_conf_str(rh, "default_realm");
-	
+
 	if ((strchr(username, '@') == NULL) && default_realm &&
 	    default_realm[0] != 0) {
 		snprintf(pctx->username, sizeof(pctx->username), "%s@%s", username, default_realm);
@@ -209,6 +209,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
 				inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6));
+			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
+				uint8_t ip[16];
+
+				/* Framed-IPv6-Prefix */
+				pctx->ipv6_prefix = (unsigned char)vp->strvalue[1];
+				memset(ip, 0, sizeof(ip)); 
+				memcpy(ip, vp->strvalue+2, vp->lvalue-2); 
+				inet_ntop(AF_INET6, ip, pctx->ipv6_net, sizeof(pctx->ipv6_net));
 			} else if (vp->attribute == PW_DNS_SERVER_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* DNS-Server-IPv6-Address */
 				if (pctx->ipv6_dns1[0] == 0)

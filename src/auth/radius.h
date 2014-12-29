@@ -38,6 +38,7 @@ struct radius_ctx_st {
 	char ipv4_dns2[MAX_IP_STR];
 
 	char ipv6[MAX_IP_STR];
+	char ipv6_net[MAX_IP_STR];
 	uint16_t ipv6_prefix;
 	char ipv6_dns1[MAX_IP_STR];
 	char ipv6_dns2[MAX_IP_STR];

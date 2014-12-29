@@ -20,14 +20,15 @@ Optional dependencies that enable specific functionality:
 * occtl:        libreadline-dev    / readline-devel
                 libnl-route-3-dev  / libnl3-devel
 
-Dependencies that can be skipped in an embedded system:
-(a replacement library is included)
+Dependencies for development, or dependencies that can be skipped
+in an embedded system (e.g., because a replacement library is included):
 
 libprotobuf-c0-dev / protobuf-c-devel
 libhttp-parser-dev / http-parser-devel
 libpcl1-dev        / pcllib-devel
 libopts25-dev      / autogen-libopts-devel
 autogen            / autogen
+protobuf-c         / protobuf-c
 
 
 See doc/README.radius for more information on Radius

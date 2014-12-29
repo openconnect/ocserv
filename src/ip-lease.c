@@ -335,7 +335,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		c_netmask = ipv6_prefix_to_mask(proc, proc->config.ipv6_prefix);
 	} else {
 		c_network = s->config->network.ipv6;
-		c_netmask = ipv6_prefix_to_mask(proc, proc->config.ipv6_prefix);
+		c_netmask = ipv6_prefix_to_mask(proc, s->config->network.ipv6_prefix);
 	}
 
 	if (c_network && c_netmask) {
@@ -486,7 +486,7 @@ char buf[128];
 		if (ret < 0)
 			return ret;
 
-		if (proc->ipv6 && proc->ipv4->db) {
+		if (proc->ipv6 && proc->ipv6->db) {
 			if (htable_add(&s->ip_leases.ht, rehash(proc->ipv6, NULL), proc->ipv6) == 0) {
 				mslog(s, proc, LOG_ERR, "could not add IPv6 lease to hash table.");
 				return -1;

@@ -1554,16 +1554,22 @@ static int connect_handler(worker_st * ws)
 				       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
 			SEND_ERR(ret);
 		} else {
+			const char *net;
+
 			ret =
 			    cstp_printf(ws, "X-CSTP-Address: %s\r\n",
 				       ws->vinfo.ipv6);
 			SEND_ERR(ret);
-		}
 
-		ret =
-		    cstp_printf(ws, "X-CSTP-Netmask: %s/%u\r\n",
-			       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
-		SEND_ERR(ret);
+			net = ws->vinfo.ipv6_network;
+			if (net == NULL)
+				net = ws->vinfo.ipv6;
+
+			ret =
+			    cstp_printf(ws, "X-CSTP-Netmask: %s/%u\r\n",
+				        net, ws->vinfo.ipv6_prefix);
+			SEND_ERR(ret);
+		}
 	}
 
 	for (i = 0; i < ws->vinfo.dns_size; i++) {

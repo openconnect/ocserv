@@ -317,6 +317,7 @@ struct main_server_st;
 
 #include <tun.h>
 
+unsigned extract_prefix(char *network);
 char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 		       void *buf, size_t buflen, unsigned full);
 

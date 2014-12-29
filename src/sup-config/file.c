@@ -204,7 +204,13 @@ unsigned prefix = 0;
 	READ_RAW_STRING("ipv6-network", msg->ipv6_net);
 	READ_RAW_STRING("ipv4-netmask", msg->ipv4_netmask);
 
-	READ_RAW_NUMERIC("ipv6-prefix", msg->ipv6_prefix, msg->has_ipv6_prefix);
+	msg->ipv6_prefix = extract_prefix(msg->ipv6_net);
+	if (msg->ipv6_prefix == 0) {
+		READ_RAW_NUMERIC("ipv6-prefix", msg->ipv6_prefix, msg->has_ipv6_prefix);
+	} else {
+		msg->has_ipv6_prefix = 1;
+	}
+
 	if (msg->has_ipv6_prefix != 0) {
 		if (valid_ipv6_prefix(msg->ipv6_prefix) == 0) {
 			syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);

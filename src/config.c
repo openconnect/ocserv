@@ -367,6 +367,28 @@ static char *get_brackets_string2(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
+/* Parses the string ::1/prefix, to return prefix
+ * and modify the string to contain the network only.
+ */
+unsigned extract_prefix(char *network)
+{
+	char *p;
+	unsigned prefix;
+
+	if (network == NULL)
+		return 0;
+
+	p = strchr(network, '/');
+
+	if (p == NULL)
+		return 0;
+
+	prefix = atoi(p+1);
+	*p = 0;
+
+	return prefix;
+}
+
 const struct auth_mod_st *get_auth_mod(void)
 {
 	return amod;
@@ -646,7 +668,11 @@ unsigned force_cert_auth;
 
 	READ_STRING("ipv6-network", config->network.ipv6);
 
-	READ_NUMERIC("ipv6-prefix", prefix);
+	prefix = extract_prefix(config->network.ipv6);
+	if (prefix == 0) {
+		READ_NUMERIC("ipv6-prefix", prefix);
+	}
+
 	if (prefix > 0) {
 		config->network.ipv6_prefix = prefix;
 

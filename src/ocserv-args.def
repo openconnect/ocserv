@@ -353,6 +353,9 @@ default-domain = example.com
 ipv4-network = 192.168.1.0
 ipv4-netmask = 255.255.255.0
 
+# An alternative way of specifying the network:
+#ipv4-network = 192.168.1.0/24
+
 # The advertized DNS server. Use multiple lines for
 # multiple servers.
 # dns = fc00::4be0

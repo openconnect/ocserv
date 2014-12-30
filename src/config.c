@@ -402,6 +402,7 @@ unsigned j, i, mand;
 char** auth = NULL;
 unsigned auth_size = 0;
 unsigned prefix = 0, auto_select_group = 0;
+unsigned prefix4 = 0;
 char *tmp;
 unsigned force_cert_auth;
 
@@ -664,7 +665,13 @@ unsigned force_cert_auth;
 	READ_STRING("proxy-url", config->proxy_url);
 
 	READ_STRING("ipv4-network", config->network.ipv4);
-	READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
+
+	prefix4 = extract_prefix(config->network.ipv4);
+	if (prefix4 == 0) {
+		READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
+	} else {
+		config->network.ipv4_netmask = ipv4_prefix_to_mask(config, prefix4);
+	}
 
 	READ_STRING("ipv6-network", config->network.ipv6);
 

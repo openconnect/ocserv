@@ -232,6 +232,34 @@ char* ipv6_prefix_to_mask(void *pool, unsigned prefix)
 	}
 }
 
+/* returns an allocated string with the mask to apply for the prefix
+ */
+char* ipv4_prefix_to_mask(void *pool, unsigned prefix)
+{
+	switch (prefix) {
+		case 8:
+			return talloc_strdup(pool, "255.0.0.0");
+		case 16:
+			return talloc_strdup(pool, "255.255.0.0");
+		case 24:
+			return talloc_strdup(pool, "255.255.255.0");
+		case 25:
+			return talloc_strdup(pool, "255.255.255.128");
+		case 26:
+			return talloc_strdup(pool, "255.255.255.192");
+		case 27:
+			return talloc_strdup(pool, "255.255.255.224");
+		case 28:
+			return talloc_strdup(pool, "255.255.255.240");
+		case 29:
+			return talloc_strdup(pool, "255.255.255.248");
+		case 30:
+			return talloc_strdup(pool, "255.255.255.252");
+		default:
+			return NULL;
+	}
+}
+
 /* Sends message + socketfd */
 int send_socket_msg(void *pool, int fd, uint8_t cmd, 
 		    int socketfd,

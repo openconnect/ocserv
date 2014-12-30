@@ -1572,10 +1572,21 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
+	/* While anyconnect clients can handle the assignment
+	 * of an IPv6 address, they cannot handle routes or DNS
+	 * in IPv6. So we disable IPv6 after an IP is assigned. */
+	if (ws->full_ipv6 == 0 || req->user_agent_type != AGENT_OPENCONNECT)
+		req->no_ipv6 = 1;
+
 	for (i = 0; i < ws->vinfo.dns_size; i++) {
-		if (req->no_ipv6 != 0 && strchr(ws->vinfo.dns[i], ':') != 0)
+		if (strchr(ws->vinfo.dns[i], ':') != 0)
+			ip6 = 1;
+		else
+			ip6 = 0;
+
+		if (req->no_ipv6 != 0 && ip6 != 0)
 			continue;
-		if (req->no_ipv4 != 0 && strchr(ws->vinfo.dns[i], '.') != 0)
+		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 
 		ret =
@@ -1585,9 +1596,14 @@ static int connect_handler(worker_st * ws)
 	}
 
 	for (i = 0; i < ws->vinfo.nbns_size; i++) {
-		if (req->no_ipv6 != 0 && strchr(ws->vinfo.nbns[i], ':') != 0)
+		if (strchr(ws->vinfo.nbns[i], ':') != 0)
+			ip6 = 1;
+		else
+			ip6 = 0;
+
+		if (req->no_ipv6 != 0 && ip6 != 0)
 			continue;
-		if (req->no_ipv4 != 0 && strchr(ws->vinfo.nbns[i], '.') != 0)
+		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 
 		ret =
@@ -1597,6 +1613,16 @@ static int connect_handler(worker_st * ws)
 	}
 
 	for (i = 0; i < ws->config->split_dns_size; i++) {
+		if (strchr(ws->config->split_dns[i], ':') != 0)
+			ip6 = 1;
+		else
+			ip6 = 0;
+
+		if (req->no_ipv6 != 0 && ip6 != 0)
+			continue;
+		if (req->no_ipv4 != 0 && ip6 == 0)
+			continue;
+
 		oclog(ws, LOG_DEBUG, "adding split DNS %s",
 		      ws->config->split_dns[i]);
 		ret =

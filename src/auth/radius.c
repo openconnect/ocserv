@@ -157,6 +157,9 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	struct radius_ctx_st *pctx = ctx;
 	VALUE_PAIR *send = NULL, *recvd = NULL;
 	uint32_t service;
+	uint8_t ip[16];
+	char route[64];
+	char txt[64];
 	int ret;
 
 	syslog(LOG_DEBUG, "communicating username (%s) and password to radius", pctx->username);
@@ -208,15 +211,19 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				strlcpy(pctx->groupname, vp->strvalue, sizeof(pctx->groupname));
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
-				inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6));
+				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
+					pctx->ipv6_prefix = 64;
+					strlcpy(pctx->ipv6_net, pctx->ipv6, sizeof(pctx->ipv6_net));
+				}
 			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
-				uint8_t ip[16];
 
 				/* Framed-IPv6-Prefix */
-				pctx->ipv6_prefix = (unsigned char)vp->strvalue[1];
 				memset(ip, 0, sizeof(ip)); 
 				memcpy(ip, vp->strvalue+2, vp->lvalue-2); 
-				inet_ntop(AF_INET6, ip, pctx->ipv6_net, sizeof(pctx->ipv6_net));
+				if (inet_ntop(AF_INET6, ip, txt, sizeof(txt)) != NULL) {
+					snprintf(route, sizeof(route), "%s/%u", txt, (unsigned)(unsigned char)vp->strvalue[1]);
+					append_route(pctx, vp->strvalue, vp->lvalue);
+				}
 			} else if (vp->attribute == PW_DNS_SERVER_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* DNS-Server-IPv6-Address */
 				if (pctx->ipv6_dns1[0] == 0)

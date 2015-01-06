@@ -217,13 +217,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 					strlcpy(pctx->ipv6_net, pctx->ipv6, sizeof(pctx->ipv6_net));
 				}
 			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
-
-				/* Framed-IPv6-Prefix */
-				memset(ipv6, 0, sizeof(ipv6)); 
-				memcpy(ipv6, vp->strvalue+2, vp->lvalue-2); 
-				if (inet_ntop(AF_INET6, ip, txt, sizeof(txt)) != NULL) {
-					snprintf(route, sizeof(route), "%s/%u", txt, (unsigned)(unsigned char)vp->strvalue[1]);
-					append_route(pctx, vp->strvalue, vp->lvalue);
+				if (vp->lvalue > 2 && vp->lvalue <= 18) {
+					/* Framed-IPv6-Prefix */
+					memset(ipv6, 0, sizeof(ipv6)); 
+					memcpy(ipv6, vp->strvalue+2, vp->lvalue-2); 
+					if (inet_ntop(AF_INET6, ip, txt, sizeof(txt)) != NULL) {
+						snprintf(route, sizeof(route), "%s/%u", txt, (unsigned)(unsigned char)vp->strvalue[1]);
+						append_route(pctx, vp->strvalue, vp->lvalue);
+					}
 				}
 			} else if (vp->attribute == PW_DNS_SERVER_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* DNS-Server-IPv6-Address */

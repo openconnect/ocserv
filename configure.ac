@@ -266,7 +266,7 @@ else
 fi
 
 AC_ARG_ENABLE(seccomp,
-  AS_HELP_STRING([--enable-seccomp], [enable seccomp support]),
+  AS_HELP_STRING([--disable-seccomp], [disable seccomp support]),
     seccomp_enabled=$enableval, seccomp_enabled=yes)
 
 if [ test "$seccomp_enabled" = "yes" ];then

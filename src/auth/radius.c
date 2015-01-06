@@ -199,7 +199,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	if (ret == OK_RC) {
 		VALUE_PAIR *vp = recvd;
-		uint32_t ip;
+		uint32_t ipv4;
+		uint8_t ipv6[16];
 		while(vp != NULL) {
 			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
 				syslog(LOG_ERR,
@@ -218,8 +219,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
 
 				/* Framed-IPv6-Prefix */
-				memset(ip, 0, sizeof(ip)); 
-				memcpy(ip, vp->strvalue+2, vp->lvalue-2); 
+				memset(ipv6, 0, sizeof(ipv6)); 
+				memcpy(ipv6, vp->strvalue+2, vp->lvalue-2); 
 				if (inet_ntop(AF_INET6, ip, txt, sizeof(txt)) != NULL) {
 					snprintf(route, sizeof(route), "%s/%u", txt, (unsigned)(unsigned char)vp->strvalue[1]);
 					append_route(pctx, vp->strvalue, vp->lvalue);
@@ -232,20 +233,20 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 					inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6_dns2, sizeof(pctx->ipv6_dns2));
 			} else if (vp->attribute == PW_FRAMED_IP_ADDRESS && vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Address */
-				ip = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ip, pctx->ipv4, sizeof(pctx->ipv4));
+				ipv4 = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4, sizeof(pctx->ipv4));
 			} else if (vp->attribute == PW_FRAMED_IP_NETMASK && vp->type == PW_TYPE_IPADDR) {
 				/* Framed-IP-Netmask */
-				ip = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ip, pctx->ipv4_mask, sizeof(pctx->ipv4_mask));
+				ipv4 = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4_mask, sizeof(pctx->ipv4_mask));
 			} else if (vp->attribute == RAD_IPV4_DNS1 && vp->type == PW_TYPE_IPADDR) {
 				/* MS-Primary-DNS-Server */
-				ip = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ip, pctx->ipv4_dns1, sizeof(pctx->ipv4_dns1));
+				ipv4 = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns1, sizeof(pctx->ipv4_dns1));
 			} else if (vp->attribute == RAD_IPV4_DNS2 && vp->type == PW_TYPE_IPADDR) {
 				/* MS-Secondary-DNS-Server */
-				ip = htonl(vp->lvalue);
-				inet_ntop(AF_INET, &ip, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
+				ipv4 = htonl(vp->lvalue);
+				inet_ntop(AF_INET, &ipv4, pctx->ipv4_dns2, sizeof(pctx->ipv4_dns2));
 			} else if (vp->attribute == PW_FRAMED_ROUTE && vp->type == PW_TYPE_STRING) {
 				/* Framed-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);

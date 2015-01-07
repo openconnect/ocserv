@@ -55,6 +55,10 @@
 
 #include <http_parser.h>
 
+#if GNUTLS_VERSION_NUMBER >= 0x030305
+# define ZERO_COPY
+#endif
+
 #define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:257)
 
 #define PERIODIC_CHECK_TIME 30
@@ -1120,7 +1124,11 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 
 static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 {
-	int ret, l;
+	int ret;
+	gnutls_datum_t data;
+#ifdef ZERO_COPY
+	gnutls_packet_t packet = NULL;
+#endif
 
 	switch (ws->udp_state) {
 	case UP_ACTIVE:
@@ -1135,8 +1143,20 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			break;
 		}
 #endif
+
+#ifdef ZERO_COPY
+		ret = gnutls_record_recv_packet(ws->dtls_session, &packet);
+		if (ret > 0) {
+			gnutls_packet_get(packet, &data, NULL);
+		} else {
+			data.size = 0;
+		}
+#else
 		ret =
 		    gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
+		data.data = ws->buffer;
+		data.size = ret;
+#endif
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);
 
@@ -1149,7 +1169,8 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			    ws->config->rekey_time / 2) {
 				oclog(ws, LOG_INFO,
 				      "client requested DTLS rehandshake too soon");
-				return -1;
+				ret = -1;
+				goto cleanup;
 			}
 
 			/* there is not much we can rehandshake on the DTLS channel,
@@ -1167,19 +1188,18 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			oclog(ws, LOG_DEBUG, "DTLS rehandshake completed");
 
 			ws->last_dtls_rehandshake = tnow->tv_sec;
-		} else if (ret > 0) {
-			l = ret;
+		} else if (ret >= 1) {
 			ws->udp_state = UP_ACTIVE;
 
 			if (bandwidth_update
-			    (&ws->b_rx, l - 1, ws->conn_mtu, tnow) != 0) {
+			    (&ws->b_rx, data.size - 1, ws->conn_mtu, tnow) != 0) {
 				ret =
-				    parse_dtls_data(ws, ws->buffer, l,
+				    parse_dtls_data(ws, data.data, data.size,
 						    tnow->tv_sec);
 				if (ret < 0) {
 					oclog(ws, LOG_INFO,
 					      "error parsing CSTP data");
-					return ret;
+					goto cleanup;
 				}
 			}
 		} else
@@ -1190,8 +1210,10 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		break;
 	case UP_SETUP:
 		ret = setup_dtls_connection(ws);
-		if (ret < 0)
-			return -1;
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
 
 		gnutls_dtls_set_mtu(ws->dtls_session,
 				    ws->conn_mtu + ws->crypto_overhead);
@@ -1247,28 +1269,51 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		break;
 	}
 
-	return 0;
+	ret = 0;
+ cleanup:
+#ifdef ZERO_COPY
+ 	if (packet)
+	 	gnutls_packet_deinit(packet);
+#endif
+	return ret;
 }
 
 static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 {
-	int ret, l;
+	int ret;
+	gnutls_datum_t data;
+#ifdef ZERO_COPY
+	gnutls_packet_t packet = NULL;
 
+	if (ws->session != NULL) {
+		ret = gnutls_record_recv_packet(ws->session, &packet);
+		if (ret > 0) {
+			gnutls_packet_get(packet, &data, NULL);
+		}
+	} else {
+		ret = recv(ws->conn_fd, ws->buffer, ws->buffer_size, 0);
+		data.data = ws->buffer;
+		data.size = ret;
+	}
+#else
 	ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
+	data.data = ws->buffer;
+	data.size = ret;
+#endif
 	FATAL_ERR_CMD(ws, ret, exit_worker(ws));
 
 	if (ret == 0) {		/* disconnect */
 		oclog(ws, LOG_DEBUG, "client disconnected");
-		return -1;
-	} else if (ret > 0) {
-		l = ret;
-		oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", l);
+		ret = -1;
+		goto cleanup;
+	} else if (ret >= 8) {
+		oclog(ws, LOG_TRANSFER_DEBUG, "received %d byte(s) (TLS)", data.size);
 
-		if (bandwidth_update(&ws->b_rx, l - 8, ws->conn_mtu, tnow) != 0) {
-			ret = parse_cstp_data(ws, ws->buffer, l, tnow->tv_sec);
+		if (bandwidth_update(&ws->b_rx, data.size - 8, ws->conn_mtu, tnow) != 0) {
+			ret = parse_cstp_data(ws, data.data, data.size, tnow->tv_sec);
 			if (ret < 0) {
 				oclog(ws, LOG_ERR, "error parsing CSTP data");
-				return ret;
+				goto cleanup;
 			}
 
 			if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) {
@@ -1286,7 +1331,8 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		    ws->config->rekey_time / 2) {
 			oclog(ws, LOG_INFO,
 			      "client requested TLS rehandshake too soon");
-			return -1;
+			ret = -1;
+			goto cleanup;
 		}
 
 		oclog(ws, LOG_INFO,
@@ -1300,7 +1346,13 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		oclog(ws, LOG_INFO, "TLS rehandshake completed");
 	}
 
-	return 0;
+	ret = 0;
+ cleanup:
+#ifdef ZERO_COPY
+ 	if (packet)
+	 	gnutls_packet_deinit(packet);
+#endif
+	return ret;
 }
 
 static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)

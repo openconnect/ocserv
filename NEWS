@@ -5,6 +5,7 @@
   instructs to read configuration from radius; the stats-report-time
   option enables interim-updates. That adds the dependency to
   freeradius-client.
+- Reply using the same address that received UDP packets are sent.
 - Simplify the input of IPv6 network addresses.
 
 

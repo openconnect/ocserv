@@ -48,6 +48,7 @@
 # include <sys/mman.h>
 #endif
 
+
 int handle_worker_commands(struct worker_st *ws)
 {
 	struct iovec iov[3];
@@ -55,7 +56,7 @@ int handle_worker_commands(struct worker_st *ws)
 	uint16_t length;
 	int e;
 	struct msghdr hdr;
-	uint8_t cmd_data[32];
+	uint8_t cmd_data[1024];
 	union {
 		struct cmsghdr    cm;
 		char              control[CMSG_SPACE(sizeof(int))];
@@ -118,7 +119,12 @@ int handle_worker_commands(struct worker_st *ws)
 			tmsg = udp_fd_msg__unpack(NULL, length, cmd_data);
 			if (tmsg) {
 				hello = tmsg->hello;
-				udp_fd_msg__free_unpacked(tmsg, NULL);
+				if (hello) {
+					ws->dtls_tptr.msg = tmsg;
+				} else {
+					udp_fd_msg__free_unpacked(tmsg, NULL);
+					tmsg = NULL;
+				}
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
@@ -137,8 +143,9 @@ int handle_worker_commands(struct worker_st *ws)
 						close(fd);
 						return 0;
 					}
-					if (ws->dtls_session != NULL)
-						gnutls_transport_set_ptr(ws->dtls_session, (gnutls_transport_ptr_t)(long)fd);
+					if (ws->dtls_session != NULL) {
+						ws->dtls_tptr.fd = fd;
+					}
 				} else { /* received client hello */
 					ws->udp_state = UP_SETUP;
 				}

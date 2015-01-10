@@ -547,6 +547,76 @@ int body_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
+inline static ssize_t dtls_pull_buffer_size(gnutls_transport_ptr_t ptr)
+{
+	dtls_transport_ptr *p = ptr;
+	if (p->msg && p->consumed < p->msg->data.len)
+		return 1;
+	return 0;
+}
+
+static
+ssize_t dtls_pull(gnutls_transport_ptr_t ptr, void *data, size_t size)
+{
+	dtls_transport_ptr *p = ptr;
+
+	if (p->msg) {
+		if (p->consumed < p->msg->data.len) {
+			ssize_t need = p->msg->data.len - p->consumed;
+
+			if (need > size) {
+				need = size;
+			}
+			memcpy(data, &p->msg->data.data[p->consumed], need);
+			p->consumed += need;
+			return need;
+		} else {
+			udp_fd_msg__free_unpacked(p->msg, NULL);
+			p->msg = NULL;
+		}
+	}
+	return recv(p->fd, data, size, 0);
+}
+
+static
+int dtls_pull_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
+{
+	fd_set rfds;
+	struct timeval tv;
+	int ret;
+	dtls_transport_ptr *p = ptr;
+	int fd = p->fd;
+
+	if (dtls_pull_buffer_size(ptr)) {
+		return 1;
+	}
+
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+
+	tv.tv_sec = 0;
+	tv.tv_usec = ms * 1000;
+
+	while (tv.tv_usec >= 1000000) {
+		tv.tv_usec -= 1000000;
+		tv.tv_sec++;
+	}
+
+	ret = select(fd + 1, &rfds, NULL, NULL, &tv);
+	if (ret <= 0)
+		return ret;
+
+	return ret;
+}
+
+static
+ssize_t dtls_push(gnutls_transport_ptr_t ptr, const void *data, size_t size)
+{
+	dtls_transport_ptr *p = ptr;
+
+	return send(p->fd, data, size, 0);
+}
+
 static int setup_dtls_connection(struct worker_st *ws)
 {
 	int ret;
@@ -605,8 +675,12 @@ static int setup_dtls_connection(struct worker_st *ws)
 		goto fail;
 	}
 
-	gnutls_transport_set_ptr(session,
-				 (gnutls_transport_ptr_t) (long)ws->udp_fd);
+	ws->dtls_tptr.fd = ws->udp_fd;
+	gnutls_transport_set_push_function(session, dtls_push);
+	gnutls_transport_set_pull_function(session, dtls_pull);
+	gnutls_transport_set_pull_timeout_function(session, dtls_pull_timeout);
+	gnutls_transport_set_ptr(session, &ws->dtls_tptr);
+
 	gnutls_session_set_ptr(session, ws);
 	gnutls_certificate_server_set_request(session, GNUTLS_CERT_IGNORE);
 
@@ -2011,17 +2085,6 @@ static int connect_handler(worker_st * ws)
 	for (;;) {
 		FD_ZERO(&rfds);
 
-		FD_SET(ws->conn_fd, &rfds);
-		FD_SET(ws->cmd_fd, &rfds);
-		FD_SET(ws->tun_fd, &rfds);
-		max = MAX(ws->cmd_fd, ws->conn_fd);
-		max = MAX(max, ws->tun_fd);
-
-		if (ws->udp_state > UP_WAIT_FD) {
-			FD_SET(ws->udp_fd, &rfds);
-			max = MAX(max, ws->udp_fd);
-		}
-
 		if (terminate != 0) {
  terminate:
 			ws->buffer[0] = 'S';
@@ -2045,14 +2108,27 @@ static int connect_handler(worker_st * ws)
 		else
 			tls_pending = 0;
 
-		if (ws->dtls_session != NULL && ws->udp_state > UP_WAIT_FD) {
-			dtls_pending =
-			    gnutls_record_check_pending(ws->dtls_session);
+		if (ws->udp_state > UP_WAIT_FD) {
+			dtls_pending = dtls_pull_buffer_size(&ws->dtls_tptr);
+			if (ws->dtls_session != NULL)
+				dtls_pending +=
+				    gnutls_record_check_pending(ws->dtls_session);
 		} else {
 			dtls_pending = 0;
 		}
 
 		if (tls_pending == 0 && dtls_pending == 0) {
+			FD_SET(ws->conn_fd, &rfds);
+			FD_SET(ws->cmd_fd, &rfds);
+			FD_SET(ws->tun_fd, &rfds);
+			max = MAX(ws->cmd_fd, ws->conn_fd);
+			max = MAX(max, ws->tun_fd);
+
+			if (ws->udp_state > UP_WAIT_FD) {
+				FD_SET(ws->udp_fd, &rfds);
+				max = MAX(max, ws->udp_fd);
+			}
+
 #ifdef HAVE_PSELECT
 			tv.tv_nsec = 0;
 			tv.tv_sec = 10;
@@ -2096,8 +2172,8 @@ static int connect_handler(worker_st * ws)
 		}
 
 		/* read data from UDP channel */
-		if (ws->udp_state > UP_WAIT_FD
-		    && (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
+		if (ws->udp_state > UP_WAIT_FD &&
+		    (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
 
 			ret = dtls_mainloop(ws, &tnow);
 			if (ret < 0)
@@ -2115,7 +2191,6 @@ static int connect_handler(worker_st * ws)
 				goto exit;
 			}
 		}
-
 	}
 
 	return 0;

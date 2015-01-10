@@ -129,10 +129,17 @@ struct http_req_st {
 	unsigned no_ipv6;
 };
 
+typedef struct dtls_transport_ptr {
+	int fd;
+	UdpFdMsg *msg; /* holds the data of the first client hello */
+	int consumed;
+} dtls_transport_ptr;
+
 typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
+	dtls_transport_ptr dtls_tptr;
 
 	struct http_req_st req;
 

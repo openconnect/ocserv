@@ -94,6 +94,7 @@ message cli_stats_msg
 message udp_fd_msg
 {
 	required bool hello = 1 [default = true]; /* is that a client hello? */
+	optional bytes data = 2; /* the client hello data */
 }
 
 /* SESSION_INFO */

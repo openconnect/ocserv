@@ -83,6 +83,11 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 const char* cmd_request_to_str(unsigned cmd);
 
+ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
+                    struct sockaddr *src_addr, socklen_t *addrlen,
+                    struct sockaddr *our_addr, socklen_t *our_addrlen,
+                    int def_port);
+
 inline static
 void safe_memset(void *data, int c, size_t size)
 {

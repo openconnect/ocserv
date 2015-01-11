@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -446,6 +446,85 @@ void _talloc_free2(void *ctx, void *ptr)
 void *_talloc_size2(void *ctx, size_t size)
 {
 	return talloc_size(ctx, size);
+}
+
+/* like recvfrom but also returns the address of our interface.
+ *
+ * @def_port: is provided to fill in the missing port number
+ *   in our_addr.
+ */
+ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
+                    struct sockaddr *src_addr, socklen_t *addrlen,
+                    struct sockaddr *our_addr, socklen_t *our_addrlen,
+                    int def_port)
+{
+int ret;
+char cmbuf[256];
+struct iovec iov = { buf, len };
+struct cmsghdr *cmsg;
+struct msghdr mh = {
+	.msg_name = src_addr,
+	.msg_namelen = *addrlen,
+	.msg_iov = &iov,
+	.msg_iovlen = 1,
+	.msg_control = cmbuf,
+	.msg_controllen = sizeof(cmbuf),
+};
+
+	ret = recvmsg(sockfd, &mh, 0);
+	if (ret < 0) {
+		return -1;
+	}
+
+	/* find our address */
+	for (cmsg = CMSG_FIRSTHDR(&mh); cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
+#if defined(IP_PKTINFO)
+		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
+			struct in_pktinfo *pi = CMSG_DATA(cmsg);
+			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
+
+			if (*our_addrlen < sizeof(struct sockaddr_in))
+				return -1;
+
+			a->sin_family = AF_INET;
+			memcpy(&a->sin_addr, &pi->ipi_addr, sizeof(struct in_addr));
+			a->sin_port = htons(def_port);
+			*our_addrlen = sizeof(struct sockaddr_in);
+			break;
+		}
+#elif defined(IP_RECVDSTADDR)
+		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
+			struct in_addr *pi = CMSG_DATA(cmsg);
+			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
+
+			if (*our_addrlen < sizeof(struct sockaddr_in))
+				return -1;
+
+			a->sin_family = AF_INET;
+			memcpy(&a->sin_addr, &pi->ipi_addr, sizeof(struct in_addr));
+			a->sin_port = htons(def_port);
+			*our_addrlen = sizeof(struct sockaddr_in);
+			break;
+		}
+#endif
+#ifdef IPV6_RECVPKTINFO
+		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_RECVPKTINFO) {
+			struct in6_pktinfo *pi = CMSG_DATA(cmsg);
+			struct sockaddr_in6 *a = (struct sockaddr_in6*)our_addr;
+
+			if (*our_addrlen < sizeof(struct sockaddr_in6))
+				return -1;
+
+			a->sin6_family = AF_INET6;
+			memcpy(&a->sin6_addr, &pi->ipi6_addr, sizeof(struct in6_addr));
+			a->sin6_port = htons(def_port);
+			*our_addrlen = sizeof(struct sockaddr_in6);
+			break;
+		}
+#endif
+	}
+
+	return ret;
 }
 
 #ifndef HAVE_STRLCPY

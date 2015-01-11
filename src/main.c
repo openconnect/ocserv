@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,7 +82,7 @@ static void add_listener(void *pool, struct listen_list_st *list,
 	tmp->family = family;
 	tmp->sock_type = socktype;
 	tmp->protocol = protocol;
-	
+
 	tmp->addr_len = addr_len;
 	memcpy(&tmp->addr, addr, addr_len);
 
@@ -199,7 +199,7 @@ int _listen_ports(void *pool, struct cfg_st* config,
 		}
 
 		set_common_socket_options(s);
-		
+
 		add_listener(pool, list, s, ptr->ai_family, ptr->ai_socktype==SOCK_STREAM?SOCK_TYPE_TCP:SOCK_TYPE_UDP,
 			ptr->ai_protocol, ptr->ai_addr, ptr->ai_addrlen);
 
@@ -344,7 +344,7 @@ listen_ports(void *pool, struct cfg_st* config,
 
 		if (config->foreground != 0)
 			fprintf(stderr, "listening on %d systemd sockets...\n", list->total);
-		
+
 		return 0;
 	}
 #endif
@@ -412,7 +412,7 @@ listen_ports(void *pool, struct cfg_st* config,
 		if (ret < 0) {
 			return -1;
 		}
-	
+
 		freeaddrinfo(res);
 	}
 
@@ -463,7 +463,7 @@ struct script_wait_st *stmp = NULL, *spos;
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		estatus = WEXITSTATUS(status);
-		
+
 		if (pid == s->sec_mod_pid) {
 			mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
 			terminate = 1;
@@ -483,7 +483,7 @@ struct script_wait_st *stmp = NULL, *spos;
 				break;
 			}
 		}
-	
+
 		if (WIFSIGNALED(status)) {
 			if (WTERMSIG(status) == SIGSEGV)
 				mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
@@ -535,7 +535,7 @@ static void drop_privileges(main_server_st* s)
 			       (int) s->config->gid, strerror(e));
 			exit(1);
 		}
-		
+
 		ret = setgroups(1, &s->config->gid);
 		if (ret < 0) {
 			e = errno;
@@ -654,6 +654,7 @@ void request_reload(int signo)
 	reload_conf = 1;
 }
 
+
 /* A UDP fd will not be forwarded to worker process before this number of
  * seconds has passed. That is to prevent a duplicate message messing the worker.
  */
@@ -667,75 +668,28 @@ int ret, e;
 struct sockaddr_storage cli_addr;
 struct sockaddr_storage our_addr;
 struct proc_st *proc_to_send = NULL;
-socklen_t cli_addr_size, our_addr_size = 0;
+socklen_t cli_addr_size, our_addr_size;
 uint8_t buffer[1024];
-char cmbuf[256];
 char tbuf[64];
 uint8_t  *session_id = NULL;
 int session_id_size = 0;
 ssize_t buffer_size;
 int match_ip_only = 0;
 time_t now;
-struct iovec iov = { buffer, sizeof(buffer) };
-struct cmsghdr *cmsg;
 int sfd = -1;
-struct msghdr mh = {
-	.msg_name = &cli_addr,
-	.msg_namelen = sizeof(cli_addr),
-	.msg_iov = &iov,
-	.msg_iovlen = 1,
-	.msg_control = cmbuf,
-	.msg_controllen = sizeof(cmbuf),
-};
 
 	/* first receive from the correct client and connect socket */
 	cli_addr_size = sizeof(cli_addr);
-	ret = recvmsg(listener->fd, &mh, 0);
+	our_addr_size = sizeof(our_addr);
+	ret = oc_recvfrom_at(listener->fd, buffer, sizeof(buffer), 0,
+			  (struct sockaddr*)&cli_addr, &cli_addr_size,
+			  (struct sockaddr*)&our_addr, &our_addr_size,
+			  s->config->udp_port);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_INFO, "error receiving in UDP socket");
 		return -1;
 	}
-
 	buffer_size = ret;
-
-	/* find our address */
-	for (cmsg = CMSG_FIRSTHDR(&mh); cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
-#if defined(IP_PKTINFO)
-		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
-			struct in_pktinfo *pi = CMSG_DATA(cmsg);
-			struct sockaddr_in *a = (struct sockaddr_in*)&our_addr;
-
-			a->sin_family = AF_INET;
-			memcpy(&a->sin_addr, &pi->ipi_addr, sizeof(struct in_addr));
-			a->sin_port = htons(s->config->udp_port);
-			our_addr_size = sizeof(struct sockaddr_in);
-			break;
-		}
-#elif defined(IP_RECVDSTADDR)
-		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-			struct in_addr *pi = CMSG_DATA(cmsg);
-			struct sockaddr_in *a = (struct sockaddr_in*)&our_addr;
-
-			a->sin_family = AF_INET;
-			memcpy(&a->sin_addr, &pi->ipi_addr, sizeof(struct in_addr));
-			a->sin_port = htons(s->config->udp_port);
-			our_addr_size = sizeof(struct sockaddr_in);
-			break;
-		}
-#endif
-#ifdef IPV6_RECVPKTINFO
-		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_RECVPKTINFO) {
-			struct in6_pktinfo *pi = CMSG_DATA(cmsg);
-			struct sockaddr_in6 *a = (struct sockaddr_in6*)&our_addr;
-
-			a->sin6_family = AF_INET6;
-			memcpy(&a->sin6_addr, &pi->ipi6_addr, sizeof(struct in6_addr));
-			a->sin6_port = htons(s->config->udp_port);
-			our_addr_size = sizeof(struct sockaddr_in6);
-			break;
-		}
-#endif
-	}
 
 	/* obtain the session id */
 	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
@@ -1040,7 +994,7 @@ int main(int argc, char** argv)
 #ifdef HAVE_LIBWRAP
 	allow_severity = LOG_DAEMON|LOG_INFO;
 	deny_severity = LOG_DAEMON|LOG_WARNING;
-#endif	
+#endif
 
 	if (s->config->foreground == 0) {
 		if (daemon(0, 0) == -1) {
@@ -1051,7 +1005,7 @@ int main(int argc, char** argv)
 	}
 
 	write_pid_file();
-	
+
 	run_sec_mod(s);
 
 	ret = ctl_handler_init(s);

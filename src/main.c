@@ -60,9 +60,6 @@
 #include <grp.h>
 #include <ip-lease.h>
 #include <ccan/list/list.h>
-/* for recvmsg */
-#include <netinet/in.h>
-#include <netinet/ip.h>
 
 int syslog_open = 0;
 static unsigned int terminate = 0;
@@ -421,13 +418,10 @@ listen_ports(void *pool, struct cfg_st* config,
 	return 0;
 }
 
-/* This is a hack. I tried to use connect() on the worker
- * and use connect() with unspec on the master process but all packets
- * were received by master. Reopening the socket seems to resolve
- * that.
- */
+/* Sets the options needed in the UDP socket we forward to
+ * worker */
 static
-void set_udp_opts(int fd, int family)
+void set_worker_udp_opts(int fd, int family)
 {
 int y;
 
@@ -762,7 +756,7 @@ int sfd = -1;
 			goto fail;
 		}
 
-		set_udp_opts(sfd, listener->family);
+		set_worker_udp_opts(sfd, listener->family);
 
 		if (our_addr_size > 0) {
 			ret = bind(sfd, (struct sockaddr *)&our_addr, our_addr_size);

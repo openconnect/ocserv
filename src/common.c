@@ -25,6 +25,10 @@
 #include <vpn.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+/* for recvmsg */
+#include <netinet/in.h>
+#include <netinet/ip.h>
+
 #include "common.h"
 
 const char* cmd_request_to_str(unsigned _cmd)

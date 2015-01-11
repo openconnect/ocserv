@@ -665,7 +665,7 @@ struct sockaddr_storage cli_addr;
 struct sockaddr_storage our_addr;
 struct proc_st *proc_to_send = NULL;
 socklen_t cli_addr_size, our_addr_size;
-uint8_t buffer[1024];
+uint8_t buffer[1536];
 char tbuf[64];
 uint8_t  *session_id = NULL;
 int session_id_size = 0;
@@ -780,10 +780,10 @@ int sfd = -1;
 		if (match_ip_only != 0) {
 			msg.hello = 0;
 		} else {
-			msg.data.data = buffer;
-			msg.data.len = buffer_size;
 			msg.has_data = 1;
 		}
+		msg.data.data = buffer;
+		msg.data.len = buffer_size;
 
 		ret = send_socket_msg_to_worker(s, proc_to_send, CMD_UDP_FD,
 			sfd,

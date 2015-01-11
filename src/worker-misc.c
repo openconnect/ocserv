@@ -56,7 +56,8 @@ int handle_worker_commands(struct worker_st *ws)
 	uint16_t length;
 	int e;
 	struct msghdr hdr;
-	uint8_t cmd_data[1024];
+	uint8_t cmd_data[1536];
+	UdpFdMsg *tmsg = NULL;
 	union {
 		struct cmsghdr    cm;
 		char              control[CMSG_SPACE(sizeof(int))];
@@ -108,7 +109,6 @@ int handle_worker_commands(struct worker_st *ws)
 		case CMD_TERMINATE:
 			exit(0);
 		case CMD_UDP_FD: {
-			UdpFdMsg *tmsg;
 			unsigned hello = 1;
 			int fd;
 
@@ -119,12 +119,6 @@ int handle_worker_commands(struct worker_st *ws)
 			tmsg = udp_fd_msg__unpack(NULL, length, cmd_data);
 			if (tmsg) {
 				hello = tmsg->hello;
-				if (hello) {
-					ws->dtls_tptr.msg = tmsg;
-				} else {
-					udp_fd_msg__free_unpacked(tmsg, NULL);
-					tmsg = NULL;
-				}
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
@@ -140,6 +134,7 @@ int handle_worker_commands(struct worker_st *ws)
 					if ((ws->udp_state != UP_ACTIVE && ws->udp_state != UP_INACTIVE) ||
 						time(0) - ws->last_msg_udp < ACTIVE_SESSION_TIMEOUT) {
 						oclog(ws, LOG_INFO, "received UDP fd message but our session is active!");
+						udp_fd_msg__free_unpacked(tmsg, NULL);
 						close(fd);
 						return 0;
 					}
@@ -153,6 +148,8 @@ int handle_worker_commands(struct worker_st *ws)
 				if (ws->udp_fd != -1) {
 					close(ws->udp_fd);
 				}
+
+				ws->dtls_tptr.msg = tmsg;
 				ws->udp_fd = fd;
 				set_non_block(fd);
 
@@ -173,6 +170,7 @@ int handle_worker_commands(struct worker_st *ws)
 	return 0;
 
 udp_fd_fail:
+	udp_fd_msg__free_unpacked(tmsg, NULL);
 	if (ws->udp_fd == -1)
 		ws->udp_state = UP_DISABLED;
 

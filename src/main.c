@@ -90,7 +90,7 @@ static void add_listener(void *pool, struct listen_list_st *list,
 	list->total++;
 }
 
-static void set_udp_socket_options(struct cfg_st* config, int fd)
+static void set_udp_socket_options(struct cfg_st* config, int fd, int family)
 {
 int y;
 	if (config->try_mtu) {
@@ -118,10 +118,12 @@ int y;
 		perror("setsockopt(IP_RECVDSTADDR) failed");
 #endif
 #if defined(IPV6_RECVPKTINFO)
-	y = 1;
-	if (setsockopt(fd, IPPROTO_IPV6, IPV6_RECVPKTINFO,
-		       (const void *)&y, sizeof(y)) < 0)
-		perror("setsockopt(IPV6_RECVPKTINFO) failed");
+	if (family == AF_INET6) {
+		y = 1;
+		if (setsockopt(fd, IPPROTO_IPV6, IPV6_RECVPKTINFO,
+			       (const void *)&y, sizeof(y)) < 0)
+			perror("setsockopt(IPV6_RECVPKTINFO) failed");
+	}
 #endif
 }
 
@@ -180,7 +182,7 @@ int _listen_ports(void *pool, struct cfg_st* config,
 		}
 
 		if (ptr->ai_socktype == SOCK_DGRAM) {
-			set_udp_socket_options(config, s);
+			set_udp_socket_options(config, s, ptr->ai_family);
 		}
 
 
@@ -310,7 +312,7 @@ listen_ports(void *pool, struct cfg_st* config,
 			}
 
 			if (type == SOCK_DGRAM)
-				set_udp_socket_options(config, fd);
+				set_udp_socket_options(config, fd, family);
 
 			/* obtain socket params */
 			tmp_sock_len = sizeof(tmp_sock);

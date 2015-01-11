@@ -139,7 +139,6 @@ typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
-	dtls_transport_ptr dtls_tptr;
 
 	struct http_req_st req;
 
@@ -173,7 +172,7 @@ typedef struct worker_st {
 	time_t last_periodic_check;
 
 	/* set after authentication */
-	int udp_fd;
+	dtls_transport_ptr dtls_tptr;
 	udp_port_state_t udp_state;
 	time_t udp_recv_time; /* time last udp packet was received */
 

@@ -1145,7 +1145,7 @@ int main(int argc, char** argv)
 					ws->config = s->config;
 					ws->cmd_fd = cmd_fd[1];
 					ws->tun_fd = -1;
-					ws->udp_fd = -1;
+					ws->dtls_tptr.fd = -1;
 					ws->conn_fd = fd;
 					ws->conn_type = stype;
 					ws->creds = &creds;

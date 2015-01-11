@@ -550,7 +550,7 @@ int body_cb(http_parser * parser, const char *at, size_t length)
 inline static ssize_t dtls_pull_buffer_size(gnutls_transport_ptr_t ptr)
 {
 	dtls_transport_ptr *p = ptr;
-	if (p->msg && p->consumed < p->msg->data.len)
+	if (p->msg && p->consumed != 0)
 		return 1;
 	return 0;
 }
@@ -560,20 +560,17 @@ ssize_t dtls_pull(gnutls_transport_ptr_t ptr, void *data, size_t size)
 {
 	dtls_transport_ptr *p = ptr;
 
-	if (p->msg) {
-		if (p->consumed < p->msg->data.len) {
-			ssize_t need = p->msg->data.len - p->consumed;
-
-			if (need > size) {
-				need = size;
-			}
-			memcpy(data, &p->msg->data.data[p->consumed], need);
-			p->consumed += need;
-			return need;
-		} else {
-			udp_fd_msg__free_unpacked(p->msg, NULL);
-			p->msg = NULL;
+	if (p->msg && p->consumed == 0) {
+		ssize_t need = p->msg->data.len;
+		if (need > size) {
+			need = size;
 		}
+		memcpy(data, p->msg->data.data, need);
+		p->consumed = 1;
+
+		udp_fd_msg__free_unpacked(p->msg, NULL);
+		p->msg = NULL;
+		return need;
 	}
 	return recv(p->fd, data, size, 0);
 }
@@ -675,7 +672,6 @@ static int setup_dtls_connection(struct worker_st *ws)
 		goto fail;
 	}
 
-	ws->dtls_tptr.fd = ws->udp_fd;
 	gnutls_transport_set_push_function(session, dtls_push);
 	gnutls_transport_set_pull_function(session, dtls_pull);
 	gnutls_transport_set_pull_timeout_function(session, dtls_pull_timeout);
@@ -2034,7 +2030,7 @@ static int connect_handler(worker_st * ws)
 
 		if (ws->config->output_buffer > 0) {
 			t = MIN(2048, ws->conn_mtu * ws->config->output_buffer);
-			setsockopt(ws->udp_fd, SOL_SOCKET, SO_SNDBUF, &t,
+			setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_SNDBUF, &t,
 				   sizeof(t));
 			if (ret == -1)
 				oclog(ws, LOG_DEBUG,
@@ -2042,7 +2038,7 @@ static int connect_handler(worker_st * ws)
 				      t);
 		}
 
-		set_net_priority(ws, ws->udp_fd, ws->config->net_priority);
+		set_net_priority(ws, ws->dtls_tptr.fd, ws->config->net_priority);
 	}
 
 	/* hack for openconnect. It uses only a single MTU value */
@@ -2125,8 +2121,8 @@ static int connect_handler(worker_st * ws)
 			max = MAX(max, ws->tun_fd);
 
 			if (ws->udp_state > UP_WAIT_FD) {
-				FD_SET(ws->udp_fd, &rfds);
-				max = MAX(max, ws->udp_fd);
+				FD_SET(ws->dtls_tptr.fd, &rfds);
+				max = MAX(max, ws->dtls_tptr.fd);
 			}
 
 #ifdef HAVE_PSELECT
@@ -2173,7 +2169,7 @@ static int connect_handler(worker_st * ws)
 
 		/* read data from UDP channel */
 		if (ws->udp_state > UP_WAIT_FD &&
-		    (FD_ISSET(ws->udp_fd, &rfds) || dtls_pending != 0)) {
+		    (FD_ISSET(ws->dtls_tptr.fd, &rfds) || dtls_pending != 0)) {
 
 			ret = dtls_mainloop(ws, &tnow);
 			if (ret < 0)

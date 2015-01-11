@@ -138,19 +138,18 @@ int handle_worker_commands(struct worker_st *ws)
 						close(fd);
 						return 0;
 					}
-					if (ws->dtls_session != NULL) {
-						ws->dtls_tptr.fd = fd;
-					}
 				} else { /* received client hello */
 					ws->udp_state = UP_SETUP;
 				}
 
-				if (ws->udp_fd != -1) {
-					close(ws->udp_fd);
+				if (ws->dtls_tptr.fd != -1) {
+					close(ws->dtls_tptr.fd);
 				}
 
 				ws->dtls_tptr.msg = tmsg;
-				ws->udp_fd = fd;
+				ws->dtls_tptr.consumed = 0;
+
+				ws->dtls_tptr.fd = fd;
 				set_non_block(fd);
 
 				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
@@ -171,7 +170,7 @@ int handle_worker_commands(struct worker_st *ws)
 
 udp_fd_fail:
 	udp_fd_msg__free_unpacked(tmsg, NULL);
-	if (ws->udp_fd == -1)
+	if (ws->dtls_tptr.fd == -1)
 		ws->udp_state = UP_DISABLED;
 
 	return -1;

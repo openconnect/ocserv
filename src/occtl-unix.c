@@ -599,13 +599,13 @@ int common_info_cmd(UserListRep * args)
 		}
 		fprintf(out, "\tDevice: %s  ", args->user[i]->tun);
 
-		if (args->user[i]->user_agent != NULL && args->user[i]->user_agent[0] != 0)
-			fprintf(out, "User-Agent: %s\n", args->user[i]->user_agent);
+		if (args->user[i]->has_mtu != 0)
+			fprintf(out, "MTU: %d\n", args->user[i]->mtu);
 		else
 			fprintf(out, "\n");
 
-		if (args->user[i]->has_mtu != 0)
-			fprintf(out, "\tMTU: %d\n", args->user[i]->mtu);
+		if (args->user[i]->user_agent != NULL && args->user[i]->user_agent[0] != 0)
+			fprintf(out, "\tUser-Agent: %s\n", args->user[i]->user_agent);
 
 		if (args->user[i]->rx_per_sec > 0 || args->user[i]->tx_per_sec > 0) {
 			/* print limits */

@@ -522,7 +522,8 @@ int handle_list_users_cmd(dbus_ctx *ctx, const char *arg)
 
 		print_time_ival7(t, out);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0) {
-			if (strncmp(dtls_ciphersuite, "(DTLS1.2)-(RSA)-", 16) == 0)
+			if (strlen(dtls_ciphersuite) > 16 && strncmp(dtls_ciphersuite, "(DTLS", 5) == 0 &&
+			    strncmp(&dtls_ciphersuite[8], ")-(RSA)-", 8) == 0)
 				dtls_ciphersuite += 16;
 			fprintf(out, " %14s %9s\n", dtls_ciphersuite, auth);
 		} else {

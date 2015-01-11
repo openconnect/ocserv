@@ -85,6 +85,7 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 		ret = -1;
 		goto fail;
 	}
+	proc->mtu = mtu;
 
 	ret = 0;
  fail:

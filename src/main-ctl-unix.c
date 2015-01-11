@@ -329,6 +329,10 @@ static int append_user_info(method_ctx *ctx,
 
 	rep->tls_ciphersuite = ctmp->tls_ciphersuite;
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;
+	if (ctmp->mtu > 0) {
+		rep->mtu = ctmp->mtu;
+		rep->has_mtu = 1;
+	}
 
 	if (single > 0) {
 		if (ctmp->config.rx_per_sec > 0)

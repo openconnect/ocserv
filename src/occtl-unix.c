@@ -603,6 +603,9 @@ int common_info_cmd(UserListRep * args)
 		else
 			fprintf(out, "\n");
 
+		if (args->user[i]->has_mtu != 0)
+			fprintf(out, "\tMTU: %d\n", args->user[i]->mtu);
+
 		if (args->user[i]->rx_per_sec > 0 || args->user[i]->tx_per_sec > 0) {
 			/* print limits */
 			char buf[32];

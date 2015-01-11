@@ -39,6 +39,7 @@ message user_info_rep
 	repeated string nbns = 19;
 	repeated string routes = 20;
 	repeated string iroutes = 21;
+	optional uint32 mtu = 22;
 }
 
 message user_list_rep

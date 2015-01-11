@@ -241,8 +241,8 @@ struct cookie_entry_st *old;
 	if ((old=find_cookie_entry(&s->cookies, req->cookie.data, req->cookie.len)) != NULL) {
 		mslog(s, proc, LOG_DEBUG, "reusing cookie for '%s' (%u)", proc->username, (unsigned)proc->pid);
 		if (old->proc != NULL) {
-			mslog(s, old->proc, LOG_DEBUG, "disconnecting '%s' (%u) due to new cookie connection",
-				old->proc->username, (unsigned)old->proc->pid);
+			mslog(s, old->proc, LOG_DEBUG, "disconnecting (%u) due to new cookie connection",
+				(unsigned)old->proc->pid);
 
 			/* steal its leases */
 			steal_ip_leases(old->proc, proc);
@@ -263,7 +263,7 @@ struct cookie_entry_st *old;
 			return -1;
 		}
 
-		mslog(s, proc, LOG_DEBUG, "new cookie for '%s' (%u)", proc->username, (unsigned)proc->pid);
+		mslog(s, proc, LOG_DEBUG, "new cookie for (%u)", (unsigned)proc->pid);
 
 		proc->cookie_ptr = new_cookie_entry(&s->cookies, proc, req->cookie.data, req->cookie.len);
 		if (proc->cookie_ptr == NULL)

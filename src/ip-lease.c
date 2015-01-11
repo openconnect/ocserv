@@ -243,9 +243,8 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
  			/* check if it exists in the hash table */
 			if (ip_lease_exists(s, &rnd, sizeof(struct sockaddr_in)) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s to '%s'; it is in use.", 
-				      human_addr((void*)&rnd, sizeof(struct sockaddr_in), buf, sizeof(buf)), 
-				      proc->username);
+				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s; it is in use.", 
+				      human_addr((void*)&rnd, sizeof(struct sockaddr_in), buf, sizeof(buf)));
 				continue;
 			}
 
@@ -258,9 +257,8 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
  			/* check if it exists in the hash table */
 			if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in)) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s to '%s'; it is in use.", 
-				      human_addr((void*)&tmp, sizeof(struct sockaddr_in), buf, sizeof(buf)), 
-				      proc->username);
+				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s; it is in use.", 
+				      human_addr((void*)&tmp, sizeof(struct sockaddr_in), buf, sizeof(buf)));
 				continue;
 			}
 
@@ -276,7 +274,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
         			continue;
         		}
 
-			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s", proc->username,
+			mslog(s, proc, LOG_DEBUG, "selected IP: %s",
 			      human_addr((void*)&proc->ipv4->lip, proc->ipv4->lip_len, buf, sizeof(buf)));
         		
         		if (icmp_ping4(s, (void*)&proc->ipv4->lip, (void*)&proc->ipv4->rip) == 0)
@@ -401,9 +399,8 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
         			
  			/* check if it exists in the hash table */
 			if (ip_lease_exists(s, &rnd, sizeof(struct sockaddr_in6)) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot assign local IP %s to '%s'; it is in use.", 
-				      human_addr((void*)&rnd, sizeof(struct sockaddr_in6), buf, sizeof(buf)), 
-				      proc->username);
+				mslog(s, proc, LOG_DEBUG, "cannot assign local IP %s; it is in use.", 
+				      human_addr((void*)&rnd, sizeof(struct sockaddr_in6), buf, sizeof(buf)));
 				continue;
 			}
 
@@ -418,9 +415,8 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
  			/* check if it exists in the hash table */
 			if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in6)) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s to '%s'; it is in use.", 
-				      human_addr((void*)&tmp, sizeof(struct sockaddr_in6), buf, sizeof(buf)), 
-				      proc->username);
+				mslog(s, proc, LOG_DEBUG, "cannot assign remote IP %s; it is in use.", 
+				      human_addr((void*)&tmp, sizeof(struct sockaddr_in6), buf, sizeof(buf))); 
 				continue;
 			}
 
@@ -435,7 +431,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		        	continue;
 	        	}
 
-			mslog(s, proc, LOG_DEBUG, "selected IP for '%s': %s", proc->username,
+			mslog(s, proc, LOG_DEBUG, "selected IP: %s",
 			      human_addr((void*)&proc->ipv6->lip, proc->ipv6->lip_len, buf, sizeof(buf)));
 
 	        	if (icmp_ping6(s, (void*)&proc->ipv6->lip, (void*)&proc->ipv6->rip) == 0)
@@ -501,11 +497,11 @@ char buf[128];
 	}
 	
 	if (proc->ipv4)
-		mslog(s, proc, LOG_INFO, "assigned IPv4 to '%s': %s", proc->username,
+		mslog(s, proc, LOG_INFO, "assigned IPv4: %s",
 			human_addr((void*)&proc->ipv4->rip, proc->ipv4->rip_len, buf, sizeof(buf)));
 
 	if (proc->ipv6)
-		mslog(s, proc, LOG_INFO, "assigned IPv6 to '%s': %s", proc->username,
+		mslog(s, proc, LOG_INFO, "assigned IPv6: %s",
 			human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));
 
 	return 0;

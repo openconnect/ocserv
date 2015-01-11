@@ -382,7 +382,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 	int ret;
 	const char *group;
 
-	mslog(s, proc, LOG_DEBUG, "accepting user '%s'", proc->username);
+	mslog(s, proc, LOG_DEBUG, "accepting user");
 
 	/* check for multiple connections */
 	ret = check_multiple_users(s, proc);

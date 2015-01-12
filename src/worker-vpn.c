@@ -550,7 +550,7 @@ int body_cb(http_parser * parser, const char *at, size_t length)
 inline static ssize_t dtls_pull_buffer_non_empty(gnutls_transport_ptr_t ptr)
 {
 	dtls_transport_ptr *p = ptr;
-	if (p->msg && p->consumed == 0)
+	if (p->msg)
 		return 1;
 	return 0;
 }
@@ -560,13 +560,12 @@ ssize_t dtls_pull(gnutls_transport_ptr_t ptr, void *data, size_t size)
 {
 	dtls_transport_ptr *p = ptr;
 
-	if (p->msg && p->consumed == 0) {
+	if (p->msg) {
 		ssize_t need = p->msg->data.len;
 		if (need > size) {
 			need = size;
 		}
 		memcpy(data, p->msg->data.data, need);
-		p->consumed = 1;
 
 		udp_fd_msg__free_unpacked(p->msg, NULL);
 		p->msg = NULL;

@@ -148,7 +148,6 @@ int handle_worker_commands(struct worker_st *ws)
 					udp_fd_msg__free_unpacked(tmsg, NULL);
 
 				ws->dtls_tptr.msg = tmsg;
-				ws->dtls_tptr.consumed = 0;
 
 				ws->dtls_tptr.fd = fd;
 				set_non_block(fd);

@@ -547,10 +547,10 @@ int body_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
-inline static ssize_t dtls_pull_buffer_size(gnutls_transport_ptr_t ptr)
+inline static ssize_t dtls_pull_buffer_non_empty(gnutls_transport_ptr_t ptr)
 {
 	dtls_transport_ptr *p = ptr;
-	if (p->msg && p->consumed != 0)
+	if (p->msg && p->consumed == 0)
 		return 1;
 	return 0;
 }
@@ -584,7 +584,7 @@ int dtls_pull_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
 	dtls_transport_ptr *p = ptr;
 	int fd = p->fd;
 
-	if (dtls_pull_buffer_size(ptr)) {
+	if (dtls_pull_buffer_non_empty(ptr)) {
 		return 1;
 	}
 
@@ -2105,7 +2105,7 @@ static int connect_handler(worker_st * ws)
 			tls_pending = 0;
 
 		if (ws->udp_state > UP_WAIT_FD) {
-			dtls_pending = dtls_pull_buffer_size(&ws->dtls_tptr);
+			dtls_pending = dtls_pull_buffer_non_empty(&ws->dtls_tptr);
 			if (ws->dtls_session != NULL)
 				dtls_pending +=
 				    gnutls_record_check_pending(ws->dtls_session);

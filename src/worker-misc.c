@@ -142,9 +142,10 @@ int handle_worker_commands(struct worker_st *ws)
 					ws->udp_state = UP_SETUP;
 				}
 
-				if (ws->dtls_tptr.fd != -1) {
+				if (ws->dtls_tptr.fd != -1)
 					close(ws->dtls_tptr.fd);
-				}
+				if (ws->dtls_tptr.msg != NULL)
+					udp_fd_msg__free_unpacked(tmsg, NULL);
 
 				ws->dtls_tptr.msg = tmsg;
 				ws->dtls_tptr.consumed = 0;

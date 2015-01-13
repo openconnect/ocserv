@@ -38,6 +38,16 @@ void kill_on_parent_kill(int sig)
 #endif
 }
 
+void pr_set_undumpable(const char *mod)
+{
+#ifdef __linux__
+	if (prctl(PR_SET_DUMPABLE, 0) == -1) {
+		int e = errno;
+		syslog(LOG_ERR, "%s: prctl(PR_SET_DUMPABLE) failed %s",
+			mod, strerror(e));
+	}
+#endif
+}
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 {

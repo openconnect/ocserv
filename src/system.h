@@ -36,6 +36,7 @@ typedef void (*sighandler_t)(int);
 # define SIGHANDLER_T sighandler_t
 #endif
 
+void pr_set_undumpable(const char* mod);
 void kill_on_parent_kill(int sig);
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler);

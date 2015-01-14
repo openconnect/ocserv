@@ -21,6 +21,8 @@
 #include <unistd.h>
 #ifdef __linux__
 # include <sys/prctl.h>
+# include <sched.h>
+# include <sys/syscall.h>
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,6 +48,20 @@ void pr_set_undumpable(const char *mod)
 		syslog(LOG_ERR, "%s: prctl(PR_SET_DUMPABLE) failed %s",
 			mod, strerror(e));
 	}
+#endif
+}
+
+pid_t safe_fork(void)
+{
+#if defined(__linux__) && defined(ENABLE_LINUX_NS)
+	long ret;
+	int flags = SIGCHLD|CLONE_NEWPID|CLONE_NEWNET|CLONE_NEWIPC;
+	ret = syscall(SYS_clone, flags, 0, 0, 0);
+	if (ret == 0 && syscall(SYS_getpid)!= 1)
+		return -1;
+	return ret;
+#else
+	return fork();
 #endif
 }
 

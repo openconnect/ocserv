@@ -937,6 +937,9 @@ void print_version(tOptions *opts, tOptDesc *desc)
 #ifdef HAVE_LIBSECCOMP
 	fprintf(stderr, "seccomp, ");
 #endif
+#ifdef ENABLE_LINUX_NS
+	fprintf(stderr, "Linux-NS, ");
+#endif
 #ifdef HAVE_LIBWRAP
 	fprintf(stderr, "tcp-wrappers, ");
 #endif

@@ -1122,7 +1122,7 @@ int main(int argc, char** argv)
 					break;
 				}
 
-				pid = fork();
+				pid = safe_fork();
 				if (pid == 0) {	/* child */
 					/* close any open descriptors, and erase
 					 * sensitive data before running the worker
@@ -1168,6 +1168,7 @@ int main(int argc, char** argv)
 					exit(0);
 				} else if (pid == -1) {
 fork_failed:
+					mslog(s, NULL, LOG_ERR, "fork failed");
 					close(cmd_fd[0]);
 				} else { /* parent */
 					/* add_proc */

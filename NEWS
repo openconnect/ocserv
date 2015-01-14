@@ -7,7 +7,7 @@
   freeradius-client.
 - Reply using the same address that received UDP packets are sent.
 - Simplify the input of IPv6 network addresses.
-- Use a separate IPC, NET and PID namespace in Linux systemsfor worker
+- Use a separate IPC, NET and PID namespace in Linux systems for worker
   processes. That effectively puts each worker process in a separate
   container. This can be disabled at compile time using --disable-linux-namespaces.
 

@@ -4,6 +4,14 @@ else
 DOCKER=/usr/bin/docker.io
 fi
 
+if test -x /usr/bin/lockfile-create;then
+LOCKFILE="lockfile-create docker"
+UNLOCKFILE="lockfile-remove docker"
+else
+LOCKFILE="lockfile docker.lock"
+UNLOCKFILE="rm -f docker.lock"
+fi
+
 if ! test -x $DOCKER;then
 	echo "The docker program is needed to perform this test"
 	exit 77
@@ -24,7 +32,7 @@ if test -z $FEDORA && test -z $DEBIAN;then
 	exit 77
 fi
 
-lockfile docker.lock
+$LOCKFILE
 if test "$UNIX" = 1;then
 	$DOCKER stop test_unix >/dev/null 2>&1
 	$DOCKER rm test_unix >/dev/null 2>&1
@@ -38,7 +46,7 @@ if test "$FEDORA" = 1;then
 	$DOCKER pull fedora:21
 	if test $? != 0;then
 		echo "Cannot pull docker image"
-		rm -f docker.lock
+		$UNLOCKFILE
 		exit 1
 	fi
 	if test "$UNIX" = 1;then
@@ -51,7 +59,7 @@ else #DEBIAN
 	$DOCKER pull debian:jessie
 	if test $? != 0;then
 		echo "Cannot pull docker image"
-		rm -f docker.lock
+		$UNLOCKFILE
 		exit 1
 	fi
 	if test "$UNIX" = 1;then
@@ -67,8 +75,8 @@ echo "Creating image $IMAGE"
 $DOCKER build -t $IMAGE docker-ocserv/
 if test $? != 0;then
 	echo "Cannot build docker image"
-	rm -f docker.lock
+	$UNLOCKFILE
 	exit 1
 fi
 
-rm -f docker.lock
+$UNLOCKFILE

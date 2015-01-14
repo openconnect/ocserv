@@ -55,7 +55,12 @@ pid_t safe_fork(void)
 {
 #if defined(__linux__) && defined(ENABLE_LINUX_NS)
 	long ret;
-	int flags = SIGCHLD|CLONE_NEWPID|CLONE_NEWNET|CLONE_NEWIPC;
+	/* fork: 100%
+	 * CLONE_NEWPID|CLONE_NEWNET|CLONE_NEWIPC: 3%
+	 * CLONE_NEWPID|CLONE_NEWIPC: 27%
+	 * CLONE_NEWPID: 36%
+	 */
+	int flags = SIGCHLD|CLONE_NEWPID|CLONE_NEWIPC;
 	ret = syscall(SYS_clone, flags, 0, 0, 0);
 	if (ret == 0 && syscall(SYS_getpid)!= 1)
 		return -1;

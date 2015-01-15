@@ -149,7 +149,42 @@ static struct cfg_options available_options[] = {
 
 #define get_brackets_string get_brackets_string1
 static char *get_brackets_string1(void *pool, const char *str);
-static char *get_brackets_string2(void *pool, const char *str);
+
+#ifdef HAVE_RADIUS
+static char *get_brackets_string2(void *pool, const char *str)
+{
+	char *p, *p2;
+	unsigned len;
+
+	p = strchr(str, '[');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+
+	p = strchr(p, ',');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+
+	while (c_isspace(*p))
+		p++;
+
+	p2 = strchr(p, ',');
+	if (p2 == NULL) {
+		p2 = strchr(p, ']');
+		if (p2 == NULL) {
+			fprintf(stderr, "error parsing %s\n", str);
+			exit(1);
+		}
+	}
+
+	len = p2 - p;
+
+	return talloc_strndup(pool, p, len);
+}
+#endif
 
 static const tOptionValue* get_option(const char* name, unsigned * mand)
 {
@@ -333,39 +368,6 @@ static char *get_brackets_string1(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
-static char *get_brackets_string2(void *pool, const char *str)
-{
-	char *p, *p2;
-	unsigned len;
-
-	p = strchr(str, '[');
-	if (p == NULL) {
-		return NULL;
-	}
-	p++;
-
-	p = strchr(p, ',');
-	if (p == NULL) {
-		return NULL;
-	}
-	p++;
-
-	while (c_isspace(*p))
-		p++;
-
-	p2 = strchr(p, ',');
-	if (p2 == NULL) {
-		p2 = strchr(p, ']');
-		if (p2 == NULL) {
-			fprintf(stderr, "error parsing %s\n", str);
-			exit(1);
-		}
-	}
-
-	len = p2 - p;
-
-	return talloc_strndup(pool, p, len);
-}
 
 /* Parses the string ::1/prefix, to return prefix
  * and modify the string to contain the network only.
@@ -461,33 +463,35 @@ unsigned force_cert_auth;
 			amod = &plain_auth_funcs;
 			config->auth_types |= amod->type;
 		} else if (strncasecmp(auth[j], "radius", 6) == 0) {
-			const char *p;
 			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
 				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
 				exit(1);
-			}
+			} else {
 
 #ifdef HAVE_RADIUS
-			config->auth_additional = get_brackets_string1(config, auth[j]+6);
-			if (config->auth_additional == NULL) {
-				fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
-				exit(1);
-			}
+				const char *p;
 
-			p = get_brackets_string2(config, auth[j]+6);
-			if (p != NULL) {
-				if (strcasecmp(p, "groupconfig") != 0) {
-					fprintf(stderr, "No known configuration option: %s\n", p);
+				config->auth_additional = get_brackets_string1(config, auth[j]+6);
+				if (config->auth_additional == NULL) {
+					fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
 					exit(1);
 				}
-				config->sup_config_type = SUP_CONFIG_RADIUS;
-			}
-			amod = &radius_auth_funcs;
-			config->auth_types |= amod->type;
+
+				p = get_brackets_string2(config, auth[j]+6);
+				if (p != NULL) {
+					if (strcasecmp(p, "groupconfig") != 0) {
+						fprintf(stderr, "No known configuration option: %s\n", p);
+						exit(1);
+					}
+					config->sup_config_type = SUP_CONFIG_RADIUS;
+				}
+				amod = &radius_auth_funcs;
+				config->auth_types |= amod->type;
 #else
-			fprintf(stderr, "Radius support is disabled\n");
-			exit(1);
+				fprintf(stderr, "Radius support is disabled\n");
+				exit(1);
 #endif
+			}
 		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {

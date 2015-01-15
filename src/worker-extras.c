@@ -36,6 +36,7 @@
 #ifdef HAVE_LZ4
 # include <lz4.h>
 #endif
+#include "lzs.h"
 
 #include <base64.h>
 #include <c-strcase.h>
@@ -315,6 +316,13 @@ struct compression_method_st comp_methods[] = {
 		.server_prio = 90,
 	},
 #endif
+	{
+		.id = OC_COMP_LZS,
+		.name = "lzs",
+		.decompress = (decompress_fn)lzs_decompress,
+		.compress = (compress_fn)lzs_compress,
+		.server_prio = 80,
+	}
 };
 
 

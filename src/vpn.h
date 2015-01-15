@@ -218,6 +218,7 @@ struct cfg_st {
 	char *auth_additional;	/* the additional string specified in the auth methode */
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
+	unsigned disable_compression;
 	char *chroot_dir;	/* where the xml files are served from */
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */

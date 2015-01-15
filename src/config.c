@@ -64,6 +64,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "disable-compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -569,6 +570,8 @@ unsigned force_cert_auth;
 		fprintf(stderr, "note that 'always-require-cert' was replaced by 'cisco-client-compat'\n");
 		config->cisco_client_compat = 1;
 	}
+
+	READ_TF("disable-compression", config->disable_compression, 0);
 
 	READ_TF("use-seccomp", config->isolate, 0);
 	if (config->isolate) {

@@ -226,6 +226,9 @@ server-key = /path/to/key.pem
 # See the manual to generate an empty CRL initially.
 #crl = /path/to/crl.pem
 
+# Uncomment this to disable compression negotiation.
+#disable-compression = true
+
 # GnuTLS priority string; note that SSL 3.0 is disabled by default
 # as there are no openconnect (and possibly anyconnect clients) using
 # that protocol. The string below does not enforce perfect forward

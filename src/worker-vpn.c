@@ -1238,7 +1238,8 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > ws->config->no_compress_limit) {
 		/* otherwise don't compress */
-		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
+		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);
+		oclog(ws, LOG_DEBUG, "compressed %d to %d\n", (int)l, ret);
 		if (ret > 0 && ret < l) {
 			dtls_to_send.data = ws->decomp;
 			dtls_to_send.size = ret;
@@ -1254,7 +1255,8 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 		}
 	} else if (ws->cstp_selected_comp != NULL && l > ws->config->no_compress_limit) {
 		/* otherwise don't compress */
-		ret = ws->cstp_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
+		ret = ws->cstp_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);
+		oclog(ws, LOG_DEBUG, "compressed %d to %d\n", (int)l, ret);
 		if (ret > 0 && ret < l) {
 			cstp_to_send.data = ws->decomp;
 			cstp_to_send.size = ret;
@@ -2100,6 +2102,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 			}
 
 			plain_size = ws->cstp_selected_comp->decompress(ws->decomp, sizeof(ws->decomp), buf, buf_size);
+			oclog(ws, LOG_DEBUG, "decompressed %d to %d\n", (int)buf_size, (int)plain_size);
 		} else { /* DTLS */
 			if (ws->dtls_selected_comp == NULL) {
 				oclog(ws, LOG_ERR, "received compression data but no compression was negotiated");
@@ -2107,6 +2110,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 			}
 
 			plain_size = ws->dtls_selected_comp->decompress(ws->decomp, sizeof(ws->decomp), buf, buf_size);
+			oclog(ws, LOG_DEBUG, "decompressed %d to %d\n", (int)buf_size, (int)plain_size);
 		}
 
 		if (plain_size <= 0) {

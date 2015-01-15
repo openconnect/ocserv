@@ -10,6 +10,8 @@
 - Use a separate IPC, NET and PID namespace in Linux systems for worker
   processes. That effectively puts each worker process in a separate
   container. This can be disabled at compile time using --disable-linux-namespaces.
+- Configuration option 'use-seccomp' was replaced by 'isolate-workers',
+  which in addition to seccomp it enables the Linux namespaces restrictions.
 
 
 * Version 0.8.9 (released 2014-12-10)

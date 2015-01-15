@@ -296,6 +296,7 @@ void __attribute__ ((format(printf, 3, 4)))
 void  oclog_hex(const worker_st* ws, int priority,
 		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
+void header_value_check(struct worker_st *ws, struct http_req_st *req);
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
 unsigned check_if_default_route(char **routes, unsigned routes_size);

@@ -12,6 +12,7 @@
   container. This can be disabled at compile time using --disable-linux-namespaces.
 - Configuration option 'use-seccomp' was replaced by 'isolate-workers',
   which in addition to seccomp it enables the Linux namespaces restrictions.
+- Added support for stateless compression using lz4.
 
 
 * Version 0.8.9 (released 2014-12-10)

@@ -65,7 +65,6 @@
 /* The number of DPD packets a client skips before he's kicked */
 #define DPD_TRIES 2
 #define DPD_MAX_TRIES 3
-#define MIN_COMPRESSED_SIZE 40
 
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 16
@@ -1232,7 +1231,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	cstp_to_send.data = ws->buffer;
 	cstp_to_send.size = l;
 
-	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
+	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > ws->config->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
 		if (ret > 0 && ret < l) {
@@ -1248,7 +1247,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 				}
 			}
 		}
-	} else if (ws->cstp_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
+	} else if (ws->cstp_selected_comp != NULL && l > ws->config->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->cstp_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
 		if (ret > 0 && ret < l) {

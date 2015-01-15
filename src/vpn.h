@@ -56,6 +56,8 @@ typedef enum {
 	OC_COMP_LZS,
 } comp_type_t;
 
+#define MIN_NO_COMPRESS_LIMIT 64
+
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  2
 #define DEBUG_TRANSFERRED 5
@@ -219,6 +221,7 @@ struct cfg_st {
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
 	unsigned disable_compression;
+	unsigned no_compress_limit;	/* under this size (in bytes) of data there will be no compression */
 	char *chroot_dir;	/* where the xml files are served from */
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */

@@ -65,6 +65,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "disable-compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -572,6 +573,9 @@ unsigned force_cert_auth;
 	}
 
 	READ_TF("disable-compression", config->disable_compression, 0);
+	READ_NUMERIC("no-compress-limit", config->no_compress_limit);
+	if (config->no_compress_limit < MIN_NO_COMPRESS_LIMIT)
+		config->no_compress_limit = MIN_NO_COMPRESS_LIMIT;
 
 	READ_TF("use-seccomp", config->isolate, 0);
 	if (config->isolate) {

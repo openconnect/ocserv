@@ -229,6 +229,12 @@ server-key = /path/to/key.pem
 # Uncomment this to disable compression negotiation.
 #disable-compression = true
 
+# Set the minimum size under which a packet will not be compressed.
+# That is to allow low-latency for VoIP packets. The default size
+# is 64 bytes. Modify it if the clients typically use compression
+# as well of VoIP with codecs that exceed the default value.
+#no-compress-limit = 256
+
 # GnuTLS priority string; note that SSL 3.0 is disabled by default
 # as there are no openconnect (and possibly anyconnect clients) using
 # that protocol. The string below does not enforce perfect forward

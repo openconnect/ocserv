@@ -56,7 +56,7 @@ typedef enum {
 	OC_COMP_LZS,
 } comp_type_t;
 
-#define MIN_NO_COMPRESS_LIMIT 64
+#define MIN_NO_COMPRESS_LIMIT 256
 
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  2

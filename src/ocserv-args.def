@@ -231,7 +231,7 @@ server-key = /path/to/key.pem
 
 # Set the minimum size under which a packet will not be compressed.
 # That is to allow low-latency for VoIP packets. The default size
-# is 64 bytes. Modify it if the clients typically use compression
+# is 256 bytes. Modify it if the clients typically use compression
 # as well of VoIP with codecs that exceed the default value.
 #no-compress-limit = 256
 

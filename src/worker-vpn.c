@@ -1235,12 +1235,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
 		/* otherwise don't compress */
 		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
-		if (ret <= 0) {
-			oclog(ws, LOG_ERR, "error in %s compression %d\n", ws->dtls_selected_comp->name, ret);
-			return -1;
-		}
-
-		if (ret < l) {
+		if (ret > 0 && ret < l) {
 			dtls_to_send.data = ws->decomp;
 			dtls_to_send.size = ret;
 			dtls_type = AC_PKT_COMPRESSED;
@@ -1256,12 +1251,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	} else if (ws->cstp_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
 		/* otherwise don't compress */
 		ret = ws->cstp_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
-		if (ret <= 0) {
-			oclog(ws, LOG_ERR, "error in %s compression %d\n", ws->dtls_selected_comp->name, ret);
-			return -1;
-		}
-
-		if (ret < l) {
+		if (ret > 0 && ret < l) {
 			cstp_to_send.data = ws->decomp;
 			cstp_to_send.size = ret;
 			cstp_type = AC_PKT_COMPRESSED;

@@ -299,9 +299,9 @@ int lz4_decompress(void *dst, int dstlen, const void *src, int srclen)
 static
 int lz4_compress(void *dst, int dstlen, const void *src, int srclen)
 {
-	if (dstlen < LZ4_compressBound(srclen))
-		return -1;
-	return LZ4_compress(src, dst, srclen);
+	/* we intentionally restrict output to srclen so that
+	 * compression fails early for packets that expand. */
+	return LZ4_compress_limitedOutput(src, dst, srclen, srclen);
 }
 #endif
 

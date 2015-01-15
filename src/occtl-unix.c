@@ -639,6 +639,11 @@ int common_info_cmd(UserListRep * args)
 		if (args->user[i]->dtls_ciphersuite != NULL && args->user[i]->dtls_ciphersuite[0] != 0)
 			fprintf(out, "\tDTLS cipher: %s\n", args->user[i]->dtls_ciphersuite);
 
+		if (args->user[i]->cstp_compr && args->user[i]->cstp_compr[0] != 0)
+			fprintf(out, "\tCSTP compression: %s\n", args->user[i]->cstp_compr);
+		if (args->user[i]->dtls_compr != NULL && args->user[i]->dtls_compr[0] != 0)
+			fprintf(out, "\tDTLS compression: %s\n", args->user[i]->dtls_compr);
+
 		/* user network info */
 		fputs("\n", out);
 		if (print_list_entries(out, "\tDNS:", args->user[i]->dns, args->user[i]->n_dns) < 0)

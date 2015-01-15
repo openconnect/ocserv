@@ -723,11 +723,15 @@ void session_info_send(worker_st * ws)
 
 	if (ws->session) {
 		msg.tls_ciphersuite = gnutls_session_get_desc(ws->session);
+		if (ws->cstp_selected_comp)
+			msg.cstp_compr = (char*)ws->cstp_selected_comp->name;
 	}
 
 	if (ws->udp_state != UP_DISABLED && ws->dtls_session) {
 		msg.dtls_ciphersuite =
 		    gnutls_session_get_desc(ws->dtls_session);
+		if (ws->dtls_selected_comp)
+			msg.dtls_compr = (char*)ws->dtls_selected_comp->name;
 	}
 
 	if (ws->req.user_agent[0] != 0) {

@@ -590,6 +590,12 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			if (tmsg->dtls_ciphersuite)
 				strlcpy(proc->dtls_ciphersuite, tmsg->dtls_ciphersuite,
 					 sizeof(proc->dtls_ciphersuite));
+			if (tmsg->cstp_compr)
+				strlcpy(proc->cstp_compr, tmsg->cstp_compr,
+					 sizeof(proc->cstp_compr));
+			if (tmsg->dtls_compr)
+				strlcpy(proc->dtls_compr, tmsg->dtls_compr,
+					 sizeof(proc->dtls_compr));
 			if (tmsg->user_agent)
 				strlcpy(proc->user_agent, tmsg->user_agent,
 					 sizeof(proc->user_agent));

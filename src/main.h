@@ -132,6 +132,8 @@ typedef struct proc_st {
 	char user_agent[MAX_AGENT_NAME];
 	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char dtls_ciphersuite[MAX_CIPHERSUITE_NAME];
+	char cstp_compr[8];
+	char dtls_compr[8];
 	unsigned mtu;
 
 	/* pointer to the cookie used by this session */

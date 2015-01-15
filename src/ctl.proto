@@ -40,6 +40,9 @@ message user_info_rep
 	repeated string routes = 20;
 	repeated string iroutes = 21;
 	optional uint32 mtu = 22;
+
+	optional string cstp_compr = 23;
+	optional string dtls_compr = 24;
 }
 
 message user_list_rep

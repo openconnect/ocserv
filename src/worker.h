@@ -47,6 +47,8 @@ typedef enum {
 
 #define STR_HDR_COOKIE "Cookie"
 #define STR_HDR_USER_AGENT "User-Agent"
+#define STR_HDR_CSTP_ENCODING "X-CSTP-Accept-Encoding"
+#define STR_HDR_DTLS_ENCODING "X-DTLS-Accept-Encoding"
 #define STR_HDR_CONNECTION "Connection"
 #define STR_HDR_MS "X-DTLS-Master-Secret"
 #define STR_HDR_CS "X-DTLS-CipherSuite"
@@ -67,6 +69,8 @@ enum {
 	HEADER_CONNECTION,
 	HEADER_FULL_IPV6,
 	HEADER_USER_AGENT,
+	HEADER_CSTP_ENCODING,
+	HEADER_DTLS_ENCODING
 };
 
 enum {
@@ -88,6 +92,17 @@ enum {
 	AGENT_OPENCONNECT_V3,
 	AGENT_OPENCONNECT
 };
+
+typedef int (*decompress_fn)(void* dst, int maxDstSize, const void* src, int src_size);
+typedef int (*compress_fn)(void* dst, int dst_size, const void* src, int src_size);
+
+typedef struct compression_method_st {
+	comp_type_t id;
+	const char *name;
+	decompress_fn decompress;
+	compress_fn compress;
+	unsigned server_prio; /* the highest the more we want to negotiate that */
+} compression_method_st;
 
 typedef struct dtls_ciphersuite_st {
 	const char* oc_name;
@@ -139,6 +154,9 @@ typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
+
+	const compression_method_st *dtls_selected_comp;
+	const compression_method_st *cstp_selected_comp;
 
 	struct http_req_st req;
 
@@ -204,6 +222,8 @@ typedef struct worker_st {
 
 	/* Buffer used by worker */
 	uint8_t buffer[16*1024];
+	/* Buffer used for decompression */
+	uint8_t decomp[16*1024];
 	unsigned buffer_size;
 
 	/* the following are set only if authentication is complete */

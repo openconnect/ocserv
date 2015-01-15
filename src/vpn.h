@@ -50,6 +50,12 @@ typedef enum {
 	SOCK_TYPE_UNIX
 } sock_type_t;
 
+typedef enum {
+	OC_COMP_NULL = 0,
+	OC_COMP_LZ4,
+	OC_COMP_LZS,
+} comp_type_t;
+
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  2
 #define DEBUG_TRANSFERRED 5

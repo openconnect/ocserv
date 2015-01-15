@@ -46,6 +46,9 @@
 #include <c-strcase.h>
 #include <c-ctype.h>
 #include <worker-bandwidth.h>
+#ifdef HAVE_LZ4
+# include <lz4.h>
+#endif
 
 #include <vpn.h>
 #include "ipc.pb-c.h"
@@ -66,6 +69,7 @@
 /* The number of DPD packets a client skips before he's kicked */
 #define DPD_TRIES 2
 #define DPD_MAX_TRIES 3
+#define MIN_COMPRESSED_SIZE 40
 
 /* HTTP requests prior to disconnection */
 #define MAX_HTTP_REQUESTS 16
@@ -181,6 +185,34 @@ int url_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
+#ifdef HAVE_LZ4
+static
+int lz4_decompress(void *dst, int dstlen, const void *src, int srclen)
+{
+	return LZ4_decompress_safe(src, dst, srclen, dstlen);
+}
+
+static
+int lz4_compress(void *dst, int dstlen, const void *src, int srclen)
+{
+	if (dstlen < LZ4_compressBound(srclen))
+		return -1;
+	return LZ4_compress(src, dst, srclen);
+}
+#endif
+
+struct compression_method_st comp_methods[] = {
+#ifdef HAVE_LZ4
+	{
+		.id = OC_COMP_LZ4,
+		.name = "oc-lz4",
+		.decompress = lz4_decompress,
+		.compress = lz4_compress,
+		.server_prio = 90,
+	},
+#endif
+};
+
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
 
@@ -234,6 +266,7 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 	char *token, *value;
 	char *str, *p;
 	const dtls_ciphersuite_st *cand = NULL;
+	const compression_method_st *comp_cand = NULL;
 	gnutls_cipher_algorithm_t want_cipher;
 	gnutls_mac_algorithm_t want_mac;
 
@@ -334,6 +367,52 @@ static void value_check(struct worker_st *ws, struct http_req_st *req)
 			str = NULL;
 		}
 	        req->selected_ciphersuite = cand;
+
+		break;
+
+	case HEADER_DTLS_ENCODING:
+	        ws->dtls_selected_comp = NULL;
+
+		str = (char *)value;
+		while ((token = strtok(str, ",")) != NULL) {
+			for (i = 0;
+			     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
+			     i++) {
+				if (strcasecmp(token, comp_methods[i].name) == 0) {
+					if (comp_cand == NULL ||
+					    comp_cand->server_prio <
+					    comp_methods[i].server_prio) {
+						comp_cand =
+						    &comp_methods[i];
+					}
+				}
+			}
+			str = NULL;
+		}
+	        ws->dtls_selected_comp = comp_cand;
+
+		break;
+
+	case HEADER_CSTP_ENCODING:
+	        ws->cstp_selected_comp = NULL;
+
+		str = (char *)value;
+		while ((token = strtok(str, ",")) != NULL) {
+			for (i = 0;
+			     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
+			     i++) {
+				if (strcasecmp(token, comp_methods[i].name) == 0) {
+					if (comp_cand == NULL ||
+					    comp_cand->server_prio <
+					    comp_methods[i].server_prio) {
+						comp_cand =
+						    &comp_methods[i];
+					}
+				}
+			}
+			str = NULL;
+		}
+	        ws->cstp_selected_comp = comp_cand;
 
 		break;
 
@@ -479,6 +558,14 @@ static void header_check(struct http_req_st *req)
 		   strncmp((char *)req->header.data, STR_HDR_USER_AGENT,
 			   req->header.length) == 0) {
 		req->next_header = HEADER_USER_AGENT;
+	} else if (req->header.length == sizeof(STR_HDR_CSTP_ENCODING) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_CSTP_ENCODING,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_CSTP_ENCODING;
+	} else if (req->header.length == sizeof(STR_HDR_DTLS_ENCODING) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_DTLS_ENCODING,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_DTLS_ENCODING;
 	} else if (req->header.length == sizeof(STR_HDR_FULL_IPV6) - 1 &&
 		   strncmp((char *)req->header.data, STR_HDR_FULL_IPV6,
 			   req->header.length) == 0) {
@@ -1388,7 +1475,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 				goto cleanup;
 			}
 
-			if (ret == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) {
+			if ((ret == AC_PKT_DATA || ret == AC_PKT_COMPRESSED) && ws->udp_state == UP_ACTIVE) {
 				/* client switched to TLS for some reason */
 				if (tnow->tv_sec - ws->udp_recv_time >
 				    UDP_SWITCH_TIME)
@@ -1431,6 +1518,10 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 {
 	int ret, l, e;
 	unsigned tls_retry;
+	int dtls_type = AC_PKT_DATA;
+	int cstp_type = AC_PKT_DATA;
+	gnutls_datum_t dtls_to_send;
+	gnutls_datum_t cstp_to_send;
 
 	l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
 	if (l < 0) {
@@ -1445,23 +1536,64 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 		return 0;
 	}
+
 	if (l == 0) {
 		oclog(ws, LOG_INFO, "TUN device returned zero");
 		return 0;
 	}
 
+
+	dtls_to_send.data = ws->buffer;
+	dtls_to_send.size = l;
+
+	cstp_to_send.data = ws->buffer;
+	cstp_to_send.size = l;
+
+	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
+		/* otherwise don't compress */
+		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
+		if (ret <= 0) {
+			oclog(ws, LOG_ERR, "error in %s compression %d\n", ws->dtls_selected_comp->name, ret);
+			return -1;
+		}
+
+		dtls_to_send.data = ws->decomp;
+		dtls_to_send.size = ret;
+		dtls_type = AC_PKT_COMPRESSED;
+
+		if (ws->cstp_selected_comp) {
+			if (ws->cstp_selected_comp->id == ws->dtls_selected_comp->id) {
+				cstp_to_send.data = ws->decomp;
+				cstp_to_send.size = ret;
+				cstp_type = AC_PKT_COMPRESSED;
+			}
+		}
+	} else if (ws->cstp_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
+		/* otherwise don't compress */
+		ret = ws->cstp_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer, l);
+		if (ret <= 0) {
+			oclog(ws, LOG_ERR, "error in %s compression %d\n", ws->dtls_selected_comp->name, ret);
+			return -1;
+		}
+
+		cstp_to_send.data = ws->decomp;
+		cstp_to_send.size = ret;
+		cstp_type = AC_PKT_COMPRESSED;
+	}
+
 	/* only transmit if allowed */
-	if (bandwidth_update(&ws->b_tx, l, ws->conn_mtu, tnow)
+	if (bandwidth_update(&ws->b_tx, dtls_to_send.size, ws->conn_mtu, tnow)
 	    != 0) {
 		tls_retry = 0;
 
-		ws->tun_bytes_out += l;
 		oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
+
 		if (ws->udp_state == UP_ACTIVE) {
 
-			ws->buffer[7] = AC_PKT_DATA;
+			ws->tun_bytes_out += dtls_to_send.size;
 
-			ret = dtls_send(ws, ws->buffer + 7, l + 1);
+			dtls_to_send.data[7] = dtls_type;
+			ret = dtls_send(ws, dtls_to_send.data + 7, dtls_to_send.size + 1);
 			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {
@@ -1477,16 +1609,18 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 		}
 
 		if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
-			ws->buffer[0] = 'S';
-			ws->buffer[1] = 'T';
-			ws->buffer[2] = 'F';
-			ws->buffer[3] = 1;
-			ws->buffer[4] = l >> 8;
-			ws->buffer[5] = l & 0xff;
-			ws->buffer[6] = AC_PKT_DATA;
-			ws->buffer[7] = 0;
+			cstp_to_send.data[0] = 'S';
+			cstp_to_send.data[1] = 'T';
+			cstp_to_send.data[2] = 'F';
+			cstp_to_send.data[3] = 1;
+			cstp_to_send.data[4] = cstp_to_send.size >> 8;
+			cstp_to_send.data[5] = cstp_to_send.size & 0xff;
+			cstp_to_send.data[6] = cstp_type;
+			cstp_to_send.data[7] = 0;
 
-			ret = cstp_send(ws, ws->buffer, l + 8);
+			ws->tun_bytes_out += cstp_to_send.size;
+
+			ret = cstp_send(ws, cstp_to_send.data, cstp_to_send.size + 8);
 			FATAL_ERR_CMD(ws, ret, exit_worker(ws));
 		}
 		ws->last_nc_msg = tnow->tv_sec;
@@ -2063,6 +2197,23 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
+	/* send any compression methods */
+	if (ws->dtls_selected_comp) {
+		oclog(ws, LOG_DEBUG, "selected DTLS compression method %s\n", ws->dtls_selected_comp->name);
+		ret =
+		    cstp_printf(ws, "X-DTLS-Content-Encoding: %s\r\n",
+			        ws->dtls_selected_comp->name);
+		SEND_ERR(ret);
+	}
+
+	if (ws->cstp_selected_comp) {
+		oclog(ws, LOG_DEBUG, "selected CSTP compression method %s\n", ws->cstp_selected_comp->name);
+		ret =
+		    cstp_printf(ws, "X-CSTP-Content-Encoding: %s\r\n",
+			        ws->cstp_selected_comp->name);
+		SEND_ERR(ret);
+	}
+
 	ret = cstp_puts(ws, "\r\n");
 	SEND_ERR(ret);
 
@@ -2157,16 +2308,13 @@ static int connect_handler(worker_st * ws)
 			ret = tun_mainloop(ws, &tnow);
 			if (ret < 0)
 				goto exit;
-
 		}
 
 		/* read pending data from TCP channel */
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
-
 			ret = tls_mainloop(ws, &tnow);
 			if (ret < 0)
 				goto exit;
-
 		}
 
 		/* read data from UDP channel */
@@ -2214,6 +2362,8 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 		      uint8_t head, uint8_t * buf, size_t buf_size, time_t now)
 {
 	int ret, e;
+	uint8_t *plain = buf;
+	ssize_t plain_size = buf_size;
 
 	switch (head) {
 	case AC_PKT_DPD_RESP:
@@ -2260,10 +2410,34 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 		oclog(ws, LOG_DEBUG, "received BYE packet; exiting");
 		exit_worker(ws);
 		break;
+	case AC_PKT_COMPRESSED:
+		/* decompress */
+		if (ws->session == ts) { /* CSTP */
+			if (ws->cstp_selected_comp == NULL) {
+				oclog(ws, LOG_ERR, "received compression data but no compression was negotiated");
+				return -1;
+			}
+
+			plain_size = ws->cstp_selected_comp->decompress(ws->decomp, sizeof(ws->decomp), buf, buf_size);
+		} else { /* DTLS */
+			if (ws->dtls_selected_comp == NULL) {
+				oclog(ws, LOG_ERR, "received compression data but no compression was negotiated");
+				return -1;
+			}
+
+			plain_size = ws->dtls_selected_comp->decompress(ws->decomp, sizeof(ws->decomp), buf, buf_size);
+		}
+
+		if (plain_size <= 0) {
+			oclog(ws, LOG_ERR, "decompression error %d", (int)plain_size);
+			return -1;
+		}
+		plain = ws->decomp;
+		/* fall through */
 	case AC_PKT_DATA:
 		oclog(ws, LOG_TRANSFER_DEBUG, "writing %d byte(s) to TUN",
 		      (int)buf_size);
-		ret = force_write(ws->tun_fd, buf, buf_size);
+		ret = force_write(ws->tun_fd, plain, plain_size);
 		if (ret == -1) {
 			e = errno;
 			oclog(ws, LOG_ERR, "could not write data to tun: %s",

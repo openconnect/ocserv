@@ -358,6 +358,25 @@ LIBS="$oldlibs"
 fi
 AM_CONDITIONAL(LOCAL_HTTP_PARSER, test "x$with_local_http_parser" != xno)
 
+dnl LZ4
+AC_ARG_WITH(lz4,
+  AS_HELP_STRING([--without-lz4], [disable support for LZ4 compression]),
+  test_for_lz4=$withval,
+  test_for_lz4=yes)
+
+enable_lz4=no
+if test "$test_for_lz4" = yes;then
+PKG_CHECK_MODULES([LIBLZ4], [liblz4], [
+enable_lz4=yes
+AC_DEFINE([HAVE_LZ4], [], [LZ4 was found])
+],
+[
+	AC_MSG_WARN([[
+***
+*** lz4 not found. Will disable compression support.
+*** ]])
+])
+fi
 
 dnl needed in the included PCL
 AC_C_VOLATILE
@@ -453,6 +472,7 @@ AC_MSG_NOTICE([
 Experimental options:
   seccomp:              ${seccomp_enabled}
   Linux namespaces:     ${linux_ns_enabled}
+  LZ4 compression:      ${enable_lz4}
   Anyconnect compat:    ${anyconnect_enabled}
 ])
 

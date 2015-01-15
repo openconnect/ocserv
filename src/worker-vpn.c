@@ -1240,15 +1240,17 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			return -1;
 		}
 
-		dtls_to_send.data = ws->decomp;
-		dtls_to_send.size = ret;
-		dtls_type = AC_PKT_COMPRESSED;
+		if (ret < l) {
+			dtls_to_send.data = ws->decomp;
+			dtls_to_send.size = ret;
+			dtls_type = AC_PKT_COMPRESSED;
 
-		if (ws->cstp_selected_comp) {
-			if (ws->cstp_selected_comp->id == ws->dtls_selected_comp->id) {
-				cstp_to_send.data = ws->decomp;
-				cstp_to_send.size = ret;
-				cstp_type = AC_PKT_COMPRESSED;
+			if (ws->cstp_selected_comp) {
+				if (ws->cstp_selected_comp->id == ws->dtls_selected_comp->id) {
+					cstp_to_send.data = ws->decomp;
+					cstp_to_send.size = ret;
+					cstp_type = AC_PKT_COMPRESSED;
+				}
 			}
 		}
 	} else if (ws->cstp_selected_comp != NULL && l > MIN_COMPRESSED_SIZE) {
@@ -1259,9 +1261,11 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			return -1;
 		}
 
-		cstp_to_send.data = ws->decomp;
-		cstp_to_send.size = ret;
-		cstp_type = AC_PKT_COMPRESSED;
+		if (ret < l) {
+			cstp_to_send.data = ws->decomp;
+			cstp_to_send.size = ret;
+			cstp_type = AC_PKT_COMPRESSED;
+		}
 	}
 
 	/* only transmit if allowed */

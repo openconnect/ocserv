@@ -90,6 +90,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "use-seccomp", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "isolate-worker", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "session-control", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "auto-select-group", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -569,10 +570,16 @@ unsigned force_cert_auth;
 		config->cisco_client_compat = 1;
 	}
 
-	READ_TF("use-seccomp", config->seccomp, 0);
-#ifndef HAVE_LIBSECCOMP
-	if (config->seccomp != 0) {
-		fprintf(stderr, "error: 'use-seccomp' is set to true, but not compiled with seccomp support\n");
+	READ_TF("use-seccomp", config->isolate, 0);
+	if (config->isolate) {
+		fprintf(stderr, "note that 'use-seccomp' was replaced by 'isolate-workers'\n");
+		config->cisco_client_compat = 1;
+	} else {
+		READ_TF("isolate-workers", config->isolate, 0);
+	}
+#if !defined(HAVE_LIBSECCOMP) && !defined(ENABLE_LINUX_NS)
+	if (config->isolate != 0) {
+		fprintf(stderr, "error: 'isolate-workers' is set to true, but not compiled with seccomp or Linux namespaces support\n");
 		exit(1);
 	}
 #endif

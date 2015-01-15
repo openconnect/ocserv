@@ -104,10 +104,12 @@ An example configuration file follows.
 # Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
 #auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
 
-# Whether to enable seccomp worker isolation. That restricts the number of 
+# Whether to enable seccomp/Linux namespaces worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a
 # bug in the worker process. It is available on Linux systems at a performance cost.
-#use-seccomp = true
+# The performance cost is roughly double the time needed for fork() per client, and 
+# 2% overhead at transfer time (tested on a Linux 3.17.8).
+#isolate-workers = true
 
 # A banner to be displayed on clients
 #banner = "Welcome"

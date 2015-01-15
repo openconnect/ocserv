@@ -573,7 +573,6 @@ unsigned force_cert_auth;
 	READ_TF("use-seccomp", config->isolate, 0);
 	if (config->isolate) {
 		fprintf(stderr, "note that 'use-seccomp' was replaced by 'isolate-workers'\n");
-		config->cisco_client_compat = 1;
 	} else {
 		READ_TF("isolate-workers", config->isolate, 0);
 	}

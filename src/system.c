@@ -22,6 +22,7 @@
 #ifdef __linux__
 # include <sys/prctl.h>
 # include <sched.h>
+# include <linux/sched.h>
 # include <sys/syscall.h>
 #endif
 #include <sys/types.h>

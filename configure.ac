@@ -286,7 +286,8 @@ if [ test "$linux_ns_enabled" = "yes" ];then
 AC_MSG_CHECKING([for Linux namespaces])
 dnl We use Linux namespaces only in the platforms clone() works as expected
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
-		   #include <sched.h>],[
+		   #include <sched.h>
+		   #include <linux/sched.h>],[
 		   #if defined(__i386__) || defined(__arm__) || defined(__x86_64__) || defined(__mips__)
 		   unshare(CLONE_NEWPID|CLONE_NEWIPC);
 		   #else

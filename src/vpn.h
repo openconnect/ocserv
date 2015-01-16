@@ -56,7 +56,8 @@ typedef enum {
 	OC_COMP_LZS,
 } comp_type_t;
 
-#define MIN_NO_COMPRESS_LIMIT 256
+#define MIN_NO_COMPRESS_LIMIT 64
+#define DEFAULT_NO_COMPRESS_LIMIT 256
 
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  2
@@ -220,7 +221,7 @@ struct cfg_st {
 	char *auth_additional;	/* the additional string specified in the auth methode */
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
-	unsigned disable_compression;
+	unsigned enable_compression;
 	unsigned no_compress_limit;	/* under this size (in bytes) of data there will be no compression */
 	char *chroot_dir;	/* where the xml files are served from */
 	char *banner;

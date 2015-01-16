@@ -439,7 +439,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_ENCODING:
-	        if (ws->config->disable_compression)
+	        if (ws->config->enable_compression == 0)
 	        	break;
 
 	        ws->dtls_selected_comp = NULL;
@@ -465,7 +465,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_CSTP_ENCODING:
-	        if (ws->config->disable_compression)
+	        if (ws->config->enable_compression == 0)
 	        	break;
 
 	        ws->cstp_selected_comp = NULL;

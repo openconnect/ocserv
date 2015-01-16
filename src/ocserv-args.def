@@ -226,8 +226,8 @@ server-key = /path/to/key.pem
 # See the manual to generate an empty CRL initially.
 #crl = /path/to/crl.pem
 
-# Uncomment this to disable compression negotiation.
-#disable-compression = true
+# Uncomment this to enable compression negotiation (LZS, LZ4).
+#compression = true
 
 # Set the minimum size under which a packet will not be compressed.
 # That is to allow low-latency for VoIP packets. The default size

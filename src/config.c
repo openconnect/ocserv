@@ -64,7 +64,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
-	{ .name = "disable-compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -572,8 +572,10 @@ unsigned force_cert_auth;
 		config->cisco_client_compat = 1;
 	}
 
-	READ_TF("disable-compression", config->disable_compression, 0);
+	READ_TF("compression", config->enable_compression, 0);
 	READ_NUMERIC("no-compress-limit", config->no_compress_limit);
+	if (config->no_compress_limit == 0)
+		config->no_compress_limit = DEFAULT_NO_COMPRESS_LIMIT;
 	if (config->no_compress_limit < MIN_NO_COMPRESS_LIMIT)
 		config->no_compress_limit = MIN_NO_COMPRESS_LIMIT;
 

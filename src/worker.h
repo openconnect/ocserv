@@ -291,6 +291,10 @@ int http_header_field_cb(http_parser * parser, const char *at, size_t length);
 int http_header_complete_cb(http_parser * parser);
 int http_message_complete_cb(http_parser * parser);
 int http_body_cb(http_parser * parser, const char *at, size_t length);
+void http_req_deinit(worker_st * ws);
+void http_req_reset(worker_st * ws);
+void http_req_init(worker_st * ws);
+
 url_handler_fn http_get_url_handler(const char *url);
 url_handler_fn http_post_url_handler(const char *url);
 

@@ -522,3 +522,30 @@ int http_body_cb(http_parser * parser, const char *at, size_t length)
 	req->body = tmp;
 	return 0;
 }
+
+void http_req_init(worker_st * ws)
+{
+	str_init(&ws->req.header, ws);
+	str_init(&ws->req.value, ws);
+}
+
+void http_req_reset(worker_st * ws)
+{
+	ws->req.headers_complete = 0;
+	ws->req.message_complete = 0;
+	ws->req.body_length = 0;
+	ws->req.url[0] = 0;
+
+	ws->req.header_state = HTTP_HEADER_INIT;
+	str_reset(&ws->req.header);
+	str_reset(&ws->req.value);
+}
+
+void http_req_deinit(worker_st * ws)
+{
+	http_req_reset(ws);
+	str_clear(&ws->req.header);
+	str_clear(&ws->req.value);
+	talloc_free(ws->req.body);
+	ws->req.body = NULL;
+}

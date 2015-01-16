@@ -80,6 +80,7 @@ static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 static void exit_worker(worker_st * ws);
+static int connect_handler(worker_st * ws);
 
 static void handle_alarm(int signo)
 {
@@ -94,10 +95,6 @@ static void handle_term(int signo)
 	terminate = 1;
 	alarm(2);		/* force exit by SIGALRM */
 }
-
-static int connect_handler(worker_st * ws);
-
-
 
 inline static ssize_t dtls_pull_buffer_non_empty(gnutls_transport_ptr_t ptr)
 {
@@ -241,33 +238,6 @@ static int setup_dtls_connection(struct worker_st *ws)
  fail:
 	gnutls_deinit(session);
 	return -1;
-}
-
-static void http_req_init(worker_st * ws)
-{
-	str_init(&ws->req.header, ws);
-	str_init(&ws->req.value, ws);
-}
-
-static void http_req_reset(worker_st * ws)
-{
-	ws->req.headers_complete = 0;
-	ws->req.message_complete = 0;
-	ws->req.body_length = 0;
-	ws->req.url[0] = 0;
-
-	ws->req.header_state = HTTP_HEADER_INIT;
-	str_reset(&ws->req.header);
-	str_reset(&ws->req.value);
-}
-
-static void http_req_deinit(worker_st * ws)
-{
-	http_req_reset(ws);
-	str_clear(&ws->req.header);
-	str_clear(&ws->req.value);
-	talloc_free(ws->req.body);
-	ws->req.body = NULL;
 }
 
 static

@@ -1,0 +1,585 @@
+/*
+ * Copyright (C) 2015 Red Hat
+ *
+ * This file is part of ocserv.
+ *
+ * ocserv is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * ocserv is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <config.h>
+
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
+#ifdef HAVE_LZ4
+# include <lz4.h>
+#endif
+#include "lzs.h"
+
+#include <base64.h>
+#include <c-strcase.h>
+#include <c-ctype.h>
+
+#include <vpn.h>
+#include <worker.h>
+
+#define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
+#define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
+
+struct known_urls_st {
+	const char *url;
+	unsigned url_size;
+	unsigned partial_match;
+	url_handler_fn get_handler;
+	url_handler_fn post_handler;
+};
+
+#define LL(x,y,z) {x, sizeof(x)-1, 0, y, z}
+#define LL_DIR(x,y,z) {x, sizeof(x)-1, 1, y, z}
+const static struct known_urls_st known_urls[] = {
+	LL("/", get_auth_handler, post_auth_handler),
+	LL("/auth", get_auth_handler, post_auth_handler),
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	LL("/1/index.html", get_empty_handler, NULL),
+	LL("/1/Linux", get_empty_handler, NULL),
+	LL("/1/Linux_64", get_empty_handler, NULL),
+	LL("/1/Windows", get_empty_handler, NULL),
+	LL("/1/Darwin_i386", get_empty_handler, NULL),
+	LL("/1/binaries/vpndownloader.sh", get_dl_handler, NULL),
+	LL("/1/VPNManifest.xml", get_string_handler, NULL),
+	LL("/1/binaries/update.txt", get_string_handler, NULL),
+
+	LL_DIR("/profiles", get_config_handler, NULL),
+	LL("/+CSCOT+/", get_string_handler, NULL),
+	LL("/logout", get_empty_handler, NULL),
+#endif
+	{NULL, 0, 0, NULL, NULL}
+};
+
+/* Consider switching to gperf when this table grows significantly.
+ * These tables are used for the custom DTLS cipher negotiation via
+ * HTTP headers (WTF), and the compression negotiation.
+ */
+static const dtls_ciphersuite_st ciphersuites[] = {
+#if GNUTLS_VERSION_NUMBER >= 0x030207
+	{
+	 .oc_name = CS_AES128_GCM,
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
+	 .server_prio = 90},
+	{
+	 .oc_name = CS_AES256_GCM,
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
+	 .server_prio = 80,
+	 },
+#endif
+	{
+	 .oc_name = "AES128-SHA",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT",
+	 .gnutls_version = GNUTLS_DTLS0_9,
+	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
+	 .server_prio = 50,
+	 },
+	{
+	 .oc_name = "DES-CBC3-SHA",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT",
+	 .gnutls_version = GNUTLS_DTLS0_9,
+	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
+	 .server_prio = 1,
+	 },
+};
+
+#ifdef HAVE_LZ4
+/* Wrappers over LZ4 functions */
+static
+int lz4_decompress(void *dst, int dstlen, const void *src, int srclen)
+{
+	return LZ4_decompress_safe(src, dst, srclen, dstlen);
+}
+
+static
+int lz4_compress(void *dst, int dstlen, const void *src, int srclen)
+{
+	/* we intentionally restrict output to srclen so that
+	 * compression fails early for packets that expand. */
+	return LZ4_compress_limitedOutput(src, dst, srclen, srclen);
+}
+#endif
+
+struct compression_method_st comp_methods[] = {
+#ifdef HAVE_LZ4
+	{
+		.id = OC_COMP_LZ4,
+		.name = "oc-lz4",
+		.decompress = lz4_decompress,
+		.compress = lz4_compress,
+		.server_prio = 90,
+	},
+#endif
+	{
+		.id = OC_COMP_LZS,
+		.name = "lzs",
+		.decompress = (decompress_fn)lzs_decompress,
+		.compress = (compress_fn)lzs_compress,
+		.server_prio = 80,
+	}
+};
+
+static
+void header_value_check(struct worker_st *ws, struct http_req_st *req)
+{
+	unsigned tmplen, i;
+	int ret;
+	size_t nlen, value_length;
+	char *token, *value;
+	char *str, *p;
+	const dtls_ciphersuite_st *cand = NULL;
+	const compression_method_st *comp_cand = NULL;
+	gnutls_cipher_algorithm_t want_cipher;
+	gnutls_mac_algorithm_t want_mac;
+
+	if (req->value.length <= 0)
+		return;
+
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length,
+	      req->header.data, (int)req->value.length, req->value.data);
+
+	value = talloc_size(ws, req->value.length + 1);
+	if (value == NULL)
+		return;
+
+	/* make sure the value is null terminated */
+	value_length = req->value.length;
+	memcpy(value, req->value.data, value_length);
+	value[value_length] = 0;
+
+	switch (req->next_header) {
+	case HEADER_MASTER_SECRET:
+		if (value_length < TLS_MASTER_SIZE * 2) {
+			req->master_secret_set = 0;
+			goto cleanup;
+		}
+
+		tmplen = TLS_MASTER_SIZE * 2;
+
+		nlen = sizeof(req->master_secret);
+		gnutls_hex2bin((void *)value, tmplen,
+			       req->master_secret, &nlen);
+
+		req->master_secret_set = 1;
+		break;
+	case HEADER_HOSTNAME:
+		if (value_length + 1 > MAX_HOSTNAME_SIZE) {
+			req->hostname[0] = 0;
+			goto cleanup;
+		}
+		memcpy(req->hostname, value, value_length);
+		req->hostname[value_length] = 0;
+		break;
+	case HEADER_DEVICE_TYPE:
+		req->is_mobile = 1;
+		break;
+	case HEADER_USER_AGENT:
+		if (value_length + 1 > MAX_AGENT_NAME) {
+			memcpy(req->user_agent, value, MAX_AGENT_NAME-1);
+			req->user_agent[MAX_AGENT_NAME-1] = 0;
+		} else {
+			memcpy(req->user_agent, value, value_length);
+			req->user_agent[value_length] = 0;
+		}
+
+		oclog(ws, LOG_DEBUG,
+		      "User-agent: '%s'", req->user_agent);
+
+		if (strncasecmp(req->user_agent, "Open Any", 8) == 0) {
+			if (strncmp(req->user_agent, "Open AnyConnect VPN Agent v3", 28) == 0)
+				req->user_agent_type = AGENT_OPENCONNECT_V3;
+			else
+				req->user_agent_type = AGENT_OPENCONNECT;
+		}
+		break;
+
+	case HEADER_DTLS_CIPHERSUITE:
+		if (ws->session != NULL) {
+			want_mac = gnutls_mac_get(ws->session);
+			want_cipher = gnutls_cipher_get(ws->session);
+		} else {
+			want_mac = -1;
+			want_cipher = -1;
+		}
+
+		req->selected_ciphersuite = NULL;
+
+		str = (char *)value;
+		while ((token = strtok(str, ":")) != NULL) {
+			for (i = 0;
+			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
+			     i++) {
+				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
+					if (cand == NULL ||
+					    cand->server_prio <
+					    ciphersuites[i].server_prio) {
+						cand =
+						    &ciphersuites[i];
+
+						/* if our candidate matches the TLS session
+						 * ciphersuite, we are finished */
+						if (want_cipher != -1) {
+							if (want_cipher == cand->gnutls_cipher &&
+							    want_mac == cand->gnutls_mac)
+							    break;
+						}
+					}
+				}
+			}
+			str = NULL;
+		}
+	        req->selected_ciphersuite = cand;
+
+		break;
+
+	case HEADER_DTLS_ENCODING:
+	        if (ws->config->enable_compression == 0)
+	        	break;
+
+	        ws->dtls_selected_comp = NULL;
+
+		str = (char *)value;
+		while ((token = strtok(str, ",")) != NULL) {
+			for (i = 0;
+			     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
+			     i++) {
+				if (c_strcasecmp(token, comp_methods[i].name) == 0) {
+					if (comp_cand == NULL ||
+					    comp_cand->server_prio <
+					    comp_methods[i].server_prio) {
+						comp_cand =
+						    &comp_methods[i];
+					}
+				}
+			}
+			str = NULL;
+		}
+	        ws->dtls_selected_comp = comp_cand;
+
+		break;
+
+	case HEADER_CSTP_ENCODING:
+	        if (ws->config->enable_compression == 0)
+	        	break;
+
+	        ws->cstp_selected_comp = NULL;
+
+		str = (char *)value;
+		while ((token = strtok(str, ",")) != NULL) {
+			for (i = 0;
+			     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
+			     i++) {
+				if (c_strcasecmp(token, comp_methods[i].name) == 0) {
+					if (comp_cand == NULL ||
+					    comp_cand->server_prio <
+					    comp_methods[i].server_prio) {
+						comp_cand =
+						    &comp_methods[i];
+					}
+				}
+			}
+			str = NULL;
+		}
+	        ws->cstp_selected_comp = comp_cand;
+
+		break;
+
+	case HEADER_CSTP_BASE_MTU:
+		req->base_mtu = atoi((char *)value);
+		break;
+	case HEADER_CSTP_ATYPE:
+		if (memmem(value, value_length, "IPv4", 4) == NULL)
+			req->no_ipv4 = 1;
+		if (memmem(value, value_length, "IPv6", 4) == NULL)
+			req->no_ipv6 = 1;
+		break;
+	case HEADER_FULL_IPV6:
+		if (memmem(value, value_length, "true", 4) != NULL)
+			ws->full_ipv6 = 1;
+		break;
+	case HEADER_COOKIE:
+
+		str = (char *)value;
+		while ((token = strtok(str, ";")) != NULL) {
+			p = token;
+			while (c_isspace(*p)) {
+				p++;
+			}
+			tmplen = strlen(p);
+
+			if (strncmp(p, "webvpn=", 7) == 0) {
+				tmplen -= 7;
+				p += 7;
+
+				while (tmplen > 1 && c_isspace(p[tmplen - 1])) {
+					tmplen--;
+				}
+
+				nlen = tmplen;
+				ws->cookie = talloc_size(ws, nlen);
+				if (ws->cookie == NULL)
+					return;
+
+				ret =
+				    base64_decode((char *)p, tmplen,
+						  (char *)ws->cookie, &nlen);
+				if (ret == 0) {
+					oclog(ws, LOG_DEBUG,
+					      "could not decode cookie: %.*s",
+					      tmplen, p);
+					ws->cookie_set = 0;
+				} else {
+					ws->cookie_size = nlen;
+					ws->auth_state = S_AUTH_COOKIE;
+					ws->cookie_set = 1;
+				}
+			} else if (strncmp(p, "webvpncontext=", 14) == 0) {
+				p += 14;
+				tmplen -= 14;
+
+				while (tmplen > 1 && c_isspace(p[tmplen - 1])) {
+					tmplen--;
+				}
+
+				nlen = sizeof(ws->sid);
+				ret =
+				    base64_decode((char *)p, tmplen,
+						  (char *)ws->sid, &nlen);
+				if (ret == 0 || nlen != sizeof(ws->sid)) {
+					oclog(ws, LOG_DEBUG,
+					      "could not decode sid: %.*s",
+					      tmplen, p);
+					ws->sid_set = 0;
+				} else {
+					ws->sid_set = 1;
+					oclog(ws, LOG_DEBUG,
+					      "received sid: %.*s", tmplen, p);
+				}
+			}
+
+			str = NULL;
+		}
+		break;
+	}
+
+ cleanup:
+	talloc_free(value);
+}
+
+url_handler_fn http_get_url_handler(const char *url)
+{
+	const struct known_urls_st *p;
+	unsigned len = strlen(url);
+
+	p = known_urls;
+	do {
+		if (p->url != NULL) {
+			if ((len == p->url_size && strcmp(p->url, url) == 0) ||
+			    (len >= p->url_size
+			     && strncmp(p->url, url, p->url_size) == 0
+			     && (p->partial_match != 0
+				 || url[p->url_size] == '/'
+				 || url[p->url_size] == '?')))
+				return p->get_handler;
+		}
+		p++;
+	} while (p->url != NULL);
+
+	return NULL;
+}
+
+url_handler_fn http_post_url_handler(const char *url)
+{
+	const struct known_urls_st *p;
+
+	p = known_urls;
+	do {
+		if (p->url != NULL && strcmp(p->url, url) == 0)
+			return p->post_handler;
+		p++;
+	} while (p->url != NULL);
+
+	return NULL;
+}
+
+int http_url_cb(http_parser * parser, const char *at, size_t length)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+
+	if (length >= sizeof(req->url)) {
+		req->url[0] = 0;
+		return 1;
+	}
+
+	memcpy(req->url, at, length);
+	req->url[length] = 0;
+
+	return 0;
+}
+
+int http_header_field_cb(http_parser * parser, const char *at, size_t length)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+	int ret;
+
+	if (req->header_state != HTTP_HEADER_RECV) {
+		/* handle value */
+		if (req->header_state == HTTP_HEADER_VALUE_RECV)
+			header_value_check(ws, req);
+		req->header_state = HTTP_HEADER_RECV;
+		str_reset(&req->header);
+	}
+
+	ret = str_append_data(&req->header, at, length);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static void header_check(struct http_req_st *req)
+{
+	/* FIXME: move this mess to a table */
+	if (req->header.length == sizeof(STR_HDR_COOKIE) - 1 &&
+	    strncmp((char *)req->header.data, STR_HDR_COOKIE,
+		    req->header.length) == 0) {
+		req->next_header = HEADER_COOKIE;
+	} else if (req->header.length == sizeof(STR_HDR_MS) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_MS,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_MASTER_SECRET;
+	} else if (req->header.length == sizeof(STR_HDR_CMTU) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_CMTU,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_CSTP_BASE_MTU;
+	} else if (req->header.length == sizeof(STR_HDR_HOST) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_HOST,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_HOSTNAME;
+	} else if (req->header.length == sizeof(STR_HDR_CS) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_CS,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_DTLS_CIPHERSUITE;
+	} else if (req->header.length == sizeof(STR_HDR_DEVICE_TYPE) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_DEVICE_TYPE,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_DEVICE_TYPE;
+	} else if (req->header.length == sizeof(STR_HDR_ATYPE) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_ATYPE,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_CSTP_ATYPE;
+	} else if (req->header.length == sizeof(STR_HDR_CONNECTION) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_CONNECTION,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_CONNECTION;
+	} else if (req->header.length == sizeof(STR_HDR_USER_AGENT) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_USER_AGENT,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_USER_AGENT;
+	} else if (req->header.length == sizeof(STR_HDR_CSTP_ENCODING) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_CSTP_ENCODING,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_CSTP_ENCODING;
+	} else if (req->header.length == sizeof(STR_HDR_DTLS_ENCODING) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_DTLS_ENCODING,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_DTLS_ENCODING;
+	} else if (req->header.length == sizeof(STR_HDR_FULL_IPV6) - 1 &&
+		   strncmp((char *)req->header.data, STR_HDR_FULL_IPV6,
+			   req->header.length) == 0) {
+		req->next_header = HEADER_FULL_IPV6;
+	} else {
+		req->next_header = 0;
+	}
+}
+
+int http_header_value_cb(http_parser * parser, const char *at, size_t length)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+	int ret;
+
+	if (req->header_state != HTTP_HEADER_VALUE_RECV) {
+		/* handle header */
+		header_check(req);
+		req->header_state = HTTP_HEADER_VALUE_RECV;
+		str_reset(&req->value);
+	}
+
+	ret = str_append_data(&req->value, at, length);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+int http_header_complete_cb(http_parser * parser)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+
+	/* handle header value */
+	header_value_check(ws, req);
+
+	req->headers_complete = 1;
+	return 0;
+}
+
+int http_message_complete_cb(http_parser * parser)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+
+	req->message_complete = 1;
+	return 0;
+}
+
+int http_body_cb(http_parser * parser, const char *at, size_t length)
+{
+	struct worker_st *ws = parser->data;
+	struct http_req_st *req = &ws->req;
+	char *tmp;
+
+	tmp = talloc_realloc_size(ws, req->body, req->body_length + length + 1);
+	if (tmp == NULL)
+		return 1;
+
+	memcpy(&tmp[req->body_length], at, length);
+	req->body_length += length;
+	tmp[req->body_length] = 0;
+
+	req->body = tmp;
+	return 0;
+}

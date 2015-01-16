@@ -296,7 +296,16 @@ void __attribute__ ((format(printf, 3, 4)))
 void  oclog_hex(const worker_st* ws, int priority,
 		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
-void header_value_check(struct worker_st *ws, struct http_req_st *req);
+typedef int (*url_handler_fn) (worker_st *, unsigned http_ver);
+int http_url_cb(http_parser * parser, const char *at, size_t length);
+int http_header_value_cb(http_parser * parser, const char *at, size_t length);
+int http_header_field_cb(http_parser * parser, const char *at, size_t length);
+int http_header_complete_cb(http_parser * parser);
+int http_message_complete_cb(http_parser * parser);
+int http_body_cb(http_parser * parser, const char *at, size_t length);
+url_handler_fn http_get_url_handler(const char *url);
+url_handler_fn http_post_url_handler(const char *url);
+
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
 unsigned check_if_default_route(char **routes, unsigned routes_size);

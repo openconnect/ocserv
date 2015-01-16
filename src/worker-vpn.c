@@ -97,224 +97,7 @@ static void handle_term(int signo)
 
 static int connect_handler(worker_st * ws);
 
-typedef int (*url_handler_fn) (worker_st *, unsigned http_ver);
-struct known_urls_st {
-	const char *url;
-	unsigned url_size;
-	unsigned partial_match;
-	url_handler_fn get_handler;
-	url_handler_fn post_handler;
-};
 
-#define LL(x,y,z) {x, sizeof(x)-1, 0, y, z}
-#define LL_DIR(x,y,z) {x, sizeof(x)-1, 1, y, z}
-const static struct known_urls_st known_urls[] = {
-	LL("/", get_auth_handler, post_auth_handler),
-	LL("/auth", get_auth_handler, post_auth_handler),
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	LL("/1/index.html", get_empty_handler, NULL),
-	LL("/1/Linux", get_empty_handler, NULL),
-	LL("/1/Linux_64", get_empty_handler, NULL),
-	LL("/1/Windows", get_empty_handler, NULL),
-	LL("/1/Darwin_i386", get_empty_handler, NULL),
-	LL("/1/binaries/vpndownloader.sh", get_dl_handler, NULL),
-	LL("/1/VPNManifest.xml", get_string_handler, NULL),
-	LL("/1/binaries/update.txt", get_string_handler, NULL),
-
-	LL_DIR("/profiles", get_config_handler, NULL),
-	LL("/+CSCOT+/", get_string_handler, NULL),
-	LL("/logout", get_empty_handler, NULL),
-#endif
-	{NULL, 0, 0, NULL, NULL}
-};
-
-static url_handler_fn get_url_handler(const char *url)
-{
-	const struct known_urls_st *p;
-	unsigned len = strlen(url);
-
-	p = known_urls;
-	do {
-		if (p->url != NULL) {
-			if ((len == p->url_size && strcmp(p->url, url) == 0) ||
-			    (len >= p->url_size
-			     && strncmp(p->url, url, p->url_size) == 0
-			     && (p->partial_match != 0
-				 || url[p->url_size] == '/'
-				 || url[p->url_size] == '?')))
-				return p->get_handler;
-		}
-		p++;
-	} while (p->url != NULL);
-
-	return NULL;
-}
-
-static url_handler_fn post_url_handler(const char *url)
-{
-	const struct known_urls_st *p;
-
-	p = known_urls;
-	do {
-		if (p->url != NULL && strcmp(p->url, url) == 0)
-			return p->post_handler;
-		p++;
-	} while (p->url != NULL);
-
-	return NULL;
-}
-
-int url_cb(http_parser * parser, const char *at, size_t length)
-{
-	struct worker_st *ws = parser->data;
-	struct http_req_st *req = &ws->req;
-
-	if (length >= sizeof(req->url)) {
-		req->url[0] = 0;
-		return 1;
-	}
-
-	memcpy(req->url, at, length);
-	req->url[length] = 0;
-
-	return 0;
-}
-
-int header_field_cb(http_parser * parser, const char *at, size_t length)
-{
-	struct worker_st *ws = parser->data;
-	struct http_req_st *req = &ws->req;
-	int ret;
-
-	if (req->header_state != HTTP_HEADER_RECV) {
-		/* handle value */
-		if (req->header_state == HTTP_HEADER_VALUE_RECV)
-			header_value_check(ws, req);
-		req->header_state = HTTP_HEADER_RECV;
-		str_reset(&req->header);
-	}
-
-	ret = str_append_data(&req->header, at, length);
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
-static void header_check(struct http_req_st *req)
-{
-	/* FIXME: move this mess to a table */
-	if (req->header.length == sizeof(STR_HDR_COOKIE) - 1 &&
-	    strncmp((char *)req->header.data, STR_HDR_COOKIE,
-		    req->header.length) == 0) {
-		req->next_header = HEADER_COOKIE;
-	} else if (req->header.length == sizeof(STR_HDR_MS) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_MS,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_MASTER_SECRET;
-	} else if (req->header.length == sizeof(STR_HDR_CMTU) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CMTU,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_BASE_MTU;
-	} else if (req->header.length == sizeof(STR_HDR_HOST) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_HOST,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_HOSTNAME;
-	} else if (req->header.length == sizeof(STR_HDR_CS) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CS,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DTLS_CIPHERSUITE;
-	} else if (req->header.length == sizeof(STR_HDR_DEVICE_TYPE) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_DEVICE_TYPE,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DEVICE_TYPE;
-	} else if (req->header.length == sizeof(STR_HDR_ATYPE) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_ATYPE,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_ATYPE;
-	} else if (req->header.length == sizeof(STR_HDR_CONNECTION) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CONNECTION,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CONNECTION;
-	} else if (req->header.length == sizeof(STR_HDR_USER_AGENT) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_USER_AGENT,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_USER_AGENT;
-	} else if (req->header.length == sizeof(STR_HDR_CSTP_ENCODING) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CSTP_ENCODING,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_ENCODING;
-	} else if (req->header.length == sizeof(STR_HDR_DTLS_ENCODING) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_DTLS_ENCODING,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DTLS_ENCODING;
-	} else if (req->header.length == sizeof(STR_HDR_FULL_IPV6) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_FULL_IPV6,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_FULL_IPV6;
-	} else {
-		req->next_header = 0;
-	}
-}
-
-int header_value_cb(http_parser * parser, const char *at, size_t length)
-{
-	struct worker_st *ws = parser->data;
-	struct http_req_st *req = &ws->req;
-	int ret;
-
-	if (req->header_state != HTTP_HEADER_VALUE_RECV) {
-		/* handle header */
-		header_check(req);
-		req->header_state = HTTP_HEADER_VALUE_RECV;
-		str_reset(&req->value);
-	}
-
-	ret = str_append_data(&req->value, at, length);
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
-int header_complete_cb(http_parser * parser)
-{
-	struct worker_st *ws = parser->data;
-	struct http_req_st *req = &ws->req;
-
-	/* handle header value */
-	header_value_check(ws, req);
-
-	req->headers_complete = 1;
-	return 0;
-}
-
-int message_complete_cb(http_parser * parser)
-{
-	struct worker_st *ws = parser->data;
-	struct http_req_st *req = &ws->req;
-
-	req->message_complete = 1;
-	return 0;
-}
-
-int body_cb(http_parser * parser, const char *at, size_t length)
-{
-	struct worker_st *ws = parser->data;
-	struct http_req_st *req = &ws->req;
-	char *tmp;
-
-	tmp = talloc_realloc_size(ws, req->body, req->body_length + length + 1);
-	if (tmp == NULL)
-		return 1;
-
-	memcpy(&tmp[req->body_length], at, length);
-	req->body_length += length;
-	tmp[req->body_length] = 0;
-
-	req->body = tmp;
-	return 0;
-}
 
 inline static ssize_t dtls_pull_buffer_non_empty(gnutls_transport_ptr_t ptr)
 {
@@ -602,12 +385,12 @@ void vpn_server(struct worker_st *ws)
 
 	memset(&settings, 0, sizeof(settings));
 
-	settings.on_url = url_cb;
-	settings.on_header_field = header_field_cb;
-	settings.on_header_value = header_value_cb;
-	settings.on_headers_complete = header_complete_cb;
-	settings.on_message_complete = message_complete_cb;
-	settings.on_body = body_cb;
+	settings.on_url = http_url_cb;
+	settings.on_header_field = http_header_field_cb;
+	settings.on_header_value = http_header_value_cb;
+	settings.on_headers_complete = http_header_complete_cb;
+	settings.on_message_complete = http_message_complete_cb;
+	settings.on_body = http_body_cb;
 	http_req_init(ws);
 
 	ws->session = session;
@@ -645,7 +428,7 @@ void vpn_server(struct worker_st *ws)
 
 	if (parser.method == HTTP_GET) {
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP GET %s", ws->req.url);
-		fn = get_url_handler(ws->req.url);
+		fn = http_get_url_handler(ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG, "unexpected URL %s", ws->req.url);
 			cstp_puts(ws, "HTTP/1.1 404 Not found\r\n\r\n");
@@ -673,7 +456,7 @@ void vpn_server(struct worker_st *ws)
 			}
 		}
 
-		fn = post_url_handler(ws->req.url);
+		fn = http_post_url_handler(ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG, "unexpected POST URL %s",
 			      ws->req.url);

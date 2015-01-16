@@ -469,60 +469,19 @@ int http_header_field_cb(http_parser * parser, const char *at, size_t length)
 	return 0;
 }
 
+/* include hash table of headers */
+#include "http-heads.h"
+
 static void header_check(struct http_req_st *req)
 {
-	/* FIXME: move this mess to a table */
-	if (req->header.length == sizeof(STR_HDR_COOKIE) - 1 &&
-	    strncmp((char *)req->header.data, STR_HDR_COOKIE,
-		    req->header.length) == 0) {
-		req->next_header = HEADER_COOKIE;
-	} else if (req->header.length == sizeof(STR_HDR_MS) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_MS,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_MASTER_SECRET;
-	} else if (req->header.length == sizeof(STR_HDR_CMTU) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CMTU,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_BASE_MTU;
-	} else if (req->header.length == sizeof(STR_HDR_HOST) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_HOST,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_HOSTNAME;
-	} else if (req->header.length == sizeof(STR_HDR_CS) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CS,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DTLS_CIPHERSUITE;
-	} else if (req->header.length == sizeof(STR_HDR_DEVICE_TYPE) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_DEVICE_TYPE,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DEVICE_TYPE;
-	} else if (req->header.length == sizeof(STR_HDR_ATYPE) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_ATYPE,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_ATYPE;
-	} else if (req->header.length == sizeof(STR_HDR_CONNECTION) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CONNECTION,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CONNECTION;
-	} else if (req->header.length == sizeof(STR_HDR_USER_AGENT) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_USER_AGENT,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_USER_AGENT;
-	} else if (req->header.length == sizeof(STR_HDR_CSTP_ENCODING) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_CSTP_ENCODING,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_CSTP_ENCODING;
-	} else if (req->header.length == sizeof(STR_HDR_DTLS_ENCODING) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_DTLS_ENCODING,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_DTLS_ENCODING;
-	} else if (req->header.length == sizeof(STR_HDR_FULL_IPV6) - 1 &&
-		   strncmp((char *)req->header.data, STR_HDR_FULL_IPV6,
-			   req->header.length) == 0) {
-		req->next_header = HEADER_FULL_IPV6;
-	} else {
-		req->next_header = 0;
+	const struct http_headers_st *p;
+
+	p = in_word_set((char *)req->header.data, req->header.length);
+	if (p != NULL) {
+		req->next_header = p->id;
+		return;
 	}
+	req->next_header = 0;
 }
 
 int http_header_value_cb(http_parser * parser, const char *at, size_t length)

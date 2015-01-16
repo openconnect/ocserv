@@ -25,6 +25,7 @@
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
 #include <unistd.h>
 #include <net/if.h>
 #include <vpn.h>
@@ -44,19 +45,6 @@ typedef enum {
 	UP_INACTIVE,
 	UP_ACTIVE
 } udp_port_state_t;
-
-#define STR_HDR_COOKIE "Cookie"
-#define STR_HDR_USER_AGENT "User-Agent"
-#define STR_HDR_CSTP_ENCODING "X-CSTP-Accept-Encoding"
-#define STR_HDR_DTLS_ENCODING "X-DTLS-Accept-Encoding"
-#define STR_HDR_CONNECTION "Connection"
-#define STR_HDR_MS "X-DTLS-Master-Secret"
-#define STR_HDR_CS "X-DTLS-CipherSuite"
-#define STR_HDR_CMTU "X-CSTP-Base-MTU"
-#define STR_HDR_ATYPE "X-CSTP-Address-Type"
-#define STR_HDR_HOST "X-CSTP-Hostname"
-#define STR_HDR_FULL_IPV6 "X-CSTP-Full-IPv6-Capability"
-#define STR_HDR_DEVICE_TYPE "X-AnyConnect-Identifier-DeviceType"
 
 enum {
 	HEADER_COOKIE = 1,

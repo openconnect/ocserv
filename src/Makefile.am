@@ -9,7 +9,7 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
-	ctl.pb-c.c ctl.pb-c.h
+	ctl.pb-c.c ctl.pb-c.h http-heads.h
 
 #AM_CPPFLAGS += -DDEBUG_LEAKS
 
@@ -29,7 +29,7 @@ endif
 
 EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
-	occtl-args.def ipc.proto ctl.proto
+	occtl-args.def ipc.proto ctl.proto http-heads.gperf
 
 bin_PROGRAMS = ocpasswd occtl
 
@@ -138,3 +138,6 @@ ctl.pb-c.c: ctl.proto
 	protoc-c --c_out=. --proto_path=$(srcdir) $<
 
 ctl.pb-c.h: ctl.pb-c.c
+
+http-heads.h: $(srcdir)/http-heads.gperf
+	-gperf --global-table -t $^ > $@-tmp && mv $@-tmp $@

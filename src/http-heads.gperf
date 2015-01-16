@@ -1,0 +1,19 @@
+%{
+#include "vpn.h"
+%}
+%language=ANSI-C
+%readonly-tables
+struct http_headers_st { const char *name; unsigned id; };
+%%
+Cookie, HEADER_COOKIE
+User-Agent, HEADER_USER_AGENT
+X-CSTP-Accept-Encoding, HEADER_CSTP_ENCODING
+X-DTLS-Accept-Encoding, HEADER_DTLS_ENCODING
+Connection, HEADER_CONNECTION
+X-DTLS-Master-Secret, HEADER_MASTER_SECRET
+X-DTLS-CipherSuite, HEADER_DTLS_CIPHERSUITE
+X-CSTP-Base-MTU, HEADER_CSTP_BASE_MTU
+X-CSTP-Address-Type, HEADER_CSTP_ATYPE
+X-CSTP-Hostname, HEADER_HOSTNAME
+X-CSTP-Full-IPv6-Capability, HEADER_FULL_IPV6
+X-AnyConnect-Identifier-DeviceType, HEADER_DEVICE_TYPE

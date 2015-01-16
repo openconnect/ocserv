@@ -159,6 +159,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	char *str, *p;
 	const dtls_ciphersuite_st *cand = NULL;
 	const compression_method_st *comp_cand = NULL;
+	const compression_method_st **selected_comp;
 	gnutls_cipher_algorithm_t want_cipher;
 	gnutls_mac_algorithm_t want_mac;
 
@@ -263,36 +264,15 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_ENCODING:
-	        if (ws->config->enable_compression == 0)
-	        	break;
-
-	        ws->dtls_selected_comp = NULL;
-
-		str = (char *)value;
-		while ((token = strtok(str, ",")) != NULL) {
-			for (i = 0;
-			     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
-			     i++) {
-				if (c_strcasecmp(token, comp_methods[i].name) == 0) {
-					if (comp_cand == NULL ||
-					    comp_cand->server_prio <
-					    comp_methods[i].server_prio) {
-						comp_cand =
-						    &comp_methods[i];
-					}
-				}
-			}
-			str = NULL;
-		}
-	        ws->dtls_selected_comp = comp_cand;
-
-		break;
-
 	case HEADER_CSTP_ENCODING:
 	        if (ws->config->enable_compression == 0)
 	        	break;
 
-	        ws->cstp_selected_comp = NULL;
+		if (req->next_header == HEADER_DTLS_ENCODING)
+			selected_comp = &ws->dtls_selected_comp;
+		else
+			selected_comp = &ws->cstp_selected_comp;
+	        *selected_comp = NULL;
 
 		str = (char *)value;
 		while ((token = strtok(str, ",")) != NULL) {
@@ -310,7 +290,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			}
 			str = NULL;
 		}
-	        ws->cstp_selected_comp = comp_cand;
+	        *selected_comp = comp_cand;
 
 		break;
 

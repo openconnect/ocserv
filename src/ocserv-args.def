@@ -460,7 +460,7 @@ route = 192.168.5.0/255.255.255.0
 # route/mask and %{D} with the (tun) device.
 #
 # The following example is from linux systems. %R should be something
-# like 192.168.2.0/24
+# like 192.168.2.0/24 (the argument of iroute).
 
 #route-add-cmd = "ip route add %{R} dev %{D}"
 #route-del-cmd = "ip route delete %{R} dev %{D}"

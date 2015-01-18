@@ -42,6 +42,6 @@ void kill_on_parent_kill(int sig);
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler);
 
-int check_upeer_id(const char *mod, int cfg, uid_t uid, uid_t gid, uid_t *ruid);
+int check_upeer_id(const char *mod, int debug, int cfg, uid_t uid, uid_t gid, uid_t *ruid);
 
 #endif

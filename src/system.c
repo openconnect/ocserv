@@ -86,7 +86,7 @@ SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 /* Checks whether the peer in a socket has the expected @uid and @gid.
  * Returns zero on success.
  */
-int check_upeer_id(const char *mod, int cfd, uid_t uid, uid_t gid, uid_t *ruid)
+int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, uid_t *ruid)
 {
 	int e, ret;
 #if defined(SO_PEERCRED) && defined(HAVE_STRUCT_UCRED)
@@ -106,9 +106,10 @@ int check_upeer_id(const char *mod, int cfd, uid_t uid, uid_t gid, uid_t *ruid)
 		return -1;
 	}
 
-	syslog(LOG_DEBUG,
-	       "%s: received request from pid %u and uid %u",
-	       mod, (unsigned)cr.pid, (unsigned)cr.uid);
+	if (debug != 0)
+		syslog(LOG_DEBUG,
+		       "%s: received request from pid %u and uid %u",
+		       mod, (unsigned)cr.pid, (unsigned)cr.uid);
 
 	if (ruid)
 		*ruid = cr.uid;
@@ -135,9 +136,10 @@ int check_upeer_id(const char *mod, int cfd, uid_t uid, uid_t gid, uid_t *ruid)
 	if (ruid)
 		*ruid = euid;
 
-	syslog(LOG_DEBUG,
-	       "%s: received request from a processes with uid %u",
-		mod, (unsigned)euid);
+	if (debug = 0)
+		syslog(LOG_DEBUG,
+		       "%s: received request from a processes with uid %u",
+		       mod, (unsigned)euid);
 	if (euid != 0 && (euid != uid || egid != gid)) {
 		syslog(LOG_DEBUG,
 		       "%s: received unauthorized request from a process with uid %u",

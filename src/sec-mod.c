@@ -619,7 +619,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 		/* do not allow unauthorized processes to issue commands
 		 */
-		ret = check_upeer_id("sec-mod", cfd, config->uid, config->gid, &uid);
+		ret = check_upeer_id("sec-mod", config->debug, cfd, config->uid, config->gid, &uid);
 		if (ret < 0) {
 			seclog(sec, LOG_INFO, "rejected unauthorized connection");
 		} else {

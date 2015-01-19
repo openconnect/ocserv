@@ -162,6 +162,18 @@ AC_LIB_HAVE_LINKFLAGS(readline,, [
     fi
   fi
 
+have_glibc=no
+AC_LIB_HAVE_LINKFLAGS(c,, [
+#include <stdio.h>
+#include <gnu/libc-version.h>
+#include <stdio.h>], [ puts (gnu_get_libc_version ()); return 0; ])
+if test x$ac_cv_libc = xyes; then
+  AC_DEFINE(TRY_SHA2_CRYPT, 1, [have original glibc])
+  have_glibc=yes
+else
+  have_glibc=no
+fi
+
 AC_ARG_WITH(pam,
   AS_HELP_STRING([--without-pam], [do not include PAM support]),
   test_for_pam=$withval,
@@ -460,6 +472,7 @@ Summary of build options:
   dbus:                 ${dbus_enabled}
   readline:             ${have_readline}
   libnl3:               ${have_libnl3}
+  glibc (sha2crypt):    ${have_glibc}
   local talloc:         ${with_local_talloc}
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}

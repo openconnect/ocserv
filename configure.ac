@@ -279,8 +279,8 @@ AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <seccomp.h>], [seccomp_init(0);])
 fi
 
 AC_ARG_ENABLE(linux-namespaces,
-  AS_HELP_STRING([--disable-linux-namespaces], [disable support for different namespaces in Linux]),
-    linux_ns_enabled=$enableval, linux_ns_enabled=yes)
+  AS_HELP_STRING([--enable-linux-namespaces], [enable support for namespaces (containers) in Linux]),
+    linux_ns_enabled=$enableval, linux_ns_enabled=no)
 
 if [ test "$linux_ns_enabled" = "yes" ];then
 AC_MSG_CHECKING([for Linux namespaces])

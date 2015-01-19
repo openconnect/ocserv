@@ -67,7 +67,7 @@ pid_t safe_fork(void)
 		return -1;
 	return ret;
 #else
-	return fork();
+	return -1;
 #endif
 }
 

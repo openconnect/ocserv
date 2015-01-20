@@ -52,9 +52,9 @@ void pr_set_undumpable(const char *mod)
 #endif
 }
 
+#if defined(__linux__) && defined(ENABLE_LINUX_NS)
 pid_t safe_fork(void)
 {
-#if defined(__linux__) && defined(ENABLE_LINUX_NS)
 	long ret;
 	/* fork: 100%
 	 * CLONE_NEWPID|CLONE_NEWNET|CLONE_NEWIPC: 3%
@@ -66,10 +66,8 @@ pid_t safe_fork(void)
 	if (ret == 0 && syscall(SYS_getpid)!= 1)
 		return -1;
 	return ret;
-#else
-	return -1;
-#endif
 }
+#endif
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 {

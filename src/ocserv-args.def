@@ -77,38 +77,45 @@ An example configuration file follows.
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, certificate[optional],
 # plain, pam, radius[configfile,groupconfig]. 
-#auth = "certificate"
-#auth = "pam"
 
-# This indicates that a user may present a certificate. When that option
+# certificate:
+#  This indicates that all connecting users must present a certificate.
+#
+# certificate[optional]:
+#  This indicates that a user may present a certificate. When that option
 # is set, individual users or user groups can be forced to present a valid
-# certificate by using "require-cert=true".
-#auth = "certificate[optional]"
-
-# The gid-min option is used by auto-select-group option, in order to
+# certificate by adding "require-cert=true" in the per-user configuration file.
+#
+# pam[gid-min=1000]:
+#  The gid-min option is used by auto-select-group option, in order to
 # select the minimum valid group ID.
-#auth = "pam[gid-min=1000]"
-
-# The plain option requires specifying a password file which contains
+#
+# plain[/etc/ocserv/ocpasswd]
+#  The plain option requires specifying a password file which contains
 # entries of the following format.
 # "username:groupname1,groupname2:encoded-password"
-# One entry must be listed per line, and 'ocpasswd' can be used
+# One entry must be listed per line, and 'ocpasswd' should be used
 # to generate password entries.
-#auth = "plain[/etc/ocserv/ocpasswd]"
-
-# The radius option requires specifying freeradius-client configuration
+#
+# radius[/etc/radiusclient/radiusclient.conf,groupconfig]:
+#  The radius option requires specifying freeradius-client configuration
 # file. If the groupconfig option is set, then config-per-user will be overriden,
 # and all configuration will be read from radius. The supported atributes for
 # radius configuration are:
 # Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,
 # Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
+
+#auth = "certificate"
+#auth = "certificate[optional]"
+#auth = "pam"
+#auth = "pam[gid-min=1000]"
+#auth = "plain[/etc/ocserv/ocpasswd]"
 #auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
 
 # Whether to enable seccomp/Linux namespaces worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a
 # bug in the worker process. It is available on Linux systems at a performance cost.
-# The performance cost is roughly double the time needed for fork() per client, and 
-# 2% overhead at transfer time (tested on a Linux 3.17.8).
+# The performance cost is roughly 2% overhead at transfer time (tested on a Linux 3.17.8).
 #isolate-workers = true
 
 # A banner to be displayed on clients
@@ -136,8 +143,8 @@ max-same-clients = 2
 #listen-host-is-dyndns = true
 
 # TCP and UDP port number
-tcp-port = 3333
-udp-port = 3333
+tcp-port = 4443
+udp-port = 4443
 
 # Accept connections using a socket file. It accepts HTTP
 # connections (i.e., without SSL/TLS unlike its TCP counterpart),
@@ -239,7 +246,7 @@ server-key = /path/to/key.pem
 # as there are no openconnect (and possibly anyconnect clients) using
 # that protocol. The string below does not enforce perfect forward
 # secrecy, in order to be compatible with legacy clients.
-tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-VERS-SSL3.0:-ARCFOUR-128"
+tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-VERS-SSL3.0"
 
 # More combinations in priority strings are available, check
 # http://gnutls.org/manual/html_node/Priority-Strings.html
@@ -344,7 +351,7 @@ run-as-group = nogroup
 
 # Set the VPN worker process into a specific cgroup. This is Linux
 # specific and can be set per user/group or globally.
-cgroup = "cpuset,cpu:test"
+#cgroup = "cpuset,cpu:test"
 
 #
 # Network settings

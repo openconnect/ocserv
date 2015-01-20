@@ -1,4 +1,4 @@
-* Version 0.9.0 (unreleased)
+* Version 0.9.0 (released 2015-01-20)
 - Added native support for radius. That adds the new auth configuration
   option "radius", which has as parameters the freeradius-client
   configuration file and optionally the groupconfig option which

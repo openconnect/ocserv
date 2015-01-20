@@ -92,7 +92,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "use-seccomp", .type = OPTION_BOOLEAN, .mandatory = 0 },
-	{ .name = "isolate-worker", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "isolate-workers", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "session-control", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "auto-select-group", .type = OPTION_BOOLEAN, .mandatory = 0 },

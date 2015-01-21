@@ -333,7 +333,7 @@ pid-file = /var/run/ocserv.pid
 # The default server directory. Does not require any devices present.
 #chroot-dir = /path/to/chroot
 
-# socket file used for server IPC (worker-main), will be appended with .PID
+# socket file used for server IPC (worker - sec-mod), will be appended with .PID
 # It must be accessible within the chroot environment (if any)
 socket-file = /var/run/ocserv-socket
 

@@ -1224,6 +1224,57 @@ static int connect_handler(worker_st * ws)
 		oclog(ws, LOG_DEBUG, "disabling UDP (DTLS) connection");
 	}
 
+	/* calculate base MTU */
+	if (ws->config->default_mtu > 0) {
+		ws->vinfo.mtu = ws->config->default_mtu;
+	}
+
+	if (req->base_mtu > 0) {
+		oclog(ws, LOG_DEBUG, "peer's base MTU is %u", req->base_mtu);
+		ws->vinfo.mtu = MIN(ws->vinfo.mtu, req->base_mtu);
+	}
+
+	sl = sizeof(max);
+	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
+		      strerror(e));
+	} else {
+		max -= 13;
+		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
+		if (max > 0 && max < ws->vinfo.mtu) {
+			oclog(ws, LOG_DEBUG,
+			      "reducing MTU due to TCP MSS to %u", max);
+			ws->vinfo.mtu = max;
+		}
+	}
+
+	ret = cstp_printf(ws, "X-CSTP-Base-MTU: %u\r\n", ws->vinfo.mtu);
+	SEND_ERR(ret);
+	oclog(ws, LOG_DEBUG, "CSTP Base MTU is %u bytes", ws->vinfo.mtu);
+
+	/* calculate TLS channel MTU */
+	if (ws->session == NULL) {
+		/* wild guess */
+		ws->crypto_overhead = CSTP_OVERHEAD +
+			tls_get_overhead(GNUTLS_TLS1_0, GNUTLS_CIPHER_AES_128_CBC, GNUTLS_MAC_SHA1);
+	} else {
+		ws->crypto_overhead = CSTP_OVERHEAD +
+		    tls_get_overhead(gnutls_protocol_get_version(ws->session),
+				     gnutls_cipher_get(ws->session),
+				     gnutls_mac_get(ws->session));
+	}
+
+	/* plaintext MTU is the device MTU minus the overhead
+	 * of the CSTP protocol. */
+	ws->conn_mtu = ws->vinfo.mtu - ws->crypto_overhead;
+	if (ws->conn_mtu < 1280 && ws->vinfo.ipv6 && req->no_ipv6 == 0) {
+		oclog(ws, LOG_INFO, "Connection MTU (%d) is not sufficient for IPv6 (1280)", ws->conn_mtu);
+		req->no_ipv6 = 1;
+	}
+
+	/* Send IP addresses */
 	if (ws->vinfo.ipv4 && req->no_ipv4 == 0) {
 		oclog(ws, LOG_DEBUG, "sending IPv4 %s", ws->vinfo.ipv4);
 		ret =
@@ -1457,51 +1508,6 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
-	/* calculate base MTU */
-	if (ws->config->default_mtu > 0) {
-		ws->vinfo.mtu = ws->config->default_mtu;
-	}
-
-	if (req->base_mtu > 0) {
-		oclog(ws, LOG_DEBUG, "peer's base MTU is %u", req->base_mtu);
-		ws->vinfo.mtu = MIN(ws->vinfo.mtu, req->base_mtu);
-	}
-
-	sl = sizeof(max);
-	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
-		      strerror(e));
-	} else {
-		max -= 13;
-		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
-		if (max > 0 && max < ws->vinfo.mtu) {
-			oclog(ws, LOG_DEBUG,
-			      "reducing MTU due to TCP MSS to %u", max);
-			ws->vinfo.mtu = max;
-		}
-	}
-
-	ret = cstp_printf(ws, "X-CSTP-Base-MTU: %u\r\n", ws->vinfo.mtu);
-	SEND_ERR(ret);
-	oclog(ws, LOG_DEBUG, "CSTP Base MTU is %u bytes", ws->vinfo.mtu);
-
-	/* calculate TLS channel MTU */
-	if (ws->session == NULL) {
-		/* wild guess */
-		ws->crypto_overhead = CSTP_OVERHEAD +
-			tls_get_overhead(GNUTLS_TLS1_0, GNUTLS_CIPHER_AES_128_CBC, GNUTLS_MAC_SHA1);
-	} else {
-		ws->crypto_overhead = CSTP_OVERHEAD +
-		    tls_get_overhead(gnutls_protocol_get_version(ws->session),
-				     gnutls_cipher_get(ws->session),
-				     gnutls_mac_get(ws->session));
-	}
-
-	/* plaintext MTU is the device MTU minus the overhead
-	 * of the CSTP protocol. */
-	ws->conn_mtu = ws->vinfo.mtu - ws->crypto_overhead;
 
 	/* set TCP socket options */
 	if (ws->config->output_buffer > 0) {

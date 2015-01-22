@@ -1,3 +1,7 @@
+* Version 0.9.0 (unreleased)
+- Do not send IPv6 leases if the calculated MTU is lower than 1280.
+
+
 * Version 0.9.0 (released 2015-01-20)
 - Added native support for radius. That adds the new auth configuration
   option "radius", which has as parameters the freeradius-client

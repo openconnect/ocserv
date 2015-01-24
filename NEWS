@@ -1,4 +1,4 @@
-* Version 0.9.0 (unreleased)
+* Version 0.9.1 (unreleased)
 - Do not send IPv6 leases if the calculated MTU is lower than 1280.
 
 

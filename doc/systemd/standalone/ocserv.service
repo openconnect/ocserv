@@ -2,7 +2,6 @@
 Description=OpenConnect SSL VPN server
 Documentation=man:ocserv(8)
 After=network.target
-After=syslog.target
 After=dbus.service
 
 [Service]

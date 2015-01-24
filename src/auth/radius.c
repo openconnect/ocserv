@@ -277,7 +277,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		if (ret == PW_ACCESS_CHALLENGE) {
 			pctx->pass_msg = pass_msg_second;
 			return ERR_AUTH_CONTINUE;
-		} else if (pctx->retries++ < MAX_TRIES) {
+		} else if (pctx->retries++ < MAX_TRIES-1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {

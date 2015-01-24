@@ -232,7 +232,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	    && strcmp(crypt(pass, pctx->cpass), pctx->cpass) == 0)
 		return 0;
 	else {
-		if (pctx->retries++ < MAX_TRIES) {
+		if (pctx->retries++ < MAX_TRIES-1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {

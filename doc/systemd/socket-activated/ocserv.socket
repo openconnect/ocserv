@@ -2,8 +2,8 @@
 Description=OpenConnect SSL VPN server Socket
 
 [Socket]
-ListenStream=4443
-ListenDatagram=4443
+ListenStream=443
+ListenDatagram=443
 BindIPv6Only=default
 Accept=false
 ReusePort=true

@@ -29,7 +29,7 @@ libpcl1-dev        / pcllib-devel
 libopts25-dev      / autogen-libopts-devel
 autogen            / autogen
 protobuf-c         / protobuf-c
-
+gperf              / gperf
 
 See doc/README.radius for more information on Radius
 dependencies and its configuration.

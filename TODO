@@ -1,5 +1,11 @@
 Short term items:
 
+* Separate accounting from authentication. I.e., allow a client which
+  is authenticated with certificates to report stats using radius.
+
+* Move the banned list into the main process. That would allow faster
+  rejection of banned clients.
+
 * Use the UDP address to report the client's IP when sniproxy or haproxy
   are being used.
 

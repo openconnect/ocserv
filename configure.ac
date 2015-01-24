@@ -319,7 +319,7 @@ AC_ARG_ENABLE(systemd,
 
 if [ test "$systemd_enabled" = "yes" ];then
 AC_LIB_HAVE_LINKFLAGS(systemd,, [#include <systemd/sd-daemon.h>], [sd_listen_fds(0);])
- if [ test -z "$LIBSYSTEMD_DAEMON" ];then
+ if [ test -z "$LIBSYSTEMD" ];then
 	systemd_enabled="no"
  else
 	systemd_enabled="yes"

@@ -47,7 +47,7 @@
 # include <tcpd.h>
 #endif
 
-#ifdef HAVE_LIBSYSTEMD_DAEMON
+#ifdef HAVE_LIBSYSTEMD
 # include <systemd/sd-daemon.h>
 #endif
 #include <main.h>
@@ -278,7 +278,7 @@ listen_ports(void *pool, struct cfg_st* config,
 	list_head_init(&list->head);
 	list->total = 0;
 
-#ifdef HAVE_LIBSYSTEMD_DAEMON
+#ifdef HAVE_LIBSYSTEMD
 	/* Support for systemd socket-activatable service */
 	if ((fds=sd_listen_fds(0)) > 0) {
 		/* if we get our fds from systemd */

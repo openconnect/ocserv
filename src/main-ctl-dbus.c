@@ -946,7 +946,7 @@ static void method_introspect(main_server_st * s, struct dbus_ctx *ctx,
 
 	mslog(s, NULL, LOG_DEBUG, "ctl: introspect");
 
-	str_init(&buf);
+	str_init(&buf, ctx);
 
 	ret = str_append_data(&buf, XML_HEAD, sizeof(XML_HEAD) - 1);
 	if (ret < 0) {

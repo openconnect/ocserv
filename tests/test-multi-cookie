@@ -43,16 +43,19 @@ echo "Connecting with cookie... "
 echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1 &
 CPID=$!
 
+sleep 4
+ls -l ${srcdir}/pid*
+
 echo "Connecting again with same cookie... "
 #( echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 #	fail $PID "Could not connect to server"
-rm -f ${srcdir}/ok
-echo "test" | openconnect -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2 &
+echo "test" | openconnect -q localhost:$PORT -b -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2 &
 C2PID=$!
 
 sleep 4
+ls -l ${srcdir}/pid*
 
-if [ !-f ${srcdir}/pid2 ];then
+if [ ! -f ${srcdir}/pid2 ];then
 	fail $PID "It was not possible to establish session!"
 fi
 

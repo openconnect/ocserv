@@ -49,11 +49,7 @@ if test "$FEDORA" = 1;then
 		$UNLOCKFILE
 		exit 1
 	fi
-	if test "$UNIX" = 1;then
-		cp docker-ocserv/Dockerfile-fedora-unix docker-ocserv/Dockerfile
-	else
-		cp docker-ocserv/Dockerfile-fedora-tcp docker-ocserv/Dockerfile
-	fi
+	cp docker-ocserv/Dockerfile-fedora-$CONFIG docker-ocserv/Dockerfile
 else #DEBIAN
 	echo "Using the Debian image"
 	$DOCKER pull debian:jessie
@@ -62,11 +58,7 @@ else #DEBIAN
 		$UNLOCKFILE
 		exit 1
 	fi
-	if test "$UNIX" = 1;then
-		cp docker-ocserv/Dockerfile-debian-unix docker-ocserv/Dockerfile
-	else
-		cp docker-ocserv/Dockerfile-debian-tcp docker-ocserv/Dockerfile
-	fi
+	cp docker-ocserv/Dockerfile-debian-$CONFIG docker-ocserv/Dockerfile
 fi
 
 cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/

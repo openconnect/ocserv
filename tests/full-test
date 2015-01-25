@@ -26,6 +26,7 @@ if [ $? != 0 ];then
 	exit 77
 fi
 
+CONFIG="tcp"
 IMAGE=ocserv-test1
 . ./docker-common.sh
 

@@ -20,40 +20,44 @@
 
 srcdir=${srcdir:-.}
 
+PORT=10500
+PORT2=10501
+PORT_OCSERV=10522
 #this test can only be run as root
 id|grep root >/dev/null 2>&1
 if [ $? != 0 ];then
 	exit 77
 fi
 
-UNIX=1
-CONFIG="unix"
-IMAGE=ocserv-test2
+CONFIG="radius"
+IMAGE=ocserv-radius-test
 . ./docker-common.sh
 
 stop() {
-	$DOCKER stop test_unix
-	$DOCKER rm test_unix
+	$DOCKER stop test_ocserv_radius
+	$DOCKER rm test_ocserv_radius
 	exit 1
 }
 
-$DOCKER run -P --privileged=true -p 6000:6000/udp -p 6001:6001/udp -p 22 -p 6551:6551/udp --tty=false -d --name test_unix $IMAGE
+$DOCKER run -P --privileged=true -p $PORT:$PORT/udp -p $PORT2:$PORT2/udp -p 22 -p $PORT_OCSERV:$PORT_OCSERV/udp --tty=false -d --name test_ocserv_radius $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
 fi
 
+echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect test_unix | grep IPAddress | cut -d '"' -f 4`
+IP=`$DOCKER inspect test_ocserv_radius | grep IPAddress | cut -d '"' -f 4`
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
 fi
+echo "Detected IP: $IP"
 
 printf "test\ntest\n" >pass.tmp
-openconnect $IP:6551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &
+openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &
 PID=$!
 
 rm -f pass.tmp
@@ -62,17 +66,24 @@ rm -f pass.tmp
 sleep 5
 
 # The client IP depends on the username so it shouldn't change.
-ping -w 5 192.168.99.190
+ping -w 5 192.168.1.190
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping -w 5 192.168.99.190 -s 1500
+ping -w 5 192.168.1.190 -s 1500
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
+	stop
+fi
+
+ping6 -w 5 fd91:6d87:7341:db6a:0:52:190c:be00
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping the IPv6 of ocserv"
 	stop
 fi
 
@@ -83,14 +94,14 @@ printf "echo root" >>echo-admin.tmp
 printf "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
 export SSH_ASKPASS="./echo-admin.tmp"
-setsid ssh -T -F config.tmp root@192.168.99.190 occtl show user test >out.tmp 2>&1
+setsid ssh -T -F config.tmp root@192.168.1.190 occtl show user test >out.tmp 2>&1
 cat out.tmp
 
 printf "#\!/bin/sh\n" >echo-admin.tmp
 printf "echo root" >>echo-admin.tmp
 printf "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
-setsid ssh -T -F config.tmp root@192.168.99.190 occtl show user test >out.tmp 2>&1
+setsid ssh -T -F config.tmp root@192.168.1.190 occtl show user test >out.tmp 2>&1
 cat out.tmp
 rm -f echo-admin.tmp
 rm -f config.tmp
@@ -107,20 +118,22 @@ rm -f out.tmp
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
+if test "$FEDORA" = 1;then
+nuttcp -T 10 -t 192.168.1.190
+if test $? != 0;then
+	kill $PID
+	echo "Cannot send to ocserv"
+	stop
+fi
 
-#nuttcp -T 10 -t 192.168.99.190
-#if test $? != 0;then
-#	kill $PID
-#	echo "Cannot send to ocserv"
-#	stop
-#fi
+nuttcp -T 10 -r 192.168.1.190
+if test $? != 0;then
+	kill $PID
+	echo "Cannot recv from ocserv"
+	stop
+fi
+fi
 
-#nuttcp -T 10 -r 192.168.99.190
-#if test $? != 0;then
-#	kill $PID
-#	echo "Cannot recv from ocserv"
-#	stop
-#fi
 sleep 2
 
 kill $PID
@@ -129,7 +142,7 @@ sleep 4
 
 #check whether /tmp/disconnect/ok was created
 rm -f ./not-ok
-$DOCKER cp test_unix:/tmp/disconnect/not-ok ./
+$DOCKER cp test_ocserv_radius:/tmp/disconnect/not-ok ./
 if test -f ./not-ok;then
 	echo "There was an issue getting stats"
 	stop
@@ -138,18 +151,18 @@ rm -f ./not-ok
 
 ret=0
 
-rm -f ./tmp-unix/ok
-$DOCKER cp test_unix:/tmp/disconnect/ok ./tmp-unix/
-if ! test -f ./tmp-unix/ok;then
+rm -f ./tmp-full/ok
+$DOCKER cp test_ocserv_radius:/tmp/disconnect/ok ./tmp-full/
+if ! test -f ./tmp-full/ok;then
 	echo "Don't know if stats were received"
 	ret=77
 else
 	echo -n "stats: "
-	echo `cat ./tmp-unix/ok`
-	rm -rf ./tmp-unix/
+	echo `cat ./tmp-full/ok`
+	rm -rf ./tmp-full/
 fi
 
-$DOCKER stop test_unix
-$DOCKER rm test_unix
+$DOCKER stop test_ocserv_radius
+$DOCKER rm test_ocserv_radius
 
 exit $ret

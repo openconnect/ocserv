@@ -1,0 +1,16 @@
+#
+# This is a complete entry for "steve". Note that there is no Fall-Through
+# entry so that no DEFAULT entry will be used, and the user will NOT
+# get any attributes in addition to the ones listed here.
+#
+test	Cleartext-Password := "test"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.5/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IPv6-Prefix = "2000:0:0:106::/64",
+	Framed-IP-Address = 192.168.1.190,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+

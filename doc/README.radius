@@ -2,9 +2,9 @@
 	Using Radius with ocserv
 ============================================
 
-For radius support the freeradius-client library is required. Currently
-(2014-12-14) the best would be to use the version from the git repository
-at: https://github.com/FreeRADIUS/freeradius-client
+For radius support the freeradius-client library is required. The
+minimum requirement is version 1.1.7 as released at:
+https://github.com/FreeRADIUS/freeradius-client
 
 Freeradius-client uses a configuration file to setup the
 server configuration. That is typically found at:

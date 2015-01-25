@@ -3,17 +3,19 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	user-config/test user-config-opt/test test-pass-script.config test-multi-cookie.config test-pam.config \
 	test-stress.config user-cert-wrong.pem connect-script test-group.passwd \
 	test-group-pass.config user-group-cert.pem user-group-key.pem test-user-group-cert.config \
-	test-user-group-cert-no-pass.config docker-common.sh
+	test-user-group-cert-no-pass.config docker-common.sh test-cookie-timeout.config
 
 SUBDIRS = docker-ocserv
 
 dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie test-pam test-stress full-test test-group-pass test-pass-group-cert \
-	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert
+	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
+	test-cookie-timeout
 
 TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie full-test test-group-pass test-pass-group-cert \
-	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert
+	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
+	test-cookie-timeout
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

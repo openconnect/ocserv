@@ -168,7 +168,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		ret =
 		    cstp_printf(ws,
 			       "Set-Cookie: webvpncontext=%s; Max-Age=%u; Secure\r\n",
-			       context, (unsigned)MAX_AUTH_SECS);
+			       context, (unsigned)ws->config->cookie_timeout);
 		if (ret < 0)
 			return -1;
 

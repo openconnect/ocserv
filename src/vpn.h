@@ -106,7 +106,12 @@ extern int syslog_open;
 #define LOG_HTTP_DEBUG 2048
 #define LOG_TRANSFER_DEBUG 2049
 
-#define MAX_AUTH_SECS 40
+/* Allow few seconds prior to cleaning up entries, to avoid any race
+ * conditions when session control is enabled.
+ */
+#define AUTH_SLACK_TIME 10
+
+
 #define MAX_CIPHERSUITE_NAME 64
 #define MAX_MSG_SIZE 256
 #define SID_SIZE 16

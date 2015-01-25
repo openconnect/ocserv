@@ -322,12 +322,15 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(sec, LOG_INFO, "session open/close but with non-existing sid!");
+		seclog(sec, LOG_INFO, "session open/close but with non-existing SID!");
 		return -1;
 	}
 
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
 		SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
+
+		/* we don't check for expiration of session here. This is
+		 * done at the main server. */
 
 		if (module != NULL && module->open_session != NULL) {
 			ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
@@ -342,6 +345,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			}
 		} else {
 			rep.reply = AUTH__REP__OK;
+			e->in_use++;
 		}
 
 		lpool = talloc_new(e);
@@ -365,7 +369,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
 		}
 		talloc_free(lpool);
-	} else {
+	} else { /* CLOSE */
 		if (req->has_uptime && req->uptime > e->stats.uptime) {
 				e->stats.uptime = req->uptime;
 		}
@@ -375,7 +379,8 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 		if (req->has_bytes_out && req->bytes_out > e->stats.bytes_out) {
 				e->stats.bytes_out = req->bytes_out;
 		}
-		del_client_entry(sec, e);
+
+		expire_client_entry(sec, e);
 	}
 
 	return 0;
@@ -573,5 +578,6 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 		}
 		module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;
+		e->have_session = 0;
 	}
 }

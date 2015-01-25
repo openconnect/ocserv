@@ -141,11 +141,6 @@ static void clean_entry(sec_mod_st *sec, client_entry_st * e)
 	talloc_free(e);
 }
 
-/* Allow few seconds prior to cleaning up entries, to avoid any race
- * conditions when session control is enabled.
- */
-#define SLACK_TIME 10
-
 void cleanup_client_entries(sec_mod_st *sec)
 {
 	struct htable *db = sec->client_db;
@@ -155,7 +150,8 @@ void cleanup_client_entries(sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if (t->have_session == 0 && now - t->time > MAX_AUTH_SECS + SLACK_TIME) {
+		if ((now - t->time) > (sec->config->cookie_timeout + AUTH_SLACK_TIME) && 
+		    t->in_use == 0) {
 			htable_delval(db, &iter);
 			clean_entry(sec, t);
 		}
@@ -170,4 +166,11 @@ void del_client_entry(sec_mod_st *sec, client_entry_st * e)
 
 	htable_del(db, rehash(e, NULL), e);
 	clean_entry(sec, e);
+}
+
+void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
+{
+	if (e->in_use > 0)
+		e->in_use--;
+	e->time = time(0);
 }

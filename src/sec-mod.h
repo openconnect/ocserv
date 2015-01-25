@@ -53,6 +53,7 @@ typedef struct client_entry_st {
 	uint8_t sid[SID_SIZE];
 	void * auth_ctx; /* the context of authentication */
 	unsigned have_session; /* whether an auth session is initialized */
+	unsigned in_use; /* counter of users of this structure */
 	unsigned tls_auth_ok;
 
 	stats_st stats;
@@ -68,6 +69,7 @@ typedef struct client_entry_st {
 
 	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
 
+	/* The time this client entry was last modified (created or closed) */
 	time_t time;
 } client_entry_st;
 
@@ -77,6 +79,7 @@ unsigned sec_mod_client_db_elems(sec_mod_st *sec);
 client_entry_st * new_client_entry(sec_mod_st *sec, const char *ip);
 client_entry_st * find_client_entry(sec_mod_st *sec, uint8_t sid[SID_SIZE]);
 void del_client_entry(sec_mod_st *sec, client_entry_st * e);
+void expire_client_entry(sec_mod_st *sec, client_entry_st * e);
 void cleanup_client_entries(sec_mod_st *sec);
 
 #ifdef __GNUC__

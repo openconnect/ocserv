@@ -47,6 +47,10 @@ echo "Connecting to obtain cookie... "
 ( echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
+echo "Connecting to obtain cookie with empty password... "
+( echo "" | openconnect -q localhost:$PORT -u "empty" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
 #echo "Normal connection... "
 #( echo "test" | openconnect -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"

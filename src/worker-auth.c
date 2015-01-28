@@ -1017,8 +1017,9 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 	}
 
 	if (len == 0) {
-		oclog(ws, LOG_HTTP_DEBUG,
-		      "cannot parse '%s' in client XML message", field);
+		*value = talloc_strdup(ws->req.body, "");
+		if (*value != NULL)
+			return 0;
 		return -1;
 	}
 	if (xml)

@@ -974,7 +974,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		*value =
 		    strcasestr(body, temp1);
 		if (*value == NULL) {
-			oclog(ws, LOG_DEBUG,
+			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find '%s' in client XML message", field);
 			return -1;
 		}
@@ -998,7 +998,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		*value =
 		    strcasestr(body, temp1);
 		if (*value == NULL) {
-			oclog(ws, LOG_DEBUG,
+			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find '%s' in client message", field);
 			return -1;
 		}
@@ -1017,7 +1017,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 	}
 
 	if (len == 0) {
-		oclog(ws, LOG_DEBUG,
+		oclog(ws, LOG_HTTP_DEBUG,
 		      "cannot parse '%s' in client XML message", field);
 		return -1;
 	}
@@ -1079,7 +1079,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		if (ret < 0) {
-			oclog(ws, LOG_DEBUG, "failed reading groupname");
+			oclog(ws, LOG_HTTP_DEBUG, "failed reading groupname");
 		} else {
 			if (ws->config->default_select_group != NULL &&
 				   strcmp(groupname, ws->config->default_select_group) == 0) {
@@ -1098,7 +1098,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 					NULL, 0,
 					&username);
 			if (ret < 0) {
-				oclog(ws, LOG_DEBUG, "failed reading username");
+				oclog(ws, LOG_HTTP_DEBUG, "failed reading username");
 				goto ask_auth;
 			}
 
@@ -1126,7 +1126,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			if (def_group == 0 && ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
-				oclog(ws, LOG_DEBUG, "user has not selected a group");
+				oclog(ws, LOG_HTTP_DEBUG, "user has not selected a group");
 				return get_auth_handler2(ws, http_ver, "Please select your group");
 			}
 
@@ -1231,7 +1231,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	oclog(ws, LOG_DEBUG, "user '%s' obtained cookie", ws->username);
+	oclog(ws, LOG_HTTP_DEBUG, "user '%s' obtained cookie", ws->username);
 	ws->auth_state = S_AUTH_COOKIE;
 
 	return post_common_handler(ws, http_ver);

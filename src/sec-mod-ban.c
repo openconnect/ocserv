@@ -108,7 +108,7 @@ void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, time_t reenable_time)
 		goto fail;
 	}
 
-	seclog(sec, LOG_INFO,"added IP '%s' to ban list, will be removed at: %u", ip, (unsigned)reenable_time);
+	seclog(sec, LOG_INFO,"added IP '%s' to ban list, will be removed at: %s", ip, ctime(&reenable_time));
 	return;
  fail:
 	talloc_free(e);

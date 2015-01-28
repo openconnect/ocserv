@@ -224,7 +224,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		  [AC_MSG_RESULT(no)
    	           AC_MSG_WARN([[
 *** 
-*** libfreeradius-client git-20141213 was not found. Radius support will be disabled.
+*** freeradius-client 1.1.7 or later was not found. Radius support will be disabled.
 *** ]])])
 LIBS="$oldlibs"
 fi

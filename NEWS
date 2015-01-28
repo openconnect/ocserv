@@ -2,6 +2,8 @@
 - Do not send IPv6 leases if the calculated MTU is lower than 1280.
 - Prevent the early expiry of sessions in security module; that
   corrects session reconnections using the cookie.
+- Reduced debugging messages in debug level 1.
+- Allow forwarding empty passwords to auth backend.
 
 
 * Version 0.9.0 (released 2015-01-20)

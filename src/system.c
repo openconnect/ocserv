@@ -104,7 +104,7 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 		return -1;
 	}
 
-	if (debug != 0)
+	if (debug >= 3)
 		syslog(LOG_DEBUG,
 		       "%s: received request from pid %u and uid %u",
 		       mod, (unsigned)cr.pid, (unsigned)cr.uid);
@@ -112,7 +112,7 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 	if (ruid)
 		*ruid = cr.uid;
 
-	if (cr.uid != 0 && (cr.uid != uid || cr.gid != gid)) {
+	if (debug >= 3 && cr.uid != 0 && (cr.uid != uid || cr.gid != gid)) {
 		syslog(LOG_DEBUG,
 		       "%s: received unauthorized request from pid %u and uid %u",
 		       mod, (unsigned)cr.pid, (unsigned)cr.uid);
@@ -134,11 +134,11 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 	if (ruid)
 		*ruid = euid;
 
-	if (debug = 0)
+	if (debug >= 3)
 		syslog(LOG_DEBUG,
 		       "%s: received request from a processes with uid %u",
 		       mod, (unsigned)euid);
-	if (euid != 0 && (euid != uid || egid != gid)) {
+	if (debug >= 3 && euid != 0 && (euid != uid || egid != gid)) {
 		syslog(LOG_DEBUG,
 		       "%s: received unauthorized request from a process with uid %u",
 			mod, (unsigned)euid);

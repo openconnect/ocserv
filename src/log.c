@@ -95,7 +95,7 @@ void __attribute__ ((format(printf, 3, 4)))
 	const char* ip;
 	va_list args;
 
-	if (priority == LOG_DEBUG && ws->config->debug == 0)
+	if (priority == LOG_DEBUG && ws->config->debug < 3)
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
@@ -139,7 +139,7 @@ void __attribute__ ((format(printf, 4, 5)))
 	const char* ip = NULL;
 	va_list args;
 
-	if (priority == LOG_DEBUG && s->config->debug == 0)
+	if (priority == LOG_DEBUG && s->config->debug < 3)
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {

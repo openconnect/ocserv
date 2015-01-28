@@ -447,15 +447,17 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 
 	if (e->status != PS_AUTH_INIT) {
 		seclog(sec, LOG_ERR, "auth cont received but we are on state %u!", e->status);
-		return -1;
+		ret = -1;
+		goto cleanup;
 	}
 
 	seclog(sec, LOG_DEBUG, "auth cont for user '%s'", e->username);
 
 	if (req->password == NULL) {
 		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s'",
-		       e->username);
-		return -1;
+			e->username);
+		ret = -1;
+		goto cleanup;
 	}
 
 	ret =
@@ -467,6 +469,7 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 		       e->username);
 	}
 
+ cleanup:
 	return handle_sec_auth_res(cfd, sec, e, ret);
 }
 
@@ -504,14 +507,16 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		    module->auth_init(&e->auth_ctx, e, req->user_name, req->ip,
 				      sec->config->auth_additional);
 		if (ret < 0) {
-			return ret;
+			goto cleanup;
 		}
 
 		ret =
 		    module->auth_group(e->auth_ctx, req->group_name, e->groupname,
 				       sizeof(e->groupname));
-		if (ret != 0)
-			return -1;
+		if (ret != 0) {
+			ret = -1;
+			goto cleanup;
+		}
 		e->groupname[sizeof(e->groupname) - 1] = 0;
 
 		/* a module is allowed to change the name of the user */
@@ -538,7 +543,8 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 			if (found == 0) {
 				seclog(sec, LOG_AUTH, "user '%s' requested group '%s' but is not included on his certificate groups",
 					req->user_name, req->group_name);
-				return -1;
+				ret = -1;
+				goto cleanup;
 			}
 		}
 	}

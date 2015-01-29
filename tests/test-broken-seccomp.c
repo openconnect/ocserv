@@ -1,5 +1,8 @@
+#include <config.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifdef HAVE_LIBSECCOMP
 #include <seccomp.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -37,3 +40,9 @@ int main()
 	fprintf(stderr, "all ok\n");
 	exit(0);
 }
+#else
+int main()
+{
+	return 77;
+}
+#endif

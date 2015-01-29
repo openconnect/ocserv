@@ -484,7 +484,7 @@ Summary of build options:
 
 AC_MSG_NOTICE([
 
-Experimental options:
+Experimental (not recommended) options:
   Linux namespaces:     ${linux_ns_enabled}
   dbus:                 ${dbus_enabled}
 ])

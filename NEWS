@@ -5,6 +5,7 @@
 - Reduced debugging messages in debug level 1.
 - Allow forwarding empty passwords to auth backend.
 - make check will test for a broken seccomp.
+- depend on freeradius-client 1.1.7
 
 
 * Version 0.9.0 (released 2015-01-20)

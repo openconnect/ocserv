@@ -466,10 +466,12 @@ Summary of build options:
   
   PAM auth backend:     ${pam_enabled}
   Radius auth backend:  ${radius_enabled}
+  Anyconnect compat:    ${anyconnect_enabled}
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}
   (socket activation)
-  dbus:                 ${dbus_enabled}
+  seccomp:              ${seccomp_enabled}
+  LZ4 compression:      ${enable_lz4}
   readline:             ${have_readline}
   libnl3:               ${have_libnl3}
   glibc (sha2crypt):    ${have_glibc}
@@ -483,9 +485,7 @@ Summary of build options:
 AC_MSG_NOTICE([
 
 Experimental options:
-  seccomp:              ${seccomp_enabled}
   Linux namespaces:     ${linux_ns_enabled}
-  LZ4 compression:      ${enable_lz4}
-  Anyconnect compat:    ${anyconnect_enabled}
+  dbus:                 ${dbus_enabled}
 ])
 

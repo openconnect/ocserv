@@ -10,12 +10,13 @@ used by CISCO's AnyConnect SSL VPN.
 
 === Build dependencies ===
 
-Required dependencies:
-libgnutls-dev      / gnutls-devel
+Required dependencies (Debian pkg/Fedora pkg):
+libgnutls28-dev      / gnutls-devel
 
 Optional dependencies that enable specific functionality:
 * TCP wrappers: libwrap0-dev       / tcp_wrappers-devel
 * PAM:          libpam0g-dev       / pam-devel
+* LZ4:          liblz4-dev         / lz4-devel
 * seccomp:      libseccomp-dev     / libseccomp-devel
 * occtl:        libreadline-dev    / readline-devel
                 libnl-route-3-dev  / libnl3-devel
@@ -24,11 +25,12 @@ Dependencies for development, or dependencies that can be skipped
 in an embedded system (e.g., because a replacement library is included):
 
 libprotobuf-c0-dev / protobuf-c-devel
+libtalloc-dev      / libtalloc-devel
 libhttp-parser-dev / http-parser-devel
 libpcl1-dev        / pcllib-devel
 libopts25-dev      / autogen-libopts-devel
 autogen            / autogen
-protobuf-c         / protobuf-c
+protobuf-c-compiler/ protobuf-c
 gperf              / gperf
 
 See doc/README.radius for more information on Radius

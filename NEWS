@@ -6,6 +6,7 @@
 - Allow forwarding empty passwords to auth backend.
 - make check will test for a broken seccomp.
 - depend on freeradius-client 1.1.7
+- fix seccomp filter in x86 systems.
 
 
 * Version 0.9.0 (released 2015-01-20)

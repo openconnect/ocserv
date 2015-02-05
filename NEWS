@@ -4,7 +4,6 @@
   corrects session reconnections using the cookie.
 - Reduced debugging messages in debug level 1.
 - Allow forwarding empty passwords to auth backend.
-- make check will test for a broken seccomp.
 - depend on freeradius-client 1.1.7
 - fix seccomp filter in x86 systems.
 

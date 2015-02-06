@@ -50,7 +50,7 @@ AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 
 dbus_enabled=no
 AC_ARG_WITH(dbus,
-  AS_HELP_STRING([--with-dbus], [use dbus instead of unix sockets]),
+  AS_HELP_STRING([--with-dbus], [use dbus instead of unix sockets (dbus support is incomplete)]),
   test_for_dbus=$withval,
   test_for_dbus=no)
 

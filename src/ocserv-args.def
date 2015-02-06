@@ -422,7 +422,8 @@ route = 192.168.0.0/255.255.0.0
 #route = fef4:db8:1000:1001::/64
 
 # Subsets of the routes above that will not be routed by
-# the server.
+# the server. Note, that this may currently be not be supported 
+# by openconnect clients.
 
 no-route = 192.168.5.0/255.255.255.0
 

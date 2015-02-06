@@ -245,6 +245,9 @@ typedef struct worker_st {
 	/* additional data - received per user or per group */
 	unsigned routes_size;
 	char** routes;
+	unsigned no_routes_size;
+	char** no_routes;
+
 	unsigned dns_size;
 	char** dns;
 	unsigned nbns_size;

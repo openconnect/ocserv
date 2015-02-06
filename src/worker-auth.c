@@ -602,6 +602,15 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			if (check_if_default_route(ws->routes, ws->routes_size))
 				ws->default_route = 1;
 
+			ws->no_routes = talloc_size(ws, msg->n_no_routes*sizeof(char*));
+			if (ws->no_routes != NULL) {
+				ws->no_routes_size = msg->n_no_routes;
+				for (i = 0; i < ws->no_routes_size; i++) {
+					ws->no_routes[i] =
+					    talloc_strdup(ws, msg->no_routes[i]);
+				}
+			}
+
 			ws->dns = talloc_size(ws, msg->n_dns*sizeof(char*));
 			if (ws->dns != NULL) {
 				ws->dns_size = msg->n_dns;

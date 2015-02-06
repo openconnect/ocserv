@@ -287,6 +287,14 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 			proc->config.routes_size = msg->n_routes;
 		}
 
+		if (msg->n_no_routes > 0) {
+			proc->config.no_routes = talloc_size(proc, sizeof(char*)*msg->n_no_routes);
+			for (i=0;i<msg->n_no_routes;i++) {
+				proc->config.no_routes[i] = talloc_strdup(proc, msg->no_routes[i]);
+			}
+			proc->config.no_routes_size = msg->n_no_routes;
+		}
+
 		if (msg->n_iroutes > 0) {
 			proc->config.iroutes = talloc_size(proc, sizeof(char*)*msg->n_iroutes);
 			for (i=0;i<msg->n_iroutes;i++) {

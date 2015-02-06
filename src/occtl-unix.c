@@ -658,6 +658,9 @@ int common_info_cmd(UserListRep * args)
 			fprintf(out, "Routes: defaultroute\n");
 		}
 
+		if ((r = print_list_entries(out, "\tNo-routes:", args->user[i]->no_routes, args->user[i]->n_no_routes)) < 0)
+			goto error_parse;
+
 		if (print_list_entries(out, "\tiRoutes:", args->user[i]->iroutes, args->user[i]->n_iroutes) < 0)
 			goto error_parse;
 

@@ -1092,6 +1092,47 @@ char *replace_vals(worker_st *ws, const char *txt)
 	return (char*)str.data;
 }
 
+static int send_routes(worker_st *ws, struct http_req_st *req,
+		       char **routes, unsigned routes_size,
+		       bool include)
+{
+	unsigned i;
+	unsigned ip6;
+	const char *txt;
+	int ret;
+
+	if (include)
+		txt = "Include";
+	else
+		txt = "Exclude";
+
+	for (i = 0; i < routes_size; i++) {
+		if (strchr(routes[i], ':') != 0)
+			ip6 = 1;
+		else
+			ip6 = 0;
+
+		if (req->no_ipv6 != 0 && ip6 != 0)
+			continue;
+		if (req->no_ipv4 != 0 && ip6 == 0)
+			continue;
+		oclog(ws, LOG_DEBUG, "%s route %s", txt, routes[i]);
+
+		if (ip6 != 0 && ws->full_ipv6) {
+			ret = cstp_printf(ws,
+				 "X-CSTP-Split-%s-IP6: %s\r\n",
+				 txt, routes[i]);
+		} else {
+			ret = cstp_printf(ws,
+				 "X-CSTP-Split-%s: %s\r\n",
+				 txt, routes[i]);
+		}
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+
 /* connect_handler:
  * @ws: an initialized worker structure
  *
@@ -1377,54 +1418,18 @@ static int connect_handler(worker_st * ws)
 	}
 
 	if (ws->default_route == 0) {
-		for (i = 0; i < ws->vinfo.routes_size; i++) {
-			if (strchr(ws->vinfo.routes[i], ':') != 0)
-				ip6 = 1;
-			else
-				ip6 = 0;
+		ret = send_routes(ws, req, ws->vinfo.routes, ws->vinfo.routes_size, 1);
+		SEND_ERR(ret);
 
-			if (req->no_ipv6 != 0 && ip6 != 0)
-				continue;
-			if (req->no_ipv4 != 0 && ip6 == 0)
-				continue;
-			oclog(ws, LOG_DEBUG, "adding route %s", ws->vinfo.routes[i]);
-
-			if (ip6 != 0 && ws->full_ipv6) {
-				ret = cstp_printf(ws,
-					 "X-CSTP-Split-Include-IP6: %s\r\n",
-					 ws->vinfo.routes[i]);
-			} else {
-				ret = cstp_printf(ws,
-					 "X-CSTP-Split-Include: %s\r\n",
-					 ws->vinfo.routes[i]);
-			}
-			SEND_ERR(ret);
-		}
-
-		for (i = 0; i < ws->routes_size; i++) {
-			if (strchr(ws->routes[i], ':') != 0)
-				ip6 = 1;
-			else
-				ip6 = 0;
-
-			if (req->no_ipv6 != 0 && ip6 != 0)
-				continue;
-			if (req->no_ipv4 != 0 && ip6 == 0)
-				continue;
-			oclog(ws, LOG_DEBUG, "adding private route %s", ws->routes[i]);
-
-			if (ip6 != 0 && ws->full_ipv6) {
-				ret = cstp_printf(ws,
-					 "X-CSTP-Split-Include-IP6: %s\r\n",
-					 ws->routes[i]);
-			} else {
-				ret = cstp_printf(ws,
-					 "X-CSTP-Split-Include: %s\r\n",
-					 ws->routes[i]);
-			}
-			SEND_ERR(ret);
-		}
+		ret = send_routes(ws, req, ws->routes, ws->routes_size, 1);
+		SEND_ERR(ret);
 	}
+
+	ret = send_routes(ws, req, ws->vinfo.no_routes, ws->vinfo.no_routes_size, 0);
+	SEND_ERR(ret);
+
+	ret = send_routes(ws, req, ws->no_routes, ws->no_routes_size, 0);
+	SEND_ERR(ret);
 
 	ret =
 	    cstp_printf(ws, "X-CSTP-Keepalive: %u\r\n",

@@ -131,6 +131,12 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.routes = proc->config.routes;
 		}
 
+		msg.n_no_routes = proc->config.no_routes_size;
+		for (i=0;i<proc->config.no_routes_size;i++) {
+			mslog(s, proc, LOG_DEBUG, "sending no-route '%s'", proc->config.no_routes[i]);
+			msg.no_routes = proc->config.no_routes;
+		}
+
 		ret = send_socket_msg_to_worker(s, proc, AUTH_COOKIE_REP, proc->tun_lease.fd,
 			 &msg,
 			 (pack_size_func)auth_reply_msg__get_packed_size,

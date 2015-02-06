@@ -376,6 +376,14 @@ static int append_user_info(method_ctx *ctx,
 			rep->n_routes = ctx->s->config->network.routes_size;
 		}
 
+		if (ctmp->config.no_routes_size > 0) {
+			rep->no_routes = ctmp->config.no_routes;
+			rep->n_no_routes = ctmp->config.no_routes_size;
+		} else {
+			rep->no_routes = ctx->s->config->network.no_routes;
+			rep->n_no_routes = ctx->s->config->network.no_routes_size;
+		}
+
 		if (ctmp->config.iroutes_size > 0) {
 			rep->iroutes = ctmp->config.iroutes;
 			rep->n_iroutes = ctmp->config.iroutes_size;

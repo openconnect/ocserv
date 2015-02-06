@@ -59,6 +59,7 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "no-route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "select-group", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
@@ -722,6 +723,8 @@ unsigned force_cert_auth;
 			break;
 		}
 	}
+
+	READ_MULTI_LINE("no-route", config->network.no_routes, config->network.no_routes_size);
 
 	READ_STRING("default-select-group", config->default_select_group);
 	READ_TF("auto-select-group", auto_select_group, 0);

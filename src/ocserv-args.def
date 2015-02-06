@@ -417,9 +417,14 @@ ping-leases = false
 # comment out all routes from the server, or use the special keyword
 # 'default'.
 
-route = 192.168.1.0/255.255.255.0
-route = 192.168.5.0/255.255.255.0
+route = 10.10.10.0/255.255.255.0
+route = 192.168.0.0/255.255.0.0
 #route = fef4:db8:1000:1001::/64
+
+# Subsets of the routes above that will not be routed by
+# the server.
+
+no-route = 192.168.5.0/255.255.255.0
 
 # Groups that a client is allowed to select from.
 # A client may belong in multiple groups, and in certain use-cases
@@ -441,7 +446,7 @@ route = 192.168.5.0/255.255.255.0
 # per group. Each file name on these directories must match the username
 # or the groupname.
 # The options allowed in the configuration files are dns, nbns,
-#  ipv?-network, ipv4-netmask, rx/tx-per-sec, iroute, route,
+#  ipv?-network, ipv4-netmask, rx/tx-per-sec, iroute, route, no-route,
 #  net-priority, deny-roaming, no-udp, user-profile, require-cert, and cgroup.
 #
 # Note that the 'iroute' option allows to add routes on the server

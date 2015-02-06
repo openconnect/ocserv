@@ -147,6 +147,10 @@ struct group_cfg_st {
 	char **routes;
 	unsigned int routes_size;
 
+	/* routes that are excluded */
+	char **no_routes;
+	unsigned int no_routes_size;
+
 	/* routes to be applied to the server */
 	char **iroutes;
 	unsigned int iroutes_size;
@@ -193,6 +197,10 @@ struct vpn_st {
 
 	char **routes;
 	unsigned int routes_size;
+
+	/* excluded routes */
+	char **no_routes;
+	unsigned int no_routes_size;
 
 	char **dns;
 	unsigned int dns_size;

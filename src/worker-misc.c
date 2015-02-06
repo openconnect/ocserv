@@ -227,6 +227,10 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 	if (check_if_default_route(vinfo->routes, vinfo->routes_size))
 		ws->default_route = 1;
 
+	vinfo->no_routes_size = ws->config->network.no_routes_size;
+	if (ws->config->network.no_routes_size > 0)
+		vinfo->no_routes = ws->config->network.no_routes;
+
 	vinfo->ipv4_network = ws->config->network.ipv4_network;
 	vinfo->ipv6_network = ws->config->network.ipv6_network;
 

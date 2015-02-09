@@ -329,8 +329,10 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
 		SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 
-		/* we don't check for expiration of session here. This is
-		 * done at the main server. */
+		if (e->time != -1 && time(0) > e->time + sec->config->cookie_timeout) {
+			seclog(sec, LOG_ERR, "session is expired");
+			return -1;
+		}
 
 		if (module != NULL && module->open_session != NULL) {
 			ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
@@ -371,6 +373,8 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 
 		if (rep.reply != AUTH__REP__OK)
 			del_client_entry(sec, e);
+		else /* set expiration time to unlimited (until someone closes the session) */
+			e->time = -1;
 
 	} else { /* CLOSE */
 		if (req->has_uptime && req->uptime > e->stats.uptime) {

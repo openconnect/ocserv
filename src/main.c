@@ -606,8 +606,6 @@ void clear_lists(main_server_st *s)
 			close(ctmp->fd);
 		if (ctmp->tun_lease.fd >= 0)
 			close(ctmp->tun_lease.fd);
-		if (ctmp->cookie_ptr)
-			ctmp->cookie_ptr->proc = NULL;
 		list_del(&ctmp->list);
 		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);
@@ -623,7 +621,6 @@ void clear_lists(main_server_st *s)
 	ip_lease_deinit(&s->ip_leases);
 	proc_table_deinit(s);
 	ctl_handler_deinit(s);
-	cookie_db_deinit(&s->cookies);
 }
 
 static void kill_children(main_server_st* s)
@@ -859,7 +856,6 @@ unsigned total = 10;
 		need_maintenance = 0;
 		mslog(s, NULL, LOG_DEBUG, "performing maintenance");
 		expire_tls_sessions(s);
-		expire_cookies(&s->cookies);
 		alarm(MAINTAINANCE_TIME(s));
 	}
 }
@@ -932,7 +928,6 @@ int main(int argc, char** argv)
 	list_head_init(&s->proc_list.head);
 	list_head_init(&s->script_list.head);
 	tls_cache_init(s, &s->tls_db);
-	cookie_db_init(s, &s->cookies);
 	ip_lease_init(&s->ip_leases);
 	proc_table_init(s);
 

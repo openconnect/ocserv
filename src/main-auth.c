@@ -170,11 +170,10 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 {
 int ret;
 Cookie *cmsg;
-time_t now = time(0);
 gnutls_datum_t key = {s->cookie_key, sizeof(s->cookie_key)};
 char str_ip[MAX_IP_STR+1];
 PROTOBUF_ALLOCATOR(pa, proc);
-struct cookie_entry_st *old = NULL;
+struct proc_st *old_proc;
 
 	if (req->cookie.len == 0) {
 		mslog(s, proc, LOG_INFO, "error in cookie size");
@@ -243,43 +242,25 @@ struct cookie_entry_st *old = NULL;
 		}
 	}
 
-	/* check for a valid stored cookie */
-	if ((old=find_cookie_entry(&s->cookies, req->cookie.data, req->cookie.len)) != NULL) {
-		mslog(s, proc, LOG_DEBUG, "reusing cookie for '%s' (%u)", proc->username, (unsigned)proc->pid);
-		if (old->proc != NULL) {
-			mslog(s, old->proc, LOG_DEBUG, "disconnecting (%u) due to new cookie connection",
-				(unsigned)old->proc->pid);
+	/* check for a user with the same sid as in the cookie */
+	old_proc = proc_search_sid(s, cmsg->sid.data, cmsg->sid.len);
+	if (old_proc != NULL) {
+		mslog(s, old_proc, LOG_DEBUG, "disconnecting (%u) due to new cookie session",
+			(unsigned)old_proc->pid);
 
-			if (strcmp(proc->username, old->proc->username) != 0) {
-				mslog(s, old->proc, LOG_ERR, "the user of the cookie don't match (new: %s)",
-					proc->username);
-				return -1;
-			}
-
-			/* steal its leases */
-			steal_ip_leases(old->proc, proc);
-
-			/* steal its cookie */
-			old->proc->cookie_ptr = NULL;
-
-			if (old->proc->pid > 0)
-				kill(old->proc->pid, SIGTERM);
-		} else {
-			revive_cookie(old);
+		if (strcmp(proc->username, old_proc->username) != 0) {
+			mslog(s, old_proc, LOG_ERR, "the user of the cookie doesn't match (new: %s)",
+				proc->username);
+			return -1;
 		}
-		proc->cookie_ptr = old;
-		old->proc = proc;
+
+		/* steal its leases */
+		steal_ip_leases(old_proc, proc);
+
+		if (old_proc->pid > 0)
+			kill(old_proc->pid, SIGTERM);
 	} else {
-		if (cmsg->expiration < now) {
-			mslog(s, proc, LOG_INFO, "ignoring expired cookie");
-			return -1;
-		}
-
-		mslog(s, proc, LOG_DEBUG, "new cookie for (%u)", (unsigned)proc->pid);
-
-		proc->cookie_ptr = new_cookie_entry(&s->cookies, proc, req->cookie.data, req->cookie.len);
-		if (proc->cookie_ptr == NULL)
-			return -1;
+		mslog(s, proc, LOG_DEBUG, "new cookie session for (%u)", (unsigned)proc->pid);
 	}
 
 	if (proc->config.require_cert != 0 && cmsg->tls_auth_ok == 0) {

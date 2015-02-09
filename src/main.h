@@ -89,7 +89,7 @@ typedef struct cookie_entry_st {
 
 	/* We store the hash of the cookie that is associated with a particular session.
 	 * The reason is to avoid a memory leak to an unprivileged process to expose
-	 * data that can be used to authenticate as another use */
+	 * data that can be used to authenticate as another user */
 	uint8_t cookie_hash[COOKIE_HASH_SIZE];
 } cookie_st;
 

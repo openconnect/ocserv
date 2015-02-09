@@ -66,12 +66,28 @@ if [ ! -f ${srcdir}/pid1.$$ ];then
 fi
 
 CPID=`cat ${srcdir}/pid1.$$`
+kill -9 $CPID
+rm -f "${srcdir}/pid1.$$"
+wait $CPID
+
+sleep 10
+echo ""
+echo "Connecting after forced kill with cookie... "
+echo "test" | openconnect -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+
+sleep 4
+
+if [ ! -f ${srcdir}/pid1.$$ ];then
+	fail $PID "It was not possible to establish third session!"
+fi
+
+CPID=`cat ${srcdir}/pid1.$$`
 kill $CPID
 rm -f "${srcdir}/pid1.$$"
 wait $CPID
 
 
-sleep 30
+sleep 40
 echo ""
 echo "Connecting with cookie after expiration... "
 echo "test" | openconnect -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &

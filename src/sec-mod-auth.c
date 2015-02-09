@@ -337,7 +337,6 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			if (ret < 0) {
 				e->status = PS_AUTH_FAILED;
 				seclog(sec, LOG_ERR, "could not open session.");
-				del_client_entry(sec, e);
 				rep.reply = AUTH__REP__FAILED;
 			} else {
 				e->have_session = 1;
@@ -353,7 +352,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			return ERR_MEM;
 		}
 
-		if (sec->config_module && sec->config_module->get_sup_config) {
+		if (rep.reply == AUTH__REP__OK && sec->config_module && sec->config_module->get_sup_config) {
 			ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
 			if (ret < 0) {
 				seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
@@ -369,6 +368,10 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
 		}
 		talloc_free(lpool);
+
+		if (rep.reply != AUTH__REP__OK)
+			del_client_entry(sec, e);
+
 	} else { /* CLOSE */
 		if (req->has_uptime && req->uptime > e->stats.uptime) {
 				e->stats.uptime = req->uptime;

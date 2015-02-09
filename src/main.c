@@ -1019,8 +1019,13 @@ int main(int argc, char** argv)
 
 	/* chdir to our chroot directory, to allow opening the sec-mod
 	 * socket if necessary. */
-	if (s->config->chroot_dir)
-		chdir(s->config->chroot_dir);
+	if (s->config->chroot_dir) {
+		if (chdir(s->config->chroot_dir) != 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->config->chroot_dir, strerror(e));
+			exit(1);
+		}
+	}
 	ms_sleep(100); /* give some time for sec-mod to initialize */
 
 	/* Initialize certificates */

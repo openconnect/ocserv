@@ -718,7 +718,7 @@ unsigned force_cert_auth;
 		    strcmp(config->network.routes[j], "default") == 0) {
 		    	/* set default route */
 			for (i=0;i<j;i++)
-				free(config->network.routes[i]);
+				talloc_free(config->network.routes[i]);
 			config->network.routes_size = 0;
 			break;
 		}

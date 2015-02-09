@@ -160,8 +160,11 @@ static int pam_auth_init(void** ctx, void *pool, const char* user, const char* i
 int pret;
 struct pam_ctx_st * pctx;
 
-	if (user == NULL)
-		return -1;
+	if (user == NULL || user[0] == 0) {
+		syslog(LOG_AUTH,
+		       "pam-auth: no username present");
+		return ERR_AUTH_FAIL;
+	}
 
 	pctx = talloc_zero(pool, struct pam_ctx_st);
 	if (pctx == NULL)
@@ -188,7 +191,7 @@ struct pam_ctx_st * pctx;
 
 	*ctx = pctx;
 	
-	return 0;
+	return ERR_AUTH_CONTINUE;
 
 fail2:
 	pam_end(pctx->ph, pret);

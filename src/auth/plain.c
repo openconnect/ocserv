@@ -167,6 +167,12 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 	struct plain_ctx_st *pctx;
 	int ret;
 
+	if (username == NULL || username[0] == 0) {
+		syslog(LOG_AUTH,
+		       "plain-auth: no username present");
+		return ERR_AUTH_FAIL;
+	}
+
 	pctx = talloc_zero(pool, struct plain_ctx_st);
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
@@ -183,7 +189,7 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 
 	*ctx = pctx;
 
-	return 0;
+	return ERR_AUTH_CONTINUE;
 }
 
 static int plain_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)

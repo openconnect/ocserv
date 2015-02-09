@@ -34,6 +34,7 @@
 #include <auth/pam.h>
 #include <auth/radius.h>
 #include <auth/plain.h>
+#include <auth/gssapi.h>
 #include <sec-mod-sup-config.h>
 
 #include <vpn.h>
@@ -47,7 +48,6 @@
 
 static char pid_file[_POSIX_PATH_MAX] = "";
 static const char* cfg_file = DEFAULT_CFG_FILE;
-static const struct auth_mod_st *amod = NULL;
 
 struct cfg_options {
 	const char* name;
@@ -58,6 +58,7 @@ struct cfg_options {
 
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
+	{ .name = "enable-auth", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "no-route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "select-group", .type = OPTION_MULTI_LINE, .mandatory = 0 },
@@ -152,10 +153,10 @@ static struct cfg_options available_options[] = {
 };
 
 #define get_brackets_string get_brackets_string1
-static char *get_brackets_string1(void *pool, const char *str);
+static char *get_brackets_string1(struct cfg_st *config, const char *str);
 
 #ifdef HAVE_RADIUS
-static char *get_brackets_string2(void *pool, const char *str)
+static char *get_brackets_string2(struct cfg_st *config, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -186,7 +187,28 @@ static char *get_brackets_string2(void *pool, const char *str)
 
 	len = p2 - p;
 
-	return talloc_strndup(pool, p, len);
+	return talloc_strndup(config, p, len);
+}
+
+static char *radius_get_brackets_string(struct cfg_st *config, const char *str)
+{
+	char *ret, *p;
+
+	ret =  get_brackets_string1(config, str+6);
+	if (ret == NULL) {
+		fprintf(stderr, "No radius configuration specified\n");
+		exit(1);
+	}
+
+	p = get_brackets_string2(config, str+6);
+	if (p != NULL) {
+		if (strcasecmp(p, "groupconfig") != 0) {
+			fprintf(stderr, "No known configuration option: %s\n", p);
+			exit(1);
+		}
+		config->sup_config_type = SUP_CONFIG_RADIUS;
+	}
+	return ret;
 }
 #endif
 
@@ -219,7 +241,7 @@ unsigned j;
 		do { \
 		        if (val && !strcmp(val->pzName, name)==0) \
 				continue; \
-		        s_name[num] = talloc_strdup(config, val->v.strVal); \
+		        s_name[num] = talloc_strdup(s_name, val->v.strVal); \
 		        num++; \
 		        if (num>=MAX_CONFIG_ENTRIES) \
 		        break; \
@@ -345,7 +367,7 @@ unsigned j;
 	}
 }
 
-static char *get_brackets_string1(void *pool, const char *str)
+static char *get_brackets_string1(struct cfg_st *config, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -369,9 +391,8 @@ static char *get_brackets_string1(void *pool, const char *str)
 
 	len = p2 - p;
 
-	return talloc_strndup(pool, p, len);
+	return talloc_strndup(config, p, len);
 }
-
 
 /* Parses the string ::1/prefix, to return prefix
  * and modify the string to contain the network only.
@@ -395,9 +416,107 @@ unsigned extract_prefix(char *network)
 	return prefix;
 }
 
-const struct auth_mod_st *get_auth_mod(void)
+typedef struct auth_types_st {
+	const char *name;
+	unsigned name_size;
+	const struct auth_mod_st *mod;
+	unsigned type;
+	char *(*get_brackets_string)(struct cfg_st *config, const char *);
+} auth_types_st;
+
+#define NAME(x) (x),(sizeof(x)-1)
+static auth_types_st avail_auth_types[] =
 {
-	return amod;
+#ifdef HAVE_PAM
+	{NAME("pam"), &pam_auth_funcs, AUTH_TYPE_PAM, get_brackets_string},
+#endif
+#ifdef HAVE_GSSAPI
+	{NAME("gssapi"), &gssapi_auth_funcs, AUTH_TYPE_GSSAPI, get_brackets_string},
+#endif
+#ifdef HAVE_RADIUS
+	{NAME("radius"), &radius_auth_funcs, AUTH_TYPE_RADIUS, radius_get_brackets_string},
+#endif
+	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, get_brackets_string},
+	{NAME("certificate[optional]"), NULL, AUTH_TYPE_CERTIFICATE_OPT, NULL},
+	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
+};
+
+static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_size,
+			      unsigned primary)
+{
+	unsigned j, i;
+	unsigned found;
+
+	if (primary != 0) {
+		/* Set the primary authentication methods */
+		for (j=0;j<auth_size;j++) {
+			found = 0;
+			for (i=0;i<sizeof(avail_auth_types)/sizeof(avail_auth_types[0]);i++) {
+				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
+					if (avail_auth_types[i].get_brackets_string)
+						config->auth[0].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
+				
+					if (config->auth[0].amod != NULL && avail_auth_types[i].mod != NULL) {
+						fprintf(stderr, "%s: You cannot mix multiple authentication methods of this type\n", auth[j]);
+						exit(1);
+					}
+
+					if (config->auth[0].amod == NULL)
+						config->auth[0].amod = avail_auth_types[i].mod;
+					config->auth[0].type |= avail_auth_types[i].type;
+					if (config->auth[0].name == NULL)
+						config->auth[0].name = avail_auth_types[i].name;
+					fprintf(stderr, "Setting '%s' as primary authentication method\n", avail_auth_types[i].name);
+					config->auth[0].enabled = 1;
+					config->auth_methods = 1;
+					found = 1;
+					break;
+				}
+			}
+
+			if (found == 0) {
+				fprintf(stderr, "Unknown or unsupported auth method: %s\n", auth[j]);
+				exit(1);
+			}
+			talloc_free(auth[j]);
+		}
+	} else {
+		unsigned x = config->auth_methods;
+		/* Append authentication methods (alternative options) */
+		for (j=0;j<auth_size;j++) {
+			found = 0;
+			for (i=0;i<sizeof(avail_auth_types)/sizeof(avail_auth_types[0]);i++) {
+				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
+					if (avail_auth_types[i].get_brackets_string)
+						config->auth[x].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
+				
+					if (config->auth[x].name == NULL)
+						config->auth[x].name = avail_auth_types[i].name;
+					fprintf(stderr, "Enabling '%s' as authentication method\n", avail_auth_types[i].name);
+
+					config->auth[x].amod = avail_auth_types[i].mod;
+					config->auth[x].type |= avail_auth_types[i].type;
+					config->auth[x].enabled = 1;
+					found = 1;
+					x++;
+					if (x >= MAX_AUTH_METHODS) {
+						fprintf(stderr, "You cannot enable more than %d authentication methods\n", x);
+						exit(1);
+					}
+					break;
+				}
+			}
+
+			if (found == 0) {
+				fprintf(stderr, "Unknown or unsupported auth method: %s\n", auth[j]);
+				exit(1);
+			}
+			talloc_free(auth[j]);
+		}
+		config->auth_methods = x;
+
+	}
+	talloc_free(auth);
 }
 
 static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
@@ -439,81 +558,26 @@ unsigned force_cert_auth;
 	config->sup_config_type = SUP_CONFIG_FILE;
 
 	READ_MULTI_LINE("auth", auth, auth_size);
-	for (j=0;j<auth_size;j++) {
-		if (c_strncasecmp(auth[j], "pam", 3) == 0) {
-			config->auth_additional = get_brackets_string(config, auth[j]+3);
-			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
-				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
-				exit(1);
-			}
-#ifdef HAVE_PAM
-			amod = &pam_auth_funcs;
-			config->auth_types |= amod->type;
-#else
-			fprintf(stderr, "PAM support is disabled\n");
-			exit(1);
-#endif
-		} else if (strncasecmp(auth[j], "plain", 5) == 0) {
-			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
-				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
-				exit(1);
-			}
+	figure_auth_funcs(config, auth, auth_size, 1);
+	auth = NULL;
+	auth_size = 0;
 
-			config->auth_additional = get_brackets_string(config, auth[j]+5);
-			if (config->auth_additional == NULL) {
-				fprintf(stderr, "Format error in %s\n", auth[j]);
-				exit(1);
-			}
-			amod = &plain_auth_funcs;
-			config->auth_types |= amod->type;
-		} else if (strncasecmp(auth[j], "radius", 6) == 0) {
-			if ((config->auth_types & AUTH_TYPE_USERNAME_PASS) != 0) {
-				fprintf(stderr, "You cannot mix multiple username/password authentication methods\n");
-				exit(1);
-			} else {
+	READ_MULTI_LINE("enable-auth", auth, auth_size);
+	figure_auth_funcs(config, auth, auth_size, 0);
+	auth = NULL;
+	auth_size = 0;
 
-#ifdef HAVE_RADIUS
-				const char *p;
-
-				config->auth_additional = get_brackets_string1(config, auth[j]+6);
-				if (config->auth_additional == NULL) {
-					fprintf(stderr, "No configuration specified; error in %s\n", auth[j]);
-					exit(1);
-				}
-
-				p = get_brackets_string2(config, auth[j]+6);
-				if (p != NULL) {
-					if (strcasecmp(p, "groupconfig") != 0) {
-						fprintf(stderr, "No known configuration option: %s\n", p);
-						exit(1);
-					}
-					config->sup_config_type = SUP_CONFIG_RADIUS;
-				}
-				amod = &radius_auth_funcs;
-				config->auth_types |= amod->type;
-#else
-				fprintf(stderr, "Radius support is disabled\n");
-				exit(1);
-#endif
-			}
-		} else if (c_strcasecmp(auth[j], "certificate") == 0) {
-			config->auth_types |= AUTH_TYPE_CERTIFICATE;
-		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
-			config->auth_types |= AUTH_TYPE_CERTIFICATE_OPT;
-			fprintf(stderr, "The authentication option certificate[optional] is experimental and may be removed in the future\n");
-		} else {
-			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
-			exit(1);
-		}
-		talloc_free(auth[j]);
+	if (config->auth[0].enabled == 0) {
+		fprintf(stderr, "No authentication method was specified!\n");
+		exit(1);
 	}
-	talloc_free(auth);
 
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
 	 */
 	READ_STRING("listen-host", config->name);
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
+	READ_STRING("listen-clear-file", config->unix_conn_file);
 
 	READ_NUMERIC("tcp-port", config->port);
 	READ_NUMERIC("udp-port", config->udp_port);
@@ -550,11 +614,6 @@ unsigned force_cert_auth;
 	if (reload == 0 && pid_file[0] == 0)
 		READ_STATIC_STRING("pid-file", pid_file);
 
-	READ_STRING("listen-clear-file", config->unix_conn_file);
-	if (config->unix_conn_file != NULL && (config->auth_types & AUTH_TYPE_CERTIFICATE)) {
-		fprintf(stderr, "The option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
-		exit(1);
-	}
 
 	READ_STRING("socket-file", config->socket_file_prefix);
 	READ_STRING("occtl-socket-file", config->occtl_socket_file);
@@ -729,8 +788,9 @@ unsigned force_cert_auth;
 
 	READ_STRING("default-select-group", config->default_select_group);
 	READ_TF("auto-select-group", auto_select_group, 0);
-	if (auto_select_group != 0 && amod != NULL && amod->group_list != NULL) {
-		amod->group_list(config, config->auth_additional, &config->group_list, &config->group_list_size);
+
+	if (auto_select_group != 0 && config->auth[0].amod != NULL && config->auth[0].amod->group_list != NULL) {
+		config->auth[0].amod->group_list(config, config->auth[0].additional, &config->group_list, &config->group_list_size);
 	} else {
 		READ_MULTI_BRACKET_LINE("select-group",
 				config->group_list,
@@ -799,18 +859,29 @@ static void check_cfg(struct cfg_st *config)
 		exit(1);
 	}
 
-	if (config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if (config->cisco_client_compat == 0 && ((config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT))
+	if (config->auth[0].type & AUTH_TYPE_CERTIFICATE) {
+		if (config->cisco_client_compat == 0 && ((config->auth[0].type & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT))
 			config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;
+	} else {
+		unsigned i;
+		for (i=1;i<config->auth_methods;i++) {
+			if (config->auth[i].type & AUTH_TYPE_CERTIFICATE) {
+				config->cert_req = GNUTLS_CERT_REQUEST;
+				break;
+			}
+		}
 	}
 
-	if (config->auth_additional != NULL && (config->auth_types & AUTH_TYPE_PLAIN) == AUTH_TYPE_PLAIN) {
-		if (access(config->auth_additional, R_OK) != 0) {
-			fprintf(stderr, "cannot access password file '%s'\n", config->auth_additional);
-			exit(1);
-		}
+	if (config->cert_req != 0 && config->cert_user_oid == NULL) {
+		fprintf(stderr, "A certificate is requested by the option 'cert-user-oid' is not set\n");
+		exit(1);
+	}
+
+	if (config->unix_conn_file != NULL && (config->cert_req != 0)) {
+		fprintf(stderr, "The option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
+		exit(1);
 	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
@@ -897,7 +968,7 @@ unsigned i;
 	DEL(config->per_group_dir);
 	DEL(config->socket_file_prefix);
 	DEL(config->default_domain);
-	DEL(config->auth_additional);
+
 	DEL(config->ocsp_response);
 	DEL(config->banner);
 	DEL(config->dh_params_file);
@@ -969,6 +1040,9 @@ void print_version(tOptions *opts, tOptDesc *desc)
 #ifdef HAVE_RADIUS
 	fprintf(stderr, "radius, ");
 #endif
+#ifdef HAVE_GSSAPI
+	fprintf(stderr, "gssapi, ");
+#endif
 #ifdef HAVE_PAM
 	fprintf(stderr, "PAM, ");
 #endif
@@ -990,13 +1064,30 @@ void print_version(tOptions *opts, tOptDesc *desc)
 	exit(0);
 }
 
+
 void reload_cfg_file(void *pool, struct cfg_st* config)
 {
+	auth_struct_st bak[MAX_AUTH_METHODS];
+	unsigned bak_size, i;
+
+	/* authentication methods can't change on reload */
+	memcpy(bak, config->auth, sizeof(config->auth));
+	memset(config->auth, 0, sizeof(config->auth));
+	bak_size = config->auth_methods;
+
 	clear_cfg_file(config);
 
 	memset(config, 0, sizeof(*config));
 
 	parse_cfg_file(cfg_file, config, 1);
+
+	/* reset the auth methods */
+	for (i=0;i<config->auth_methods;i++) {
+		if (config->auth[i].enabled)
+			DEL(config->auth[i].additional);
+	}
+	memcpy(config->auth, bak, sizeof(config->auth));
+	config->auth_methods = bak_size;
 
 	check_cfg(config);
 

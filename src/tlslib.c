@@ -398,10 +398,10 @@ static int verify_certificate_cb(gnutls_session_t session)
 fail:
 	/* In cisco client compatibility we don't hangup immediately, we
 	 * simply use the flag (ws->cert_auth_ok). */
-	if (ws->config->cisco_client_compat == 0)
-		return GNUTLS_E_CERTIFICATE_ERROR;
-	else
+	if (ws->config->cisco_client_compat != 0 || ws->config->cert_req != GNUTLS_CERT_REQUIRE)
 		return 0;
+	else
+		return GNUTLS_E_CERTIFICATE_ERROR;
 
 }
 

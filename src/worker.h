@@ -58,7 +58,9 @@ enum {
 	HEADER_FULL_IPV6,
 	HEADER_USER_AGENT,
 	HEADER_CSTP_ENCODING,
-	HEADER_DTLS_ENCODING
+	HEADER_DTLS_ENCODING,
+	HEADER_NEED_SPNEGO,
+	HEADER_AUTHORIZATION
 };
 
 enum {
@@ -130,6 +132,9 @@ struct http_req_st {
 	
 	unsigned no_ipv4;
 	unsigned no_ipv6;
+
+	char *authorization;
+	unsigned authorization_size;
 };
 
 typedef struct dtls_transport_ptr {
@@ -143,6 +148,7 @@ typedef struct worker_st {
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
 
+	auth_struct_st *selected_auth;
 	const compression_method_st *dtls_selected_comp;
 	const compression_method_st *cstp_selected_comp;
 
@@ -309,6 +315,7 @@ int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);
 int disable_system_calls(struct worker_st *ws);
 void ocsigaltstack(struct worker_st *ws);
+int ws_switch_auth_to(struct worker_st *ws, unsigned auth);
 
 int connect_to_secmod(worker_st * ws);
 inline static

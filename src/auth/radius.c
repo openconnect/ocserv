@@ -67,6 +67,12 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	struct radius_ctx_st *pctx;
 	char *default_realm;
 
+	if (username == NULL || username[0] == 0) {
+		syslog(LOG_AUTH,
+		       "radius-auth: no username present");
+		return ERR_AUTH_FAIL;
+	}
+
 	pctx = talloc_zero(pool, struct radius_ctx_st);
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
@@ -88,7 +94,7 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 
 	*ctx = pctx;
 
-	return 0;
+	return ERR_AUTH_CONTINUE;
 }
 
 static int radius_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)

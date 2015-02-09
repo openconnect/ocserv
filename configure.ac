@@ -391,6 +391,26 @@ AC_DEFINE([HAVE_LZ4], [], [LZ4 was found])
 ])
 fi
 
+dnl GSSAPI
+AC_ARG_WITH(gssapi,
+  AS_HELP_STRING([--without-gssapi], [disable support for GSSAPI authentication]),
+  test_for_gssapi=$withval,
+  test_for_gssapi=yes)
+
+enable_gssapi=no
+if test "$test_for_gssapi" = yes;then
+PKG_CHECK_MODULES([LIBKRB5], [krb5-gssapi], [
+enable_gssapi=yes
+AC_DEFINE([HAVE_GSSAPI], [], [GSSAPI was found])
+],
+[
+	AC_MSG_WARN([[
+***
+*** gssapi not found. Will disable compression support.
+*** ]])
+])
+fi
+
 dnl needed in the included PCL
 AC_C_VOLATILE
 AC_C_CONST
@@ -467,6 +487,7 @@ Summary of build options:
   
   PAM auth backend:     ${pam_enabled}
   Radius auth backend:  ${radius_enabled}
+  GSSAPI auth backend:  ${enable_gssapi}
   Anyconnect compat:    ${anyconnect_enabled}
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}

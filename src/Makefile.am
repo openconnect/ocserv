@@ -5,7 +5,8 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBGNUTLS_CFLAGS) \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS) \
-	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS)
+	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) \
+	$(LIBKRB5_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
@@ -63,7 +64,7 @@ COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
 
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
-	auth/common.c auth/common.h
+	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \
@@ -90,7 +91,7 @@ ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
-	$(FREERADIUS_CLIENT_LIBS) $(LIBLZ4_LIBS)
+	$(FREERADIUS_CLIENT_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS)
 
 
 if PCL

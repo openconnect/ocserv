@@ -166,6 +166,7 @@ message sec_auth_init_msg
 	repeated string cert_group_names = 6;
 	optional string hostname = 7;
 	required string ip = 8;
+	required uint32 auth_type = 9 [default = 0];
 }
 
 /* SEC_AUTH_CONT */

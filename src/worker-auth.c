@@ -88,6 +88,22 @@ static const char ocv3_login_msg_end[] =
 
 static int get_cert_info(worker_st * ws);
 
+int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
+{
+	unsigned i;
+
+	if (ws->selected_auth && ws->selected_auth->type & auth)
+		return 1;
+
+	for (i=1;i<ws->config->auth_methods;i++) {
+		if ((ws->config->auth[i].type & auth) != 0) {
+			ws->selected_auth = &ws->config->auth[i];
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
 {
 	char temp[128];
@@ -215,7 +231,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			goto cleanup;
 		}
 
-		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
 			ret = str_append_str(&str, login_msg_user);
 			if (ret < 0) {
 				ret = -1;
@@ -223,7 +239,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			}
 		}
 
-		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
+		if (ws->selected_auth->type & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
 			ret = get_cert_info(ws);
 			if (ret < 0) {
 				ret = -1;
@@ -262,7 +278,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			}
 
 			/* append any groups available in the certificate */
-			if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
+			if (ws->selected_auth->type & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
 				unsigned dup;
 
 				for (i=0;i<ws->cert_groups_size;i++) {
@@ -794,9 +810,9 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 	int ret;
 	AuthCookieRequestMsg msg = AUTH_COOKIE_REQUEST_MSG__INIT;
 
-	if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE)
+	if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE)
 	    && ws->config->cisco_client_compat == 0) {
-		if (((ws->config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0)) {
+		if (((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0)) {
 			oclog(ws, LOG_INFO,
 			      "no certificate provided for cookie authentication");
 			return -1;
@@ -833,7 +849,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 	return 0;
 }
 
-int post_common_handler(worker_st * ws, unsigned http_ver)
+int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 {
 	int ret, size;
 	char str_cookie[BASE64_LENGTH(ws->cookie_size)+1];
@@ -869,6 +885,12 @@ int post_common_handler(worker_st * ws, unsigned http_ver)
 	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
 		return -1;
+
+	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && imsg != NULL) {
+		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", imsg);
+		if (ret < 0)
+			return -1;
+	}
 
 	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
 	if (ret < 0)
@@ -966,6 +988,9 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 	unsigned temp2_len, temp1_len;
 	unsigned len, xml = 0;
 
+	if (body == NULL || body_length == 0)
+		return -1;
+
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
 		xml = 1;
 		if (xml_field) {
@@ -1045,6 +1070,42 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 	return 0;
 }
 
+static
+int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
+{
+	int ret;
+
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 401 Unauthorized\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	if (msg == NULL) {
+		ret = cstp_puts(ws, "WWW-Authenticate: Negotiate\r\n");
+	} else {
+		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", msg);
+	}
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_uncork(ws);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = 0;
+
+ cleanup:
+	return ret;
+}
+
 #define USERNAME_FIELD "username"
 #define PASSWORD_FIELD "password"
 #define GROUPNAME_FIELD "group%5flist"
@@ -1101,7 +1162,20 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 		talloc_free(groupname);
 
-		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
+			if (req->authorization == NULL || req->authorization_size == 0)
+				return basic_auth_handler(ws, http_ver, NULL);
+
+			if (req->authorization_size > 10) {
+				ireq.user_name = req->authorization + 10;
+				ireq.auth_type |= AUTH_TYPE_GSSAPI;
+			} else {
+				oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+				goto auth_fail;
+			}
+		}
+
+		if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
 
 			ret = parse_reply(ws, req->body, req->body_length,
 					USERNAME_FIELD, sizeof(USERNAME_FIELD)-1,
@@ -1115,10 +1189,11 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			strlcpy(ws->username, username, sizeof(ws->username));
 			talloc_free(username);
 			ireq.user_name = ws->username;
+			ireq.auth_type |= AUTH_TYPE_USERNAME_PASS;
 		}
 
-		if (ws->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-			if ((ws->config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0) {
+		if (ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) {
+			if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0) {
 				reason = MSG_NO_CERT_ERROR;
 				oclog(ws, LOG_INFO,
 				      "no certificate provided for authentication");
@@ -1144,6 +1219,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			ireq.cert_user_name = ws->cert_username;
 			ireq.cert_group_names = ws->cert_groups;
 			ireq.n_cert_group_names = ws->cert_groups_size;
+			ireq.auth_type |= AUTH_TYPE_CERTIFICATE;
 		}
 
 		ireq.hostname = req->hostname;
@@ -1174,7 +1250,16 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		   || ws->auth_state == S_AUTH_REQ) {
 		SecAuthContMsg areq = SEC_AUTH_CONT_MSG__INIT;
 
-		if (ws->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
+			if (req->authorization == NULL || req->authorization_size <= 10) {
+				if (req->authorization != NULL)
+					oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+				goto auth_fail;
+			}
+			areq.password = req->authorization + 10;
+		}
+
+		if (areq.password == NULL && ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
 			ret = parse_reply(ws, req->body, req->body_length,
 					PASSWORD_FIELD, sizeof(PASSWORD_FIELD)-1,
 					NULL, 0,
@@ -1186,6 +1271,9 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			areq.password = password;
+		}
+
+		if (areq.password != NULL) {
 			if (ws->sid_set != 0) {
 				areq.sid.data = ws->sid;
 				areq.sid.len = sizeof(ws->sid);
@@ -1234,7 +1322,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		      ws->username);
 		ws->auth_state = S_AUTH_REQ;
 
-		return get_auth_handler2(ws, http_ver, msg);
+		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI)
+			return basic_auth_handler(ws, http_ver, msg);
+		else
+			return get_auth_handler2(ws, http_ver, msg);
 	} else if (ret < 0) {
 		oclog(ws, LOG_ERR, "failed authentication for '%s'",
 		      ws->username);
@@ -1244,7 +1335,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	oclog(ws, LOG_HTTP_DEBUG, "user '%s' obtained cookie", ws->username);
 	ws->auth_state = S_AUTH_COOKIE;
 
-	return post_common_handler(ws, http_ver);
+	return post_common_handler(ws, http_ver, msg);
 
  ask_auth:
 

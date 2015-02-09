@@ -51,24 +51,18 @@
 #include <vpn.h>
 #include <sec-mod-sup-config.h>
 
-static const struct auth_mod_st *module = NULL;
+#ifdef HAVE_GSSAPI
+# include <gssapi/gssapi.h>
+# include <gssapi/gssapi_ext.h>
+#endif
 
 void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 {
-	module = get_auth_mod();
+	unsigned i;
 
-	if (module && module->global_init) {
-		module->global_init(sec, config->auth_additional);
-	}
-}
-
-void sec_auth_reinit(sec_mod_st * sec, struct cfg_st *config)
-{
-	if (module) {
-		if (module != get_auth_mod()) {
-			seclog(sec, LOG_ERR, "Cannot change authentication method on reload");
-			exit(1);
-		}
+	for (i=0;i<config->auth_methods;i++) {
+		if (config->auth[i].enabled && config->auth[i].amod && config->auth[i].amod->global_init)
+			config->auth[i].amod->global_init(sec, config->auth[i].additional);
 	}
 }
 
@@ -165,18 +159,9 @@ static
 int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 {
 	SecAuthReplyMsg msg = SEC_AUTH_REPLY_MSG__INIT;
-	char tmp[MAX_MSG_SIZE] = "";
-
 	int ret;
 
-	if (module == NULL || e->auth_ctx == NULL)
-		return -1;
-
-	ret = module->auth_msg(e->auth_ctx, tmp, sizeof(tmp));
-	if (ret < 0)
-		return ret;
-
-	msg.msg = tmp;
+	msg.msg = e->msg_str;
 	msg.reply = AUTH__REP__MSG;
 
 	msg.has_sid = 1;
@@ -202,8 +187,8 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 	unsigned need_cert = 1;
 
 
-	if (sec->config->auth_types & AUTH_TYPE_CERTIFICATE) {
-		if ((sec->config->auth_types & AUTH_TYPE_CERTIFICATE_OPT) == AUTH_TYPE_CERTIFICATE_OPT) {
+	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
+		if ((e->auth_type & AUTH_TYPE_CERTIFICATE_OPT) == AUTH_TYPE_CERTIFICATE_OPT) {
 			need_cert = 0;
 		}
 
@@ -307,7 +292,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 
 /* opens or closes a session.
  */
-int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionMsg * req,
+int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req,
 				unsigned cmd)
 {
 	client_entry_st *e;
@@ -340,8 +325,8 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			return -1;
 		}
 
-		if (module != NULL && module->open_session != NULL) {
-			ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
+		if (e->module != NULL && e->module->open_session != NULL) {
+			ret = e->module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
 			if (ret < 0) {
 				e->status = PS_AUTH_FAILED;
 				seclog(sec, LOG_ERR, "could not open session.");
@@ -428,10 +413,10 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->uptime > e->stats.uptime)
 		e->stats.uptime = req->uptime;
 
-	if (module == NULL || module->session_stats == NULL)
+	if (e->module == NULL || e->module->session_stats == NULL)
 		return 0;
 
-	module->session_stats(e->auth_ctx, &e->stats);
+	e->module->session_stats(e->auth_ctx, &e->stats);
 	return 0;
 }
 
@@ -473,8 +458,14 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 		goto cleanup;
 	}
 
+	if (e->module == NULL) {
+		seclog(sec, LOG_ERR, "no module available!");
+		ret = -1;
+		goto cleanup;
+	}
+
 	ret =
-	    module->auth_pass(e->auth_ctx, req->password,
+	    e->module->auth_pass(e->auth_ctx, req->password,
 			      strlen(req->password));
 	if (ret < 0) {
 		seclog(sec, LOG_DEBUG,
@@ -486,21 +477,34 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 	return handle_sec_auth_res(cfd, sec, e, ret);
 }
 
+static
+int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
+{
+	unsigned i;
+
+	for (i=0;i<sec->config->auth_methods;i++) {
+		if (sec->config->auth[i].enabled && (sec->config->auth[i].type & auth_type) == auth_type) {
+			e->module = sec->config->auth[i].amod;
+			e->auth_type = sec->config->auth[i].type;
+			e->auth_additional = sec->config->auth[i].additional;
+
+			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (%x)", sec->config->auth[i].name, auth_type);
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
 int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 {
 	int ret = -1;
 	client_entry_st *e;
+	unsigned need_continue = 0;
 
 	if (check_if_banned(sec, req->ip) != 0) {
 		seclog(sec, LOG_INFO,
 		       "IP '%s' is banned", req->ip);
-		return -1;
-	}
-
-	if ((req->user_name == NULL || req->user_name[0] == 0)
-	    && (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS)) {
-		seclog(sec, LOG_DEBUG,
-		       "auth init from '%s' with no username present", req->ip);
 		return -1;
 	}
 
@@ -510,21 +514,28 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		return -1;
 	}
 
+	ret = set_module(sec, e, req->auth_type);
+	if (ret < 0) {
+		seclog(sec, LOG_ERR, "no module found for auth type %u", (unsigned)req->auth_type);
+		goto cleanup;
+	}
+
 	if (req->hostname != NULL) {
 		strlcpy(e->hostname, req->hostname, sizeof(e->hostname));
 	}
 
-	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
-		/* req->username is non-null at this point */
+	if (e->module) {
 		ret =
-		    module->auth_init(&e->auth_ctx, e, req->user_name, req->ip,
-				      sec->config->auth_additional);
-		if (ret < 0) {
+		    e->module->auth_init(&e->auth_ctx, e, req->user_name, req->ip,
+				         e->auth_additional);
+		if (ret == ERR_AUTH_CONTINUE) {
+			need_continue = 1;
+		} else if (ret < 0) {
 			goto cleanup;
 		}
 
 		ret =
-		    module->auth_group(e->auth_ctx, req->group_name, e->groupname,
+		    e->module->auth_group(e->auth_ctx, req->group_name, e->groupname,
 				       sizeof(e->groupname));
 		if (ret != 0) {
 			ret = -1;
@@ -534,14 +545,20 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 
 		/* a module is allowed to change the name of the user */
 		ret =
-		    module->auth_user(e->auth_ctx, e->username,
+		    e->module->auth_user(e->auth_ctx, e->username,
 				      sizeof(e->username));
 		if (ret != 0 && req->user_name != NULL) {
 			strlcpy(e->username, req->user_name, sizeof(e->username));
 		}
+
+		ret = e->module->auth_msg(e->auth_ctx, e->msg_str, sizeof(e->msg_str));
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
 	}
 
-	if (sec->config->auth_types & AUTH_TYPE_CERTIFICATE) {
+	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
 		if (e->groupname[0] == 0 && req->group_name != NULL && sec->config->cert_group_oid != NULL) {
 			unsigned i, found = 0;
 
@@ -575,7 +592,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	       req->tls_auth_ok?"(with cert) ":"",
 	       e->username, e->groupname, req->ip);
 
-	if (sec->config->auth_types & AUTH_TYPE_USERNAME_PASS) {
+	if (need_continue != 0) {
 		ret = ERR_AUTH_CONTINUE;
 		goto cleanup;
 	}
@@ -587,15 +604,15 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 {
-	if (module == NULL)
+	if (e->module == NULL)
 		return;
 
 	seclog(sec, LOG_DEBUG, "auth deinit for user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
 		if (e->have_session) {
-			module->close_session(e->auth_ctx, &e->stats);
+			e->module->close_session(e->auth_ctx, &e->stats);
 		}
-		module->auth_deinit(e->auth_ctx);
+		e->module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;
 		e->have_session = 0;
 	}

@@ -105,6 +105,7 @@ An example configuration file follows.
 #auth = "pam[gid-min=1000]"
 #auth = "plain[/etc/ocserv/ocpasswd]"
 #auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
+#backup-auth = "gssapi[/etc/gssapi/config]"
 
 # Whether to enable seccomp/Linux namespaces worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a

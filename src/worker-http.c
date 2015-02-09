@@ -204,6 +204,16 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	case HEADER_DEVICE_TYPE:
 		req->is_mobile = 1;
 		break;
+	case HEADER_NEED_SPNEGO:
+		ws_switch_auth_to(ws, AUTH_TYPE_GSSAPI);
+		break;
+	case HEADER_AUTHORIZATION:
+		if (req->authorization != NULL)
+			talloc_free(req->authorization);
+		req->authorization = value;
+		req->authorization_size = value_length;
+		value = NULL;
+		break;
 	case HEADER_USER_AGENT:
 		if (value_length + 1 > MAX_AGENT_NAME) {
 			memcpy(req->user_agent, value, MAX_AGENT_NAME-1);

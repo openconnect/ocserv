@@ -86,6 +86,7 @@ extern int syslog_open;
 #define AUTH_TYPE_CERTIFICATE (1<<3)
 #define AUTH_TYPE_CERTIFICATE_OPT (1<<4|AUTH_TYPE_CERTIFICATE)
 #define AUTH_TYPE_RADIUS (1<<5 | AUTH_TYPE_USERNAME_PASS)
+#define AUTH_TYPE_GSSAPI (1<<6)
 
 #define ERR_SUCCESS 0
 #define ERR_BAD_COMMAND -2
@@ -209,6 +210,16 @@ struct vpn_st {
 	unsigned int nbns_size;
 };
 
+#define MAX_AUTH_METHODS 4
+
+typedef struct auth_struct_st {
+	const char *name;
+	char *additional;
+	unsigned type;
+	const struct auth_mod_st *amod;
+	bool enabled;
+} auth_struct_st;
+
 struct cfg_st {
 	char *name; /* server name */
 	unsigned int port;
@@ -230,8 +241,10 @@ struct cfg_st {
 	char *dh_params_file;
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
-	unsigned int auth_types;	/* or'ed sequence of AUTH_TYPE */
-	char *auth_additional;	/* the additional string specified in the auth methode */
+
+	auth_struct_st auth[MAX_AUTH_METHODS];
+	unsigned auth_methods;
+
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
 	unsigned enable_compression;

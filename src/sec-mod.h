@@ -56,6 +56,8 @@ typedef struct client_entry_st {
 	unsigned in_use; /* counter of users of this structure */
 	unsigned tls_auth_ok;
 
+	char msg_str[MAX_MSG_SIZE];
+
 	stats_st stats;
 
 	unsigned status; /* PS_AUTH_ */
@@ -71,6 +73,12 @@ typedef struct client_entry_st {
 
 	/* The time this client entry was last modified (created or closed) */
 	time_t time;
+
+	/* the auth type associated with the user */
+	unsigned auth_type;
+	/* the module this entry is using */
+	const struct auth_mod_st *module;
+	void *auth_additional; /* input to auth_init */
 } client_entry_st;
 
 void *sec_mod_client_db_init(sec_mod_st *sec);
@@ -98,7 +106,6 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
 void sec_auth_init(sec_mod_st *sec, struct cfg_st *config);
-void sec_auth_reinit(sec_mod_st *sec, struct cfg_st *config);
 
 int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);

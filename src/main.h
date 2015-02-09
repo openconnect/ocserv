@@ -293,5 +293,6 @@ void request_reload(int signo);
 void request_stop(int signo);
 
 const struct auth_mod_st *get_auth_mod(void);
+const struct auth_mod_st *get_backup_auth_mod(void);
 
 #endif

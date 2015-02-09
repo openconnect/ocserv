@@ -355,6 +355,10 @@ void vpn_server(struct worker_st *ws)
 
 	memset(&settings, 0, sizeof(settings));
 
+	ws->selected_auth = &ws->config->auth[0];
+	if (ws->cert_auth_ok)
+		ws_switch_auth_to(ws, AUTH_TYPE_CERTIFICATE);
+
 	settings.on_url = http_url_cb;
 	settings.on_header_field = http_header_field_cb;
 	settings.on_header_value = http_header_value_cb;

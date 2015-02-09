@@ -273,7 +273,10 @@ listen_ports(void *pool, struct cfg_st* config,
 {
 	struct addrinfo hints, *res;
 	char portname[6];
-	int ret, fds;
+	int ret;
+#ifdef HAVE_LIBSYSTEMD
+	int fds;
+#endif
 
 	list_head_init(&list->head);
 	list->total = 0;

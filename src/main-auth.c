@@ -250,6 +250,12 @@ struct cookie_entry_st *old = NULL;
 			mslog(s, old->proc, LOG_DEBUG, "disconnecting (%u) due to new cookie connection",
 				(unsigned)old->proc->pid);
 
+			if (strcmp(proc->username, old->proc->username) != 0) {
+				mslog(s, old->proc, LOG_ERR, "the user of the cookie don't match (new: %s)",
+					proc->username);
+				return -1;
+			}
+
 			/* steal its leases */
 			steal_ip_leases(old->proc, proc);
 

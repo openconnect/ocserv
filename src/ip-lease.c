@@ -159,13 +159,17 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
         	((struct sockaddr_in*)&network)->sin_family = AF_INET;
         	((struct sockaddr_in*)&network)->sin_port = 0;
-		memcpy(&proc->ipv4->lip, &network, sizeof(struct sockaddr_in));
-       		proc->ipv4->lip_len = sizeof(struct sockaddr_in);
-	
 		memcpy(&proc->ipv4->rip, &network, sizeof(struct sockaddr_in));
        		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
 	
-       		return 0;
+		/* LIP = RIP + 1 */
+		memcpy(&tmp, &proc->ipv4->rip, sizeof(struct sockaddr_in));
+		bignum_add(SA_IN_U8_P(&tmp), sizeof(struct in_addr), 1);
+
+		memcpy(&proc->ipv4->lip, &tmp, sizeof(struct sockaddr_in));
+		proc->ipv4->lip_len = sizeof(struct sockaddr_in);
+
+		return 0;
 	}
 
 	/* Our IP accounting */
@@ -319,13 +323,17 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
         	((struct sockaddr_in6*)&network)->sin6_family = AF_INET6;
         	((struct sockaddr_in6*)&network)->sin6_port = 0;
-		memcpy(&proc->ipv6->lip, &network, sizeof(struct sockaddr_in6));
-       		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
-	
 		memcpy(&proc->ipv6->rip, &network, sizeof(struct sockaddr_in6));
        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
 	
-       		return 0;
+		/* LIP = RIP + 1 */
+		memcpy(&tmp, &proc->ipv6->rip, sizeof(struct sockaddr_in6));
+		bignum_add(SA_IN6_U8_P(&tmp), sizeof(struct in6_addr), 1);
+
+		memcpy(&proc->ipv6->lip, &tmp, sizeof(struct sockaddr_in6));
+		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
+
+		return 0;
 	}
 
 	if (proc->config.ipv6_network && proc->config.ipv6_prefix) {

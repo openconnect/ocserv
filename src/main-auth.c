@@ -174,7 +174,7 @@ time_t now = time(0);
 gnutls_datum_t key = {s->cookie_key, sizeof(s->cookie_key)};
 char str_ip[MAX_IP_STR+1];
 PROTOBUF_ALLOCATOR(pa, proc);
-struct cookie_entry_st *old;
+struct cookie_entry_st *old = NULL;
 
 	if (req->cookie.len == 0) {
 		mslog(s, proc, LOG_INFO, "error in cookie size");

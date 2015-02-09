@@ -257,8 +257,10 @@ struct cookie_entry_st *find_cookie_entry(struct cookie_entry_db_st* db, void *c
 	if (e == NULL)
 		return NULL;
 
-	if (e->expiration != -1 && e->expiration < time(0))
+	if (e->expiration != -1 && e->expiration < time(0)) {
+		delete_cookie(db, e);
 		return NULL;
+	}
 
 	return e;
 }
@@ -292,4 +294,16 @@ struct cookie_entry_st *new_cookie_entry(struct cookie_entry_db_st* db, proc_st 
  fail:
  	talloc_free(t);
  	return NULL;
+}
+
+void delete_cookie(struct cookie_entry_db_st* db, struct cookie_entry_st *e)
+{
+	if (e->proc) {
+		syslog(LOG_ERR, "found proc that references cookie to be deleted!");
+		e->proc->cookie_ptr = NULL;
+	}
+	htable_del(db->db, rehash(e, NULL), e);
+	db->total--;
+	talloc_free(e);
+	return;
 }

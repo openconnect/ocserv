@@ -372,10 +372,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 	/* expire any available cookies */
 	if (proc->cookie_ptr) {
 		proc->cookie_ptr->proc = NULL;
-		/* if we use session control and we closed the session we 
-		 * need to invalidate the cookie, so that a new session is 
-		 * used on the next connection */
-		proc->cookie_ptr->expiration = 1;
+		proc->cookie_ptr->expiration = time(0) + s->config->cookie_timeout;
 	}
 
 	close_tun(s, proc);

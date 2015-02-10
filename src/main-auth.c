@@ -275,7 +275,10 @@ struct proc_st *old_proc;
 	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
 
 	/* add the links to proc hash */
-	proc_table_add(s, proc);
+	if (proc_table_add(s, proc) < 0) {
+		mslog(s, proc, LOG_ERR, "failed to add proc hashes");
+		return -1;
+	}
 
 	return 0;
 }

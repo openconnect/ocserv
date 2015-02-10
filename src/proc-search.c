@@ -83,29 +83,29 @@ void proc_table_deinit(main_server_st *s)
 	talloc_free(s->proc_table.db_sid);
 }
 
-void proc_table_add(main_server_st *s, struct proc_st *proc)
+int proc_table_add(main_server_st *s, struct proc_st *proc)
 {
 	size_t ip_hash = rehash_ip(proc, NULL);
 	size_t dtls_id_hash = rehash_dtls_id(proc, NULL);
 
 	if (htable_add(s->proc_table.db_ip, ip_hash, proc) == 0) {
-		return;
+		return -1;
 	}
 
 	if (htable_add(s->proc_table.db_dtls_id, dtls_id_hash, proc) == 0) {
 		htable_del(s->proc_table.db_ip, ip_hash, proc);
-		return;
+		return -1;
 	}
 
 	if (htable_add(s->proc_table.db_sid, rehash_sid(proc, NULL), proc) == 0) {
 		htable_del(s->proc_table.db_ip, ip_hash, proc);
 		htable_del(s->proc_table.db_dtls_id, dtls_id_hash, proc);
-		return;
+		return -1;
 	}
 
 	s->proc_table.total++;
 
-	return;
+	return 0;
 }
 
 void proc_table_del(main_server_st *s, struct proc_st *proc)

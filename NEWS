@@ -6,6 +6,9 @@
 - Allow forwarding empty passwords to auth backend.
 - depend on freeradius-client 1.1.7
 - fix seccomp filter in x86 systems.
+- Added per-user-configuration option explicit-ipv4. That allows
+  to specify only odd IP addresses, and the next even will be used
+  as the local address.
 - Added configuration option 'no-route' which corresponds to
   X-CSTP-Split-Exclude.
 

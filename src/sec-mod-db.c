@@ -172,5 +172,6 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 {
 	if (e->in_use > 0)
 		e->in_use--;
-	e->time = time(0);
+	if (e->in_use == 0)
+		e->time = time(0);
 }

@@ -31,6 +31,8 @@ struct proc_st *proc_search_ip(struct main_server_st *s,
 			       struct sockaddr_storage *sockaddr,
 			       unsigned sockaddr_size);
 struct proc_st *proc_search_dtls_id(struct main_server_st *s, const uint8_t *id, unsigned id_size);
+struct proc_st *proc_search_sid(struct main_server_st *s,
+			        const uint8_t id[SID_SIZE]);
 
 void proc_table_init(main_server_st *s);
 void proc_table_deinit(main_server_st *s);

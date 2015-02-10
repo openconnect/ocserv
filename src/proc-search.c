@@ -34,6 +34,10 @@ struct find_dtls_id_st {
 	unsigned dtls_id_size;
 };
 
+struct find_sid_st {
+	const uint8_t *sid;
+};
+
 
 static size_t rehash_ip(const void* _p, void* unused)
 {
@@ -51,12 +55,21 @@ const struct proc_st * proc = _p;
 	return hash_any(proc->dtls_session_id, proc->dtls_session_id_size, 0);
 }
 
+static size_t rehash_sid(const void* _p, void* unused)
+{
+const struct proc_st * proc = _p;
+
+	return hash_any(proc->sid, sizeof(proc->sid), 0);
+}
+
 void proc_table_init(main_server_st *s)
 {
 	s->proc_table.db_ip = talloc(s, struct htable);
 	s->proc_table.db_dtls_id = talloc(s, struct htable);
+	s->proc_table.db_sid = talloc(s, struct htable);
 	htable_init(s->proc_table.db_ip, rehash_ip, NULL);
 	htable_init(s->proc_table.db_dtls_id, rehash_dtls_id, NULL);
+	htable_init(s->proc_table.db_sid, rehash_sid, NULL);
 	s->proc_table.total = 0;
 }
 
@@ -64,20 +77,29 @@ void proc_table_deinit(main_server_st *s)
 {
 	htable_clear(s->proc_table.db_ip);
 	htable_clear(s->proc_table.db_dtls_id);
+	htable_clear(s->proc_table.db_sid);
 	talloc_free(s->proc_table.db_dtls_id);
 	talloc_free(s->proc_table.db_ip);
+	talloc_free(s->proc_table.db_sid);
 }
 
 void proc_table_add(main_server_st *s, struct proc_st *proc)
 {
 	size_t ip_hash = rehash_ip(proc, NULL);
+	size_t dtls_id_hash = rehash_dtls_id(proc, NULL);
 
 	if (htable_add(s->proc_table.db_ip, ip_hash, proc) == 0) {
 		return;
 	}
 
-	if (htable_add(s->proc_table.db_dtls_id, rehash_dtls_id(proc, NULL), proc) == 0) {
+	if (htable_add(s->proc_table.db_dtls_id, dtls_id_hash, proc) == 0) {
 		htable_del(s->proc_table.db_ip, ip_hash, proc);
+		return;
+	}
+
+	if (htable_add(s->proc_table.db_sid, rehash_sid(proc, NULL), proc) == 0) {
+		htable_del(s->proc_table.db_ip, ip_hash, proc);
+		htable_del(s->proc_table.db_dtls_id, dtls_id_hash, proc);
 		return;
 	}
 
@@ -90,6 +112,7 @@ void proc_table_del(main_server_st *s, struct proc_st *proc)
 {
 	htable_del(s->proc_table.db_ip, rehash_ip(proc, NULL), proc);
 	htable_del(s->proc_table.db_dtls_id, rehash_dtls_id(proc, NULL), proc);
+	htable_del(s->proc_table.db_sid, rehash_sid(proc, NULL), proc);
 }
 
 static bool local_ip_cmp(const void* _c1, void* _c2)
@@ -156,5 +179,27 @@ struct proc_st *proc_search_dtls_id(struct main_server_st *s,
 	fdtls_id.dtls_id_size = id_size;
 
 	return htable_get(s->proc_table.db_dtls_id, hash_any(id, id_size, 0), dtls_id_cmp, &fdtls_id);
+}
+
+static bool sid_cmp(const void* _c1, void* _c2)
+{
+const struct proc_st* c1 = _c1;
+struct find_sid_st* c2 = _c2;
+
+	if (memcmp(c1->sid,
+		   c2->sid,
+		   sizeof(c1->sid)) == 0) {
+		return 1;
+	}
+
+	return 0;
+}
+struct proc_st *proc_search_sid(struct main_server_st *s,
+			        const uint8_t sid[SID_SIZE])
+{
+	struct find_sid_st fsid;
+	fsid.sid = sid;
+
+	return htable_get(s->proc_table.db_sid, hash_any(sid, SID_SIZE, 0), sid_cmp, &fsid);
 }
 

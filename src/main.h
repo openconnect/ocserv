@@ -169,6 +169,7 @@ struct cookie_entry_db_st {
 struct proc_hash_db_st {
 	struct htable *db_ip;
 	struct htable *db_dtls_id;
+	struct htable *db_sid;
 	unsigned total;
 };
 

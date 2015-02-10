@@ -243,7 +243,7 @@ struct proc_st *old_proc;
 	}
 
 	/* check for a user with the same sid as in the cookie */
-	old_proc = proc_search_sid(s, cmsg->sid.data, cmsg->sid.len);
+	old_proc = proc_search_sid(s, cmsg->sid.data);
 	if (old_proc != NULL) {
 		mslog(s, old_proc, LOG_DEBUG, "disconnecting (%u) due to new cookie session",
 			(unsigned)old_proc->pid);

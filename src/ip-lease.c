@@ -144,13 +144,19 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 
 	if (proc->config.explicit_ipv4) {
 		/* if an explicit IP is given for that client, then
-		 * don't do any IP accounting */
+		 * do implicit IP accounting. Require the address
+		 * to be odd, so we use the next even address as PtP. */
 		ret =
 		    inet_pton(AF_INET, proc->config.explicit_ipv4, SA_IN_P(&network));
 
 		if (ret != 1) {
 			mslog(s, NULL, LOG_ERR, "error reading explicit IP: %s", proc->config.explicit_ipv4);
 			return -1;
+		}
+
+		if (((uint8_t*)SA_IN_P(&network))[3] % 2 == 0) {
+			mslog(s, NULL, LOG_ERR, "we only assign odd IP addresses: %s", proc->config.explicit_ipv4);
+			return ERR_NO_IP;
 		}
 
 		proc->ipv4 = talloc_zero(proc, struct ip_lease_st);
@@ -308,13 +314,19 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 	if (proc->config.explicit_ipv6) {
 		/* if an explicit IP is given for that client, then
-		 * don't do any IP accounting */
+		 * do implicit IP accounting. Require the address
+		 * to be odd, so we use the next even address as PtP. */
 		ret =
 		    inet_pton(AF_INET6, proc->config.explicit_ipv6, SA_IN6_P(&network));
 
 		if (ret != 1) {
 			mslog(s, NULL, LOG_ERR, "error reading explicit IP: %s", proc->config.explicit_ipv6);
 			return -1;
+		}
+
+		if (((uint8_t*)SA_IN6_P(&network))[15] % 2 == 0) {
+			mslog(s, NULL, LOG_ERR, "we only assign odd IP addresses: %s", proc->config.explicit_ipv6);
+			return ERR_NO_IP;
 		}
 
 		proc->ipv6 = talloc_zero(proc, struct ip_lease_st);

@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# Copyright (C) 2014 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+TMPFILE=${srcdir}/outfile.$$
+PORT=8446
+
+. `dirname $0`/common.sh
+
+connect()
+{
+opts=$1
+pass=$2
+COOKIE=''
+eval `echo "$pass" | openconnect -q localhost:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate`
+if [ -z "$COOKIE" ];then
+	return 1
+fi
+
+rm -f $TMPFILE
+echo "$pass" | openconnect -q localhost:$PORT $opts -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pidx >$TMPFILE 2>&1 &
+CPID=$!
+
+sleep 3
+grep "Established DTLS" $TMPFILE >/dev/null 2>&1
+if test $? != 0;then
+	rm -f $TMPFILE
+	return 1
+fi
+
+rm -f $TMPFILE
+kill $CPID
+return 0
+}
+
+echo "Testing local backend with username-password and explicit IP addresses... "
+
+launch_server -d 1 -f -c test-explicit-ip.config & PID=$!
+wait_server $PID
+
+echo -n "Connecting with an illegal address assigned... "
+connect "-u test2" "test2"
+if test $? = 0;then
+	fail $PID "Connected using an illegal address!"
+fi
+echo ok
+
+echo -n "Connecting with a proper address... "
+connect "-u test" "test"
+if test $? != 0;then
+	fail $PID "Failed to connect!"
+fi
+echo ok
+
+echo -n "Connecting with an illegal IPv6 address assigned... "
+connect "-u test4" "test4"
+if test $? = 0;then
+	fail $PID "Connected using an illegal address!"
+fi
+echo ok
+
+echo -n "Connecting with a proper IPv6 address... "
+connect "-u test3" "test3"
+if test $? != 0;then
+	fail $PID "Failed to connect!"
+fi
+echo ok
+
+kill $PID
+wait
+
+exit 0

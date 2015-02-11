@@ -197,6 +197,12 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		memcpy(&proc->ipv4->rip, &tmp, sizeof(struct sockaddr_in));
        		proc->ipv4->rip_len = sizeof(struct sockaddr_in);
 
+		if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in)) != 0) {
+			mslog(s, proc, LOG_DEBUG, "cannot assign explicit IP %s; it is in use.", 
+			      human_addr((void*)&tmp, sizeof(struct sockaddr_in), buf, sizeof(buf)));
+			return -1;
+		}
+
 		/* LIP = 1st network address */
 		memcpy(&proc->ipv4->lip, &network, sizeof(struct sockaddr_in));
 		proc->ipv4->lip_len = sizeof(struct sockaddr_in);
@@ -365,7 +371,13 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
         	((struct sockaddr_in6*)&tmp)->sin6_port = 0;
 		memcpy(&proc->ipv6->rip, &tmp, sizeof(struct sockaddr_in6));
        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
-	
+
+		if (ip_lease_exists(s, &tmp, sizeof(struct sockaddr_in6)) != 0) {
+			mslog(s, proc, LOG_DEBUG, "cannot assign explicit IP %s; it is in use.", 
+			      human_addr((void*)&tmp, sizeof(struct sockaddr_in6), buf, sizeof(buf)));
+			return ERR_NO_IP;
+		}
+
 		/* LIP = 1st network address */
 		memcpy(&proc->ipv6->lip, &network, sizeof(struct sockaddr_in6));
 		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);

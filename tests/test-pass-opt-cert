@@ -65,20 +65,20 @@ echo ok
 
 echo -n "Connecting to obtain cookie (without certificate)... "
 connect "-u test" "test"
-if test $? = 0;then
-	fail $PID "Connected without certificate!"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without certificate!"
 fi
 echo ok
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-connect "-u test --sslkey ./user-key.pem -c ./user-cert.pem" "test"
+connect "-u test --sslkey ./user-key.pem -c ./user-cert.pem"
 if test $? != 0;then
 	fail $PID "Failed to connect with certificate!"
 fi
 echo ok
 
 echo -n "Connecting to obtain cookie (with incorrect certificate)... "
-connect "-u test --sslkey ./user-key.pem -c ./user-cert-wrong.pem" "test"
+connect "-u test --sslkey ./user-key.pem -c ./user-cert-wrong.pem" ""
 if test $? = 0;then
 	fail $PID "Should not have connected with wrong certificate!"
 fi

@@ -212,32 +212,6 @@ int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2,
 
 /* returns an allocated string with the mask to apply for the prefix
  */
-char* ipv6_prefix_to_mask(void *pool, unsigned prefix)
-{
-	switch (prefix) {
-		case 16:
-			return talloc_strdup(pool, "ffff::");
-		case 32:
-			return talloc_strdup(pool, "ffff:ffff::");
-		case 48:
-			return talloc_strdup(pool, "ffff:ffff:ffff::");
-		case 64:
-			return talloc_strdup(pool, "ffff:ffff:ffff:ffff::");
-		case 80:
-			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff::");
-		case 96:
-			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff:ffff::");
-		case 112:
-			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff:ffff:ffff::");
-		case 128:
-			return talloc_strdup(pool, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
-		default:
-			return NULL;
-	}
-}
-
-/* returns an allocated string with the mask to apply for the prefix
- */
 char* ipv4_prefix_to_mask(void *pool, unsigned prefix)
 {
 	switch (prefix) {

@@ -263,12 +263,6 @@ struct proc_st *old_proc;
 		mslog(s, proc, LOG_DEBUG, "new cookie session for (%u)", (unsigned)proc->pid);
 	}
 
-	if (proc->config.require_cert != 0 && cmsg->tls_auth_ok == 0) {
-		mslog(s, proc, LOG_ERR,
-		      "certificate is required for user '%s'", proc->username);
-		return -1;
-	}
-
 	if (cmsg->hostname)
 		strlcpy(proc->hostname, cmsg->hostname, sizeof(proc->hostname));
 

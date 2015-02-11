@@ -437,7 +437,6 @@ static auth_types_st avail_auth_types[] =
 	{NAME("radius"), &radius_auth_funcs, AUTH_TYPE_RADIUS, radius_get_brackets_string},
 #endif
 	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, get_brackets_string},
-	{NAME("certificate[optional]"), NULL, AUTH_TYPE_CERTIFICATE_OPT, NULL},
 	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
 };
 
@@ -860,7 +859,7 @@ static void check_cfg(struct cfg_st *config)
 	}
 
 	if (config->auth[0].type & AUTH_TYPE_CERTIFICATE) {
-		if (config->cisco_client_compat == 0 && ((config->auth[0].type & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT))
+		if (config->cisco_client_compat == 0)
 			config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			config->cert_req = GNUTLS_CERT_REQUEST;

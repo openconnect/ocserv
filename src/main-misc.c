@@ -245,9 +245,6 @@ int session_cmd(main_server_st * s, struct proc_st *proc, const uint8_t *cookie,
 		if (msg->has_deny_roaming)
 			proc->config.deny_roaming = msg->deny_roaming;
 
-		if (msg->has_require_cert)
-			proc->config.require_cert = msg->require_cert;
-
 		if (msg->has_ipv6_prefix)
 			proc->config.ipv6_prefix = msg->ipv6_prefix;
 

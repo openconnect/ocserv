@@ -812,13 +812,11 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 
 	if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE)
 	    && ws->config->cisco_client_compat == 0) {
-		if (((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0)) {
+		if (ws->cert_auth_ok == 0) {
 			oclog(ws, LOG_INFO,
 			      "no certificate provided for cookie authentication");
 			return -1;
-		}
-
-		if (ws->cert_auth_ok != 0) {
+		} else {
 			ret = get_cert_info(ws);
 			if (ret < 0) {
 				oclog(ws, LOG_INFO, "cannot obtain certificate info");
@@ -1193,14 +1191,12 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		if (ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) {
-			if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE_OPT) != AUTH_TYPE_CERTIFICATE_OPT && ws->cert_auth_ok == 0) {
+			if (ws->cert_auth_ok == 0) {
 				reason = MSG_NO_CERT_ERROR;
 				oclog(ws, LOG_INFO,
 				      "no certificate provided for authentication");
 				goto auth_fail;
-			}
-
-			if (ws->cert_auth_ok != 0) {
+			} else {
 				ret = get_cert_info(ws);
 				if (ret < 0) {
 					reason = MSG_CERT_READ_ERROR;

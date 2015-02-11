@@ -235,7 +235,6 @@ message sec_auth_session_reply_msg
 	/* sup - config */
 	optional bool no_udp = 10;
 	optional bool deny_roaming = 11;
-	optional bool require_cert = 12;
 	repeated string routes = 13;
 	repeated string iroutes = 14;
 	repeated string dns = 15;

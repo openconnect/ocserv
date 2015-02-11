@@ -184,15 +184,10 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 				   unsigned cert_groups_size)
 {
 	unsigned found, i;
-	unsigned need_cert = 1;
 
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
-		if ((e->auth_type & AUTH_TYPE_CERTIFICATE_OPT) == AUTH_TYPE_CERTIFICATE_OPT) {
-			need_cert = 0;
-		}
-
-		if (tls_auth_ok == 0 && need_cert != 0) {
+		if (tls_auth_ok == 0) {
 			seclog(sec, LOG_INFO, "user '%s' presented no certificate",
 			       e->username);
 			return -1;

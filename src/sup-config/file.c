@@ -44,7 +44,6 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "no-udp", .type = OPTION_BOOLEAN },
 	{ .name = "deny-roaming", .type = OPTION_BOOLEAN },
-	{ .name = "require-cert", .type = OPTION_BOOLEAN },
 	{ .name = "route", .type = OPTION_MULTI_LINE },
 	{ .name = "no-route", .type = OPTION_MULTI_LINE },
 	{ .name = "iroute", .type = OPTION_MULTI_LINE },
@@ -183,7 +182,6 @@ unsigned prefix = 0;
 
 	READ_TF("no-udp", msg->no_udp, msg->has_no_udp);
 	READ_TF("deny-roaming", msg->deny_roaming, msg->has_deny_roaming);
-	READ_TF("require-cert", msg->require_cert, msg->has_require_cert);
 
 	READ_RAW_MULTI_LINE("route", msg->routes, msg->n_routes);
 	READ_RAW_MULTI_LINE("no-route", msg->no_routes, msg->n_no_routes);

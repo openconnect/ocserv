@@ -84,7 +84,6 @@ extern int syslog_open;
 #define AUTH_TYPE_PAM (1<<1 | AUTH_TYPE_USERNAME_PASS)
 #define AUTH_TYPE_PLAIN (1<<2 | AUTH_TYPE_USERNAME_PASS)
 #define AUTH_TYPE_CERTIFICATE (1<<3)
-#define AUTH_TYPE_CERTIFICATE_OPT (1<<4|AUTH_TYPE_CERTIFICATE)
 #define AUTH_TYPE_RADIUS (1<<5 | AUTH_TYPE_USERNAME_PASS)
 #define AUTH_TYPE_GSSAPI (1<<6)
 
@@ -180,7 +179,6 @@ struct group_cfg_st {
 	unsigned deny_roaming; /* whether the user is allowed to re-use cookies from another IP */
 	unsigned net_priority;
 	unsigned no_udp; /* whether to disable UDP for this user */
-	unsigned require_cert; /* when optional certificate auth is selected require a certificate */
 };
 
 struct vpn_st {

@@ -26,6 +26,9 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE /* for vasprintf() */
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -198,17 +201,19 @@ unsigned tls_has_session_cert(struct worker_st * ws)
 int __attribute__ ((format(printf, 2, 3)))
     cstp_printf(worker_st *ws, const char *fmt, ...)
 {
-	char buf[1024];
+	char *buf;
 	va_list args;
-	size_t s;
-
-	buf[1023] = 0;
+	int ret, s;
 
 	va_start(args, fmt);
-	s = vsnprintf(buf, 1023, fmt, args);
-	va_end(args);
-	return cstp_send(ws, buf, s);
+	s = vasprintf(&buf, fmt, args);
+	if (s == -1)
+		return -1;
 
+	va_end(args);
+	ret = cstp_send(ws, buf, s);
+	free(buf);
+	return ret;
 }
 
 void cstp_close(worker_st *ws)

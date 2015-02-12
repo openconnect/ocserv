@@ -138,6 +138,7 @@ client_entry_st *find_client_entry(sec_mod_st *sec, uint8_t sid[SID_SIZE])
 static void clean_entry(sec_mod_st *sec, client_entry_st * e)
 {
 	sec_auth_user_deinit(sec, e);
+	talloc_free(e->msg_str);
 	talloc_free(e);
 }
 

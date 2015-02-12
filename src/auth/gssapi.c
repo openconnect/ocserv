@@ -226,18 +226,22 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	}
 }
 
-static int gssapi_auth_msg(void *ctx, char *msg, size_t msg_size)
+static int gssapi_auth_msg(void *ctx, void *pool, char **msg)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 	OM_uint32 min;
+	unsigned length;
 
 	/* our msg is our SPNEGO reply */
 	if (pctx->msg.value != NULL) {
-		base64_encode((char *)pctx->msg.value, pctx->msg.length, (char *)msg, msg_size);
+		length = BASE64_LENGTH(pctx->msg.length)+1;
+		*msg = talloc_size(pool, length);
+
+		base64_encode((char *)pctx->msg.value, pctx->msg.length, *msg, length);
 		gss_release_buffer(&min, &pctx->msg);
 		pctx->msg.value = NULL;
 	} else {
-		msg[0] = 0;
+		*msg = NULL;
 	}
 	return 0;
 }

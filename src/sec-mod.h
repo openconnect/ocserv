@@ -56,7 +56,7 @@ typedef struct client_entry_st {
 	unsigned in_use; /* counter of users of this structure */
 	unsigned tls_auth_ok;
 
-	char msg_str[MAX_MSG_SIZE];
+	char *msg_str;
 
 	stats_st stats;
 

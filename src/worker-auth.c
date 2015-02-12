@@ -696,8 +696,7 @@ int connect_to_secmod(worker_st * ws)
 	return sd;
 }
 
-static int recv_auth_reply(worker_st * ws, int sd, char *txt,
-			   size_t max_txt_size)
+static int recv_auth_reply(worker_st * ws, int sd, char **txt)
 {
 	int ret;
 	SecAuthReplyMsg *msg = NULL;
@@ -713,7 +712,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 	oclog(ws, LOG_DEBUG, "received auth reply message (value: %u)",
 	      (unsigned)msg->reply);
 
-	if (txt) txt[0] = 0;
+	if (txt) *txt = NULL;
 
 	switch (msg->reply) {
 	case AUTH__REP__MSG:
@@ -722,7 +721,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 			return ERR_AUTH_FAIL;
 		}
 
-		strlcpy(txt, msg->msg, max_txt_size);
+		*txt = talloc_strdup(ws, msg->msg);
 		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
 			/* update our sid */
 			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
@@ -761,8 +760,8 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 		memcpy(ws->session_id, msg->dtls_session_id.data,
 		       msg->dtls_session_id.len);
 
-		if (msg->msg && txt)
-			strlcpy(txt, msg->msg, max_txt_size);
+		if (txt)
+			*txt = talloc_strdup(ws, msg->msg);
 
 		break;
 	case AUTH__REP__FAILED:
@@ -1143,7 +1142,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *password = NULL;
 	char *groupname = NULL;
 	char ipbuf[128];
-	char msg[MAX_MSG_SIZE];
+	char *msg = NULL;
 	unsigned def_group = 0;
 
 	if (req->body_length > 0) {
@@ -1328,7 +1327,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	ret = recv_auth_reply(ws, sd, msg, sizeof(msg));
+	ret = recv_auth_reply(ws, sd, &msg);
 	if (sd != -1) {
 		close(sd);
 		sd = -1;
@@ -1339,10 +1338,12 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		      ws->username);
 		ws->auth_state = S_AUTH_REQ;
 
-		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI)
-			return basic_auth_handler(ws, http_ver, msg);
-		else
-			return get_auth_handler2(ws, http_ver, msg);
+		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
+			ret = basic_auth_handler(ws, http_ver, msg);
+		} else {
+			ret = get_auth_handler2(ws, http_ver, msg);
+		}
+		goto cleanup;
 	} else if (ret < 0) {
 		oclog(ws, LOG_ERR, "failed authentication for '%s'",
 		      ws->username);
@@ -1352,7 +1353,8 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	oclog(ws, LOG_HTTP_DEBUG, "user '%s' obtained cookie", ws->username);
 	ws->auth_state = S_AUTH_COOKIE;
 
-	return post_common_handler(ws, http_ver, msg);
+	ret = post_common_handler(ws, http_ver, msg);
+	goto cleanup;
 
  ask_auth:
 
@@ -1366,5 +1368,9 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		   "HTTP/1.1 401 Unauthorized\r\nX-Reason: %s\r\n\r\n",
 		   reason);
 	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
+	talloc_free(msg);
 	exit(1);
+ cleanup:
+ 	talloc_free(msg);
+ 	return ret;
 }

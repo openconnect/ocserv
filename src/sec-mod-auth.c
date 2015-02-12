@@ -123,7 +123,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 
 		msg.user_name = entry->username;
 
-		if (entry->msg_str[0] != 0) {
+		if (entry->msg_str != NULL) {
 			msg.msg = entry->msg_str;
 		}
 
@@ -156,6 +156,9 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 		return ret;
 	}
 
+	talloc_free(entry->msg_str);
+	entry->msg_str = NULL;
+
 	return 0;
 }
 
@@ -178,6 +181,9 @@ int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "send_auth_reply_msg error");
 	}
+
+	talloc_free(e->msg_str);
+	e->msg_str = NULL;
 
 	return ret;
 }
@@ -550,7 +556,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 			strlcpy(e->username, req->user_name, sizeof(e->username));
 		}
 
-		ret = e->module->auth_msg(e->auth_ctx, e->msg_str, sizeof(e->msg_str));
+		ret = e->module->auth_msg(e->auth_ctx, e, &e->msg_str);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;

@@ -200,10 +200,9 @@ fail1:
 	return -1;
 }
 
-static int pam_auth_msg(void* ctx, char* msg, size_t msg_size)
+static int pam_auth_msg(void* ctx, void *pool, char** msg)
 {
 struct pam_ctx_st * pctx = ctx;
-int size;
 
 	if (pctx->state != PAM_S_INIT && pctx->state != PAM_S_WAIT_FOR_PASS) {
 		syslog(LOG_AUTH, "PAM-auth: conversation in wrong state (%d)", pctx->state);
@@ -224,13 +223,14 @@ int size;
 	if (msg != NULL) {
 		if (pctx->msg.length == 0)
                         if (pctx->changing)
-				strlcpy(msg, "Please enter the new password.", msg_size);
+				*msg = talloc_strdup(pool, "Please enter the new password.");
                         else
-				strlcpy(msg, "Please enter your password.", msg_size);
+				*msg = talloc_strdup(pool, "Please enter your password.");
 		else {
-			size = MIN(msg_size-1, pctx->msg.length);
-			memcpy(msg, pctx->msg.data, size);
-			msg[size] = 0;
+			if (str_append_data(&pctx->msg, "\0", 1) < 0)
+				return -1;
+
+			*msg = talloc_strdup(pool, (char*)pctx->msg.data);
 		}
 	}
 

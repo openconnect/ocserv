@@ -250,11 +250,11 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 }
 
-static int plain_auth_msg(void *ctx, char *msg, size_t msg_size)
+static int plain_auth_msg(void *ctx, void *pool, char **msg)
 {
 	struct plain_ctx_st *pctx = ctx;
 
-	strlcpy(msg, pctx->pass_msg, msg_size);
+	*msg = talloc_strdup(pool, pctx->pass_msg);
 	return 0;
 }
 

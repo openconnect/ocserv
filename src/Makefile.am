@@ -74,7 +74,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
 	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod-auth.h sec-mod.h sec-mod-ban.c \
 	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) \
-	icmp-ping.c icmp-ping.h \
+	icmp-ping.c icmp-ping.h worker-urlfw.c \
 	sec-mod-sup-config.c sec-mod-sup-config.h \
 	sup-config/file.c sup-config/file.h \
 	sup-config/radius.c sup-config/radius.h \

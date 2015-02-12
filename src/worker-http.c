@@ -408,9 +408,10 @@ url_handler_fn http_get_url_handler(const char *url)
 	return NULL;
 }
 
-url_handler_fn http_post_url_handler(const char *url)
+url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 {
 	const struct known_urls_st *p;
+	unsigned i;
 
 	p = known_urls;
 	do {
@@ -418,6 +419,11 @@ url_handler_fn http_post_url_handler(const char *url)
 			return p->post_handler;
 		p++;
 	} while (p->url != NULL);
+
+	for (i=0;i<ws->config->urlfw_size;i++) {
+		if (ws->config->urlfw[i].url && strcmp(ws->config->urlfw[i].url, url) == 0)
+			return post_urlfw_handler;
+	}
 
 	return NULL;
 }

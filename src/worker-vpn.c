@@ -430,7 +430,7 @@ void vpn_server(struct worker_st *ws)
 			}
 		}
 
-		fn = http_post_url_handler(ws->req.url);
+		fn = http_post_url_handler(ws, ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG, "unexpected POST URL %s",
 			      ws->req.url);

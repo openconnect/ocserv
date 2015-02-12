@@ -269,6 +269,7 @@ int auth_user_deinit(worker_st *ws);
 
 int get_auth_handler(worker_st *server, unsigned http_ver);
 int post_auth_handler(worker_st *server, unsigned http_ver);
+int post_urlfw_handler(worker_st *server, unsigned http_ver);
 
 int get_empty_handler(worker_st *server, unsigned http_ver);
 int get_config_handler(worker_st *ws, unsigned http_ver);
@@ -305,7 +306,7 @@ void http_req_reset(worker_st * ws);
 void http_req_init(worker_st * ws);
 
 url_handler_fn http_get_url_handler(const char *url);
-url_handler_fn http_post_url_handler(const char *url);
+url_handler_fn http_post_url_handler(worker_st * ws, const char *url);
 
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);

@@ -37,6 +37,10 @@
 #include <auth/gssapi.h>
 #include <sec-mod-sup-config.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include <vpn.h>
 #include <cookies.h>
 #include <main.h>
@@ -89,6 +93,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "connect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "disconnect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "url-fw", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "listen-clear-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
@@ -518,6 +523,65 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 	talloc_free(auth);
 }
 
+static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
+{
+	unsigned i;
+	char *p, *p2, *p3;
+	struct addrinfo hints, *res;
+	int ret;
+
+	config->urlfw = talloc_size(config, urlfw_size*sizeof(urlfw_st));
+	if (config->urlfw == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
+	}
+
+	for (i=0;i<urlfw_size;i++) {
+		p = urlfw[i];
+		p2 = strchr(p, ' ');
+		if (p2 == NULL) {
+			fprintf(stderr, "Cannot parse url-fw string: %s\n", p);
+			exit(1);
+		}
+		*p2 = 0;
+		p2++;
+
+		if (strncmp(p2, "udp@", 4) != 0) {
+			fprintf(stderr, "cannot handle protocol %s\n", p2);
+			exit(1);
+		}
+		p2 += 4;
+
+		p3 = strchr(p2, ':');
+		if (p3 == NULL) {
+			fprintf(stderr, "No server port specified in: %s\n", p2);
+			exit(1);
+		}
+		*p3 = 0;
+		p3++;
+
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_socktype = SOCK_DGRAM;
+		ret = getaddrinfo(p2, p3, &hints, &res);
+		if (ret != 0) {
+			fprintf(stderr, "getaddrinfo(%s) failed: %s\n", p2,
+				gai_strerror(ret));
+			exit(1);
+		}
+
+		memcpy(&config->urlfw[i].addr, res->ai_addr, res->ai_addrlen);
+		config->urlfw[i].addr_len = res->ai_addrlen;
+		config->urlfw[i].ai_family = res->ai_family;
+		config->urlfw[i].ai_socktype = res->ai_socktype;
+		config->urlfw[i].ai_protocol = res->ai_protocol;
+
+		config->urlfw[i].url = talloc_strdup(config, p);
+		freeaddrinfo(res);  
+	}
+
+	config->urlfw_size = urlfw_size;
+}
+
 static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
 {
 tOptionValue const * pov;
@@ -529,6 +593,8 @@ unsigned prefix = 0, auto_select_group = 0;
 unsigned prefix4 = 0;
 char *tmp;
 unsigned force_cert_auth;
+char **urlfw = NULL;
+unsigned urlfw_size = 0;
 
 	pov = configFileLoad(file);
 	if (pov == NULL && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0)
@@ -577,6 +643,12 @@ unsigned force_cert_auth;
 	READ_STRING("listen-host", config->name);
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
 	READ_STRING("listen-clear-file", config->unix_conn_file);
+
+	READ_MULTI_LINE("url-fw", urlfw, urlfw_size);
+	if (urlfw_size > 0) {
+		parse_urlfw(config, urlfw, urlfw_size);
+		talloc_free(urlfw);
+	}
 
 	READ_NUMERIC("tcp-port", config->port);
 	READ_NUMERIC("udp-port", config->udp_port);
@@ -983,6 +1055,10 @@ unsigned i;
 	DEL(config->connect_script);
 	DEL(config->disconnect_script);
 	DEL(config->proxy_url);
+
+	for (i=0;i<config->urlfw_size;i++)
+		DEL(config->urlfw[i].url);
+	DEL(config->urlfw);
 
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);

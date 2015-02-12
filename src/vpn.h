@@ -113,7 +113,7 @@ extern int syslog_open;
 
 
 #define MAX_CIPHERSUITE_NAME 64
-#define MAX_MSG_SIZE 256
+#define MAX_MSG_SIZE 2048
 #define SID_SIZE 16
 
 typedef enum {

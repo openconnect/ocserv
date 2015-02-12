@@ -36,8 +36,6 @@
 #include <gssapi/gssapi_krb5.h>
 #include <gl/base64.h>
 
-#define MAX_MSG_SIZE 256
-
 static gss_cred_id_t glob_creds;
 gss_OID_set glob_oids;
 

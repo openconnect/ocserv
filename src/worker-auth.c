@@ -889,7 +889,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	if (ret < 0)
 		return -1;
 
-	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && imsg != NULL) {
+	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && imsg != NULL && imsg[0] != 0) {
 		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", imsg);
 		if (ret < 0)
 			return -1;
@@ -1323,6 +1323,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
+	msg[0] = 0;
 	ret = recv_auth_reply(ws, sd, msg, sizeof(msg));
 	if (sd != -1) {
 		close(sd);

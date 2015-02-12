@@ -231,7 +231,7 @@ int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
 int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
   			   const SessionResumeStoreReqMsg *);
 
-int session_open(main_server_st * s, struct proc_st *proc);
+int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
 int session_close(main_server_st * s, struct proc_st *proc);
 
 void 

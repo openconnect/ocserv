@@ -334,6 +334,12 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			return -1;
 		}
 
+		if (req->has_cookie == 0 || (req->cookie.len != e->cookie_size) ||
+		    memcmp(req->cookie.data, e->cookie, e->cookie_size) != 0) {
+			seclog(sec, LOG_ERR, "cookie doesn't match the one sent");
+			return -1;
+		}
+
 		if (module != NULL && module->open_session != NULL) {
 			ret = module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
 			if (ret < 0) {

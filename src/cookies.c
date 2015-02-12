@@ -46,7 +46,7 @@ gnutls_datum_t iv = { (void*)cookie, COOKIE_IV_SIZE };
 int ret;
 uint8_t tag[COOKIE_MAC_SIZE];
 gnutls_cipher_hd_t h;
-uint8_t *p;
+uint8_t *p, *decrypted = NULL;
 unsigned p_size;
 
 	if (cookie_size <= COOKIE_IV_SIZE+COOKIE_MAC_SIZE)
@@ -56,16 +56,22 @@ unsigned p_size;
 	if (ret < 0)
 		return -1;
 
+	decrypted = talloc_size(pa->allocator_data, cookie_size);
+	if (decrypted == NULL) {
+		ret = -1;
+		goto cleanup;
+	}
+
 	cookie += COOKIE_IV_SIZE;
 	cookie_size -= (COOKIE_IV_SIZE + COOKIE_MAC_SIZE);
 
-	ret = gnutls_cipher_decrypt2(h, cookie, cookie_size, cookie, cookie_size);
+	ret = gnutls_cipher_decrypt2(h, cookie, cookie_size, decrypted, cookie_size);
 	if (ret < 0) {
 		ret = -1;
 		goto cleanup;
 	}
 
-	p = cookie;
+	p = decrypted;
 	p_size = cookie_size;
 
 	ret = gnutls_cipher_tag(h, tag, sizeof(tag));
@@ -73,8 +79,8 @@ unsigned p_size;
 		ret = -1;
 		goto cleanup;
 	}
-	cookie += cookie_size;
-	if (memcmp(tag, cookie, COOKIE_MAC_SIZE) != 0) {
+
+	if (memcmp(tag, cookie+cookie_size, COOKIE_MAC_SIZE) != 0) {
 		ret = -1;
 		goto cleanup;
 	}
@@ -90,6 +96,7 @@ unsigned p_size;
 
 cleanup:
 	gnutls_cipher_deinit(h);
+	talloc_free(decrypted);
 
 	return ret;
 }

@@ -214,7 +214,7 @@ struct proc_st *old_proc;
 	apply_default_sup_config(s->config, proc);
 
 	/* loads sup config */
-	ret = session_open(s, proc);
+	ret = session_open(s, proc, req->cookie.data, req->cookie.len);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;

@@ -219,6 +219,8 @@ message cookie
 message sec_auth_session_msg
 {
 	required bytes sid = 1;
+	/* on open */
+	optional bytes cookie = 2;
 	/* on close */
 	optional uint32 uptime = 3;
 	optional uint64 bytes_in = 4;

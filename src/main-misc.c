@@ -163,7 +163,7 @@ struct proc_st *ctmp;
 }
 
 static
-int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
+int session_cmd(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int sd, ret, e;
 	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
@@ -171,7 +171,7 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 	unsigned type, i;
 	PROTOBUF_ALLOCATOR(pa, proc);
 
-	if (open)
+	if (cookie)
 		type = SM_CMD_AUTH_SESSION_OPEN;
 	else
 		type = SM_CMD_AUTH_SESSION_CLOSE;
@@ -205,6 +205,12 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 	ireq.sid.data = proc->sid;
 	ireq.sid.len = sizeof(proc->sid);
 
+	if (cookie) {
+		ireq.cookie.data = (void*)cookie;
+		ireq.cookie.len = cookie_size;
+		ireq.has_cookie = 1;
+	}
+
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(type));
 
 	ret = send_msg(proc, sd, type,
@@ -218,7 +224,7 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 		return -1;
 	}
 
-	if (open) {
+	if (type == SM_CMD_AUTH_SESSION_OPEN) {
 		ret = recv_msg(proc, sd, SM_CMD_AUTH_SESSION_REPLY,
 		       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack);
 		close(sd);
@@ -326,14 +332,14 @@ int session_cmd(main_server_st * s, struct proc_st *proc, unsigned open)
 	return 0;
 }
 
-int session_open(main_server_st * s, struct proc_st *proc)
+int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
-	return session_cmd(s, proc, 1);
+	return session_cmd(s, proc, cookie, cookie_size);
 }
 
 int session_close(main_server_st * s, struct proc_st *proc)
 {
-	return session_cmd(s, proc, 0);
+	return session_cmd(s, proc, NULL, 0);
 }
 
 /* k: whether to kill the process

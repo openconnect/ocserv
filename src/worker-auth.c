@@ -713,6 +713,8 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 	oclog(ws, LOG_DEBUG, "received auth reply message (value: %u)",
 	      (unsigned)msg->reply);
 
+	if (txt) txt[0] = 0;
+
 	switch (msg->reply) {
 	case AUTH__REP__MSG:
 		if (txt == NULL || msg->msg == NULL) {
@@ -758,6 +760,9 @@ static int recv_auth_reply(worker_st * ws, int sd, char *txt,
 		}
 		memcpy(ws->session_id, msg->dtls_session_id.data,
 		       msg->dtls_session_id.len);
+
+		if (msg->msg && txt)
+			strlcpy(txt, msg->msg, max_txt_size);
 
 		break;
 	case AUTH__REP__FAILED:
@@ -1323,7 +1328,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	msg[0] = 0;
 	ret = recv_auth_reply(ws, sd, msg, sizeof(msg));
 	if (sd != -1) {
 		close(sd);

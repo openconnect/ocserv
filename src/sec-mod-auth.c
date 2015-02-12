@@ -123,6 +123,10 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 
 		msg.user_name = entry->username;
 
+		if (entry->msg_str[0] != 0) {
+			msg.msg = entry->msg_str;
+		}
+
 		msg.has_sid = 1;
 		msg.sid.data = entry->sid;
 		msg.sid.len = sizeof(entry->sid);

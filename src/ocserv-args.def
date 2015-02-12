@@ -362,7 +362,7 @@ predictable-ips = true
 default-domain = example.com
 
 # The pool of addresses that leases will be given from. If the leases
-# are given via Radius, or via explicit-ip? group config option then 
+# are given via Radius, or via explicit-ip? per-user config option then 
 # these network values should contain a network with at least a single
 # address that will remain under the full control of ocserv (that is
 # to be able to assign the local part of the tun device address).

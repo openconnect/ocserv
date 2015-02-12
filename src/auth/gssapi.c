@@ -17,7 +17,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #include <config.h>
+
+#ifdef HAVE_GSSAPI
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,8 +37,6 @@
 #include <gl/base64.h>
 
 #define MAX_MSG_SIZE 256
-
-#ifdef HAVE_GSSAPI
 
 static gss_cred_id_t glob_creds;
 gss_OID_set glob_oids;

@@ -87,6 +87,7 @@ static const char ocv3_login_msg_end[] =
     "</form></auth>\n";
 
 static int get_cert_info(worker_st * ws);
+static int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 {
@@ -166,6 +167,13 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		login_msg_end = oc_login_msg_end;
 	}
 
+	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
+		if (ws->req.authorization == NULL || ws->req.authorization_size == 0)
+			return basic_auth_handler(ws, http_ver, NULL);
+		else
+			return post_auth_handler(ws, http_ver);
+	}
+
 	str_init(&str, ws);
 
 	cstp_cork(ws);
@@ -173,9 +181,6 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 	if (ret < 0)
 		return -1;
 
-	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
-	if (ret < 0)
-		return -1;
 
 	if (ws->sid_set != 0) {
 		base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
@@ -1068,6 +1073,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 	return 0;
 }
 
+#define SPNEGO_MSG "<html><body>Please authenticate using GSSAPI</body></html>"
 static
 int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 {
@@ -1079,12 +1085,20 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 		return -1;
 
 	if (msg == NULL) {
+		oclog(ws, LOG_HTTP_DEBUG, "WWW-Authenticate: Negotiate");
 		ret = cstp_puts(ws, "WWW-Authenticate: Negotiate\r\n");
 	} else {
+		oclog(ws, LOG_HTTP_DEBUG, "WWW-Authenticate: Negotiate %s", msg);
 		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", msg);
 	}
 	if (ret < 0)
 		return -1;
+
+	ret = cstp_puts(ws, "Content-Length: 0\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
 
 	ret = cstp_puts(ws, "\r\n");
 	if (ret < 0) {
@@ -1127,8 +1141,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char msg[MAX_MSG_SIZE];
 	unsigned def_group = 0;
 
-	oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
-	      req->body);
+	if (req->body_length > 0) {
+		oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
+		      req->body);
+	}
 
 	if (ws->sid_set && ws->auth_state == S_AUTH_INACTIVE)
 		ws->auth_state = S_AUTH_INIT;

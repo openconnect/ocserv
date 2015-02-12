@@ -20,7 +20,7 @@ is used by several CISCO routers.
 ";
 
 copyright = {
-    date  = "2013, 2014";
+    date  = "2013, 2014, 2015";
     owner = "Nikos Mavrogiannopoulos";
     author = "Nikos Mavrogiannopoulos and others";
     eaddr  = "openconnect-devel@lists.infradead.org";
@@ -604,7 +604,7 @@ $ cat << _EOF_ >ca.tmpl
 cn = "VPN CA"
 organization = "Big Corp"
 serial = 1
-expiration_days = 9999
+expiration_days = -1
 ca
 signing_key
 cert_signing_key
@@ -622,9 +622,11 @@ certtool.
 @example
 $ certtool --generate-privkey --outfile server-key.pem
 $ cat << _EOF_ >server.tmpl
-cn = "www.example.com"
+cn = "VPN server"
+dns_name = "www.example.com"
+dns_name = "vpn1.example.com"
 organization = "MyCompany"
-expiration_days = 9999
+expiration_days = -1
 signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server
@@ -645,9 +647,10 @@ with the signing_key option and another with the encryption_key.
 @example
 $ certtool --generate-privkey --outfile server-key.pem
 $ cat << _EOF_ >server.tmpl
-cn = "www.example.com"
+cn = "My server"
+dns_name = "www.example.com"
 organization = "MyCompany"
-expiration_days = 9999
+expiration_days = -1
 signing_key
 encryption_key #only if the generated key is an RSA one
 tls_www_server

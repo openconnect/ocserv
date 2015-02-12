@@ -500,6 +500,7 @@ unsigned force_cert_auth;
 			config->auth_types |= AUTH_TYPE_CERTIFICATE;
 		} else if (c_strcasecmp(auth[j], "certificate[optional]") == 0) {
 			config->auth_types |= AUTH_TYPE_CERTIFICATE_OPT;
+			fprintf(stderr, "The authentication option certificate[optional] is experimental and may be removed in the future\n");
 		} else {
 			fprintf(stderr, "Unknown auth method: %s\n", auth[j]);
 			exit(1);

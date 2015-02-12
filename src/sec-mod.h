@@ -94,6 +94,9 @@ void cleanup_client_entries(sec_mod_st *sec);
 	}
 #endif
 
+void  seclog_hex(const struct sec_mod_st* sec, int priority,
+		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
+
 void sec_auth_init(sec_mod_st *sec, struct cfg_st *config);
 void sec_auth_reinit(sec_mod_st *sec, struct cfg_st *config);
 

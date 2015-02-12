@@ -219,6 +219,7 @@ typedef struct auth_struct_st {
 
 typedef struct urlfw_st {
 	char *url;
+	char *content_type; /* Content-Type */
 	struct sockaddr_storage addr;
 	socklen_t addr_len;
 	int ai_family;

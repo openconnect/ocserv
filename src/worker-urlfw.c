@@ -98,6 +98,14 @@ int post_urlfw_handler(worker_st *ws, unsigned http_ver)
 		goto fail;
 	}
 
+	if (handler->content_type) {
+		ret =
+		    cstp_printf(ws, "Content-Type: %s\r\n", handler->content_type);
+		if (ret < 0) {
+			goto fail;
+		}
+	}
+
 	ret =
 	    cstp_printf(ws, "Content-Length: %u\r\n",
 		       (unsigned int)length);

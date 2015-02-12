@@ -526,7 +526,7 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
 {
 	unsigned i;
-	char *p, *p2, *p3;
+	char *p, *p2, *p3, *cont_type;
 	struct addrinfo hints, *res;
 	int ret;
 
@@ -546,11 +546,23 @@ static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		*p2 = 0;
 		p2++;
 
-		if (strncmp(p2, "udp@", 4) != 0) {
+		memset(&hints, 0, sizeof(hints));
+		if (strncmp(p2, "udp@", 4) == 0) {
+			hints.ai_socktype = SOCK_DGRAM;
+		} else if (strncmp(p2, "tcp@", 4) == 0) {
+			hints.ai_socktype = SOCK_STREAM;
+		} else {
 			fprintf(stderr, "cannot handle protocol %s\n", p2);
 			exit(1);
 		}
 		p2 += 4;
+
+		cont_type = strchr(p2, ' ');
+		if (cont_type != NULL) {
+			*cont_type = 0;
+			cont_type++;
+			config->urlfw[i].content_type = talloc_strdup(config->urlfw, cont_type);
+		}
 
 		p3 = strchr(p2, ':');
 		if (p3 == NULL) {
@@ -560,8 +572,6 @@ static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		*p3 = 0;
 		p3++;
 
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_socktype = SOCK_DGRAM;
 		ret = getaddrinfo(p2, p3, &hints, &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo(%s) failed: %s\n", p2,
@@ -575,7 +585,7 @@ static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		config->urlfw[i].ai_socktype = res->ai_socktype;
 		config->urlfw[i].ai_protocol = res->ai_protocol;
 
-		config->urlfw[i].url = talloc_strdup(config, p);
+		config->urlfw[i].url = talloc_strdup(config->urlfw, p);
 		freeaddrinfo(res);  
 	}
 

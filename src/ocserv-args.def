@@ -76,7 +76,9 @@ An example configuration file follows.
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, 
-# plain, pam, radius[configfile,groupconfig]. 
+# plain, pam, radius[configfile,groupconfig], gssapi.
+#
+# Note that authentication methods cannot be changed with reload.
 
 # certificate:
 #  This indicates that all connecting users must present a certificate.
@@ -105,7 +107,13 @@ An example configuration file follows.
 #auth = "pam[gid-min=1000]"
 #auth = "plain[/etc/ocserv/ocpasswd]"
 #auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
-#backup-auth = "gssapi[/etc/gssapi/config]"
+
+# Specify alternative authentication methods that are sufficient
+# for authentication. That is, if set, any of the methods enabled
+# will be sufficient to login.
+#enable-auth = certificate
+#enable-auth = gssapi
+#enable-auth = "gssapi[keytab:/etc/key.tab]"
 
 # Whether to enable seccomp/Linux namespaces worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a

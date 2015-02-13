@@ -204,7 +204,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	case HEADER_DEVICE_TYPE:
 		req->is_mobile = 1;
 		break;
-	case HEADER_NEED_SPNEGO:
+	case HEADER_SUPPORT_SPNEGO:
 		ws_switch_auth_to(ws, AUTH_TYPE_GSSAPI);
 		break;
 	case HEADER_AUTHORIZATION:

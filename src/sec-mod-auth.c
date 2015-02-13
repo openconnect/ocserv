@@ -487,6 +487,11 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 {
 	unsigned i;
 
+	if (auth_type == 0)
+		return -1;
+
+	/* Find the first configured authentication method which contains
+	 * the method asked by the worker, and use that. */
 	for (i=0;i<sec->config->auth_methods;i++) {
 		if (sec->config->auth[i].enabled && (sec->config->auth[i].type & auth_type) == auth_type) {
 			e->module = sec->config->auth[i].amod;

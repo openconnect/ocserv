@@ -1157,7 +1157,6 @@ void reload_cfg_file(void *pool, struct cfg_st* config)
 
 	/* authentication methods can't change on reload */
 	memcpy(bak, config->auth, sizeof(config->auth));
-	memset(config->auth, 0, sizeof(config->auth));
 	bak_size = config->auth_methods;
 
 	clear_cfg_file(config);
@@ -1166,17 +1165,27 @@ void reload_cfg_file(void *pool, struct cfg_st* config)
 
 	parse_cfg_file(cfg_file, config, 1);
 
-	/* reset the auth methods */
-	for (i=0;i<config->auth_methods;i++) {
-		if (config->auth[i].enabled)
-			DEL(config->auth[i].additional);
+	/* check if the authentication methods remained the same */
+	if (config->auth_methods != bak_size) {
+		goto auth_fail;
 	}
-	memcpy(config->auth, bak, sizeof(config->auth));
-	config->auth_methods = bak_size;
+
+	for (i=0;i<config->auth_methods;i++) {
+		if (config->auth[i].enabled != bak[i].enabled) {
+			goto auth_fail;
+		}
+
+		if (config->auth[i].type != bak[i].type) {
+			goto auth_fail;
+		}
+	}
 
 	check_cfg(config);
 
 	return;
+ auth_fail:
+ 	syslog(LOG_ERR, "you cannot switch authentication methods on reload");
+	exit(1);
 }
 
 void write_pid_file(void)

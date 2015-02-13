@@ -316,7 +316,9 @@ int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);
 int disable_system_calls(struct worker_st *ws);
 void ocsigaltstack(struct worker_st *ws);
+
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth);
+void ws_disable_auth(struct worker_st *ws, unsigned auth);
 
 int connect_to_secmod(worker_st * ws);
 inline static

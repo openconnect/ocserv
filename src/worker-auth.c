@@ -93,16 +93,28 @@ int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 {
 	unsigned i;
 
-	if (ws->selected_auth && ws->selected_auth->type & auth)
+	if (ws->selected_auth && ws->selected_auth->enabled != 0 &&
+	    ws->selected_auth->type & auth)
 		return 1;
 
 	for (i=1;i<ws->config->auth_methods;i++) {
-		if ((ws->config->auth[i].type & auth) != 0) {
+		if (ws->config->auth[i].enabled && (ws->config->auth[i].type & auth) != 0) {
 			ws->selected_auth = &ws->config->auth[i];
 			return 1;
 		}
 	}
 	return 0;
+}
+
+void ws_disable_auth(struct worker_st *ws, unsigned auth)
+{
+	unsigned i;
+
+	for (i=0;i<ws->config->auth_methods;i++) {
+		if ((ws->config->auth[i].type & auth) != 0) {
+			ws->config->auth[i].enabled = 0;
+		}
+	}
 }
 
 static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
@@ -194,6 +206,12 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 			return -1;
 
 		oclog(ws, LOG_DEBUG, "sent sid: %s", context);
+	} else {
+		ret =
+		    cstp_puts(ws,
+			     "Set-Cookie: webvpncontext=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
+		if (ret < 0)
+			return -1;
 	}
 
 	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
@@ -1345,9 +1363,21 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 		goto cleanup;
 	} else if (ret < 0) {
-		oclog(ws, LOG_ERR, "failed authentication for '%s'",
-		      ws->username);
-		goto auth_fail;
+		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
+			/* Fallback from GSSAPI to USERNAME-PASSWORD */
+			ws_disable_auth(ws, AUTH_TYPE_GSSAPI);
+			oclog(ws, LOG_ERR, "failed gssapi authentication");
+			if (ws_switch_auth_to(ws, AUTH_TYPE_USERNAME_PASS) == 0)
+				goto auth_fail;
+
+			ws->auth_state = S_AUTH_INACTIVE;
+			ws->sid_set = 0;
+			goto ask_auth;
+		} else {
+			oclog(ws, LOG_ERR, "failed authentication for '%s'",
+			      ws->username);
+			goto auth_fail;
+		}
 	}
 
 	oclog(ws, LOG_HTTP_DEBUG, "user '%s' obtained cookie", ws->username);

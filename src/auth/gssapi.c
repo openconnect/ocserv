@@ -47,6 +47,40 @@ struct gssapi_ctx_st {
 	gss_buffer_desc msg;
 };
 
+/* Taken from openconnect's gssapi */
+static void print_gss_err(const char *where,
+			  gss_OID mech, OM_uint32 err_maj,
+			  OM_uint32 err_min)
+{
+	OM_uint32 major, minor, msg_ctx = 0;
+	gss_buffer_desc status;
+
+	do {
+		major = gss_display_status(&minor, err_maj, GSS_C_GSS_CODE,
+					   mech, &msg_ctx, &status);
+		if (GSS_ERROR(major))
+			break;
+		syslog(LOG_ERR, "gssapi: %s[maj]: %s\n", where, (char *)status.value);
+		gss_release_buffer(&minor, &status);
+	} while (msg_ctx);
+
+	msg_ctx = 0;
+	do {
+		major = gss_display_status(&minor, err_min, GSS_C_MECH_CODE,
+					   mech, &msg_ctx, &status);
+		if (GSS_ERROR(major))
+			break;
+		syslog(LOG_ERR, "gssapi: %s[min]: %s\n", where, (char *)status.value);
+		gss_release_buffer(&minor, &status);
+	} while (msg_ctx);
+}
+
+const gss_OID_desc spnego_mech = {6, (void *)"\x2b\x06\x01\x05\x05\x02"};
+const gss_OID_set_desc desired_mechs = { 
+	.count = 1,
+	.elements = (gss_OID)&spnego_mech
+};
+
 static void gssapi_global_init(void *pool, void *additional)
 {
 	int ret;
@@ -62,17 +96,23 @@ static void gssapi_global_init(void *pool, void *additional)
 		cred_store.count = 1;
 		cred_store.elements = &element;
 
-		ret = gss_acquire_cred_from(&minor, name, 0, GSS_C_NO_OID_SET, 2,
+		ret = gss_acquire_cred_from(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
 			&cred_store, &glob_creds, &glob_oids, &time);
-	} else {
-		ret = gss_acquire_cred(&minor, name, 0, GSS_C_NO_OID_SET, 2,
-			&glob_creds, &glob_oids, &time);
-	}
 
-	if (ret != GSS_S_COMPLETE) {
-		ret = -1;
-		syslog(LOG_ERR, "gssapi: error in gss_acquire_cred[%s]: %d", (name==GSS_C_NO_NAME)?"default":(char*)additional, ret);
-		exit(1);
+		if (ret != GSS_S_COMPLETE) {
+			ret = -1;
+			print_gss_err("gss_acquire_cred(keytab)", GSS_C_NO_OID, ret, minor);
+			exit(1);
+		}
+	} else {
+		ret = gss_acquire_cred(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
+			&glob_creds, &glob_oids, &time);
+
+		if (ret != GSS_S_COMPLETE) {
+			ret = -1;
+			print_gss_err("gss_acquire_cred", GSS_C_NO_OID, ret, minor);
+			exit(1);
+		}
 	}
 
 	if (name != GSS_C_NO_NAME)
@@ -99,7 +139,7 @@ static void get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech
 
 	ret = gss_display_name(&minor, client, &name, NULL);
 	if (GSS_ERROR(ret)) {
-		syslog(LOG_ERR, "gssapi: error in gss_display_name: %d", ret);
+		print_gss_err("gss_display_name", GSS_C_NO_OID, ret, minor);
 		return;
 	}
 
@@ -108,7 +148,7 @@ static void get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech
 
 	ret = gss_localname(&minor, client, mech_type, &name);
 	if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
-		syslog(LOG_ERR, "gssapi: error in gss_display_name: %d", ret);
+		print_gss_err("gss_display_name", GSS_C_NO_OID, ret, minor);
 		return;
 	}
 
@@ -162,7 +202,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 		gss_release_name(&minor, &client);
 		ret = 0;
 	} else {
-		syslog(LOG_ERR, "gssapi: error in gss_accept_sec_context: %d", ret);
+		print_gss_err("gss_accept_sec_context", mech_type, ret, minor);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -220,7 +260,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 		gss_release_name(&minor, &client);
 		return 0;
 	} else {
-		syslog(LOG_ERR, "gssapi: error in gss_accept_sec_context: %d", ret);
+		print_gss_err("gss_accept_sec_context", mech_type, ret, minor);
 		return ERR_AUTH_FAIL;
 	}
 }

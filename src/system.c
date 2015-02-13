@@ -29,9 +29,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/uio.h>
-#include <sys/errno.h>
 #include <sys/syslog.h>
 
+#include <errno.h>
 #include <signal.h>
 
 void kill_on_parent_kill(int sig)

@@ -479,7 +479,7 @@ struct msghdr mh = {
 				return -1;
 
 			a->sin_family = AF_INET;
-			memcpy(&a->sin_addr, &pi->ipi_addr, sizeof(struct in_addr));
+			memcpy(&a->sin_addr, &pi->s_addr, sizeof(struct in_addr));
 			a->sin_port = htons(def_port);
 			*our_addrlen = sizeof(struct sockaddr_in);
 			break;

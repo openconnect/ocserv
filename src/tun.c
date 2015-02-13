@@ -45,9 +45,12 @@
 #include <main.h>
 #include <ccan/list/list.h>
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 # include <net/if_var.h>
 # include <netinet/in_var.h>
+#endif
+#if defined(__OpenBSD__)
+# include <netinet6/in6_var.h>
 #endif
 
 #ifdef __linux__
@@ -177,7 +180,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = AF_INET6;
 	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-	strlcpy(ifr.ifr_name, oroc->tun_lease.name, IFNAMSIZ);
+	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret != 0) {
@@ -445,7 +448,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	}
 
 #ifdef SIOCIFDESTROY
-	int e;
+	int e, ret;
 	struct ifreq ifr;
 
 	if (proc->tun_lease.name[0] != 0) {

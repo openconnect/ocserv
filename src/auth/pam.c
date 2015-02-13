@@ -155,7 +155,7 @@ wait:
 	}
 }
 
-static int pam_auth_init(void** ctx, void *pool, const char* user, const char* ip, void* additional)
+static int pam_auth_init(void** ctx, void *pool, const char* user, const char* ip)
 {
 int pret;
 struct pam_ctx_st * pctx;

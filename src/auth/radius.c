@@ -61,8 +61,7 @@ static void radius_global_deinit()
 		rc_destroy(rh);
 }
 
-static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip,
-			   void *additional)
+static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip)
 {
 	struct radius_ctx_st *pctx;
 	char *default_realm;
@@ -79,7 +78,6 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 
 	strlcpy(pctx->username, username, sizeof(pctx->username));
 	strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
-	pctx->config = additional;
 	pctx->pass_msg = pass_msg_first;
 
 	default_realm = rc_conf_str(rh, "default_realm");

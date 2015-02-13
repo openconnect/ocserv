@@ -46,7 +46,6 @@ struct radius_ctx_st {
 	char **routes;
 	unsigned routes_size;
 
-	const char *config;	/* radius config file */
 	const char *pass_msg;
 	unsigned retries;
 };

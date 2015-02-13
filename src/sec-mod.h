@@ -78,7 +78,6 @@ typedef struct client_entry_st {
 	unsigned auth_type;
 	/* the module this entry is using */
 	const struct auth_mod_st *module;
-	void *auth_additional; /* input to auth_init */
 } client_entry_st;
 
 void *sec_mod_client_db_init(sec_mod_st *sec);

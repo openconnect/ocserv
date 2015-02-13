@@ -121,8 +121,7 @@ static void get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech
 	return;
 }
 
-static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const char *ip,
-			   void *additional)
+static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const char *ip)
 {
 	struct gssapi_ctx_st *pctx;
 	OM_uint32 minor, flags, time;

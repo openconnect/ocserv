@@ -491,7 +491,6 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 		if (sec->config->auth[i].enabled && (sec->config->auth[i].type & auth_type) == auth_type) {
 			e->module = sec->config->auth[i].amod;
 			e->auth_type = sec->config->auth[i].type;
-			e->auth_additional = sec->config->auth[i].additional;
 
 			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (%x)", sec->config->auth[i].name, auth_type);
 			return 0;
@@ -531,8 +530,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 
 	if (e->module) {
 		ret =
-		    e->module->auth_init(&e->auth_ctx, e, req->user_name, req->ip,
-				         e->auth_additional);
+		    e->module->auth_init(&e->auth_ctx, e, req->user_name, req->ip);
 		if (ret == ERR_AUTH_CONTINUE) {
 			need_continue = 1;
 		} else if (ret < 0) {

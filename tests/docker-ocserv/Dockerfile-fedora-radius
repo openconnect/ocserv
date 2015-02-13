@@ -26,15 +26,15 @@ ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
 ADD ocserv-radius.conf /etc/ocserv/ocserv.conf
 ADD radiusclient.conf /etc/radiusclient/
-ADD radius-clients.conf /etc/freeradius/clients.conf
-ADD radiusclient-servers /etc/freeradius/servers
+ADD radius-clients.conf /etc/raddb/clients.conf
+ADD radiusclient-servers /etc/raddb/servers
 ADD ocserv /usr/sbin/
 ADD ocpasswd /usr/bin/
 ADD occtl /usr/bin/
 ADD myscript /usr/bin/
-ADD freeradius-users /etc/freeradius/users
+ADD freeradius-users /etc/raddb/users
 # It's not possible to use mknod inside a container with the default LXC
 # template, so we untar it from this archive.
 ADD dev-tun.tgz /dev/
 
-CMD nuttcp -S;sshd-keygen;/usr/sbin/sshd;mkdir -p /tmp/disconnect/;usr/sbin/ocserv -d 1 -f;sleep 3600
+CMD nuttcp -S;radiusd;sshd-keygen;/usr/sbin/sshd;mkdir -p /tmp/disconnect/;usr/sbin/ocserv -d 1 -f;sleep 3600

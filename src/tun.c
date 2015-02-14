@@ -529,9 +529,9 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 	int ret;
 
 	if (iph->ip_v == 6)
-		head = AF_INET6;
+		head = htonl(AF_INET6);
 	else if (iph->ip_v == 4)
-		head = AF_INET; 
+		head = htonl(AF_INET);
 	else {
 		if (!complained) {
 			complained = 1;

@@ -509,6 +509,7 @@ struct msghdr mh = {
 		}
 #endif
 	}
+	*addrlen = mh.msg_namelen;
 
 	return ret;
 }

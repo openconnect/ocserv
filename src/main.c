@@ -1111,6 +1111,10 @@ int main(int argc, char** argv)
 					continue;
 				}
 				set_cloexec_flag (fd, 1);
+#ifndef __linux__
+				/* OpenBSD sets the non-blocking flag if accept's fd is non-blocking */
+				set_block(fd);
+#endif
 
 				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
 					close(fd);

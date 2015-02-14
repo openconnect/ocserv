@@ -36,6 +36,7 @@ void *_talloc_size2(void *ctx, size_t size);
 #define DEFAULT_SOCKET_TIMEOUT 10
 
 void set_non_block(int fd);
+void set_block(int fd);
 
 ssize_t force_write(int sockfd, const void *buf, size_t len);
 ssize_t force_read(int sockfd, void *buf, size_t len);

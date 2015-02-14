@@ -177,6 +177,14 @@ int val;
 	fcntl(fd, F_SETFL, val | O_NONBLOCK);
 }
 
+void set_block(int fd)
+{
+int val;
+
+	val = fcntl(fd, F_GETFL, 0);
+	fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
+}
+
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)
 {
 int ret;

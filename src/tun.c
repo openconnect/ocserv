@@ -432,7 +432,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	}
 #endif
 #else				/* freebsd */
-	tunfd = bsd_open_tun()
+	tunfd = bsd_open_tun();
 	if (tunfd < 0) {
 		int e = errno;
 		mslog(s, NULL, LOG_ERR, "Can't open /dev/tun: %s\n",

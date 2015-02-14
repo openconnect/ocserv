@@ -281,7 +281,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		if (ret == PW_ACCESS_CHALLENGE) {
 			pctx->pass_msg = pass_msg_second;
 			return ERR_AUTH_CONTINUE;
-		} else if (pctx->retries++ < MAX_TRIES-1) {
+		} else if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {
@@ -508,6 +508,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 
 const struct auth_mod_st radius_auth_funcs = {
 	.type = AUTH_TYPE_RADIUS | AUTH_TYPE_USERNAME_PASS,
+	.allows_retries = 1,
 	.global_init = radius_global_init,
 	.global_deinit = radius_global_deinit,
 	.auth_init = radius_auth_init,

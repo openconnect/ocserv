@@ -77,6 +77,7 @@ enum {
 	PS_AUTH_INACTIVE, /* no comm with worker */
 	PS_AUTH_FAILED, /* no tried authenticated but failed */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
+	PS_AUTH_CONT, /* worker has sent an auth cont msg */
 	PS_AUTH_COMPLETED, /* successful authentication */
 };
 

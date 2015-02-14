@@ -255,7 +255,21 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 {
 	int ret;
 
+	if ((result == ERR_AUTH_CONTINUE || result == 0) && e->module) {
+		ret = e->module->auth_msg(e->auth_ctx, e, &e->msg_str);
+		if (ret < 0) {
+			e->status = PS_AUTH_FAILED;
+			seclog(sec, LOG_ERR, "error getting auth msg");
+			return ret;
+		}
+	}
+
 	if (result == ERR_AUTH_CONTINUE) {
+		/* if the module allows multiple retries for the password */
+		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries) {
+			add_ip_to_ban_list(sec, e->ip, 1, time(0) + sec->config->min_reauth_time);
+		}
+
 		ret = send_sec_auth_reply_msg(cfd, sec, e);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
@@ -272,11 +286,13 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
 		}
+		remove_ip_from_ban_list(sec, e->ip);
 
 		ret = 0;
 	} else {
 		e->status = PS_AUTH_FAILED;
-		add_ip_to_ban_list(sec, e->ip, time(0) + sec->config->min_reauth_time);
+
+		add_ip_to_ban_list(sec, e->ip, 1, time(0) + sec->config->min_reauth_time);
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {
@@ -448,7 +464,7 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 		return -1;
 	}
 
-	if (e->status != PS_AUTH_INIT) {
+	if (e->status != PS_AUTH_INIT && e->status != PS_AUTH_CONT) {
 		seclog(sec, LOG_ERR, "auth cont received but we are on state %u!", e->status);
 		ret = -1;
 		goto cleanup;
@@ -469,6 +485,8 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 		goto cleanup;
 	}
 
+	e->status = PS_AUTH_CONT;
+
 	ret =
 	    e->module->auth_pass(e->auth_ctx, req->password,
 			      strlen(req->password));
@@ -476,6 +494,7 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 		seclog(sec, LOG_DEBUG,
 		       "error in password given in auth cont for user '%s'",
 		       e->username);
+		goto cleanup;
 	}
 
  cleanup:
@@ -557,12 +576,6 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 				      sizeof(e->username));
 		if (ret != 0 && req->user_name != NULL) {
 			strlcpy(e->username, req->user_name, sizeof(e->username));
-		}
-
-		ret = e->module->auth_msg(e->auth_ctx, e, &e->msg_str);
-		if (ret < 0) {
-			ret = -1;
-			goto cleanup;
 		}
 	}
 

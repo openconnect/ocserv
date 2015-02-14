@@ -117,7 +117,8 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 void cleanup_banned_entries(sec_mod_st *sec);
 unsigned check_if_banned(sec_mod_st *sec, const char *ip);
-void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, time_t reenable_time);
+void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, unsigned attempts, time_t reset_time);
+void remove_ip_from_ban_list(sec_mod_st *sec, const char *ip);
 void *sec_mod_ban_db_init(sec_mod_st *sec);
 void sec_mod_ban_db_deinit(sec_mod_st *sec);
 unsigned sec_mod_ban_db_elems(sec_mod_st *sec);

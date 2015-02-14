@@ -1284,6 +1284,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		   || ws->auth_state == S_AUTH_REQ) {
 		SecAuthContMsg areq = SEC_AUTH_CONT_MSG__INIT;
 
+		areq.ip =
+		    human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
+			       ipbuf, sizeof(ipbuf), 0);
+
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			if (req->authorization == NULL || req->authorization_size <= 10) {
 				if (req->authorization != NULL)

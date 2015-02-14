@@ -248,7 +248,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	    && strcmp(crypt(pass, pctx->cpass), pctx->cpass) == 0)
 		return 0;
 	else {
-		if (pctx->retries++ < MAX_TRIES-1) {
+		if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
 		} else {
@@ -370,6 +370,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 
 const struct auth_mod_st plain_auth_funcs = {
 	.type = AUTH_TYPE_PLAIN | AUTH_TYPE_USERNAME_PASS,
+	.allows_retries = 1,
 	.global_init = plain_global_init,
 	.auth_init = plain_auth_init,
 	.auth_deinit = plain_auth_deinit,

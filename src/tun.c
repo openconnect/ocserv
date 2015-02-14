@@ -28,6 +28,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/ioctl.h>
+#include <sys/uio.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -515,21 +516,22 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 }
 
 #if defined(__OpenBSD__) || defined(TUNSIFHEAD)
-/* We are pretty inefficient in that case */
-# define TUN_AF_PREFIX 4
+# define TUN_AF_PREFIX 1
 #endif
 ssize_t tun_write(int sockfd, const void *buf, size_t len)
 {
 #ifdef TUN_AF_PREFIX
-	uint8_t data[len+TUN_AF_PREFIX];
 	struct ip *iph = (void *)buf;
-	uint32_t type;
+	uint32_t head;
+	const uint8_t *data = buf;
 	static int complained = 0;
+	struct iovec iov[2];
+	int ret;
 
 	if (iph->ip_v == 6)
-		type = AF_INET6;
+		head = AF_INET6;
 	else if (iph->ip_v == 4)
-		type = AF_INET; 
+		head = AF_INET; 
 	else {
 		if (!complained) {
 			complained = 1;
@@ -539,9 +541,15 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 		return -1;
 	}
 
-	memcpy(data, &type, 4);
-	memcpy(data+TUN_AF_PREFIX, buf, len);
-	return force_write(sockfd, data, len+TUN_AF_PREFIX);
+	iov[0].iov_base = &head;
+	iov[0].iov_len = sizeof(head);
+	iov[1].iov_base = (void*)buf;
+	iov[1].iov_len = len;
+
+	ret = writev(sockfd, iov, 2);
+	if (ret >= sizeof(uint32_t))
+		ret -= sizeof(uint32_t);
+	return ret;
 #else
 	return force_write(sockfd, buf, len);
 #endif
@@ -550,15 +558,19 @@ ssize_t tun_write(int sockfd, const void *buf, size_t len)
 ssize_t tun_read(int sockfd, void *buf, size_t len)
 {
 #ifdef TUN_AF_PREFIX
-	uint8_t data[len+TUN_AF_PREFIX];
+	uint32_t head;
+	struct iovec iov[2];
 	int ret;
 
-	ret = read(sockfd, data, len+TUN_AF_PREFIX);
-	if (ret > TUN_AF_PREFIX) {
-		memcpy(buf, data+TUN_AF_PREFIX, ret-TUN_AF_PREFIX);
-		return ret-TUN_AF_PREFIX;
-	}
-	return -1;
+	iov[0].iov_base = &head;
+	iov[0].iov_len = sizeof(head);
+	iov[1].iov_base = buf;
+	iov[1].iov_len = len;
+
+	ret = readv(sockfd, iov, 2);
+	if (ret >= sizeof(uint32_t))
+		ret -= sizeof(uint32_t);
+	return ret;
 #else
 	return read(sockfd, buf, len);
 #endif

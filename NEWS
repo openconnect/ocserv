@@ -9,6 +9,7 @@
 - Added per-user-configuration option explicit-ipv4.
 - Added configuration option 'no-route' which corresponds to
   X-CSTP-Split-Exclude.
+- Fixes in BSD systems support by Stuart Henderson.
 
 
 * Version 0.9.0 (released 2015-01-20)

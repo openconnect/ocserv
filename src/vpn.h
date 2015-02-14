@@ -286,6 +286,7 @@ struct cfg_st {
 	unsigned rekey_method; /* REKEY_METHOD_ */
 
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
+	int max_password_retries;	/* the number of retries allowed prior to applying min_reauth_time */
 
 	unsigned isolate; /* whether seccomp should be enabled or not */
 

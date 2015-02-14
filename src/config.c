@@ -35,6 +35,7 @@
 #include <auth/radius.h>
 #include <auth/plain.h>
 #include <auth/gssapi.h>
+#include <auth/common.h>
 #include <sec-mod-sup-config.h>
 
 #include <sys/types.h>
@@ -73,6 +74,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "max-password-retries", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -799,6 +801,12 @@ unsigned urlfw_size = 0;
 
 	READ_NUMERIC("max-clients", config->max_clients);
 	READ_NUMERIC("min-reauth-time", config->min_reauth_time);
+
+	config->max_password_retries = -1;
+	READ_NUMERIC("max-password-retries", config->max_password_retries);
+	if (config->max_password_retries == -1)
+		config->max_password_retries = MAX_PASSWORD_TRIES;
+
 	READ_NUMERIC("max-same-clients", config->max_same_clients);
 
 	val = get_option("run-as-user", NULL);

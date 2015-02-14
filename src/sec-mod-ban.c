@@ -39,7 +39,6 @@
 #include <vpn.h>
 #include <tlslib.h>
 #include <sec-mod.h>
-#include <auth/common.h>
 #include <ccan/hash/hash.h>
 #include <ccan/htable/htable.h>
 
@@ -139,7 +138,7 @@ void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, unsigned attempts, time
 	e->failed_attempts += attempts;
 	e->expires = reset_time;
 
-	if (e->failed_attempts >= MAX_PASSWORD_TRIES) {
+	if (sec->config->max_password_retries > 0 && e->failed_attempts >= sec->config->max_password_retries) {
 		seclog(sec, LOG_INFO,"added IP '%s' (with failed attempts %d) to ban list, will be reset at: %s", ip, e->failed_attempts, ctime(&reset_time));
 	} else {
 		seclog(sec, LOG_DEBUG,"added failed attempt for IP '%s' to ban list, will be reset at: %s", ip, ctime(&reset_time));
@@ -191,7 +190,8 @@ unsigned check_if_banned(sec_mod_st *sec, const char *ip)
 		if (now > e->expires)
 			return 0;
 
-		if (e->failed_attempts >= MAX_PASSWORD_TRIES)
+		if (sec->config->max_password_retries > 0 &&
+		    e->failed_attempts >= sec->config->max_password_retries)
 			return 1;
 	}
 	return 0;

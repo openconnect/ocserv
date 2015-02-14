@@ -273,6 +273,10 @@ auth-timeout = 40
 # a failed authentication attempt.
 min-reauth-time = 120
 
+# The maximum number of password retries before applying the min-reauth-time
+# delay. Set to zero to disable.
+max-password-retries = 5
+
 # Cookie timeout (in seconds)
 # Once a client is authenticated he's provided a cookie with
 # which he can reconnect. That cookie will be invalided if not

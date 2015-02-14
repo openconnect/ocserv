@@ -32,7 +32,7 @@
 #include <sys/un.h>
 #include <sys/uio.h>
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 # include <limits.h>
 # define SOL_IP IPPROTO_IP
 #endif

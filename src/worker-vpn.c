@@ -963,7 +963,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	gnutls_datum_t dtls_to_send;
 	gnutls_datum_t cstp_to_send;
 
-	l = read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
+	l = tun_read(ws->tun_fd, ws->buffer + 8, ws->conn_mtu);
 	if (l < 0) {
 		e = errno;
 
@@ -1886,7 +1886,7 @@ static int parse_data(struct worker_st *ws, gnutls_session_t ts,	/* the interfac
 	case AC_PKT_DATA:
 		oclog(ws, LOG_TRANSFER_DEBUG, "writing %d byte(s) to TUN",
 		      (int)buf_size);
-		ret = force_write(ws->tun_fd, plain, plain_size);
+		ret = tun_write(ws->tun_fd, plain, plain_size);
 		if (ret == -1) {
 			e = errno;
 			oclog(ws, LOG_ERR, "could not write data to tun: %s",

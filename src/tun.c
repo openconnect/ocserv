@@ -25,6 +25,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <net/if.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <string.h>
@@ -510,4 +512,54 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 		close(fd);
 
 	return;
+}
+
+#if defined(__OpenBSD__) || defined(TUNSIFHEAD)
+/* We are pretty inefficient in that case */
+# define TUN_AF_PREFIX 4
+#endif
+ssize_t tun_write(int sockfd, const void *buf, size_t len)
+{
+#ifdef TUN_AF_PREFIX
+	uint8_t data[len+TUN_AF_PREFIX];
+	struct ip *iph = (void *)buf;
+	uint32_t type;
+	static int complained = 0;
+
+	if (iph->ip_v == 6)
+		type = AF_INET6;
+	else if (iph->ip_v == 4)
+		type = AF_INET; 
+	else {
+		if (!complained) {
+			complained = 1;
+			syslog(LOG_ERR, "tun_write: Unknown packet (len %d) received %02x %02x %02x %02x...\n",
+				(int)len, data[0], data[1], data[2], data[3]);
+		}
+		return -1;
+	}
+
+	memcpy(data, &type, 4);
+	memcpy(data+TUN_AF_PREFIX, buf, len);
+	return force_write(sockfd, data, len+TUN_AF_PREFIX);
+#else
+	return force_write(sockfd, buf, len);
+#endif
+}
+
+ssize_t tun_read(int sockfd, void *buf, size_t len)
+{
+#ifdef TUN_AF_PREFIX
+	uint8_t data[len+TUN_AF_PREFIX];
+	int ret;
+
+	ret = read(sockfd, data, len+TUN_AF_PREFIX);
+	if (ret > TUN_AF_PREFIX) {
+		memcpy(buf, data+TUN_AF_PREFIX, ret-TUN_AF_PREFIX);
+		return ret-TUN_AF_PREFIX;
+	}
+	return -1;
+#else
+	return read(sockfd, buf, len);
+#endif
 }

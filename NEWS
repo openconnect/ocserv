@@ -1,3 +1,10 @@
+* Version 0.9.2 (unreleased)
+- Enable seccomp unconditionally for all platforms (libseccomp 2.2.0
+  is more portable).
+- Ensure that 'socket-file' is a relative path, so that is accessible
+  from both the main and worker processes.
+
+
 * Version 0.9.1 (released 2015-02-15)
 - Do not send IPv6 leases if the calculated MTU is lower than 1280.
 - Prevent the early expiry of sessions in security module; that

@@ -21,9 +21,11 @@
 #include <unistd.h>
 #ifdef __linux__
 # include <sys/prctl.h>
-# include <sched.h>
-# include <linux/sched.h>
-# include <sys/syscall.h>
+# if defined(ENABLE_LINUX_NS)
+#  include <sched.h>
+#  include <linux/sched.h>
+#  include <sys/syscall.h>
+# endif
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>

@@ -428,6 +428,7 @@ void set_worker_udp_opts(int fd, int family)
 {
 int y;
 
+#ifdef IPV6_V6ONLY
 	if (family == AF_INET6) {
 		y = 1;
 		/* avoid listen on ipv6 addresses failing
@@ -435,6 +436,7 @@ int y;
 		setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
 			   (const void *) &y, sizeof(y));
 	}
+#endif
 
 	y = 1;
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));

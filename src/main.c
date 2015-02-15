@@ -892,6 +892,7 @@ int main(int argc, char** argv)
 	struct proc_st *ctmp = NULL, *cpos;
 	fd_set rd_set, wr_set;
 	int n = 0, ret, flags;
+	char *p;
 #ifdef HAVE_PSELECT
 	struct timespec ts;
 #else
@@ -1034,7 +1035,10 @@ int main(int argc, char** argv)
 	tls_load_certs(s, &creds);
 
 	s->secmod_addr.sun_family = AF_UNIX;
-	strlcpy(s->secmod_addr.sun_path, s->socket_file, sizeof(s->secmod_addr.sun_path));
+	p = s->socket_file;
+	if (s->config->chroot_dir) /* if we are on chroot make the socket file path relative */
+		while (*p == '/') p++;
+	strlcpy(s->secmod_addr.sun_path, p, sizeof(s->secmod_addr.sun_path));
 	s->secmod_addr_len = SUN_LEN(&s->secmod_addr);
 
 	/* initialize memory for worker process */

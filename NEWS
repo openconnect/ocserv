@@ -1,4 +1,4 @@
-* Version 0.9.1 (unreleased)
+* Version 0.9.1 (released 2015-02-15)
 - Do not send IPv6 leases if the calculated MTU is lower than 1280.
 - Prevent the early expiry of sessions in security module; that
   corrects session reconnections using the cookie.
@@ -6,10 +6,12 @@
 - Allow forwarding empty passwords to auth backend.
 - depend on freeradius-client 1.1.7
 - fix seccomp filter in x86 systems.
-- Added per-user-configuration option explicit-ipv4.
+- Added per-user-configuration option explicit-ipv4, contributed
+  by Kevin Cerneke.
 - Added configuration option 'no-route' which corresponds to
   X-CSTP-Split-Exclude.
-- Fixes in BSD systems support by Stuart Henderson.
+- Fixes in BSD systems support, contributed by Stuart Henderson.
+- Deprecated the certificate[optional] auth option.
 
 
 * Version 0.9.0 (released 2015-01-20)

@@ -90,7 +90,7 @@ static size_t rehash(const void* _e, void* unused)
 {
 const struct ip_lease_st * e = _e;
 
-	return hash_any(&e->rip, e->rip_len, 0);
+	return hash_any(SA_IN_P_GENERIC(&e->rip, e->rip_len), SA_IN_SIZE(e->rip_len), 0);
 }
 
 void ip_lease_init(struct ip_lease_db_st* db)
@@ -492,6 +492,7 @@ int unref_ip_lease(struct ip_lease_st *lease)
 	if (lease->db) {
 		htable_del(&lease->db->ht, rehash(lease, NULL), lease);
 	}
+
 	return 0;
 }
 

@@ -400,9 +400,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			goto fail;
 		}
 
-		/* LIP = 1st network address */
+		/* LIP = network address + 1 */
 		memcpy(&proc->ipv6->lip, &network, sizeof(struct sockaddr_in6));
 		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
+		SA_IN6_U8_P(&proc->ipv6->lip)[15] |= 1;
 
 		if (memcmp(SA_IN6_U8_P(&proc->ipv6->lip), SA_IN6_U8_P(&proc->ipv6->rip), sizeof(struct in6_addr)) == 0) {
 			mslog(s, NULL, LOG_ERR, "cannot assign explicit IP %s; network %s", proc->config.explicit_ipv6, c_network);
@@ -460,9 +461,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
        		memcpy(&proc->ipv6->rip, &rnd, proc->ipv6->rip_len);
 
-		/* LIP = 1st network address */
+		/* LIP = network address + 1 */
 		memcpy(&proc->ipv6->lip, &network, sizeof(struct sockaddr_in6));
 		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
+		SA_IN6_U8_P(&proc->ipv6->lip)[15] |= 1;
 
 		if (memcmp(SA_IN6_U8_P(&proc->ipv6->lip), SA_IN6_U8_P(&proc->ipv6->rip), sizeof(struct in6_addr)) == 0) {
 			continue;

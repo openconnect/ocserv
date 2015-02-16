@@ -32,14 +32,15 @@ if test -z $FEDORA && test -z $DEBIAN;then
 	exit 77
 fi
 
+stop() {
+	$DOCKER stop $IMAGE_NAME
+	$DOCKER rm $IMAGE_NAME
+	exit 1
+}
+
 $LOCKFILE
-if test "$UNIX" = 1;then
-	$DOCKER stop test_unix >/dev/null 2>&1
-	$DOCKER rm test_unix >/dev/null 2>&1
-else
-	$DOCKER stop test_ocserv >/dev/null 2>&1
-	$DOCKER rm test_ocserv >/dev/null 2>&1
-fi
+$DOCKER stop $IMAGE_NAME >/dev/null 2>&1
+$DOCKER rm $IMAGE_NAME >/dev/null 2>&1
 
 if test "$FEDORA" = 1;then
 	echo "Using the fedora image"
@@ -61,6 +62,7 @@ else #DEBIAN
 	cp docker-ocserv/Dockerfile-debian-$CONFIG docker-ocserv/Dockerfile
 fi
 
+rm -f docker-ocserv/ocserv docker-ocserv/ocpasswd docker-ocserv/occtl
 cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
 
 echo "Creating image $IMAGE"

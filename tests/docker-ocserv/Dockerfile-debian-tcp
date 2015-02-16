@@ -8,6 +8,7 @@ RUN apt-get install -y libhttp-parser2.1 libpcl1 libopts25 autogen
 RUN apt-get install -y libsystemd-daemon0 valgrind nuttcp openssh-server bash
 RUN apt-get install -y libtalloc2
 RUN apt-get install -y liblz4-1
+RUN apt-get install -y libfreeradius-client2
 RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/sshd_config
 
 RUN echo 'root:root' |chpasswd
@@ -22,7 +23,6 @@ EXPOSE 5551/udp
 EXPOSE 22
 
 RUN mkdir /etc/ocserv
-
 
 ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/

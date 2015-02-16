@@ -29,13 +29,8 @@ fi
 UNIX=1
 CONFIG="unix"
 IMAGE=ocserv-test2
+IMAGE_NAME=test_unix
 . ./docker-common.sh
-
-stop() {
-	$DOCKER stop test_unix
-	$DOCKER rm test_unix
-	exit 1
-}
 
 $DOCKER run -P --privileged=true -p 6000:6000/udp -p 6001:6001/udp -p 22 -p 6551:6551/udp --tty=false -d --name test_unix $IMAGE
 if test $? != 0;then

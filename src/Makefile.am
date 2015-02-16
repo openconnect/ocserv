@@ -6,11 +6,11 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) \
-	$(LIBKRB5_CFLAGS)
+	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS)
 
 BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
 	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
-	ctl.pb-c.c ctl.pb-c.h http-heads.h
+	ctl.pb-c.c ctl.pb-c.h http-heads.h kkdcp_asn1_tab.c
 
 #AM_CPPFLAGS += -DDEBUG_LEAKS
 
@@ -82,7 +82,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	vasprintf.c vasprintf.h lzs.c lzs.h \
 	proc-search.c proc-search.h http-heads.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	$(PROTOBUF_SOURCES)
+	$(PROTOBUF_SOURCES) kkdcp.asn kkdcp_asn1_tab.c
 
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
@@ -91,7 +91,8 @@ ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
-	$(FREERADIUS_CLIENT_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS)
+	$(FREERADIUS_CLIENT_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
+	$(LIBTASN1_LIBS)
 
 
 if PCL
@@ -142,3 +143,6 @@ ctl.pb-c.h: ctl.pb-c.c
 
 http-heads.h: $(srcdir)/http-heads.gperf
 	-gperf --global-table -t $^ > $@-tmp && mv $@-tmp $@
+
+kkdcp_asn1_tab.c: $(srcdir)/kkdcp.asn
+	-asn1Parser $^ $@

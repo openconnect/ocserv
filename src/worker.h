@@ -103,6 +103,12 @@ typedef struct dtls_ciphersuite_st {
 	unsigned gnutls_version;
 } dtls_ciphersuite_st;
 
+#ifdef HAVE_GSSAPI
+# include <libtasn1.h>
+/* main has initialized that for us */
+extern ASN1_TYPE _kkdcp_pkix1_asn;
+#endif
+
 struct http_req_st {
 	char url[256];
 

@@ -402,13 +402,15 @@ if test "$test_for_gssapi" = yes;then
 PKG_CHECK_MODULES([LIBKRB5], [krb5-gssapi], [
 enable_gssapi=yes
 AC_DEFINE([HAVE_GSSAPI], [], [GSSAPI was found])
+PKG_CHECK_MODULES(LIBTASN1, [libtasn1 >= 3.9])
 ],
 [
 	AC_MSG_WARN([[
 ***
-*** gssapi not found. Will disable compression support.
+*** gssapi not found. Will disable gssapi (and Kerberos) support.
 *** ]])
 ])
+
 fi
 
 dnl needed in the included PCL

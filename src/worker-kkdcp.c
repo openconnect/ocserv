@@ -27,13 +27,87 @@
 #include <vpn.h>
 #include <worker.h>
 
+#ifdef HAVE_GSSAPI
+
+int der_decode(const uint8_t *der, unsigned der_size, uint8_t *out, unsigned *out_size, int *error)
+{
+	int ret, len;
+	ASN1_TYPE c2 = ASN1_TYPE_EMPTY;
+
+	ret = asn1_create_element(_kkdcp_pkix1_asn, "KDC-PROXY-MESSAGE", &c2);
+	if (ret != ASN1_SUCCESS) {
+		*error = ret;
+		return -1;
+	}
+
+	ret = asn1_der_decoding(&c2, der, der_size, NULL);
+	if (ret != ASN1_SUCCESS) {
+		*error = ret;
+		ret = -1;
+		goto cleanup;
+	}
+
+	len = *out_size;
+	ret = asn1_read_value(c2, "kerb-message", out, &len);
+	if (ret != ASN1_SUCCESS) {
+		*error = ret;
+		ret = -1;
+		goto cleanup;
+	}
+	*out_size = len;
+
+	ret = 0;
+ cleanup:
+	asn1_delete_structure(&c2); 
+	return ret;
+	
+}
+
+int der_encode_inplace(uint8_t *raw, unsigned *raw_size, unsigned max_size, int *error)
+{
+	int ret, len;
+	ASN1_TYPE c2 = ASN1_TYPE_EMPTY;
+
+	ret = asn1_create_element(_kkdcp_pkix1_asn, "KDC-PROXY-MESSAGE", &c2);
+	if (ret != ASN1_SUCCESS) {
+		*error = ret;
+		return -1;
+	}
+
+	ret = asn1_write_value(c2, "kerb-message", raw, *raw_size);
+	if (ret != ASN1_SUCCESS) {
+		*error = ret;
+		ret = -1;
+		goto cleanup;
+	}
+
+	asn1_write_value(c2, "target-domain", NULL, 0);
+	asn1_write_value(c2, "dclocator-hint", NULL, 0);
+
+	len = max_size;
+	ret = asn1_der_coding(c2, "", raw, &len, NULL);
+	if (ret != ASN1_SUCCESS) {
+		*error = ret;
+		ret = -1;
+		goto cleanup;
+	}
+	*raw_size = len;
+
+	ret = 0;
+ cleanup:
+	asn1_delete_structure(&c2); 
+	return ret;
+	
+}
+
+#define BUF_SIZE 16*1024
 int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 {
 	int ret, e, fd;
 	struct http_req_st *req = &ws->req;
 	unsigned i, length;
 	kkdcp_st *handler = NULL;
-	char buf[16*1024];
+	uint8_t *buf = NULL;
 	const char *reason = "Unknown";
 
 	for (i=0;i<ws->config->kkdcp_size;i++) {
@@ -71,8 +145,23 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		goto fail;
 	}
 
-	ret = send(fd, req->body, req->body_length, 0);
-	if (ret != req->body_length) {
+	length = BUF_SIZE;
+	buf = talloc_size(ws, length);
+	if (buf == NULL) {
+		oclog(ws, LOG_INFO, "kkdcp: memory error");
+		reason = "Memory error";
+		goto fail;
+	}
+
+	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, &e);
+	if (ret <= 0) {
+		oclog(ws, LOG_INFO, "kkdcp: DER decoding error: %s", asn1_strerror(e));
+		reason = "DER decoding error";
+		goto fail;
+	}
+
+	ret = send(fd, buf, length, 0);
+	if (ret != length) {
 		if (ret == -1) {
 			e = errno;
 			oclog(ws, LOG_INFO, "kkdcp: send error: %s", strerror(e));
@@ -104,6 +193,13 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		if (ret < 0) {
 			goto fail;
 		}
+	}
+
+	ret = der_encode_inplace(buf, &length, BUF_SIZE, &e);
+	if (ret < 0) {
+		oclog(ws, LOG_INFO, "kkdcp: DER encoding error: %s", asn1_strerror(e));
+		reason = "DER encoding error";
+		goto fail;
 	}
 
 	ret =
@@ -142,7 +238,15 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	ret = -1;
 
  cleanup:
+ 	talloc_free(buf);
  	close(fd);
  	return ret;
-
 }
+
+#else
+
+int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
+{
+	return -1;
+}
+#endif

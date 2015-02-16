@@ -61,6 +61,13 @@
 #include <ip-lease.h>
 #include <ccan/list/list.h>
 
+#ifdef HAVE_GSSAPI
+# include <libtasn1.h>
+
+extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
+ASN1_TYPE _kkdcp_pkix1_asn = ASN1_TYPE_EMPTY;
+#endif
+
 int syslog_open = 0;
 static unsigned int terminate = 0;
 static unsigned int reload_conf = 0;
@@ -1053,6 +1060,17 @@ int main(int argc, char** argv)
 		fprintf(stderr, "memory error\n");
 		exit(1);
 	}
+
+#ifdef HAVE_GSSAPI
+	/* Initialize kkdcp structures */
+	if (s->config->kkdcp) {
+		ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
+		if (ret != ASN1_SUCCESS) {
+			fprintf(stderr, "KKDCP ASN.1 initialization error\n");
+			exit(1);
+		}
+	}
+#endif
 
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
 	alarm(MAINTAINANCE_TIME(s));

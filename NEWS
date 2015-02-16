@@ -3,6 +3,7 @@
   is more portable).
 - Ensure that 'socket-file' is a relative path, so that is accessible
   from both the main and worker processes.
+- Fixes in IPv6 tun addresses assignment, and IPv6 assigned address check.
 
 
 * Version 0.9.1 (released 2015-02-15)

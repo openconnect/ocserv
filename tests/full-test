@@ -77,7 +77,7 @@ if test $? != 0;then
 	stop
 fi
 
-ping6 -w 5 fd91:6d87:7341:db6a::
+ping6 -w 5 fd91:6d87:7341:db6a::1
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping the IPv6 of ocserv"

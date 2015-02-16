@@ -425,7 +425,7 @@ void vpn_server(struct worker_st *ws)
 						nrecvd);
 			if (nparsed == 0) {
 				oclog(ws, LOG_HTTP_DEBUG,
-				      "error parsing HTTP request");
+				      "error parsing HTTP POST request");
 				exit_worker(ws);
 			}
 		}

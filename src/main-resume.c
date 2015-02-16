@@ -87,8 +87,7 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 			   req->session_id.len) == 0) {
 
 			if (proc->remote_addr_len == cache->remote_addr_len &&
-			    ip_cmp(&proc->remote_addr, &cache->remote_addr,
-				   proc->remote_addr_len) == 0) {
+			    ip_cmp(&proc->remote_addr, &cache->remote_addr) == 0) {
 
 				rep->reply =
 				    SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;

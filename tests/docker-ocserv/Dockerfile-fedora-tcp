@@ -3,6 +3,7 @@ FROM fedora:21
 RUN yum install -y gnutls gnutls-utils protobuf-c iproute pcllib http-parser tcp_wrappers pam systemd libseccomp
 RUN yum install -y bash openssh-server nuttcp
 RUN yum install -y libnl3 libtalloc
+RUN yum install -y freeradius-client
 RUN yum install -y lz4
 RUN systemctl enable sshd
 RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/sshd_config

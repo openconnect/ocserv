@@ -27,38 +27,38 @@
 #include <vpn.h>
 #include <worker.h>
 
-int post_urlfw_handler(worker_st *ws, unsigned http_ver)
+int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 {
 	int ret, e, fd;
 	struct http_req_st *req = &ws->req;
 	unsigned i, length;
-	urlfw_st *handler = NULL;
+	kkdcp_st *handler = NULL;
 	char buf[16*1024];
 	const char *reason = "Unknown";
 
-	for (i=0;i<ws->config->urlfw_size;i++) {
-		if (ws->config->urlfw[i].url && strcmp(ws->config->urlfw[i].url, req->url) == 0) {
-			handler = &ws->config->urlfw[i];
+	for (i=0;i<ws->config->kkdcp_size;i++) {
+		if (ws->config->kkdcp[i].url && strcmp(ws->config->kkdcp[i].url, req->url) == 0) {
+			handler = &ws->config->kkdcp[i];
 			break;
 		}
 	}
 
 	if (handler == NULL) {
-		oclog(ws, LOG_HTTP_DEBUG, "could not figure urlfw handler for %s", req->url);
+		oclog(ws, LOG_HTTP_DEBUG, "could not figure kkdcp handler for %s", req->url);
 		return -1;
 	}
 
 	if (req->body_length == 0) {
-		oclog(ws, LOG_HTTP_DEBUG, "empty body length for urlfw handler %s", req->url);
+		oclog(ws, LOG_HTTP_DEBUG, "empty body length for kkdcp handler %s", req->url);
 		return -1;
 	}
 
-	oclog(ws, LOG_HTTP_DEBUG, "POST urlfw data: %u bytes", (unsigned)req->body_length);
+	oclog(ws, LOG_HTTP_DEBUG, "POST kkdcp data: %u bytes", (unsigned)req->body_length);
 
 	fd = socket(handler->ai_family, handler->ai_socktype, handler->ai_protocol);
 	if (fd == -1) {
 		e = errno;
-		oclog(ws, LOG_INFO, "urlfw: socket error: %s", strerror(e));
+		oclog(ws, LOG_INFO, "kkdcp: socket error: %s", strerror(e));
 		reason = "Socket error";
 		goto fail;
 	}
@@ -66,7 +66,7 @@ int post_urlfw_handler(worker_st *ws, unsigned http_ver)
 	ret = connect(fd, (struct sockaddr*)&handler->addr, handler->addr_len);
 	if (ret == -1) {
 		e = errno;
-		oclog(ws, LOG_INFO, "urlfw: connect error: %s", strerror(e));
+		oclog(ws, LOG_INFO, "kkdcp: connect error: %s", strerror(e));
 		reason = "Connect error";
 		goto fail;
 	}
@@ -75,9 +75,9 @@ int post_urlfw_handler(worker_st *ws, unsigned http_ver)
 	if (ret != req->body_length) {
 		if (ret == -1) {
 			e = errno;
-			oclog(ws, LOG_INFO, "urlfw: send error: %s", strerror(e));
+			oclog(ws, LOG_INFO, "kkdcp: send error: %s", strerror(e));
 		} else {
-			oclog(ws, LOG_INFO, "urlfw: send error: only %d were sent", ret);
+			oclog(ws, LOG_INFO, "kkdcp: send error: only %d were sent", ret);
 		}
 		reason = "Send error";
 		goto fail;
@@ -86,7 +86,7 @@ int post_urlfw_handler(worker_st *ws, unsigned http_ver)
 	ret = recv(fd, buf, sizeof(buf), 0);
 	if (ret == -1) {
 		e = errno;
-		oclog(ws, LOG_INFO, "urlfw: recv error: %s", strerror(e));
+		oclog(ws, LOG_INFO, "kkdcp: recv error: %s", strerror(e));
 		reason = "Recv error";
 		goto fail;
 	}

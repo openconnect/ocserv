@@ -217,7 +217,7 @@ typedef struct auth_struct_st {
 	bool enabled;
 } auth_struct_st;
 
-typedef struct urlfw_st {
+typedef struct kkdcp_st {
 	char *url;
 	char *content_type; /* Content-Type */
 	struct sockaddr_storage addr;
@@ -225,7 +225,7 @@ typedef struct urlfw_st {
 	int ai_family;
 	int ai_socktype;
 	int ai_protocol;
-} urlfw_st;
+} kkdcp_st;
 
 struct cfg_st {
 	char *name; /* server name */
@@ -236,8 +236,8 @@ struct cfg_st {
 	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
 	unsigned int stats_report_time;
 
-	urlfw_st *urlfw;
-	unsigned int urlfw_size;
+	kkdcp_st *kkdcp;
+	unsigned int kkdcp_size;
 
 	char *pin_file;
 	char *srk_pin_file;

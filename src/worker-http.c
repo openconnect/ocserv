@@ -420,9 +420,9 @@ url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 		p++;
 	} while (p->url != NULL);
 
-	for (i=0;i<ws->config->urlfw_size;i++) {
-		if (ws->config->urlfw[i].url && strcmp(ws->config->urlfw[i].url, url) == 0)
-			return post_urlfw_handler;
+	for (i=0;i<ws->config->kkdcp_size;i++) {
+		if (ws->config->kkdcp[i].url && strcmp(ws->config->kkdcp[i].url, url) == 0)
+			return post_kkdcp_handler;
 	}
 
 	return NULL;

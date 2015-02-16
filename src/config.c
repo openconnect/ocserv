@@ -95,7 +95,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "connect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "disconnect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "url-fw", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "kkdcp", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "socket-file", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "listen-clear-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
@@ -525,15 +525,15 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 	talloc_free(auth);
 }
 
-static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
+static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
 {
 	unsigned i;
 	char *p, *p2, *p3, *cont_type;
 	struct addrinfo hints, *res;
 	int ret;
 
-	config->urlfw = talloc_size(config, urlfw_size*sizeof(urlfw_st));
-	if (config->urlfw == NULL) {
+	config->kkdcp = talloc_size(config, urlfw_size*sizeof(kkdcp_st));
+	if (config->kkdcp == NULL) {
 		fprintf(stderr, "memory error\n");
 		exit(1);
 	}
@@ -542,7 +542,7 @@ static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		p = urlfw[i];
 		p2 = strchr(p, ' ');
 		if (p2 == NULL) {
-			fprintf(stderr, "Cannot parse url-fw string: %s\n", p);
+			fprintf(stderr, "Cannot parse kkdcp string: %s\n", p);
 			exit(1);
 		}
 		*p2 = 0;
@@ -563,7 +563,7 @@ static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		if (cont_type != NULL) {
 			*cont_type = 0;
 			cont_type++;
-			config->urlfw[i].content_type = talloc_strdup(config->urlfw, cont_type);
+			config->kkdcp[i].content_type = talloc_strdup(config->kkdcp, cont_type);
 		}
 
 		p3 = strchr(p2, ':');
@@ -581,17 +581,17 @@ static void parse_urlfw(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 			exit(1);
 		}
 
-		memcpy(&config->urlfw[i].addr, res->ai_addr, res->ai_addrlen);
-		config->urlfw[i].addr_len = res->ai_addrlen;
-		config->urlfw[i].ai_family = res->ai_family;
-		config->urlfw[i].ai_socktype = res->ai_socktype;
-		config->urlfw[i].ai_protocol = res->ai_protocol;
+		memcpy(&config->kkdcp[i].addr, res->ai_addr, res->ai_addrlen);
+		config->kkdcp[i].addr_len = res->ai_addrlen;
+		config->kkdcp[i].ai_family = res->ai_family;
+		config->kkdcp[i].ai_socktype = res->ai_socktype;
+		config->kkdcp[i].ai_protocol = res->ai_protocol;
 
-		config->urlfw[i].url = talloc_strdup(config->urlfw, p);
+		config->kkdcp[i].url = talloc_strdup(config->kkdcp, p);
 		freeaddrinfo(res);  
 	}
 
-	config->urlfw_size = urlfw_size;
+	config->kkdcp_size = urlfw_size;
 }
 
 static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
@@ -656,9 +656,9 @@ unsigned urlfw_size = 0;
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
 	READ_STRING("listen-clear-file", config->unix_conn_file);
 
-	READ_MULTI_LINE("url-fw", urlfw, urlfw_size);
+	READ_MULTI_LINE("kkdcp", urlfw, urlfw_size);
 	if (urlfw_size > 0) {
-		parse_urlfw(config, urlfw, urlfw_size);
+		parse_kkdcp(config, urlfw, urlfw_size);
 		talloc_free(urlfw);
 	}
 
@@ -1074,9 +1074,9 @@ unsigned i;
 	DEL(config->disconnect_script);
 	DEL(config->proxy_url);
 
-	for (i=0;i<config->urlfw_size;i++)
-		DEL(config->urlfw[i].url);
-	DEL(config->urlfw);
+	for (i=0;i<config->kkdcp_size;i++)
+		DEL(config->kkdcp[i].url);
+	DEL(config->kkdcp);
 
 	DEL(config->network.ipv4);
 	DEL(config->network.ipv4_netmask);

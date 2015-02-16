@@ -269,7 +269,7 @@ int auth_user_deinit(worker_st *ws);
 
 int get_auth_handler(worker_st *server, unsigned http_ver);
 int post_auth_handler(worker_st *server, unsigned http_ver);
-int post_urlfw_handler(worker_st *server, unsigned http_ver);
+int post_kkdcp_handler(worker_st *server, unsigned http_ver);
 
 int get_empty_handler(worker_st *server, unsigned http_ver);
 int get_config_handler(worker_st *ws, unsigned http_ver);

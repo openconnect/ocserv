@@ -62,4 +62,8 @@ tests/docker-ocserv/ocpasswd
 tests/docker-ocserv/occtl
 tests/docker-ocserv/ocserv
 tests/docker-ocserv/Dockerfile
+tests/docker-kerberos/Dockerfile
+tests/docker-kerberos/ocpasswd
+tests/docker-kerberos/occtl
+tests/docker-kerberos/ocserv
 gl/strings.h

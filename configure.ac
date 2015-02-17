@@ -475,6 +475,7 @@ AC_CONFIG_FILES([
 	doc/Makefile
 	gl/Makefile
 	tests/docker-ocserv/Makefile
+	tests/docker-kerberos/Makefile
 	tests/Makefile
 ])
 AC_OUTPUT

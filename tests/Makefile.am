@@ -8,7 +8,7 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-explicit-ip user-config-explicit/test2 user-config-explicit/test3 \
 	user-config-explicit/test4 test-pass-opt-cert.config test-gssapi.config
 
-SUBDIRS = docker-ocserv
+SUBDIRS = docker-ocserv docker-kerberos
 
 dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie test-pam test-stress full-test test-group-pass test-pass-group-cert \

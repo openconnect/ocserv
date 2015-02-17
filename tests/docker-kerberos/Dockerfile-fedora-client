@@ -1,0 +1,30 @@
+# Clone from the Fedora 21 image
+FROM fedora:21
+
+RUN yum install -y krb5-libs krb5-workstation 
+RUN yum install -y gnutls gnutls-utils iproute systemd
+RUN yum install -y bash net-tools nuttcp iputils openssh-clients passwd
+RUN yum install -y lz4 openconnect
+
+# To be able to debug
+RUN yum install -y openssh-server strace lsof && yum clean all
+RUN echo 'root:root' | chpasswd
+RUN echo set -o vi >> /etc/bashrc
+
+EXPOSE  80 443 443/udp 88 88/udp
+
+ADD krb5.conf /etc/
+
+RUN useradd -m -p "$6$ZzoUpzPP$PaQoBzfpVCSO23OXB523mgcHaXeVkW/zqYFr84GiItggqo9NK.MAkqMXKuDLybuscuEwxtpAMSNaxTftyaQjT." testuser
+
+ADD ca.pem /etc/
+
+# It's not possible to use mknod inside a container with the default LXC
+# template, so we untar it from this archive.
+ADD dev-tun.tgz /dev/
+
+ADD openconnect /usr/sbin/
+ADD libopenconnect.so.5.1.0 /usr/lib64/
+RUN ldconfig
+
+CMD sshd-keygen;/usr/sbin/sshd;echo testuser123|kinit testuser@KERBEROS.TEST && /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem -b && sleep 5 && ping -w 5 192.168.1.1 && ping6 -w 5 fd91:6d87:7341:db6a::1 && kdestroy && ( /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem --cookieonly --non-inter || touch /tmp/ok ) ;sleep 3600

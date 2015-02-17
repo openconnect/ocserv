@@ -12,6 +12,10 @@ LOCKFILE="lockfile docker.lock"
 UNLOCKFILE="rm -f docker.lock"
 fi
 
+if test -z "$DOCKER_DIR";then
+	DOCKER_DIR=docker-ocserv
+fi
+
 if ! test -x $DOCKER;then
 	echo "The docker program is needed to perform this test"
 	exit 77
@@ -42,6 +46,7 @@ $LOCKFILE
 $DOCKER stop $IMAGE_NAME >/dev/null 2>&1
 $DOCKER rm $IMAGE_NAME >/dev/null 2>&1
 
+rm -f $DOCKER_DIR/Dockerfile
 if test "$FEDORA" = 1;then
 	echo "Using the fedora image"
 	$DOCKER pull fedora:21
@@ -50,7 +55,7 @@ if test "$FEDORA" = 1;then
 		$UNLOCKFILE
 		exit 1
 	fi
-	cp docker-ocserv/Dockerfile-fedora-$CONFIG docker-ocserv/Dockerfile
+	cp $DOCKER_DIR/Dockerfile-fedora-$CONFIG $DOCKER_DIR/Dockerfile
 else #DEBIAN
 	echo "Using the Debian image"
 	$DOCKER pull debian:jessie
@@ -59,14 +64,14 @@ else #DEBIAN
 		$UNLOCKFILE
 		exit 1
 	fi
-	cp docker-ocserv/Dockerfile-debian-$CONFIG docker-ocserv/Dockerfile
+	cp $DOCKER_DIR/Dockerfile-debian-$CONFIG $DOCKER_DIR/Dockerfile
 fi
 
-rm -f docker-ocserv/ocserv docker-ocserv/ocpasswd docker-ocserv/occtl
-cp ../src/ocserv ../src/ocpasswd ../src/occtl docker-ocserv/
+rm -f $DOCKER_DIR/ocserv $DOCKER_DIR/ocpasswd $DOCKER_DIR/occtl
+cp ../src/ocserv ../src/ocpasswd ../src/occtl $DOCKER_DIR/
 
 echo "Creating image $IMAGE"
-$DOCKER build -t $IMAGE docker-ocserv/
+$DOCKER build -t $IMAGE $DOCKER_DIR/
 if test $? != 0;then
 	echo "Cannot build docker image"
 	$UNLOCKFILE

@@ -129,7 +129,7 @@ static void gssapi_global_deinit()
 		gss_release_cred(&minor, &glob_creds);
 }
 
-static void get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_type)
+static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_type)
 {
 	int ret;
 	OM_uint32 minor;
@@ -140,7 +140,12 @@ static void get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech
 	ret = gss_display_name(&minor, client, &name, NULL);
 	if (GSS_ERROR(ret)) {
 		print_gss_err("gss_display_name", GSS_C_NO_OID, ret, minor);
-		return;
+		return -1;
+	}
+
+	if (name.length < sizeof(pctx->username)) {
+		memcpy(pctx->username, name.value, name.length);
+		pctx->username[name.length] = 0;
 	}
 
 	syslog(LOG_DEBUG, "gssapi: full username %.*s", (unsigned)name.length, (char*)name.value);
@@ -148,17 +153,24 @@ static void get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech
 
 	ret = gss_localname(&minor, client, mech_type, &name);
 	if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
-		print_gss_err("gss_display_name", GSS_C_NO_OID, ret, minor);
-		return;
+		print_gss_err("gss_localname", GSS_C_NO_OID, ret, minor);
+		if (pctx->username[0] == 0)
+			return -1;
+		else
+			return 0;
 	}
 
 	syslog(LOG_DEBUG, "gssapi: username %.*s", (unsigned)name.length, (char*)name.value);
+	if (name.length < sizeof(pctx->username)) {
+		memcpy(pctx->username, name.value, name.length);
+		pctx->username[name.length] = 0;
+	}
 
-	memcpy(pctx->username, name.value, name.length);
-	pctx->username[name.length] = 0;
 	gss_release_buffer(&minor, &name);
-
-	return;
+	if (pctx->username[0] == 0)
+		return -1;
+	else
+		return 0;
 }
 
 static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const char *ip)
@@ -198,9 +210,8 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 		gss_release_name(&minor, &client);
 		ret = ERR_AUTH_CONTINUE;
 	} else if (ret == GSS_S_COMPLETE) {
-		get_name(pctx, client, mech_type);
+		ret = get_name(pctx, client, mech_type);
 		gss_release_name(&minor, &client);
-		ret = 0;
 	} else {
 		print_gss_err("gss_accept_sec_context", mech_type, ret, minor);
 		return ERR_AUTH_FAIL;
@@ -222,7 +233,7 @@ static int gssapi_auth_user(void *ctx, char *username, int username_size)
 	struct gssapi_ctx_st *pctx = ctx;
 
 	strlcpy(username, pctx->username, username_size);
-	return -1;
+	return 0;
 }
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
@@ -256,9 +267,9 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 		gss_release_name(&minor, &client);
 		return ERR_AUTH_CONTINUE;
 	} else if (ret == GSS_S_COMPLETE) {
-		get_name(pctx, client, mech_type);
+		ret = get_name(pctx, client, mech_type);
 		gss_release_name(&minor, &client);
-		return 0;
+		return ret;
 	} else {
 		print_gss_err("gss_accept_sec_context", mech_type, ret, minor);
 		return ERR_AUTH_FAIL;

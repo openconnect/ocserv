@@ -280,6 +280,9 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	} else if (result == 0) {
 		e->status = PS_AUTH_COMPLETED;
 
+		e->module->auth_user(e->auth_ctx, e->username,
+				     sizeof(e->username));
+
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__OK);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
@@ -571,10 +574,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		e->groupname[sizeof(e->groupname) - 1] = 0;
 
 		/* a module is allowed to change the name of the user */
-		ret =
-		    e->module->auth_user(e->auth_ctx, e->username,
-				      sizeof(e->username));
-		if (ret != 0 && req->user_name != NULL) {
+		if (req->user_name != NULL) {
 			strlcpy(e->username, req->user_name, sizeof(e->username));
 		}
 	}

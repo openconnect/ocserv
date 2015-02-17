@@ -102,7 +102,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip),
 	       SA_IN_SIZE(proc->ipv6->lip_len));
 	ifr6.ifr6_ifindex = idx;
-	ifr6.ifr6_prefixlen = s->config->network.ipv6_prefix;
+	ifr6.ifr6_prefixlen = 128;
 
 	ret = ioctl(fd, SIOCSIFADDR, &ifr6);
 	if (ret != 0) {

@@ -179,7 +179,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		login_msg_end = oc_login_msg_end;
 	}
 
-	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
+	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && ws->auth_state < S_AUTH_COOKIE) {
 		if (ws->req.authorization == NULL || ws->req.authorization_size == 0)
 			return basic_auth_handler(ws, http_ver, NULL);
 		else

@@ -166,7 +166,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	if (req->value.length <= 0)
 		return;
 
-	oclog(ws, LOG_HTTP_DEBUG, "HTTP: %.*s: %.*s", (int)req->header.length,
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: %.*s", (int)req->header.length,
 	      req->header.data, (int)req->value.length, req->value.data);
 
 	value = talloc_size(ws, req->value.length + 1);

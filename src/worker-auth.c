@@ -755,7 +755,6 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt)
 		}
 
 		strlcpy(ws->username, msg->user_name, sizeof(ws->username));
-
 		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
 			/* update our sid */
 			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
@@ -1107,10 +1106,10 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 		return -1;
 
 	if (msg == NULL) {
-		oclog(ws, LOG_HTTP_DEBUG, "WWW-Authenticate: Negotiate");
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: Negotiate");
 		ret = cstp_puts(ws, "WWW-Authenticate: Negotiate\r\n");
 	} else {
-		oclog(ws, LOG_HTTP_DEBUG, "WWW-Authenticate: Negotiate %s", msg);
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: Negotiate %s", msg);
 		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", msg);
 	}
 	if (ret < 0)

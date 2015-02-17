@@ -1,22 +1,22 @@
 /* === Authentication ===
  
-  main                 sec-mod            worker
-   |                      |                  |
-   |                      |  <--AUTH_INIT--- |
-   |                      |  ---AUTH_REP---> |
-   |                      |  <--AUTH_CONT--- |
-   |                      |         .        |
-   |                      |         .        |
-   |                      |         .        |
-   |                      |  ----AUTH_REP--> |
-   |                      |                  |
-   | <----------AUTH_COOKIE_REQ------------- |
-   |                      |                  |
-   | ---SESSION_OPEN----> |                  |
-   | <--SESSION_REPLY---- |                  |
-   |                      |                  |
-   | -----------------AUTH_REP-------------> |
-   |                      |                  |
+  main                 sec-mod                 worker
+   |                      |                      |
+   |                      |  <--SEC_AUTH_INIT--- |
+   |                      |  ---SEC_AUTH_REP---> |
+   |                      |  <--SEC_AUTH_CONT--- |
+   |                      |         .            |
+   |                      |         .            |
+   |                      |         .            |
+   |                      |  ----SEC_AUTH_REP--> |
+   |                      |                      |
+   | <----------AUTH_COOKIE_REQ----------------- |
+   |                      |                      |
+   | ---SESSION_OPEN----> |                      |
+   | <--SESSION_REPLY---- |                      |
+   |                      |                      |
+   | -----------------AUTH_REP-----------------> |
+   |                      |                      |
    |                      |
    |                      |            (disconnect)
    | ---SESSION_CLOSE---> |

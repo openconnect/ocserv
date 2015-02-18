@@ -34,7 +34,7 @@ int der_decode(const uint8_t *der, unsigned der_size, uint8_t *out, unsigned *ou
 	int ret, len;
 	ASN1_TYPE c2 = ASN1_TYPE_EMPTY;
 
-	ret = asn1_create_element(_kkdcp_pkix1_asn, "KDC-PROXY-MESSAGE", &c2);
+	ret = asn1_create_element(_kkdcp_pkix1_asn, "KKDCP.KDC-PROXY-MESSAGE", &c2);
 	if (ret != ASN1_SUCCESS) {
 		*error = ret;
 		return -1;
@@ -68,7 +68,7 @@ int der_encode_inplace(uint8_t *raw, unsigned *raw_size, unsigned max_size, int 
 	int ret, len;
 	ASN1_TYPE c2 = ASN1_TYPE_EMPTY;
 
-	ret = asn1_create_element(_kkdcp_pkix1_asn, "KDC-PROXY-MESSAGE", &c2);
+	ret = asn1_create_element(_kkdcp_pkix1_asn, "KKDCP.KDC-PROXY-MESSAGE", &c2);
 	if (ret != ASN1_SUCCESS) {
 		*error = ret;
 		return -1;
@@ -85,6 +85,7 @@ int der_encode_inplace(uint8_t *raw, unsigned *raw_size, unsigned max_size, int 
 	asn1_write_value(c2, "dclocator-hint", NULL, 0);
 
 	len = max_size;
+
 	ret = asn1_der_coding(c2, "", raw, &len, NULL);
 	if (ret != ASN1_SUCCESS) {
 		*error = ret;
@@ -127,12 +128,12 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		return -1;
 	}
 
-	oclog(ws, LOG_HTTP_DEBUG, "POST kkdcp data: %u bytes", (unsigned)req->body_length);
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending kkdcp: %u bytes", (unsigned)req->body_length);
 
 	fd = socket(handler->ai_family, handler->ai_socktype, handler->ai_protocol);
 	if (fd == -1) {
 		e = errno;
-		oclog(ws, LOG_INFO, "kkdcp: socket error: %s", strerror(e));
+		oclog(ws, LOG_ERR, "kkdcp: socket error: %s", strerror(e));
 		reason = "Socket error";
 		goto fail;
 	}
@@ -140,7 +141,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	ret = connect(fd, (struct sockaddr*)&handler->addr, handler->addr_len);
 	if (ret == -1) {
 		e = errno;
-		oclog(ws, LOG_INFO, "kkdcp: connect error: %s", strerror(e));
+		oclog(ws, LOG_ERR, "kkdcp: connect error: %s", strerror(e));
 		reason = "Connect error";
 		goto fail;
 	}
@@ -148,14 +149,14 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	length = BUF_SIZE;
 	buf = talloc_size(ws, length);
 	if (buf == NULL) {
-		oclog(ws, LOG_INFO, "kkdcp: memory error");
+		oclog(ws, LOG_ERR, "kkdcp: memory error");
 		reason = "Memory error";
 		goto fail;
 	}
 
 	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, &e);
-	if (ret <= 0) {
-		oclog(ws, LOG_INFO, "kkdcp: DER decoding error: %s", asn1_strerror(e));
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "kkdcp: DER decoding error: %s", asn1_strerror(e));
 		reason = "DER decoding error";
 		goto fail;
 	}
@@ -164,9 +165,9 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	if (ret != length) {
 		if (ret == -1) {
 			e = errno;
-			oclog(ws, LOG_INFO, "kkdcp: send error: %s", strerror(e));
+			oclog(ws, LOG_ERR, "kkdcp: send error: %s", strerror(e));
 		} else {
-			oclog(ws, LOG_INFO, "kkdcp: send error: only %d were sent", ret);
+			oclog(ws, LOG_ERR, "kkdcp: send error: only %d were sent", ret);
 		}
 		reason = "Send error";
 		goto fail;
@@ -175,7 +176,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	ret = recv(fd, buf, sizeof(buf), 0);
 	if (ret == -1) {
 		e = errno;
-		oclog(ws, LOG_INFO, "kkdcp: recv error: %s", strerror(e));
+		oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
 		reason = "Recv error";
 		goto fail;
 	}
@@ -197,7 +198,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 
 	ret = der_encode_inplace(buf, &length, BUF_SIZE, &e);
 	if (ret < 0) {
-		oclog(ws, LOG_INFO, "kkdcp: DER encoding error: %s", asn1_strerror(e));
+		oclog(ws, LOG_ERR, "kkdcp: DER encoding error: %s", asn1_strerror(e));
 		reason = "DER encoding error";
 		goto fail;
 	}

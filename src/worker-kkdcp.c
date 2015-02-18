@@ -26,6 +26,7 @@
 
 #include <vpn.h>
 #include <worker.h>
+#include "common.h"
 
 #ifdef HAVE_GSSAPI
 
@@ -109,6 +110,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	unsigned i, length;
 	kkdcp_st *handler = NULL;
 	uint8_t *buf = NULL;
+	uint32_t mlength;
 	const char *reason = "Unknown";
 
 	for (i=0;i<ws->config->kkdcp_size;i++) {
@@ -128,7 +130,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		return -1;
 	}
 
-	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending kkdcp: %u bytes", (unsigned)req->body_length);
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
 
 	fd = socket(handler->ai_family, handler->ai_socktype, handler->ai_protocol);
 	if (fd == -1) {
@@ -161,6 +163,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		goto fail;
 	}
 
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending kkdcp request: %u bytes", (unsigned)length);
 	ret = send(fd, buf, length, 0);
 	if (ret != length) {
 		if (ret == -1) {
@@ -173,14 +176,46 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		goto fail;
 	}
 
-	ret = recv(fd, buf, sizeof(buf), 0);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
-		reason = "Recv error";
-		goto fail;
+	if (handler->ai_socktype == SOCK_DGRAM) {
+		ret = recv(fd, buf, BUF_SIZE, 0);
+		if (ret == -1) {
+			e = errno;
+			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
+			reason = "Recv error";
+			goto fail;
+		}
+
+		length = ret;
+	} else {
+		ret = recv(fd, buf, 4, 0);
+		if (ret < 4) {
+			e = errno;
+			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
+			reason = "Recv error";
+			ret = -1;
+			goto fail;
+		}
+
+		memcpy(&mlength, buf, 4);
+		mlength = ntohl(mlength);
+		if (mlength >= BUF_SIZE-4) {
+			oclog(ws, LOG_ERR, "kkdcp: too long message (%d bytes)", (int)mlength);
+			reason = "Recv error";
+			ret = -1;
+			goto fail;
+		}
+
+		ret = force_read_timeout(fd, buf+4, mlength, 5);
+		if (ret == -1) {
+			e = errno;
+			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
+			reason = "Recv error";
+			goto fail;
+		}
+		length = ret + 4;
 	}
-	length = ret;
+
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp reply: %u bytes", (unsigned)length);
 
 	cstp_cork(ws);
 	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
@@ -203,6 +238,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		goto fail;
 	}
 
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending kkdcp framed reply: %u bytes", (unsigned)length);
 	ret =
 	    cstp_printf(ws, "Content-Length: %u\r\n",
 		       (unsigned int)length);

@@ -87,10 +87,14 @@ static void gssapi_global_init(void *pool, void *additional)
 	OM_uint32 time, minor;
 	gss_name_t name = GSS_C_NO_NAME;
 
-	if (additional && strncmp(additional, "keytab:", 7) == 0) {
+	if (additional && strncmp(additional, "keytab", 6) == 0) {
 		gss_key_value_element_desc element;
 		gss_key_value_set_desc cred_store;
 
+		if (((uint8_t*)additional)[6] != ':' && ((uint8_t*)additional)[6] != '=') {
+			fprintf(stderr, "syntax error at: %s\n", (char*)additional);
+			exit(1);
+		}
 		element.key = "keytab";
 		element.value = additional+7;
 		cred_store.count = 1;
@@ -139,7 +143,7 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 
 	ret = gss_display_name(&minor, client, &name, NULL);
 	if (GSS_ERROR(ret)) {
-		print_gss_err("gss_display_name", GSS_C_NO_OID, ret, minor);
+		print_gss_err("gss_display_name", mech_type, ret, minor);
 		return -1;
 	}
 
@@ -152,12 +156,11 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 	gss_release_buffer(&minor, &name);
 
 	ret = gss_localname(&minor, client, mech_type, &name);
+	if (GSS_ERROR(ret) && mech_type !=  GSS_C_NO_OID)
+		ret = gss_localname(&minor, client, GSS_C_NO_OID, &name);
 	if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
-		print_gss_err("gss_localname", GSS_C_NO_OID, ret, minor);
-		if (pctx->username[0] == 0)
-			return -1;
-		else
-			return 0;
+		print_gss_err("gss_localname", mech_type, ret, minor);
+		return -1;
 	}
 
 	syslog(LOG_DEBUG, "gssapi: username %.*s", (unsigned)name.length, (char*)name.value);

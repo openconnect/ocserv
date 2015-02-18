@@ -76,7 +76,7 @@ static struct cfg_options available_options[] = {
 		do { \
 		        if (num >= MAX_CONFIG_ENTRIES) \
 			        break; \
-		        if (val && !strcmp(val->pzName, name)==0) \
+		        if (val && strcmp(val->pzName, name)!=0) \
 				continue; \
 		        s_name[num] = talloc_strdup(pool, val->v.strVal); \
 		        num++; \

@@ -1398,8 +1398,8 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	if (sd != -1)
 		close(sd);
 	cstp_printf(ws,
-		   "HTTP/1.1 401 Unauthorized\r\nX-Reason: %s\r\n\r\n",
-		   reason);
+		   "HTTP/1.%d 401 Unauthorized\r\nContent-Length: 0\r\nX-Reason: %s\r\n\r\n",
+		   http_ver, reason);
 	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 	talloc_free(msg);
 	exit(1);

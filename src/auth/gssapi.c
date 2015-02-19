@@ -53,7 +53,7 @@ static void print_gss_err(const char *where,
 			  OM_uint32 err_min)
 {
 	OM_uint32 major, minor, msg_ctx = 0;
-	gss_buffer_desc status;
+	gss_buffer_desc status = GSS_C_EMPTY_BUFFER;
 
 	do {
 		major = gss_display_status(&minor, err_maj, GSS_C_GSS_CODE,
@@ -137,7 +137,7 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 {
 	int ret;
 	OM_uint32 minor;
-	gss_buffer_desc name;
+	gss_buffer_desc name = GSS_C_EMPTY_BUFFER;
 
 	pctx->username[0] = 0;
 
@@ -152,22 +152,19 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 		pctx->username[name.length] = 0;
 	}
 
-	syslog(LOG_DEBUG, "gssapi: full username %.*s", (unsigned)name.length, (char*)name.value);
+	syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s", (unsigned)name.length, (char*)name.value);
 	gss_release_buffer(&minor, &name);
 
 	ret = gss_localname(&minor, client, mech_type, &name);
-	if (GSS_ERROR(ret) && mech_type !=  GSS_C_NO_OID)
-		ret = gss_localname(&minor, client, GSS_C_NO_OID, &name);
 	if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
 		print_gss_err("gss_localname", mech_type, ret, minor);
+		syslog(LOG_INFO, "gssapi: authenticated user doesn't map to a local user");
 		return -1;
 	}
 
-	syslog(LOG_DEBUG, "gssapi: username %.*s", (unsigned)name.length, (char*)name.value);
-	if (name.length < sizeof(pctx->username)) {
-		memcpy(pctx->username, name.value, name.length);
-		pctx->username[name.length] = 0;
-	}
+	memcpy(pctx->username, name.value, name.length);
+	pctx->username[name.length] = 0;
+	syslog(LOG_INFO, "gssapi: authenticated local user: %s", pctx->username);
 
 	gss_release_buffer(&minor, &name);
 	if (pctx->username[0] == 0)
@@ -180,7 +177,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 {
 	struct gssapi_ctx_st *pctx;
 	OM_uint32 minor, flags, time;
-	gss_buffer_desc buf;
+	gss_buffer_desc buf= GSS_C_EMPTY_BUFFER;
 	gss_name_t client = GSS_C_NO_NAME;
 	gss_OID mech_type = GSS_C_NO_OID;
 	int ret;
@@ -245,7 +242,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 	OM_uint32 minor, flags, time;
-	gss_buffer_desc buf;
+	gss_buffer_desc buf = GSS_C_EMPTY_BUFFER;
 	gss_name_t client = GSS_C_NO_NAME;
 	gss_OID mech_type = GSS_C_NO_OID;
 	size_t raw_len;

@@ -347,7 +347,6 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 				seclog(sec, LOG_ERR, "could not open session.");
 				rep.reply = AUTH__REP__FAILED;
 			} else {
-				e->have_session = 1;
 				rep.reply = AUTH__REP__OK;
 			}
 		} else {
@@ -592,11 +591,10 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 
 	seclog(sec, LOG_DEBUG, "auth deinit for user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
-		if (e->have_session) {
+		if (module->close_session) {
 			module->close_session(e->auth_ctx, &e->stats);
 		}
 		module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;
-		e->have_session = 0;
 	}
 }

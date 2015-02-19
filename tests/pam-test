@@ -1,0 +1,175 @@
+#!/bin/sh
+#
+# Copyright (C) 2014 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ocserv; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+srcdir=${srcdir:-.}
+
+PORT_OCSERV=5551
+#this test can only be run as root
+id|grep root >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+CONFIG="pam"
+IMAGE=ocserv-pam-test
+IMAGE_NAME=test_ocserv_pam
+. ./docker-common.sh
+
+$DOCKER run -P --privileged=true --tty=false -d --name test_ocserv_pam $IMAGE
+if test $? != 0;then
+	echo "Cannot run docker image"
+	exit 1
+fi
+
+echo "ocserv image was run"
+#wait for ocserv to server
+sleep 5
+
+IP=`$DOCKER inspect test_ocserv_pam | grep IPAddress | cut -d '"' -f 4`
+if test -z "$IP";then
+	echo "Detected IP is null!"
+	stop
+fi
+echo "Detected IP: $IP"
+
+printf "testuser\n" >pass-pam.tmp
+openconnect $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
+if test $? = 0;then
+	echo "Authentication with wrong password succeeded!"
+	stop
+fi
+
+printf "testuser123\n" >pass-pam.tmp
+openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
+if test $? = 0;then
+	echo "Authentication with wrong username succeeded!"
+	stop
+fi
+
+printf "testuser123\n" >pass-pam.tmp
+openconnect $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-pam.tmp &
+PID=$!
+
+rm -f pass-pam.tmp
+
+#wait for openconnect
+sleep 5
+
+# The client IP depends on the username so it shouldn't change.
+ping -w 5 192.168.1.1
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+ping -w 5 192.168.1.1 -s 1500
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+ping6 -w 5 fd91:6d87:7341:db6a::1
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping the IPv6 of ocserv"
+	stop
+fi
+
+echo "UserKnownHostsFile ./known-hosts.tmp" >config.tmp
+printf "#\!/bin/sh\n" >echo-admin.tmp
+printf "echo yes" >>echo-admin.tmp
+printf "echo root" >>echo-admin.tmp
+printf "\n" >>echo-admin.tmp
+chmod 755 echo-admin.tmp
+export SSH_ASKPASS="./echo-admin.tmp"
+setsid ssh -T -F config.tmp root@192.168.1.1 occtl show user testuser >out.tmp 2>&1
+cat out.tmp
+
+printf "#\!/bin/sh\n" >echo-admin.tmp
+printf "echo root" >>echo-admin.tmp
+printf "\n" >>echo-admin.tmp
+chmod 755 echo-admin.tmp
+setsid ssh -T -F config.tmp root@192.168.1.1 occtl show user testuser >out.tmp 2>&1
+cat out.tmp
+rm -f echo-admin.tmp
+rm -f config.tmp
+rm -f known-hosts.tmp
+
+grep "Username" out.tmp
+if test $? != 0;then
+	kill $PID
+	echo "could not find user information"
+	stop
+fi
+
+rm -f out.tmp
+
+# There is an issue in nuttcp that makes it crash under docker if
+# /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
+if test "$FEDORA" = 1;then
+nuttcp -T 10 -t 192.168.1.1
+if test $? != 0;then
+	kill $PID
+	echo "Cannot send to ocserv"
+	stop
+fi
+
+nuttcp -T 10 -r 192.168.1.1
+if test $? != 0;then
+	kill $PID
+	echo "Cannot recv from ocserv"
+	stop
+fi
+fi
+
+sleep 2
+
+kill $PID
+
+sleep 4
+
+#check whether /tmp/disconnect/ok was created
+rm -f ./not-ok
+$DOCKER cp test_ocserv_pam:/tmp/disconnect/not-ok ./
+if test -f ./not-ok;then
+	echo "There was an issue getting stats"
+	stop
+fi
+rm -f ./not-ok
+
+ret=0
+
+rm -f ./tmp-full/ok
+$DOCKER cp test_ocserv_pam:/tmp/disconnect/ok ./tmp-full/
+if ! test -f ./tmp-full/ok;then
+	echo "Don't know if stats were received"
+	ret=77
+else
+	echo -n "stats: "
+	echo `cat ./tmp-full/ok`
+	rm -rf ./tmp-full/
+fi
+
+$DOCKER stop test_ocserv_pam
+$DOCKER rm test_ocserv_pam
+
+exit $ret

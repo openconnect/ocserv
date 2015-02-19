@@ -1155,7 +1155,7 @@ int main(int argc, char** argv)
 				/* Create a command socket */
 				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
 				if (ret < 0) {
-					mslog(s, NULL, LOG_ERR, "Error creating command socket");
+					mslog(s, NULL, LOG_ERR, "error creating command socket");
 					close(fd);
 					break;
 				}

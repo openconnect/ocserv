@@ -205,8 +205,8 @@ static int pam_auth_msg(void* ctx, void *pool, char** msg)
 struct pam_ctx_st * pctx = ctx;
 
 	if (pctx->state != PAM_S_INIT && pctx->state != PAM_S_WAIT_FOR_PASS) {
-		syslog(LOG_AUTH, "PAM-auth: conversation in wrong state (%d)", pctx->state);
-		return ERR_AUTH_FAIL;
+		*msg = NULL;
+		return 0;
 	}
 
 	if (pctx->state == PAM_S_INIT) {

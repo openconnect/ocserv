@@ -203,13 +203,13 @@ static char *radius_get_brackets_string(struct cfg_st *config, const char *str)
 {
 	char *ret, *p;
 
-	ret =  get_brackets_string1(config, str+6);
+	ret = get_brackets_string1(config, str);
 	if (ret == NULL) {
-		fprintf(stderr, "No radius configuration specified\n");
+		fprintf(stderr, "No radius configuration specified: %s\n", str);
 		exit(1);
 	}
 
-	p = get_brackets_string2(config, str+6);
+	p = get_brackets_string2(config, str);
 	if (p != NULL) {
 		if (strcasecmp(p, "groupconfig") != 0) {
 			fprintf(stderr, "No known configuration option: %s\n", p);

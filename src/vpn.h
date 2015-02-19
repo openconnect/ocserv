@@ -208,6 +208,7 @@ struct vpn_st {
 };
 
 #define MAX_AUTH_METHODS 4
+#define MAX_KRB_REALMS 16
 
 typedef struct auth_struct_st {
 	const char *name;
@@ -217,14 +218,20 @@ typedef struct auth_struct_st {
 	bool enabled;
 } auth_struct_st;
 
-typedef struct kkdcp_st {
-	char *url;
-	char *content_type; /* Content-Type */
+typedef struct kkdcp_realm_st {
+	char *realm;
 	struct sockaddr_storage addr;
 	socklen_t addr_len;
 	int ai_family;
 	int ai_socktype;
 	int ai_protocol;
+} kkdcp_realm_st;
+
+typedef struct kkdcp_st {
+	char *url;
+	/* the supported realms by this URL */
+	kkdcp_realm_st realms[MAX_KRB_REALMS];
+	unsigned realms_size;
 } kkdcp_st;
 
 struct cfg_st {

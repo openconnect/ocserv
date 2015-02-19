@@ -530,71 +530,102 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 #ifdef HAVE_GSSAPI
 static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
 {
-	unsigned i;
-	char *p, *p2, *p3, *cont_type;
+	unsigned i, j;
+	char *path, *server, *port, *realm;
 	struct addrinfo hints, *res;
 	int ret;
+	struct kkdcp_st *kkdcp;
+	struct kkdcp_realm_st *kkdcp_realm;
 
-	config->kkdcp = talloc_size(config, urlfw_size*sizeof(kkdcp_st));
+	config->kkdcp = talloc_zero_size(config, urlfw_size*sizeof(kkdcp_st));
 	if (config->kkdcp == NULL) {
 		fprintf(stderr, "memory error\n");
 		exit(1);
 	}
 
+	config->kkdcp_size = 0;
+
 	for (i=0;i<urlfw_size;i++) {
-		p = urlfw[i];
-		p2 = strchr(p, ' ');
-		if (p2 == NULL) {
-			fprintf(stderr, "Cannot parse kkdcp string: %s\n", p);
+		path = urlfw[i];
+		realm = strchr(path, ' ');
+		if (realm == NULL) {
+			fprintf(stderr, "Cannot parse kkdcp string: %s\n", path);
 			exit(1);
 		}
-		*p2 = 0;
-		p2++;
+
+		*realm = 0;
+		realm++;
+		while (c_isspace(*realm))
+			realm++;
+
+		server = strchr(realm, ' ');
+		if (server == NULL) {
+			fprintf(stderr, "Cannot parse kkdcp string: %s\n", realm);
+			exit(1);
+		}
+
+		while (c_isspace(*server))
+			server++;
 
 		memset(&hints, 0, sizeof(hints));
-		if (strncmp(p2, "udp@", 4) == 0) {
+		if (strncmp(server, "udp@", 4) == 0) {
 			hints.ai_socktype = SOCK_DGRAM;
-		} else if (strncmp(p2, "tcp@", 4) == 0) {
+		} else if (strncmp(server, "tcp@", 4) == 0) {
 			hints.ai_socktype = SOCK_STREAM;
 		} else {
-			fprintf(stderr, "cannot handle protocol %s\n", p2);
+			fprintf(stderr, "cannot handle protocol %s\n", server);
 			exit(1);
 		}
-		p2 += 4;
+		server += 4;
 
-		cont_type = strchr(p2, ' ');
-		if (cont_type != NULL) {
-			*cont_type = 0;
-			cont_type++;
-			config->kkdcp[i].content_type = talloc_strdup(config->kkdcp, cont_type);
-		}
-
-		p3 = strchr(p2, ':');
-		if (p3 == NULL) {
-			fprintf(stderr, "No server port specified in: %s\n", p2);
+		port = strchr(server, ':');
+		if (port == NULL) {
+			fprintf(stderr, "No server port specified in: %s\n", server);
 			exit(1);
 		}
-		*p3 = 0;
-		p3++;
+		*port = 0;
+		port++;
 
-		ret = getaddrinfo(p2, p3, &hints, &res);
+		ret = getaddrinfo(server, port, &hints, &res);
 		if (ret != 0) {
-			fprintf(stderr, "getaddrinfo(%s) failed: %s\n", p2,
+			fprintf(stderr, "getaddrinfo(%s) failed: %s\n", server,
 				gai_strerror(ret));
 			exit(1);
 		}
 
-		memcpy(&config->kkdcp[i].addr, res->ai_addr, res->ai_addrlen);
-		config->kkdcp[i].addr_len = res->ai_addrlen;
-		config->kkdcp[i].ai_family = res->ai_family;
-		config->kkdcp[i].ai_socktype = res->ai_socktype;
-		config->kkdcp[i].ai_protocol = res->ai_protocol;
+		kkdcp = NULL;
+		/* check if the path is already added */
+		for (j=0;j<config->kkdcp_size;j++) {
+			if (strcmp(path, config->kkdcp[j].url) == 0) {
+				kkdcp = &config->kkdcp[j];
+			}
+		}
 
-		config->kkdcp[i].url = talloc_strdup(config->kkdcp, p);
+		if (kkdcp == NULL) {
+			kkdcp = &config->kkdcp[i];
+			kkdcp->url = talloc_strdup(config->kkdcp, path);
+			config->kkdcp_size++;
+		}
+
+		if (kkdcp->realms_size >= MAX_KRB_REALMS) {
+			fprintf(stderr, "reached maximum number (%d) of realms per URL\n", MAX_KRB_REALMS);
+			exit(1);
+		}
+
+		kkdcp_realm = &kkdcp->realms[kkdcp->realms_size];
+
+		memcpy(&kkdcp_realm->addr, res->ai_addr, res->ai_addrlen);
+		kkdcp_realm->addr_len = res->ai_addrlen;
+		kkdcp_realm->ai_family = res->ai_family;
+		kkdcp_realm->ai_socktype = res->ai_socktype;
+		kkdcp_realm->ai_protocol = res->ai_protocol;
+
+		kkdcp_realm->realm = talloc_strdup(config->kkdcp, realm);
+
 		freeaddrinfo(res);  
+		kkdcp->realms_size++;
 	}
 
-	config->kkdcp_size = urlfw_size;
 }
 #endif
 
@@ -1081,8 +1112,13 @@ unsigned i;
 	DEL(config->proxy_url);
 
 #ifdef HAVE_GSSAPI
-	for (i=0;i<config->kkdcp_size;i++)
+	for (i=0;i<config->kkdcp_size;i++) {
+		unsigned j;
 		DEL(config->kkdcp[i].url);
+		for (j=0;j<config->kkdcp[i].realms_size;j++) {
+			DEL(config->kkdcp[i].realms[j].realm);
+		}
+	}
 	DEL(config->kkdcp);
 #endif
 

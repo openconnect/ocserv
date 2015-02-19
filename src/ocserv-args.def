@@ -496,9 +496,17 @@ no-route = 192.168.5.0/255.255.255.0
 # This option allows you to specify a URL location where a client can
 # post using MS-KKDCP, and the message will be forwarded to the provided
 # KDC server. That is a translation URL between HTTP and Kerberos.
+# You can have the same path used for multiple realms. To authenticate
+# in client side, in MIT kerberos you'll need to add in krb5.conf:
+#   EXAMPLE.COM = {
+#     kdc = https://ocserv.example.com/kerberos
+#     http_anchors = FILE:/etc/ocserv-ca.pem
+#   }
 # This option is available if ocserv is compiled with GSSAPI support. 
-#kkdcp = /kerberos udp@127.0.0.1:88 application/kerberos
-#kkdcp = /kerberos-tcp tcp@127.0.0.1:88 application/kerberos
+
+#kkdcp = SERVER-PATH KERBEROS-REALM PROTOCOL@SERVER:PORT
+#kkdcp = /kerberos KERBEROS.REALM udp@127.0.0.1:88
+#kkdcp = /kerberos-tcp KERBEROS.REALM tcp@127.0.0.1:88
 
 #
 # The following options are for (experimental) AnyConnect client 

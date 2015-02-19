@@ -10,7 +10,7 @@ const asn1_static_node kkdcp_asn1_tab[] = {
   { "KDC-PROXY-MESSAGE", 536870917, NULL },
   { "kerb-message", 1610620935, NULL },
   { NULL, 2056, "0"},
-  { "target-domain", 1610637325, NULL },
+  { "target-domain", 1610637341, NULL },
   { NULL, 2056, "1"},
   { "dclocator-hint", 536895491, NULL },
   { NULL, 2056, "2"},

@@ -30,7 +30,8 @@
 
 #ifdef HAVE_GSSAPI
 
-int der_decode(const uint8_t *der, unsigned der_size, uint8_t *out, unsigned *out_size, int *error)
+int der_decode(const uint8_t *der, unsigned der_size, uint8_t *out, unsigned *out_size, 
+	       char *realm, unsigned realm_size, int *error)
 {
 	int ret, len;
 	ASN1_TYPE c2 = ASN1_TYPE_EMPTY;
@@ -56,6 +57,13 @@ int der_decode(const uint8_t *der, unsigned der_size, uint8_t *out, unsigned *ou
 		goto cleanup;
 	}
 	*out_size = len;
+
+	len = realm_size;
+	ret = asn1_read_value(c2, "target-domain", realm, &len);
+	if (ret != ASN1_SUCCESS) {
+		/* no realm was given */
+		realm[0] = 0;
+	}
 
 	ret = 0;
  cleanup:
@@ -108,19 +116,21 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	int ret, e, fd;
 	struct http_req_st *req = &ws->req;
 	unsigned i, length;
-	kkdcp_st *handler = NULL;
+	kkdcp_st *kkdcp = NULL;
 	uint8_t *buf = NULL;
 	uint32_t mlength;
+	char realm[128] = "";
 	const char *reason = "Unknown";
+	kkdcp_realm_st *kr;
 
 	for (i=0;i<ws->config->kkdcp_size;i++) {
 		if (ws->config->kkdcp[i].url && strcmp(ws->config->kkdcp[i].url, req->url) == 0) {
-			handler = &ws->config->kkdcp[i];
+			kkdcp = &ws->config->kkdcp[i];
 			break;
 		}
 	}
 
-	if (handler == NULL) {
+	if (kkdcp == NULL) {
 		oclog(ws, LOG_HTTP_DEBUG, "could not figure kkdcp handler for %s", req->url);
 		return -1;
 	}
@@ -132,19 +142,39 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
 
-	fd = socket(handler->ai_family, handler->ai_socktype, handler->ai_protocol);
+
+	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, realm, sizeof(realm), &e);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "kkdcp: DER decoding error: %s", asn1_strerror(e));
+		reason = "DER decoding error";
+		return -1;
+	}
+
+	kr = &kkdcp->realms[0];
+	if (realm[0] != 0 && kkdcp->realms_size > 1) {
+		oclog(ws, LOG_DEBUG, "kkdcp: client asked for '%s'", realm);
+
+		for (i=0;i<kkdcp->realms_size;i++) {
+			if (strcmp(kkdcp->realms[i].realm, realm) == 0) {
+				kr = &kkdcp->realms[i];
+				break;
+			}
+		}
+	}
+
+	fd = socket(kr->ai_family, kr->ai_socktype, kr->ai_protocol);
 	if (fd == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "kkdcp: socket error: %s", strerror(e));
-		reason = "Socket error";
-		goto fail;
+		reason = "socket error";
+		return -1;
 	}
 
-	ret = connect(fd, (struct sockaddr*)&handler->addr, handler->addr_len);
+	ret = connect(fd, (struct sockaddr*)&kr->addr, kr->addr_len);
 	if (ret == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "kkdcp: connect error: %s", strerror(e));
-		reason = "Connect error";
+		reason = "connect error";
 		goto fail;
 	}
 
@@ -152,14 +182,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	buf = talloc_size(ws, length);
 	if (buf == NULL) {
 		oclog(ws, LOG_ERR, "kkdcp: memory error");
-		reason = "Memory error";
-		goto fail;
-	}
-
-	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, &e);
-	if (ret < 0) {
-		oclog(ws, LOG_ERR, "kkdcp: DER decoding error: %s", asn1_strerror(e));
-		reason = "DER decoding error";
+		reason = "memory error";
 		goto fail;
 	}
 
@@ -172,16 +195,16 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		} else {
 			oclog(ws, LOG_ERR, "kkdcp: send error: only %d were sent", ret);
 		}
-		reason = "Send error";
+		reason = "send error";
 		goto fail;
 	}
 
-	if (handler->ai_socktype == SOCK_DGRAM) {
+	if (kr->ai_socktype == SOCK_DGRAM) {
 		ret = recv(fd, buf, BUF_SIZE, 0);
 		if (ret == -1) {
 			e = errno;
 			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
-			reason = "Recv error";
+			reason = "recv error";
 			goto fail;
 		}
 
@@ -200,7 +223,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		mlength = ntohl(mlength);
 		if (mlength >= BUF_SIZE-4) {
 			oclog(ws, LOG_ERR, "kkdcp: too long message (%d bytes)", (int)mlength);
-			reason = "Recv error";
+			reason = "recv error";
 			ret = -1;
 			goto fail;
 		}
@@ -209,7 +232,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		if (ret == -1) {
 			e = errno;
 			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
-			reason = "Recv error";
+			reason = "recv error";
 			goto fail;
 		}
 		length = ret + 4;
@@ -223,12 +246,10 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		goto fail;
 	}
 
-	if (handler->content_type) {
-		ret =
-		    cstp_printf(ws, "Content-Type: %s\r\n", handler->content_type);
-		if (ret < 0) {
-			goto fail;
-		}
+	ret =
+	    cstp_puts(ws, "Content-Type: application/kerberos\r\n");
+	if (ret < 0) {
+		goto fail;
 	}
 
 	ret = der_encode_inplace(buf, &length, BUF_SIZE, &e);

@@ -280,8 +280,10 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	} else if (result == 0) {
 		e->status = PS_AUTH_COMPLETED;
 
-		e->module->auth_user(e->auth_ctx, e->username,
-				     sizeof(e->username));
+		if (e->module) {
+			e->module->auth_user(e->auth_ctx, e->username,
+					     sizeof(e->username));
+		}
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__OK);
 		if (ret < 0) {

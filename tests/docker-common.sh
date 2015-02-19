@@ -67,6 +67,12 @@ else #DEBIAN
 	cp $DOCKER_DIR/Dockerfile-debian-$CONFIG $DOCKER_DIR/Dockerfile
 fi
 
+if test ! -f $DOCKER_DIR/Dockerfile;then
+	echo "Cannot test in this system"
+	$UNLOCKFILE
+	exit 77
+fi
+
 rm -f $DOCKER_DIR/ocserv $DOCKER_DIR/ocpasswd $DOCKER_DIR/occtl
 cp ../src/ocserv ../src/ocpasswd ../src/occtl $DOCKER_DIR/
 

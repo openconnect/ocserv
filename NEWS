@@ -1,3 +1,13 @@
+* Version 0.10.0 (unreleased)
+- Added support for gssapi (e.g., Kerberos) authentication
+- Added support for alternative authentication methods, via enable-auth.
+  That allows to set a suffcient for login authentication that will be
+  used as alternative to the main authentication.
+- Added support for MS-KKDCP. That is, the server can be used as an HTTP
+  proxy to a KDC.
+- Support for 'certificate[optional]' authentication has been removed.
+
+
 * Version 0.9.2 (released 2015-02-18)
 - Enable seccomp unconditionally for all platforms (libseccomp 2.2.0
   is more portable).

@@ -68,10 +68,6 @@ if test -z "$IP";then
 fi
 echo "Detected KDC IP: $IP"
 
-if test ! -z "$QUIT_ON_INIT";then
-	exit 0
-fi
-
 # run the client
 CONFIG="client"
 DOCKER_DIR=docker-kerberos
@@ -92,6 +88,10 @@ if test -z "$CIP";then
 	stop
 fi
 echo "Detected client IP: $CIP"
+
+if test ! -z "$QUIT_ON_INIT";then
+	exit 0
+fi
 
 echo "Waiting for client tests"
 sleep 20

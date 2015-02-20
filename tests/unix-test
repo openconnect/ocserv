@@ -29,13 +29,8 @@ fi
 UNIX=1
 CONFIG="unix"
 IMAGE=ocserv-test2
+IMAGE_NAME=test_unix
 . ./docker-common.sh
-
-stop() {
-	$DOCKER stop test_unix
-	$DOCKER rm test_unix
-	exit 1
-}
 
 $DOCKER run -P --privileged=true -p 6000:6000/udp -p 6001:6001/udp -p 22 -p 6551:6551/udp --tty=false -d --name test_unix $IMAGE
 if test $? != 0;then
@@ -62,14 +57,14 @@ rm -f pass.tmp
 sleep 5
 
 # The client IP depends on the username so it shouldn't change.
-ping -w 5 192.168.99.190
+ping -w 5 192.168.99.0
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping -w 5 192.168.99.190 -s 1500
+ping -w 5 192.168.99.0 -s 1500
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
@@ -83,14 +78,14 @@ printf "echo root" >>echo-admin.tmp
 printf "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
 export SSH_ASKPASS="./echo-admin.tmp"
-setsid ssh -T -F config.tmp root@192.168.99.190 occtl show user test >out.tmp 2>&1
+setsid ssh -T -F config.tmp root@192.168.99.0 occtl show user test >out.tmp 2>&1
 cat out.tmp
 
 printf "#\!/bin/sh\n" >echo-admin.tmp
 printf "echo root" >>echo-admin.tmp
 printf "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
-setsid ssh -T -F config.tmp root@192.168.99.190 occtl show user test >out.tmp 2>&1
+setsid ssh -T -F config.tmp root@192.168.99.0 occtl show user test >out.tmp 2>&1
 cat out.tmp
 rm -f echo-admin.tmp
 rm -f config.tmp
@@ -108,14 +103,14 @@ rm -f out.tmp
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
 
-#nuttcp -T 10 -t 192.168.99.190
+#nuttcp -T 10 -t 192.168.99.0
 #if test $? != 0;then
 #	kill $PID
 #	echo "Cannot send to ocserv"
 #	stop
 #fi
 
-#nuttcp -T 10 -r 192.168.99.190
+#nuttcp -T 10 -r 192.168.99.0
 #if test $? != 0;then
 #	kill $PID
 #	echo "Cannot recv from ocserv"

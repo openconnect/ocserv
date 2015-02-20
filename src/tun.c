@@ -58,6 +58,7 @@
 
 #ifdef __linux__
 
+#include <net/route.h>
 #include <linux/types.h>
 
 struct in6_ifreq {
@@ -71,6 +72,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 {
 	int fd, e, ret;
 	struct in6_ifreq ifr6;
+	struct in6_rtmsg rt6;
 	struct ifreq ifr;
 	unsigned idx;
 
@@ -100,12 +102,29 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip),
 	       SA_IN_SIZE(proc->ipv6->lip_len));
 	ifr6.ifr6_ifindex = idx;
-	ifr6.ifr6_prefixlen = 127;
+	ifr6.ifr6_prefixlen = 128;
 
 	ret = ioctl(fd, SIOCSIFADDR, &ifr6);
 	if (ret != 0) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "%s: Error setting IPv6: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	/* route to our remote address */
+	memset(&rt6, 0, sizeof(rt6));
+	memcpy(&rt6.rtmsg_dst, SA_IN6_P(&proc->ipv6->rip),
+	       SA_IN_SIZE(proc->ipv6->rip_len));
+	rt6.rtmsg_ifindex = idx;
+	rt6.rtmsg_dst_len = 128;
+	rt6.rtmsg_metric = 1;
+
+	ret = ioctl(fd, SIOCADDRT, &rt6);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "%s: Error setting route to remote IPv6: %s\n",
 		      proc->tun_lease.name, strerror(e));
 		ret = -1;
 		goto cleanup;
@@ -240,7 +259,6 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 		ifr.ifra_mask.sin_len = sizeof(struct sockaddr_in);
 		ifr.ifra_mask.sin_family = AF_INET;
 		ifr.ifra_mask.sin_addr.s_addr = 0xffffffff;
-
 		ret = ioctl(fd, SIOCAIFADDR, &ifr);
 		if (ret != 0) {
 			e = errno;

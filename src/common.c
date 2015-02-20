@@ -209,7 +209,7 @@ fd_set set;
 	return recv(sockfd, buf, len, 0);
 }
 
-int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2, size_t n)
+int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
 {
 	if (((struct sockaddr*)s1)->sa_family == AF_INET) {
 		return memcmp(SA_IN_P(s1), SA_IN_P(s2), sizeof(struct in_addr));

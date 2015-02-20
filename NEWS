@@ -1,8 +1,9 @@
-* Version 0.9.2 (unreleased)
+* Version 0.9.2 (released 2015-02-18)
 - Enable seccomp unconditionally for all platforms (libseccomp 2.2.0
   is more portable).
 - Ensure that 'socket-file' is a relative path, so that is accessible
   from both the main and worker processes.
+- Fixes in IP tun addresses assignment, and enhanced IP assigned address check.
 
 
 * Version 0.9.1 (released 2015-02-15)

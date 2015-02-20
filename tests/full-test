@@ -28,13 +28,8 @@ fi
 
 CONFIG="tcp"
 IMAGE=ocserv-test1
+IMAGE_NAME=test_ocserv
 . ./docker-common.sh
-
-stop() {
-	$DOCKER stop test_ocserv
-	$DOCKER rm test_ocserv
-	exit 1
-}
 
 $DOCKER run -P --privileged=true -p 5000:5000/udp -p 5001:5001/udp -p 22 -p 5551:5551/udp --tty=false -d --name test_ocserv $IMAGE
 if test $? != 0;then
@@ -63,21 +58,21 @@ rm -f pass.tmp
 sleep 5
 
 # The client IP depends on the username so it shouldn't change.
-ping -w 5 192.168.1.190
+ping -w 5 192.168.1.1
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping -w 5 192.168.1.190 -s 1500
+ping -w 5 192.168.1.1 -s 1500
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping6 -w 5 fd91:6d87:7341:db6a:0:52:190c:be00
+ping6 -w 5 fd91:6d87:7341:db6a::1
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping the IPv6 of ocserv"
@@ -91,14 +86,14 @@ printf "echo root" >>echo-admin.tmp
 printf "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
 export SSH_ASKPASS="./echo-admin.tmp"
-setsid ssh -T -F config.tmp root@192.168.1.190 occtl show user test >out.tmp 2>&1
+setsid ssh -T -F config.tmp root@192.168.1.1 occtl show user test >out.tmp 2>&1
 cat out.tmp
 
 printf "#\!/bin/sh\n" >echo-admin.tmp
 printf "echo root" >>echo-admin.tmp
 printf "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
-setsid ssh -T -F config.tmp root@192.168.1.190 occtl show user test >out.tmp 2>&1
+setsid ssh -T -F config.tmp root@192.168.1.1 occtl show user test >out.tmp 2>&1
 cat out.tmp
 rm -f echo-admin.tmp
 rm -f config.tmp
@@ -116,14 +111,14 @@ rm -f out.tmp
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
 if test "$FEDORA" = 1;then
-nuttcp -T 10 -t 192.168.1.190
+nuttcp -T 10 -t 192.168.1.1
 if test $? != 0;then
 	kill $PID
 	echo "Cannot send to ocserv"
 	stop
 fi
 
-nuttcp -T 10 -r 192.168.1.190
+nuttcp -T 10 -r 192.168.1.1
 if test $? != 0;then
 	kill $PID
 	echo "Cannot recv from ocserv"

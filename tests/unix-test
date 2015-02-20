@@ -46,6 +46,11 @@ if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
 fi
+echo "Detected IP: $IP"
+
+if test ! -z "$QUIT_ON_INIT";then
+	exit 0
+fi
 
 printf "test\ntest\n" >pass.tmp
 openconnect $IP:6551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass.tmp &

@@ -51,6 +51,10 @@ if test -z "$IP";then
 fi
 echo "Detected IP: $IP"
 
+if test ! -z "$QUIT_ON_INIT";then
+	exit 0
+fi
+
 printf "testuser\n" >pass-radius.tmp
 openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius.tmp
 if test $? = 0;then

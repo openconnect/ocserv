@@ -49,6 +49,10 @@ if test -z "$IP";then
 fi
 echo "Detected IP: $IP"
 
+if test ! -z "$QUIT_ON_INIT";then
+	exit 0
+fi
+
 printf "testuser\n" >pass-pam.tmp
 openconnect $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
 if test $? = 0;then

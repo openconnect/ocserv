@@ -188,6 +188,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 	str_init(&str, ws);
 
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 200 OK");
 	cstp_cork(ws);
 	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
@@ -900,8 +901,9 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		      (char *)str_cookie, str_cookie_size);
 
 	/* reply */
-	cstp_cork(ws);
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 200 OK");
 
+	cstp_cork(ws);
 	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
 		return -1;
@@ -1100,6 +1102,7 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 {
 	int ret;
 
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
 	cstp_cork(ws);
 	ret = cstp_printf(ws, "HTTP/1.%u 401 Unauthorized\r\n", http_ver);
 	if (ret < 0)
@@ -1397,6 +1400,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 	if (sd != -1)
 		close(sd);
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
 	cstp_printf(ws,
 		   "HTTP/1.%d 401 Unauthorized\r\nContent-Length: 0\r\nX-Reason: %s\r\n\r\n",
 		   http_ver, reason);

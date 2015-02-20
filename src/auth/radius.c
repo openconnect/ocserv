@@ -400,6 +400,10 @@ static void append_acct_standard(struct radius_ctx_st * pctx, rc_handle *rh,
 		}
 	}
 
+	if (rc_avpair_add(rh, send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
+		return;
+	}
+
 	if (rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
 		return;
 	}
@@ -417,12 +421,15 @@ static void append_acct_standard(struct radius_ctx_st * pctx, rc_handle *rh,
 	return;
 }
 
-static void radius_auth_session_stats(void* ctx, stats_st *stats)
+static void radius_auth_session_stats(void* ctx, stats_st *stats, const char *ip)
 {
 struct radius_ctx_st * pctx = ctx;
 int ret;
 uint32_t status_type;
 VALUE_PAIR *send = NULL, *recvd = NULL;
+
+	if (ip)
+		strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
 
 	status_type = PW_STATUS_ALIVE;
 

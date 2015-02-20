@@ -463,7 +463,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 		return 0;
 
 	stats_add_to(&totals, &e->stats, &e->saved_stats);
-	e->module->session_stats(e->auth_ctx, &totals);
+	e->module->session_stats(e->auth_ctx, &totals, req->ip);
 	return 0;
 }
 

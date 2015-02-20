@@ -610,12 +610,16 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 
 		sd = connect_to_secmod(ws);
 		if (sd >= 0) {
+			char buf[64];
 			msg.bytes_in = ws->tun_bytes_in;
 			msg.bytes_out = ws->tun_bytes_out;
 			msg.uptime = now - ws->session_start_time;
 			msg.sid.len = sizeof(ws->sid);
 			msg.sid.data = ws->sid;
 			msg.has_sid = 1;
+
+			msg.ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
+			       		     buf, sizeof(buf), 0);
 
 			send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
 					 (pack_size_func)cli_stats_msg__get_packed_size,

@@ -1,3 +1,10 @@
+* Version 0.9.3 (unreleased)
+- Corrected usage counting issue in security module. That affected
+  accounting information in radius.
+- Added configuration option server-name. That is translated to
+  NAS IDENTIFIER in radius messages.
+
+
 * Version 0.9.2 (released 2015-02-18)
 - Enable seccomp unconditionally for all platforms (libseccomp 2.2.0
   is more portable).

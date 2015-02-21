@@ -114,7 +114,7 @@ static int radius_auth_group(void *ctx, const char *suggested, char *groupname, 
 		}
 
 		syslog(LOG_AUTH,
-		       "user '%s' requested group '%s' but is not a member",
+		       "radius-auth: user '%s' requested group '%s' but is not a member",
 		       pctx->username, suggested);
 		return -1;
 	}
@@ -172,7 +172,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	char txt[64];
 	int ret;
 
-	syslog(LOG_DEBUG, "communicating username (%s) and password to radius", pctx->username);
+	syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
 	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: user '%s' auth error", __func__, __LINE__,
@@ -275,7 +275,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				/* Framed-IPv6-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);
 			} else {
-				syslog(LOG_DEBUG, "radius: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
+				syslog(LOG_DEBUG, "radius-auth: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
 			}
 			vp = vp->next;
 		}
@@ -426,7 +426,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 
 	status_type = PW_STATUS_ALIVE;
 
-	syslog(LOG_DEBUG, "sending radius session interim update");
+	syslog(LOG_DEBUG, "radius-auth: sending session interim update");
 
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		ret = -1;
@@ -461,13 +461,13 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	status_type = PW_STATUS_START;
 
 	if (sid_size != SID_SIZE) {
-		syslog(LOG_DEBUG, "incorrect sid size");
+		syslog(LOG_DEBUG, "radius-auth: incorrect sid size");
 		return -1;
 	}
 
 	base64_encode((char *)sid, sid_size, (char *)pctx->sid, sizeof(pctx->sid));
 
-	syslog(LOG_DEBUG, "opening session %s with radius", pctx->sid);
+	syslog(LOG_DEBUG, "radius-auth: opening session %s", pctx->sid);
 
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		ret = -1;
@@ -502,7 +502,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 
 	status_type = PW_STATUS_STOP;
 
-	syslog(LOG_DEBUG, "closing session with radius");
+	syslog(LOG_DEBUG, "radius-auth: closing session");
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL)
 		return;
 

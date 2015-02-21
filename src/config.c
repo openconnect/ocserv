@@ -63,6 +63,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "select-group", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "server-name", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -512,7 +513,7 @@ unsigned force_cert_auth;
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
 	 */
-	READ_STRING("listen-host", config->name);
+	READ_STRING("listen-host", config->listen_host);
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
 
 	READ_NUMERIC("tcp-port", config->port);
@@ -538,6 +539,7 @@ unsigned force_cert_auth;
 	READ_STRING("user-profile", config->xml_config_file);
 #endif
 
+	READ_STRING("server-name", config->server_name);
 	READ_STRING("ca-cert", config->ca);
 	READ_STRING("default-domain", config->default_domain);
 	READ_STRING("crl", config->crl);
@@ -901,7 +903,8 @@ unsigned i;
 	DEL(config->ocsp_response);
 	DEL(config->banner);
 	DEL(config->dh_params_file);
-	DEL(config->name);
+	DEL(config->listen_host);
+	DEL(config->server_name);
 	DEL(config->pin_file);
 	DEL(config->srk_pin_file);
 	DEL(config->ca);

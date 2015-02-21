@@ -210,7 +210,8 @@ struct vpn_st {
 };
 
 struct cfg_st {
-	char *name; /* server name */
+	char *server_name;
+	char *listen_host;
 	unsigned int port;
 	unsigned int udp_port;
 	unsigned int is_dyndns;

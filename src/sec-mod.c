@@ -47,7 +47,7 @@
 
 #define MAX_WAIT_SECS 3
 #define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
-#define MAINTAINANCE_TIME 300
+#define MAINTAINANCE_TIME 310
 
 static int need_maintainance = 0;
 static int need_reload = 0;

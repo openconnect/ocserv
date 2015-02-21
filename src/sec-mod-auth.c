@@ -551,6 +551,11 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		return -1;
 	}
 
+	if (e->status != PS_AUTH_INACTIVE) {
+		seclog(sec, LOG_ERR, "auth init received for '%s' but we are on state %u!", e->username, e->status);
+		return -1;
+	}
+
 	ret = set_module(sec, e, req->auth_type);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "no module found for auth type %u", (unsigned)req->auth_type);

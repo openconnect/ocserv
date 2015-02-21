@@ -382,18 +382,22 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 				(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
 				(pack_func) sec_auth_session_reply_msg__pack);
 		if (ret < 0) {
-			seclog(sec, LOG_WARNING, "sec-mod error in sending session reply");
+			seclog(sec, LOG_WARNING, "error in sending session reply");
 		}
 		talloc_free(lpool);
 
-		if (rep.reply != AUTH__REP__OK)
+		if (rep.reply != AUTH__REP__OK) {
+			seclog(sec, LOG_INFO, "denied open session for %s", e->username);
 			del_client_entry(sec, e);
-		else { /* set expiration time to unlimited (until someone closes the session) */
+		} else { /* set expiration time to unlimited (until someone closes the session) */
+			seclog(sec, LOG_INFO, "initiating session for %s", e->username);
 			e->time = -1;
 			e->in_use++;
 		}
 
 	} else { /* CLOSE */
+		seclog(sec, LOG_INFO, "temporarily closing session for %s", e->username);
+
 		if (req->has_uptime && req->uptime > e->stats.uptime) {
 				e->stats.uptime = req->uptime;
 		}
@@ -630,7 +634,7 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 	if (e->module == NULL)
 		return;
 
-	seclog(sec, LOG_DEBUG, "auth deinit for user '%s'", e->username);
+	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s'", e->username);
 	if (e->auth_ctx != NULL) {
 		if (e->module->close_session)
 			e->module->close_session(e->auth_ctx, &e->stats);

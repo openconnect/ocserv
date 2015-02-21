@@ -150,7 +150,7 @@ void cleanup_client_entries(sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if ((now - t->time) > (sec->config->cookie_timeout + AUTH_SLACK_TIME) && 
+		if (t->time != -1 && (now - t->time) > (sec->config->cookie_timeout + AUTH_SLACK_TIME) && 
 		    t->in_use == 0) {
 			htable_delval(db, &iter);
 			clean_entry(sec, t);

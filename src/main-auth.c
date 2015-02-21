@@ -260,7 +260,7 @@ struct proc_st *old_proc;
 		if (old_proc->pid > 0)
 			kill(old_proc->pid, SIGTERM);
 	} else {
-		mslog(s, proc, LOG_DEBUG, "new cookie session for (%u)", (unsigned)proc->pid);
+		mslog(s, proc, LOG_DEBUG, "new cookie session for user '%s' (%u)", proc->username, (unsigned)proc->pid);
 	}
 
 	if (cmsg->hostname)

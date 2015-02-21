@@ -100,6 +100,8 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 		seclog(sec, LOG_ERR, "error generating SID");
 		goto fail;
 	}
+	snprintf(e->printable_sid, sizeof(e->printable_sid), "%.2x%.2x%.2x",
+		(unsigned) e->sid[0], (unsigned) e->sid[1], (unsigned) e->sid[2]);
 	e->time = time(0);
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {

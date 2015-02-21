@@ -51,6 +51,10 @@ typedef struct client_entry_st {
 	 * sessions.
 	 */
 	uint8_t sid[SID_SIZE];
+
+	/* a part of sid used in the logs to differentiate the session */
+	char printable_sid[7];
+
 	void * auth_ctx; /* the context of authentication */
 	unsigned in_use; /* counter of users of this structure */
 	unsigned tls_auth_ok;

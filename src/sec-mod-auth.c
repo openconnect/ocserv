@@ -198,8 +198,8 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
 		if (tls_auth_ok == 0) {
-			seclog(sec, LOG_INFO, "user '%s' presented no certificate",
-			       e->username);
+			seclog(sec, LOG_INFO, "user %s (session: %s) presented no certificate",
+			       e->username, e->printable_sid);
 			return -1;
 		}
 
@@ -217,8 +217,8 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 			} else {
 				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->username, cert_user) != 0) {
 					seclog(sec, LOG_INFO,
-					       "user '%s' presented a certificate from user '%s'",
-					       e->username, cert_user);
+					       "user '%s' (session: %s) presented a certificate from user '%s'",
+					       e->username, e->printable_sid, cert_user);
 					return -1;
 				}
 
@@ -232,8 +232,8 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 					}
 					if (found == 0) {
 						seclog(sec, LOG_INFO,
-							"user '%s' presented a certificate from group '%s' but he isn't a member of it",
-							e->username, e->groupname);
+							"user '%s' (session: %s) presented a certificate from group '%s' but he isn't a member of it",
+							e->username, e->printable_sid, e->groupname);
 							return -1;
 					}
 				}
@@ -372,7 +372,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		if (rep.reply == AUTH__REP__OK && sec->config_module && sec->config_module->get_sup_config) {
 			ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
 			if (ret < 0) {
-				seclog(sec, LOG_ERR, "error reading additional configuration for '%s'", e->username);
+				seclog(sec, LOG_ERR, "error reading additional configuration for '%s' (session: %s)", e->username, e->printable_sid);
 				talloc_free(lpool);
 				return ERR_READ_CONFIG;
 			}
@@ -387,16 +387,16 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		talloc_free(lpool);
 
 		if (rep.reply != AUTH__REP__OK) {
-			seclog(sec, LOG_INFO, "denied open session for %s", e->username);
+			seclog(sec, LOG_INFO, "denied open session for user '%s' (session: %s)", e->username, e->printable_sid);
 			del_client_entry(sec, e);
 		} else { /* set expiration time to unlimited (until someone closes the session) */
-			seclog(sec, LOG_INFO, "initiating session for %s", e->username);
+			seclog(sec, LOG_INFO, "initiating session for user '%s' (session: %s)", e->username, e->printable_sid);
 			e->time = -1;
 			e->in_use++;
 		}
 
 	} else { /* CLOSE */
-		seclog(sec, LOG_INFO, "temporarily closing session for %s", e->username);
+		seclog(sec, LOG_INFO, "temporarily closing session for %s (session: %s)", e->username, e->printable_sid);
 
 		if (req->has_uptime && req->uptime > e->stats.uptime) {
 				e->stats.uptime = req->uptime;
@@ -479,11 +479,11 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 		goto cleanup;
 	}
 
-	seclog(sec, LOG_DEBUG, "auth cont for user '%s'", e->username);
+	seclog(sec, LOG_DEBUG, "auth cont for user '%s' (session: %s)", e->username, e->printable_sid);
 
 	if (req->password == NULL) {
-		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s'",
-			e->username);
+		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s' (session: %s)",
+			e->username, e->printable_sid);
 		ret = -1;
 		goto cleanup;
 	}
@@ -501,8 +501,8 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 			      strlen(req->password));
 	if (ret < 0) {
 		seclog(sec, LOG_DEBUG,
-		       "error in password given in auth cont for user '%s'",
-		       e->username);
+		       "error in password given in auth cont for user '%s' (session: %s)",
+		       e->username, e->printable_sid);
 		goto cleanup;
 	}
 
@@ -552,7 +552,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	if (e->status != PS_AUTH_INACTIVE) {
-		seclog(sec, LOG_ERR, "auth init received for '%s' but we are on state %u!", e->username, e->status);
+		seclog(sec, LOG_ERR, "auth init received for '%s' (session: %s), but we are on state %u!", e->username, e->printable_sid, e->status);
 		return -1;
 	}
 
@@ -620,9 +620,9 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	e->status = PS_AUTH_INIT;
-	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' (group: '%s') from '%s'", 
+	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' (session: %s) of group: '%s' from '%s'", 
 	       req->tls_auth_ok?"(with cert) ":"",
-	       e->username, e->groupname, req->ip);
+	       e->username, e->printable_sid, e->groupname, req->ip);
 
 	if (need_continue != 0) {
 		ret = ERR_AUTH_CONTINUE;
@@ -639,7 +639,7 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 	if (e->module == NULL)
 		return;
 
-	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s'", e->username);
+	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' (session: %s)", e->username, e->printable_sid);
 	if (e->auth_ctx != NULL) {
 		if (e->module->close_session)
 			e->module->close_session(e->auth_ctx, &e->stats);

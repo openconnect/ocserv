@@ -374,7 +374,7 @@ listen_ports(void *pool, struct cfg_st* config,
 #endif
 		    ;
 
-		ret = getaddrinfo(config->name, portname, &hints, &res);
+		ret = getaddrinfo(config->listen_host, portname, &hints, &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo() failed: %s\n",
 				gai_strerror(ret));
@@ -410,7 +410,7 @@ listen_ports(void *pool, struct cfg_st* config,
 #endif
 		    ;
 
-		ret = getaddrinfo(config->name, portname, &hints, &res);
+		ret = getaddrinfo(config->listen_host, portname, &hints, &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo() failed: %s\n",
 				gai_strerror(ret));

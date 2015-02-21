@@ -48,7 +48,7 @@ struct plain_ctx_st {
 
 static char *password_file = NULL;
 
-static void plain_global_init(void *pool, void *additional)
+static void plain_global_init(void *pool, const char *server_name, void *additional)
 {
 	password_file = talloc_strdup(pool, (char*)additional);
 	if (password_file == NULL) {

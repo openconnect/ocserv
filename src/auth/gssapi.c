@@ -81,7 +81,7 @@ const gss_OID_set_desc desired_mechs = {
 	.elements = (gss_OID)&spnego_mech
 };
 
-static void gssapi_global_init(void *pool, void *additional)
+static void gssapi_global_init(void *pool, const char *server_name, void *additional)
 {
 	int ret;
 	OM_uint32 time, minor;

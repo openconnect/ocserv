@@ -136,6 +136,9 @@ max-clients = 16
 # multiple times). Unset or set to zero for unlimited.
 max-same-clients = 2
 
+# Used to identify this particular server.
+server-name = ocserv@example.com
+
 # Use listen-host to limit to specific IPs or to the IPs of a provided 
 # hostname.
 #listen-host = [IP|HOSTNAME]

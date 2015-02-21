@@ -351,7 +351,6 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 			}
 		} else {
 			rep.reply = AUTH__REP__OK;
-			e->in_use++;
 		}
 
 		lpool = talloc_new(e);
@@ -378,8 +377,10 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st * sec, const SecAuthSessionM
 
 		if (rep.reply != AUTH__REP__OK)
 			del_client_entry(sec, e);
-		else /* set expiration time to unlimited (until someone closes the session) */
+		else { /* set expiration time to unlimited (until someone closes the session) */
 			e->time = -1;
+			e->in_use++;
+		}
 
 	} else { /* CLOSE */
 		if (req->has_uptime && req->uptime > e->stats.uptime) {

@@ -3,6 +3,8 @@
   accounting information in radius.
 - Added configuration option server-name. That is translated to
   NAS IDENTIFIER in radius messages.
+- Restored security checks on control socket file. That affects mainly
+  non-Linux systems.
 
 
 * Version 0.9.2 (released 2015-02-18)

@@ -211,7 +211,7 @@ struct vpn_st {
 #define MAX_KRB_REALMS 16
 
 typedef struct auth_struct_st {
-	const char *name;
+	char *name;
 	char *additional;
 	unsigned type;
 	const struct auth_mod_st *amod;

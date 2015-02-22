@@ -473,9 +473,14 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 					if (config->auth[0].amod == NULL)
 						config->auth[0].amod = avail_auth_types[i].mod;
 					config->auth[0].type |= avail_auth_types[i].type;
-					if (config->auth[0].name == NULL)
-						config->auth[0].name = avail_auth_types[i].name;
-					fprintf(stderr, "Setting '%s' as primary authentication method\n", avail_auth_types[i].name);
+					if (config->auth[0].name == NULL) {
+						config->auth[0].name = talloc_strdup(config, avail_auth_types[i].name);
+					} else {
+						char *tmp;
+						tmp = talloc_asprintf(config, "%s+%s", config->auth[0].name, avail_auth_types[i].name);
+						talloc_free(config->auth[0].name);
+						config->auth[0].name = tmp;
+					}
 					config->auth[0].enabled = 1;
 					config->auth_methods = 1;
 					found = 1;
@@ -487,6 +492,7 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 				fprintf(stderr, "Unknown or unsupported auth method: %s\n", auth[j]);
 				exit(1);
 			}
+			fprintf(stderr, "Setting '%s' as primary authentication method\n", config->auth[0].name);
 			talloc_free(auth[j]);
 		}
 	} else {
@@ -499,8 +505,7 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[x].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
 				
-					if (config->auth[x].name == NULL)
-						config->auth[x].name = avail_auth_types[i].name;
+					config->auth[x].name = talloc_strdup(config, avail_auth_types[i].name);
 					fprintf(stderr, "Enabling '%s' as authentication method\n", avail_auth_types[i].name);
 
 					config->auth[x].amod = avail_auth_types[i].mod;
@@ -641,8 +646,10 @@ unsigned prefix = 0, auto_select_group = 0;
 unsigned prefix4 = 0;
 char *tmp;
 unsigned force_cert_auth;
+#ifdef HAVE_GSSAPI
 char **urlfw = NULL;
 unsigned urlfw_size = 0;
+#endif
 
 	pov = configFileLoad(file);
 	if (pov == NULL && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0)
@@ -1114,6 +1121,10 @@ unsigned i;
 	DEL(config->disconnect_script);
 	DEL(config->proxy_url);
 
+	for (i=0;i<config->auth_methods;i++) {
+		if (config->auth[i].enabled)
+			talloc_free(config->auth[i].name);
+	}
 #ifdef HAVE_GSSAPI
 	for (i=0;i<config->kkdcp_size;i++) {
 		unsigned j;

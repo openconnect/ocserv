@@ -525,7 +525,7 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 			e->module = sec->config->auth[i].amod;
 			e->auth_type = sec->config->auth[i].type;
 
-			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (%x)", sec->config->auth[i].name, auth_type);
+			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (session: %s)", sec->config->auth[i].name, e->printable_sid);
 			return 0;
 		}
 	}
@@ -579,7 +579,6 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		}
 		e->groupname[sizeof(e->groupname) - 1] = 0;
 
-		/* a module is allowed to change the name of the user */
 		if (req->user_name != NULL) {
 			strlcpy(e->username, req->user_name, sizeof(e->username));
 		}

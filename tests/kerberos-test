@@ -23,8 +23,14 @@ srcdir=${srcdir:-.}
 PORT=10500
 PORT2=10501
 PORT_OCSERV=443
+
 #this test can only be run as root
 id|grep root >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+$SERV --version|grep gssapi >/dev/null 2>&1
 if [ $? != 0 ];then
 	exit 77
 fi

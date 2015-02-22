@@ -22,6 +22,11 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PORT=4449
 
+$SERV --version|grep gssapi >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
 . `dirname $0`/common.sh
 
 echo "Testing local backend with gssapi... "

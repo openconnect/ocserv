@@ -431,7 +431,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session stats received in unauthenticated client!");
+		seclog(sec, LOG_ERR, "session stats received in unauthenticated client %s (session: %s)!", e->username, e->printable_sid);
 		return -1;
 	}
 
@@ -548,11 +548,6 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	e = new_client_entry(sec, req->ip);
 	if (e == NULL) {
 		seclog(sec, LOG_ERR, "cannot initialize memory");
-		return -1;
-	}
-
-	if (e->status != PS_AUTH_INACTIVE) {
-		seclog(sec, LOG_ERR, "auth init received for '%s' (session: %s), but we are on state %u!", e->username, e->printable_sid, e->status);
 		return -1;
 	}
 

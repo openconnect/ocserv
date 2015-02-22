@@ -337,6 +337,11 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		return -1;
 	}
 
+	if (e->status != PS_AUTH_COMPLETED) {
+		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s (session: %s)!", e->username, e->printable_sid);
+		return -1;
+	}
+
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
 		SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 
@@ -474,7 +479,8 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 	}
 
 	if (e->status != PS_AUTH_INIT && e->status != PS_AUTH_CONT) {
-		seclog(sec, LOG_ERR, "auth cont received but we are on state %u!", e->status);
+		seclog(sec, LOG_ERR, "auth cont received for %s (session: %s) but we are on state %u!",
+		       e->username, e->printable_sid, e->status);
 		ret = -1;
 		goto cleanup;
 	}

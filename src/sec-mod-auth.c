@@ -514,11 +514,6 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		return -1;
 	}
 
-	if (e->status != PS_AUTH_INACTIVE) {
-		seclog(sec, LOG_ERR, "auth init received for '%s' (session: %s), but we are on state %u!", e->username, e->printable_sid, e->status);
-		return -1;
-	}
-
 	if (req->hostname != NULL) {
 		strlcpy(e->hostname, req->hostname, sizeof(e->hostname));
 	}

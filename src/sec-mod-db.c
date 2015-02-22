@@ -86,8 +86,9 @@ struct htable *db = sec->client_db;
 client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 {
 	struct htable *db = sec->client_db;
-	client_entry_st *e;
+	client_entry_st *e, *te;
 	int ret;
+	int retries = 3;
 
 	e = talloc_zero(db, client_entry_st);
 	if (e == NULL) {
@@ -95,11 +96,24 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 	}
 
 	strlcpy(e->ip, ip, sizeof(e->ip));
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));
-	if (ret < 0) {
-		seclog(sec, LOG_ERR, "error generating SID");
+
+	do {
+		ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));
+		if (ret < 0) {
+			seclog(sec, LOG_ERR, "error generating SID");
+			goto fail;
+		}
+
+		/* check if in use */
+		te = find_client_entry(sec, e->sid);
+	} while(te != NULL && retries-- >= 0);
+
+	if (te != NULL) {
+		seclog(sec, LOG_ERR,
+		       "could not generate a unique SID!");
 		goto fail;
 	}
+
 	snprintf(e->printable_sid, sizeof(e->printable_sid), "%.2x%.2x%.2x",
 		(unsigned) e->sid[0], (unsigned) e->sid[1], (unsigned) e->sid[2]);
 	e->time = time(0);

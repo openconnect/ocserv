@@ -9,6 +9,7 @@ RUN apt-get install -y libsystemd-daemon0 valgrind nuttcp openssh-server bash
 RUN apt-get install -y libtalloc2
 RUN apt-get install -y liblz4-1
 RUN apt-get install -y libfreeradius-client2
+RUN apt-get install -y libkrb5-3 less
 RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/sshd_config
 
 RUN echo 'root:root' |chpasswd

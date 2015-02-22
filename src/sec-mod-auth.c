@@ -316,6 +316,13 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	return ret;
 }
 
+static void stats_add_to(stats_st *dst, stats_st *src1, stats_st *src2)
+{
+	dst->bytes_out = src1->bytes_out + src2->bytes_out;
+	dst->bytes_in = src1->bytes_in + src2->bytes_in;
+	dst->uptime = src1->uptime + src2->uptime;
+}
+
 /* opens or closes a session.
  */
 int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req,
@@ -356,7 +363,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 			return -1;
 		}
 
-		if (e->module != NULL && e->module->open_session != NULL) {
+		if (e->module != NULL && e->module->open_session != NULL && e->session_is_open == 0) {
 			ret = e->module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
 			if (ret < 0) {
 				e->status = PS_AUTH_FAILED;
@@ -364,6 +371,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 				rep.reply = AUTH__REP__FAILED;
 			} else {
 				rep.reply = AUTH__REP__OK;
+				e->session_is_open = 1;
 			}
 		} else {
 			rep.reply = AUTH__REP__OK;
@@ -413,6 +421,8 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 				e->stats.bytes_out = req->bytes_out;
 		}
 
+		stats_add_to(&e->saved_stats, &e->saved_stats, &e->stats);
+		memset(&e->stats, 0, sizeof(e->stats));
 		expire_client_entry(sec, e);
 	}
 
@@ -422,6 +432,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 {
 	client_entry_st *e;
+	stats_st totals;
 
 	if (req->sid.len != SID_SIZE) {
 		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
@@ -451,7 +462,8 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (e->module == NULL || e->module->session_stats == NULL)
 		return 0;
 
-	e->module->session_stats(e->auth_ctx, &e->stats);
+	stats_add_to(&totals, &e->stats, &e->saved_stats);
+	e->module->session_stats(e->auth_ctx, &totals);
 	return 0;
 }
 
@@ -641,8 +653,9 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 
 	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' (session: %s)", e->username, e->printable_sid);
 	if (e->auth_ctx != NULL) {
-		if (e->module->close_session)
-			e->module->close_session(e->auth_ctx, &e->stats);
+		if (e->module->close_session) {
+			e->module->close_session(e->auth_ctx, &e->saved_stats);
+		}
 		e->module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;
 	}

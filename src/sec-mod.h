@@ -56,12 +56,14 @@ typedef struct client_entry_st {
 	char printable_sid[7];
 
 	void * auth_ctx; /* the context of authentication */
+	unsigned session_is_open; /* whether open_session was done */
 	unsigned in_use; /* counter of users of this structure */
 	unsigned tls_auth_ok;
 
 	char *msg_str;
 
-	stats_st stats;
+	stats_st saved_stats; /* saved from previous cookie usage */
+	stats_st stats; /* current */
 
 	unsigned status; /* PS_AUTH_ */
 

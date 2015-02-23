@@ -20,6 +20,7 @@ Optional dependencies that enable specific functionality:
 * seccomp:      libseccomp-dev     / libseccomp-devel
 * occtl:        libreadline-dev    / readline-devel
                 libnl-route-3-dev  / libnl3-devel
+* GSSAPI        libkrb5-dev        / krb5-devel
 
 Dependencies for development, or dependencies that can be skipped
 in an embedded system (e.g., because a replacement library is included):

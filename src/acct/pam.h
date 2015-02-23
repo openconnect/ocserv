@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015 Red Hat, Inc.
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -18,29 +18,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef PAM_H
-#define PAM_H
+#ifndef ACCT_PAM_H
+#define ACCT_PAM_H
 
-#include <sec-mod-auth.h>
-#include <security/pam_appl.h>
-#include <str.h>
-#include <pcl.h>
+#include <sec-mod-acct.h>
 
-extern const struct auth_mod_st pam_auth_funcs;
-
-struct pam_ctx_st {
-	char password[MAX_PASSWORD_SIZE];
-	char username[MAX_USERNAME_SIZE];
-	pam_handle_t * ph;
-	struct pam_conv dc;
-	coroutine_t cr;
-	int cr_ret;
-	unsigned changing; /* whether we are entering a new password */
-	str_st msg;
-	unsigned sent_msg;
-	struct pam_response *replies; /* for safety */
-	unsigned state; /* PAM_S_ */
-};
-
+extern const struct acct_mod_st pam_acct_funcs;
 
 #endif

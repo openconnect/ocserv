@@ -618,8 +618,11 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 			msg.sid.data = ws->sid;
 			msg.has_sid = 1;
 
-			msg.ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
+			msg.remote_ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
 			       		     buf, sizeof(buf), 0);
+
+			msg.ipv4 = ws->vinfo.ipv4;
+			msg.ipv4 = ws->vinfo.ipv6;
 
 			send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
 					 (pack_size_func)cli_stats_msg__get_packed_size,

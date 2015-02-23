@@ -95,7 +95,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 		return NULL;
 	}
 
-	strlcpy(e->ip, ip, sizeof(e->ip));
+	strlcpy(e->auth_info.remote_ip, ip, sizeof(e->auth_info.remote_ip));
 
 	do {
 		ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));
@@ -114,8 +114,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 		goto fail;
 	}
 
-	snprintf(e->printable_sid, sizeof(e->printable_sid), "%.2x%.2x%.2x",
-		(unsigned) e->sid[0], (unsigned) e->sid[1], (unsigned) e->sid[2]);
+	base64_encode((char *)e->sid, SID_SIZE, (char *)e->auth_info.psid, sizeof(e->auth_info.psid));
 	e->time = time(0);
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {

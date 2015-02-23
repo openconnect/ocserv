@@ -66,6 +66,8 @@ COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
 	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c
 
+ACCT_SOURCES=acct/pam.c acct/pam.h acct/radius.c acct/radius.h
+
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
@@ -73,7 +75,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	worker-extras.c html.c html.h worker-http.c \
 	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
 	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod-auth.h sec-mod.h sec-mod-ban.c \
-	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) \
+	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
 	icmp-ping.c icmp-ping.h worker-kkdcp.c \
 	sec-mod-sup-config.c sec-mod-sup-config.h \
 	sup-config/file.c sup-config/file.h \
@@ -82,7 +84,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	vasprintf.c vasprintf.h lzs.c lzs.h \
 	proc-search.c proc-search.h http-heads.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	$(PROTOBUF_SOURCES) kkdcp.asn kkdcp_asn1_tab.c
+	$(PROTOBUF_SOURCES) kkdcp.asn kkdcp_asn1_tab.c sec-mod-acct.h
 
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h

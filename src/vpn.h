@@ -87,6 +87,12 @@ extern int syslog_open;
 #define AUTH_TYPE_RADIUS (1<<5 | AUTH_TYPE_USERNAME_PASS)
 #define AUTH_TYPE_GSSAPI (1<<6)
 
+#define ALL_AUTH_TYPES ((AUTH_TYPE_PAM|AUTH_TYPE_PLAIN|AUTH_TYPE_CERTIFICATE|AUTH_TYPE_RADIUS|AUTH_TYPE_GSSAPI) & (~AUTH_TYPE_USERNAME_PASS))
+#define VIRTUAL_AUTH_TYPES (AUTH_TYPE_USERNAME_PASS)
+
+#define ACCT_TYPE_PAM (1<<1)
+#define ACCT_TYPE_RADIUS (1<<2)
+
 #define ERR_SUCCESS 0
 #define ERR_BAD_COMMAND -2
 #define ERR_AUTH_FAIL -3
@@ -218,6 +224,12 @@ typedef struct auth_struct_st {
 	bool enabled;
 } auth_struct_st;
 
+typedef struct acct_struct_st {
+	const char *name;
+	char *additional;
+	const struct acct_mod_st *amod;
+} acct_struct_st;
+
 typedef struct kkdcp_realm_st {
 	char *realm;
 	struct sockaddr_storage addr;
@@ -262,6 +274,7 @@ struct cfg_st {
 
 	auth_struct_st auth[MAX_AUTH_METHODS];
 	unsigned auth_methods;
+	acct_struct_st acct;
 
 	gnutls_certificate_request_t cert_req;
 	char *priorities;

@@ -33,10 +33,13 @@
 #include <c-ctype.h>
 #include <auth/pam.h>
 #include <auth/radius.h>
+#include <acct/pam.h>
+#include <acct/radius.h>
 #include <auth/plain.h>
 #include <auth/gssapi.h>
 #include <auth/common.h>
 #include <sec-mod-sup-config.h>
+#include <sec-mod-acct.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -69,6 +72,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "select-group", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "acct", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "server-name", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -533,6 +537,51 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 	talloc_free(auth);
 }
 
+typedef struct acct_types_st {
+	const char *name;
+	unsigned name_size;
+	const struct acct_mod_st *mod;
+	char *(*get_brackets_string)(struct cfg_st *config, const char *);
+} acct_types_st;
+
+static acct_types_st avail_acct_types[] =
+{
+	{NAME("pam"), &pam_acct_funcs, NULL},
+#ifdef HAVE_RADIUS
+	{NAME("radius"), &radius_acct_funcs, get_brackets_string1},
+#endif
+};
+
+static void figure_acct_funcs(struct cfg_st *config, const char *acct)
+{
+	unsigned i;
+	unsigned found = 0;
+
+	/* Set the accounting method */
+	for (i=0;i<sizeof(avail_acct_types)/sizeof(avail_acct_types[0]);i++) {
+		if (c_strncasecmp(acct, avail_acct_types[i].name, avail_acct_types[i].name_size) == 0) {
+			if (avail_acct_types[i].get_brackets_string)
+				config->acct.additional = avail_acct_types[i].get_brackets_string(config, acct+avail_acct_types[i].name_size);
+
+			if ((avail_acct_types[i].mod->auth_types & config->auth[0].type) == 0) {
+				fprintf(stderr, "You cannot mix the '%s' accounting method with the '%s' authentication method\n", acct, config->auth[0].name);
+				exit(1);
+			}
+
+			config->acct.amod = avail_acct_types[i].mod;
+			config->acct.name = avail_acct_types[i].name;
+			found = 1;
+			break;
+		}
+	}
+
+	if (found == 0) {
+		fprintf(stderr, "Unknown or unsupported accounting method: %s\n", acct);
+		exit(1);
+	}
+	fprintf(stderr, "Setting '%s' as accounting method\n", config->acct.name);
+}
+
 #ifdef HAVE_GSSAPI
 static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
 {
@@ -690,6 +739,13 @@ unsigned urlfw_size = 0;
 	if (config->auth[0].enabled == 0) {
 		fprintf(stderr, "No authentication method was specified!\n");
 		exit(1);
+	}
+
+	tmp = NULL;
+	READ_STRING("acct", tmp);
+	if (tmp != NULL) {
+		figure_acct_funcs(config, tmp);
+		talloc_free(tmp);
 	}
 
 	/* When adding allocated data, remember to modify

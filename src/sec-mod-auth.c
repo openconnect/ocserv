@@ -50,6 +50,7 @@
 #include <sec-mod.h>
 #include <vpn.h>
 #include <sec-mod-sup-config.h>
+#include <sec-mod-acct.h>
 
 #ifdef HAVE_GSSAPI
 # include <gssapi/gssapi.h>
@@ -64,6 +65,9 @@ void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 		if (config->auth[i].enabled && config->auth[i].amod && config->auth[i].amod->global_init)
 			config->auth[i].amod->global_init(sec, config->server_name, config->auth[i].additional);
 	}
+
+	if (config->acct.amod && config->acct.amod->global_init)
+		config->acct.amod->global_init(sec, config->server_name, config->acct.additional);
 }
 
 static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
@@ -71,15 +75,15 @@ static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 	int ret;
 	Cookie msg = COOKIE__INIT;
 
-	msg.username = entry->username;
-	msg.groupname = entry->groupname;
+	msg.username = entry->auth_info.username;
+	msg.groupname = entry->auth_info.groupname;
 	msg.hostname = entry->hostname;
-	msg.ip = entry->ip;
+	msg.ip = entry->auth_info.remote_ip;
 	msg.tls_auth_ok = entry->tls_auth_ok;
 
 	/* Fixme: possibly we should allow for completely random seeds */
 	if (sec->config->predictable_ips != 0) {
-		msg.ipv4_seed = hash_any(entry->username, strlen(entry->username), 0);
+		msg.ipv4_seed = hash_any(entry->auth_info.username, strlen(entry->auth_info.username), 0);
 	} else {
 		ret = gnutls_rnd(GNUTLS_RND_NONCE, &msg.ipv4_seed, sizeof(msg.ipv4_seed));
 		if (ret < 0)
@@ -121,7 +125,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 		msg.cookie.data = entry->cookie;
 		msg.cookie.len = entry->cookie_size;
 
-		msg.user_name = entry->username;
+		msg.user_name = entry->auth_info.username;
 
 		if (entry->msg_str != NULL) {
 			msg.msg = entry->msg_str;
@@ -199,33 +203,33 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
 		if (tls_auth_ok == 0) {
 			seclog(sec, LOG_INFO, "user %s (session: %s) presented no certificate",
-			       e->username, e->printable_sid);
+			       e->auth_info.username, e->auth_info.psid);
 			return -1;
 		}
 
 		e->tls_auth_ok = tls_auth_ok;
 		if (tls_auth_ok != 0) {
-			if (e->username[0] == 0 && sec->config->cert_user_oid != NULL) {
+			if (e->auth_info.username[0] == 0 && sec->config->cert_user_oid != NULL) {
 				if (cert_user == NULL) {
 					seclog(sec, LOG_INFO, "no username in the certificate!");
 					return -1;
 				}
 
-				strlcpy(e->username, cert_user, sizeof(e->username));
-				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL && e->groupname[0] == 0)
-					strlcpy(e->groupname, cert_groups[0], sizeof(e->groupname));
+				strlcpy(e->auth_info.username, cert_user, sizeof(e->auth_info.username));
+				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL && e->auth_info.groupname[0] == 0)
+					strlcpy(e->auth_info.groupname, cert_groups[0], sizeof(e->auth_info.groupname));
 			} else {
-				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->username, cert_user) != 0) {
+				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->auth_info.username, cert_user) != 0) {
 					seclog(sec, LOG_INFO,
 					       "user '%s' (session: %s) presented a certificate from user '%s'",
-					       e->username, e->printable_sid, cert_user);
+					       e->auth_info.username, e->auth_info.psid, cert_user);
 					return -1;
 				}
 
 				if (sec->config->cert_group_oid != NULL) {
 					found = 0;
 					for (i=0;i<cert_groups_size;i++) {
-						if (strcmp(e->groupname, cert_groups[i]) == 0) {
+						if (strcmp(e->auth_info.groupname, cert_groups[i]) == 0) {
 							found++;
 							break;
 						}
@@ -233,7 +237,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 					if (found == 0) {
 						seclog(sec, LOG_INFO,
 							"user '%s' (session: %s) presented a certificate from group '%s' but he isn't a member of it",
-							e->username, e->printable_sid, e->groupname);
+							e->auth_info.username, e->auth_info.psid, e->auth_info.groupname);
 							return -1;
 					}
 				}
@@ -267,7 +271,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	if (result == ERR_AUTH_CONTINUE) {
 		/* if the module allows multiple retries for the password */
 		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries) {
-			add_ip_to_ban_list(sec, e->ip, 1, time(0) + sec->config->min_reauth_time);
+			add_ip_to_ban_list(sec, e->auth_info.remote_ip, 1, time(0) + sec->config->min_reauth_time);
 		}
 
 		ret = send_sec_auth_reply_msg(cfd, sec, e);
@@ -281,8 +285,8 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 		e->status = PS_AUTH_COMPLETED;
 
 		if (e->module) {
-			e->module->auth_user(e->auth_ctx, e->username,
-					     sizeof(e->username));
+			e->module->auth_user(e->auth_ctx, e->auth_info.username,
+					     sizeof(e->auth_info.username));
 		}
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__OK);
@@ -291,13 +295,13 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
 		}
-		remove_ip_from_ban_list(sec, e->ip);
+		remove_ip_from_ban_list(sec, e->auth_info.remote_ip);
 
 		ret = 0;
 	} else {
 		e->status = PS_AUTH_FAILED;
 
-		add_ip_to_ban_list(sec, e->ip, 1, time(0) + sec->config->min_reauth_time);
+		add_ip_to_ban_list(sec, e->auth_info.remote_ip, 1, time(0) + sec->config->min_reauth_time);
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {
@@ -345,7 +349,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s (session: %s)!", e->username, e->printable_sid);
+		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s (session: %s)!", e->auth_info.username, e->auth_info.psid);
 		return -1;
 	}
 
@@ -363,8 +367,8 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 			return -1;
 		}
 
-		if (e->module != NULL && e->module->open_session != NULL && e->session_is_open == 0) {
-			ret = e->module->open_session(e->auth_ctx, req->sid.data, req->sid.len);
+		if (sec->config->acct.amod != NULL && sec->config->acct.amod->open_session != NULL && e->session_is_open == 0) {
+			ret = sec->config->acct.amod->open_session(e->module->type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
 			if (ret < 0) {
 				e->status = PS_AUTH_FAILED;
 				seclog(sec, LOG_ERR, "could not open session.");
@@ -385,7 +389,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		if (rep.reply == AUTH__REP__OK && sec->config_module && sec->config_module->get_sup_config) {
 			ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
 			if (ret < 0) {
-				seclog(sec, LOG_ERR, "error reading additional configuration for '%s' (session: %s)", e->username, e->printable_sid);
+				seclog(sec, LOG_ERR, "error reading additional configuration for '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
 				talloc_free(lpool);
 				return ERR_READ_CONFIG;
 			}
@@ -400,16 +404,16 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		talloc_free(lpool);
 
 		if (rep.reply != AUTH__REP__OK) {
-			seclog(sec, LOG_INFO, "denied open session for user '%s' (session: %s)", e->username, e->printable_sid);
+			seclog(sec, LOG_INFO, "denied open session for user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
 			del_client_entry(sec, e);
 		} else { /* set expiration time to unlimited (until someone closes the session) */
-			seclog(sec, LOG_INFO, "initiating session for user '%s' (session: %s)", e->username, e->printable_sid);
+			seclog(sec, LOG_INFO, "initiating session for user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
 			e->time = -1;
 			e->in_use++;
 		}
 
 	} else { /* CLOSE */
-		seclog(sec, LOG_INFO, "temporarily closing session for %s (session: %s)", e->username, e->printable_sid);
+		seclog(sec, LOG_INFO, "temporarily closing session for %s (session: %s)", e->auth_info.username, e->auth_info.psid);
 
 		if (req->has_uptime && req->uptime > e->stats.uptime) {
 				e->stats.uptime = req->uptime;
@@ -447,7 +451,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session stats received in unauthenticated client %s (session: %s)!", e->username, e->printable_sid);
+		seclog(sec, LOG_ERR, "session stats received in unauthenticated client %s (session: %s)!", e->auth_info.username, e->auth_info.psid);
 		return -1;
 	}
 
@@ -459,11 +463,18 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->uptime > e->stats.uptime)
 		e->stats.uptime = req->uptime;
 
-	if (e->module == NULL || e->module->session_stats == NULL)
+	if (sec->config->acct.amod == NULL || sec->config->acct.amod->session_stats == NULL)
 		return 0;
 
 	stats_add_to(&totals, &e->stats, &e->saved_stats);
-	e->module->session_stats(e->auth_ctx, &totals, req->ip);
+	if (req->remote_ip)
+		strlcpy(e->auth_info.remote_ip, req->remote_ip, sizeof(e->auth_info.remote_ip));
+	if (req->ipv4)
+		strlcpy(e->auth_info.ipv4, req->ipv4, sizeof(e->auth_info.ipv4));
+	if (req->ipv6)
+		strlcpy(e->auth_info.ipv6, req->ipv6, sizeof(e->auth_info.ipv6));
+
+	sec->config->acct.amod->session_stats(e->module->type, e->auth_ctx, &e->auth_info, &totals);
 	return 0;
 }
 
@@ -492,16 +503,16 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 
 	if (e->status != PS_AUTH_INIT && e->status != PS_AUTH_CONT) {
 		seclog(sec, LOG_ERR, "auth cont received for %s (session: %s) but we are on state %u!",
-		       e->username, e->printable_sid, e->status);
+		       e->auth_info.username, e->auth_info.psid, e->status);
 		ret = -1;
 		goto cleanup;
 	}
 
-	seclog(sec, LOG_DEBUG, "auth cont for user '%s' (session: %s)", e->username, e->printable_sid);
+	seclog(sec, LOG_DEBUG, "auth cont for user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
 
 	if (req->password == NULL) {
 		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s' (session: %s)",
-			e->username, e->printable_sid);
+			e->auth_info.username, e->auth_info.psid);
 		ret = -1;
 		goto cleanup;
 	}
@@ -520,7 +531,7 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 	if (ret < 0) {
 		seclog(sec, LOG_DEBUG,
 		       "error in password given in auth cont for user '%s' (session: %s)",
-		       e->username, e->printable_sid);
+		       e->auth_info.username, e->auth_info.psid);
 		goto cleanup;
 	}
 
@@ -543,7 +554,7 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 			e->module = sec->config->auth[i].amod;
 			e->auth_type = sec->config->auth[i].type;
 
-			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (session: %s)", sec->config->auth[i].name, e->printable_sid);
+			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (session: %s)", sec->config->auth[i].name, e->auth_info.psid);
 			return 0;
 		}
 	}
@@ -589,26 +600,26 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 		}
 
 		ret =
-		    e->module->auth_group(e->auth_ctx, req->group_name, e->groupname,
-				       sizeof(e->groupname));
+		    e->module->auth_group(e->auth_ctx, req->group_name, e->auth_info.groupname,
+				       sizeof(e->auth_info.groupname));
 		if (ret != 0) {
 			ret = -1;
 			goto cleanup;
 		}
-		e->groupname[sizeof(e->groupname) - 1] = 0;
+		e->auth_info.groupname[sizeof(e->auth_info.groupname) - 1] = 0;
 
 		if (req->user_name != NULL) {
-			strlcpy(e->username, req->user_name, sizeof(e->username));
+			strlcpy(e->auth_info.username, req->user_name, sizeof(e->auth_info.username));
 		}
 	}
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
-		if (e->groupname[0] == 0 && req->group_name != NULL && sec->config->cert_group_oid != NULL) {
+		if (e->auth_info.groupname[0] == 0 && req->group_name != NULL && sec->config->cert_group_oid != NULL) {
 			unsigned i, found = 0;
 
 			for (i=0;i<req->n_cert_group_names;i++) {
 				if (strcmp(req->group_name, req->cert_group_names[i]) == 0) {
-					strlcpy(e->groupname, req->cert_group_names[i], sizeof(e->groupname));
+					strlcpy(e->auth_info.groupname, req->cert_group_names[i], sizeof(e->auth_info.groupname));
 					found = 1;
 					break;
 				}
@@ -634,7 +645,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	e->status = PS_AUTH_INIT;
 	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' (session: %s) of group: '%s' from '%s'", 
 	       req->tls_auth_ok?"(with cert) ":"",
-	       e->username, e->printable_sid, e->groupname, req->ip);
+	       e->auth_info.username, e->auth_info.psid, e->auth_info.groupname, req->ip);
 
 	if (need_continue != 0) {
 		ret = ERR_AUTH_CONTINUE;
@@ -651,10 +662,10 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 	if (e->module == NULL)
 		return;
 
-	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' (session: %s)", e->username, e->printable_sid);
+	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
 	if (e->auth_ctx != NULL) {
-		if (e->module->close_session) {
-			e->module->close_session(e->auth_ctx, &e->saved_stats);
+		if (sec->config->acct.amod != NULL && sec->config->acct.amod->close_session != NULL && e->session_is_open != 0) {
+			sec->config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats);
 		}
 		e->module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;

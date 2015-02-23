@@ -24,6 +24,7 @@
 #include <cookies.h>
 #include <gnutls/abstract.h>
 #include <ccan/htable/htable.h>
+#include <base64.h>
 
 typedef struct sec_mod_st {
 	gnutls_datum_t dcookie_key; /* the key to generate cookies */
@@ -44,6 +45,15 @@ typedef struct stats_st {
 	time_t uptime;
 } stats_st;
 
+typedef struct common_auth_info_st {
+	char username[MAX_USERNAME_SIZE*2];
+	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
+	char psid[BASE64_LENGTH(SID_SIZE) + 1]; /* printable */
+	char remote_ip[MAX_IP_STR];
+	char ipv4[MAX_IP_STR];
+	char ipv6[MAX_IP_STR];
+} common_auth_info_st;
+
 typedef struct client_entry_st {
 	/* A unique session identifier used to distinguish sessions
 	 * prior to authentication. It is sent as cookie to the client
@@ -51,9 +61,6 @@ typedef struct client_entry_st {
 	 * sessions.
 	 */
 	uint8_t sid[SID_SIZE];
-
-	/* a part of sid used in the logs to differentiate the session */
-	char printable_sid[7];
 
 	void * auth_ctx; /* the context of authentication */
 	unsigned session_is_open; /* whether open_session was done */
@@ -67,10 +74,7 @@ typedef struct client_entry_st {
 
 	unsigned status; /* PS_AUTH_ */
 
-	char ip[MAX_IP_STR]; /* the user's IP */
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
-	char username[MAX_USERNAME_SIZE]; /* the owner */
-	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	uint8_t *cookie; /* the cookie associated with the session */
 	unsigned cookie_size;
 
@@ -81,6 +85,9 @@ typedef struct client_entry_st {
 
 	/* the auth type associated with the user */
 	unsigned auth_type;
+
+	struct common_auth_info_st auth_info;
+
 	/* the module this entry is using */
 	const struct auth_mod_st *module;
 } client_entry_st;

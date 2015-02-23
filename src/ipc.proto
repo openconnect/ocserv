@@ -115,7 +115,9 @@ message cli_stats_msg
 	required uint64 bytes_out = 2;
 	optional bytes sid = 3; /* only required by sec-mod */
 	required uint32 uptime = 4; /* sec-mod */
-	optional string ip = 5; /* only required by sec-mod */
+	optional string remote_ip = 5; /* only required by sec-mod */
+	optional string ipv4 = 6; /* only required by sec-mod */
+	optional string ipv6 = 7; /* only required by sec-mod */
 }
 
 /* UDP_FD */

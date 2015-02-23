@@ -27,7 +27,7 @@
 #define MAX_AUTH_REQS 8
 #define MAX_GROUPS 32
 
-struct auth_mod_st {
+typedef struct auth_mod_st {
 	unsigned int type;
 	unsigned int allows_retries; /* whether the module allows retries of the same password */
 	void (*global_init)(void *pool, const char *server_name, void* additional);
@@ -38,13 +38,9 @@ struct auth_mod_st {
 	int (*auth_group)(void* ctx, const char *suggested, char *groupname, int groupname_size);
 	int (*auth_user)(void* ctx, char *groupname, int groupname_size);
 
-	int (*open_session)(void *ctx, const void *sid, unsigned sid_size); /* optional, may be null */
-	void (*session_stats)(void *ctx, struct stats_st *stats, const char *ip); /* optional, may be null */
-	void (*close_session)(void *ctx, struct stats_st *stats); /* optional may be null */
-
 	void (*auth_deinit)(void* ctx);
 	void (*group_list)(void *pool, void *additional, char ***groupname, unsigned *groupname_size);
-};
+} auth_mod_st;
 
 void main_auth_init(main_server_st *s);
 void proc_auth_deinit(main_server_st* s, struct proc_st* proc);

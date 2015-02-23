@@ -269,9 +269,9 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 	char file[_POSIX_PATH_MAX];
 	int ret;
 
-	if (cfg->per_group_dir != NULL && entry->groupname[0] != 0) {
+	if (cfg->per_group_dir != NULL && entry->auth_info.groupname[0] != 0) {
 		snprintf(file, sizeof(file), "%s/%s", cfg->per_group_dir,
-			 entry->groupname);
+			 entry->auth_info.groupname);
 
 		ret = read_sup_config_file(cfg, msg, pool, file, cfg->default_group_conf, "group");
 		if (ret < 0)
@@ -280,7 +280,7 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 
 	if (cfg->per_user_dir != NULL) {
 		snprintf(file, sizeof(file), "%s/%s", cfg->per_user_dir,
-			 entry->username);
+			 entry->auth_info.username);
 		ret = read_sup_config_file(cfg, msg, pool, file, cfg->default_user_conf, "user");
 		if (ret < 0)
 			return ret;

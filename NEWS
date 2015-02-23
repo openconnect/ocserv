@@ -5,6 +5,8 @@
   used as alternative to the main authentication.
 - Added support for MS-KKDCP. That is, the server can be used as an HTTP
   proxy to a KDC.
+- Accounting was split from authentication. That way radius accounting can
+  be used in addition to any authentication method.
 - Support for 'certificate[optional]' authentication has been removed.
 
 

@@ -51,7 +51,7 @@ IMAGE_NAME=test_ocserv_kerberos
 . ./docker-common.sh
 
 #-p $PORT:$PORT/udp -p $PORT2:$PORT2/udp -p 22 -p $PORT_OCSERV:$PORT_OCSERV/udp
-$DOCKER run -P --privileged=true --add-host='kerberos.test:127.0.0.1' --tty=false -d --name test_ocserv_kerberos $IMAGE
+$DOCKER run -P --privileged=true --hostname=kerberos.test --add-host='kerberos.test:127.0.0.1' --tty=false -d --name test_ocserv_kerberos $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1

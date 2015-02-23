@@ -19,6 +19,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 srcdir=${srcdir:-.}
+SERV="${SERV:-../src/ocserv}"
 
 PORT=10500
 PORT2=10501
@@ -30,7 +31,7 @@ if [ $? != 0 ];then
 	exit 77
 fi
 
-$SERV --version|grep gssapi >/dev/null 2>&1
+$SERV --version 2>&1|grep gssapi >/dev/null 2>&1
 if [ $? != 0 ];then
 	exit 77
 fi

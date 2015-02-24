@@ -97,7 +97,7 @@ int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 	    ws->selected_auth->type & auth)
 		return 1;
 
-	for (i=1;i<ws->config->auth_methods;i++) {
+	for (i=0;i<ws->config->auth_methods;i++) {
 		if (ws->config->auth[i].enabled && (ws->config->auth[i].type & auth) != 0) {
 			ws->selected_auth = &ws->config->auth[i];
 			return 1;

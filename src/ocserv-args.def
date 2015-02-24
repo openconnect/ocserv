@@ -76,7 +76,7 @@ An example configuration file follows.
 # User authentication method. Could be set multiple times and in 
 # that case all should succeed. To enable multiple methods use
 # multiple auth directives. Available options: certificate, 
-# plain, pam, radius[configfile,groupconfig], gssapi.
+# plain, pam, radius[config=configfile,groupconfig=trueval], gssapi.
 #
 # Note that authentication methods cannot be changed with reload.
 
@@ -94,7 +94,7 @@ An example configuration file follows.
 # One entry must be listed per line, and 'ocpasswd' should be used
 # to generate password entries.
 #
-# radius[/etc/radiusclient/radiusclient.conf,groupconfig]:
+# radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true]:
 #  The radius option requires specifying freeradius-client configuration
 # file. If the groupconfig option is set, then config-per-user will be overriden,
 # and all configuration will be read from radius. The supported atributes for
@@ -106,7 +106,7 @@ An example configuration file follows.
 #auth = "pam"
 #auth = "pam[gid-min=1000]"
 #auth = "plain[/etc/ocserv/ocpasswd]"
-#auth = "radius[/etc/radiusclient/radiusclient.conf,groupconfig]"
+#auth = "radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true]"
 
 # Specify alternative authentication methods that are sufficient
 # for authentication. That is, if set, any of the methods enabled
@@ -124,7 +124,7 @@ An example configuration file follows.
 #
 # Only one accounting method can be specified.
 #acct = "pam"
-#acct = "radius[/etc/radiusclient/radiusclient.conf]"
+#acct = "radius[config=/etc/radiusclient/radiusclient.conf]"
 
 # Whether to enable seccomp/Linux namespaces worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a

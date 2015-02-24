@@ -33,6 +33,10 @@ typedef struct gssapi_cfg_st {
 	unsigned no_local_map;
 } gssapi_cfg_st;
 
+typedef struct radius_cfg_st {
+	char *config;
+} radius_cfg_st;
+
 unsigned expand_brackets_string(struct cfg_st *config, const char *str, subcfg_val_st out[MAX_SUBOPTIONS]);
 inline static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS], unsigned size)
 {
@@ -43,8 +47,10 @@ inline static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTION
 	}
 }
 
-#define CHECK_TRUE(str) (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0)?1:0
+#define CHECK_TRUE(str) (str != NULL && (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0))?1:0
 
+void *get_brackets_string1(struct cfg_st *config, const char *str);
 void *gssapi_get_brackets_string(struct cfg_st *config, const char *str);
+void *radius_get_brackets_string(struct cfg_st *config, const char *str);
 
 #endif

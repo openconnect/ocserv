@@ -31,6 +31,7 @@
 
 #ifdef HAVE_RADIUS
 
+#include "cfg.h"
 #include <freeradius-client.h>
 
 #define RAD_GROUP_NAME 1030
@@ -42,7 +43,9 @@ static char nas_identifier[64];
 
 static void radius_global_init(void *pool, const char *server_name, void *additional)
 {
-	rh = rc_read_config(additional);
+	radius_cfg_st *config = additional;
+
+	rh = rc_read_config(config->config);
 	if (rh == NULL) {
 		fprintf(stderr, "radius initialization error\n");
 		exit(1);

@@ -167,66 +167,6 @@ static struct cfg_options available_options[] = {
 	{ .name = "default-group-config", .type = OPTION_STRING, .mandatory = 0 },
 };
 
-#define get_brackets_string get_brackets_string1
-static void *get_brackets_string1(struct cfg_st *config, const char *str);
-
-#ifdef HAVE_RADIUS
-static void *get_brackets_string2(struct cfg_st *config, const char *str)
-{
-	char *p, *p2;
-	unsigned len;
-
-	p = strchr(str, '[');
-	if (p == NULL) {
-		return NULL;
-	}
-	p++;
-
-	p = strchr(p, ',');
-	if (p == NULL) {
-		return NULL;
-	}
-	p++;
-
-	while (c_isspace(*p))
-		p++;
-
-	p2 = strchr(p, ',');
-	if (p2 == NULL) {
-		p2 = strchr(p, ']');
-		if (p2 == NULL) {
-			fprintf(stderr, "error parsing %s\n", str);
-			exit(1);
-		}
-	}
-
-	len = p2 - p;
-
-	return talloc_strndup(config, p, len);
-}
-
-static void *radius_get_brackets_string(struct cfg_st *config, const char *str)
-{
-	char *ret, *p;
-
-	ret = get_brackets_string1(config, str);
-	if (ret == NULL) {
-		fprintf(stderr, "No radius configuration specified: %s\n", str);
-		exit(1);
-	}
-
-	p = get_brackets_string2(config, str);
-	if (p != NULL) {
-		if (strcasecmp(p, "groupconfig") != 0) {
-			fprintf(stderr, "No known configuration option: %s\n", p);
-			exit(1);
-		}
-		config->sup_config_type = SUP_CONFIG_RADIUS;
-	}
-	return ret;
-}
-#endif
-
 static const tOptionValue* get_option(const char* name, unsigned * mand)
 {
 unsigned j;
@@ -285,7 +225,7 @@ unsigned j;
 				continue; \
 		        s_name[num] = talloc_strdup(config, val->v.strVal); \
 		        xp = strchr(s_name[num], '['); if (xp != NULL) *xp = 0; \
-		        s_name2[num] = get_brackets_string(config, val->v.strVal); \
+		        s_name2[num] = get_brackets_string1(config, val->v.strVal); \
 		        num++; \
 		        if (num>=MAX_CONFIG_ENTRIES) \
 		        break; \
@@ -382,32 +322,6 @@ unsigned j;
 	}
 }
 
-static void *get_brackets_string1(struct cfg_st *config, const char *str)
-{
-	char *p, *p2;
-	unsigned len;
-
-	p = strchr(str, '[');
-	if (p == NULL) {
-		return NULL;
-	}
-	p++;
-	while (c_isspace(*p))
-		p++;
-
-	p2 = strchr(p, ',');
-	if (p2 == NULL) {
-		p2 = strchr(p, ']');
-		if (p2 == NULL) {
-			fprintf(stderr, "error parsing %s\n", str);
-			exit(1);
-		}
-	}
-
-	len = p2 - p;
-
-	return talloc_strndup(config, p, len);
-}
 
 /* Parses the string ::1/prefix, to return prefix
  * and modify the string to contain the network only.
@@ -443,7 +357,7 @@ typedef struct auth_types_st {
 static auth_types_st avail_auth_types[] =
 {
 #ifdef HAVE_PAM
-	{NAME("pam"), &pam_auth_funcs, AUTH_TYPE_PAM, get_brackets_string},
+	{NAME("pam"), &pam_auth_funcs, AUTH_TYPE_PAM, get_brackets_string1},
 #endif
 #ifdef HAVE_GSSAPI
 	{NAME("gssapi"), &gssapi_auth_funcs, AUTH_TYPE_GSSAPI, gssapi_get_brackets_string},
@@ -451,7 +365,7 @@ static auth_types_st avail_auth_types[] =
 #ifdef HAVE_RADIUS
 	{NAME("radius"), &radius_auth_funcs, AUTH_TYPE_RADIUS, radius_get_brackets_string},
 #endif
-	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, get_brackets_string},
+	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, get_brackets_string1},
 	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
 };
 
@@ -549,7 +463,7 @@ static acct_types_st avail_acct_types[] =
 {
 	{NAME("pam"), &pam_acct_funcs, NULL},
 #ifdef HAVE_RADIUS
-	{NAME("radius"), &radius_acct_funcs, get_brackets_string1},
+	{NAME("radius"), &radius_acct_funcs, radius_get_brackets_string},
 #endif
 };
 

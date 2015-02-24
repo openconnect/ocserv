@@ -35,13 +35,16 @@
 #include <sec-mod-acct.h>
 #include "auth/radius.h"
 #include "acct/radius.h"
+#include "cfg.h"
 
 static rc_handle *rh = NULL;
 static char nas_identifier[64];
 
 static void acct_radius_global_init(void *pool, const char *server_name, void *additional)
 {
-	rh = rc_read_config(additional);
+	radius_cfg_st *config = additional;
+
+	rh = rc_read_config(config->config);
 	if (rh == NULL) {
 		fprintf(stderr, "radius initialization error\n");
 		exit(1);

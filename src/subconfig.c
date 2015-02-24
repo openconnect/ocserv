@@ -25,6 +25,7 @@
 #include <c-strcase.h>
 #include <c-ctype.h>
 
+#include <sec-mod-sup-config.h>
 #include <common.h>
 #include <vpn.h>
 #include "cfg.h"
@@ -109,6 +110,120 @@ void *gssapi_get_brackets_string(struct cfg_st *config, const char *str)
 		}
 	}
 	free_expanded_brackets_string(vals, vals_size);
+	return additional;
+}
+#endif
+
+void *get_brackets_string1(struct cfg_st *config, const char *str)
+{
+	char *p, *p2;
+	unsigned len;
+
+	p = strchr(str, '[');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+	while (c_isspace(*p))
+		p++;
+
+	p2 = strchr(p, ',');
+	if (p2 == NULL) {
+		p2 = strchr(p, ']');
+		if (p2 == NULL) {
+			fprintf(stderr, "error parsing %s\n", str);
+			exit(1);
+		}
+	}
+
+	len = p2 - p;
+
+	return talloc_strndup(config, p, len);
+}
+
+#ifdef HAVE_RADIUS
+static void *get_brackets_string2(struct cfg_st *config, const char *str)
+{
+	char *p, *p2;
+	unsigned len;
+
+	p = strchr(str, '[');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+
+	p = strchr(p, ',');
+	if (p == NULL) {
+		return NULL;
+	}
+	p++;
+
+	while (c_isspace(*p))
+		p++;
+
+	p2 = strchr(p, ',');
+	if (p2 == NULL) {
+		p2 = strchr(p, ']');
+		if (p2 == NULL) {
+			fprintf(stderr, "error parsing %s\n", str);
+			exit(1);
+		}
+	}
+
+	len = p2 - p;
+
+	return talloc_strndup(config, p, len);
+}
+
+void *radius_get_brackets_string(struct cfg_st *config, const char *str)
+{
+	char *p;
+	subcfg_val_st vals[MAX_SUBOPTIONS];
+	unsigned vals_size, i;
+	radius_cfg_st *additional;
+
+	additional = talloc_zero(config, radius_cfg_st);
+	if (additional == NULL) {
+		return NULL;
+	}
+
+	if (str && str[0] == '[' && str[1] == '/') { /* legacy format */
+		fprintf(stderr, "Parsing radius auth method subconfig using legacy format\n");
+
+		additional->config = get_brackets_string1(config, str);
+		if (additional->config == NULL) {
+			fprintf(stderr, "No radius configuration specified: %s\n", str);
+			exit(1);
+		}
+
+		p = get_brackets_string2(config, str);
+		if (p != NULL) {
+			if (strcasecmp(p, "groupconfig") != 0) {
+				fprintf(stderr, "No known configuration option: %s\n", p);
+				exit(1);
+			}
+			config->sup_config_type = SUP_CONFIG_RADIUS;
+		}
+	} else {
+		/* new format */
+		vals_size = expand_brackets_string(config, str, vals);
+		for (i=0;i<vals_size;i++) {
+			if (c_strcasecmp(vals[i].name, "config") == 0) {
+				additional->config = talloc_strdup(config, vals[i].value);
+				vals[i].value = NULL;
+			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
+				if (CHECK_TRUE(vals[i].value))
+					config->sup_config_type = SUP_CONFIG_RADIUS;
+		} else {
+			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
+			exit(1);
+		}
+	}
+	free_expanded_brackets_string(vals, vals_size);
+	return additional;
+
+	}
 	return additional;
 }
 #endif

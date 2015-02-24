@@ -100,7 +100,7 @@ void *gssapi_get_brackets_string(struct cfg_st *config, const char *str)
 	vals_size = expand_brackets_string(config, str, vals);
 	for (i=0;i<vals_size;i++) {
 		if (c_strcasecmp(vals[i].name, "keytab") == 0) {
-			additional->keytab = talloc_strdup(config, vals[i].value);
+			additional->keytab = vals[i].value;
 			vals[i].value = NULL;
 		} else if (c_strcasecmp(vals[i].name, "require-local-user-map") == 0) {
 			additional->no_local_map = 1-CHECK_TRUE(vals[i].value);
@@ -188,7 +188,7 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 		return NULL;
 	}
 
-	if (str && str[0] == '[' && str[1] == '/') { /* legacy format */
+	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
 		fprintf(stderr, "Parsing radius auth method subconfig using legacy format\n");
 
 		additional->config = get_brackets_string1(config, str);
@@ -206,7 +206,7 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 		vals_size = expand_brackets_string(config, str, vals);
 		for (i=0;i<vals_size;i++) {
 			if (c_strcasecmp(vals[i].name, "config") == 0) {
-				additional->config = talloc_strdup(config, vals[i].value);
+				additional->config = vals[i].value;
 				vals[i].value = NULL;
 			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
 				if (CHECK_TRUE(vals[i].value))

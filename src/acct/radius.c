@@ -44,11 +44,12 @@ static void acct_radius_global_init(void *pool, const char *server_name, void *a
 {
 	radius_cfg_st *config = additional;
 
+	if (config == NULL)
+		goto fail;
+
 	rh = rc_read_config(config->config);
-	if (rh == NULL) {
-		fprintf(stderr, "radius initialization error\n");
-		exit(1);
-	}
+	if (rh == NULL)
+		goto fail;
 
 	if (server_name)
 		strlcpy(nas_identifier, server_name, sizeof(nas_identifier));
@@ -61,6 +62,10 @@ static void acct_radius_global_init(void *pool, const char *server_name, void *a
 	}
 
 	return;
+ fail:
+ 	fprintf(stderr, "radius acct initialization error\n");
+	exit(1);
+
 }
 
 static void acct_radius_global_deinit(void)

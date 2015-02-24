@@ -345,7 +345,8 @@ static void pam_group_list(void *pool, void *_additional, char ***groupname, uns
 	struct pam_cfg_st *config = _additional;
 	gid_t min = 0;
 
-	min = config->gid_min;
+	if (config)
+		min = config->gid_min;
 
 	setgrent();
 

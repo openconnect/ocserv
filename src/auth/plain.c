@@ -53,9 +53,14 @@ static void plain_global_init(void *pool, const char *server_name, void *additio
 {
 	struct plain_cfg_st *config = additional;
 
+	if (config == NULL) {
+		fprintf(stderr, "plain: no configuration passed!\n");
+		exit(1);
+	}
+
 	password_file = talloc_strdup(pool, config->passwd);
 	if (password_file == NULL) {
-		fprintf(stderr, "memory error\n");
+		fprintf(stderr, "plain: memory error\n");
 		exit(1);
 	}
 

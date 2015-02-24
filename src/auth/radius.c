@@ -45,10 +45,12 @@ static void radius_global_init(void *pool, const char *server_name, void *additi
 {
 	radius_cfg_st *config = additional;
 
+	if (config == NULL)
+		goto fail;
+
 	rh = rc_read_config(config->config);
 	if (rh == NULL) {
-		fprintf(stderr, "radius initialization error\n");
-		exit(1);
+		goto fail;
 	}
 
 	if (config->nas_identifier) {
@@ -66,6 +68,9 @@ static void radius_global_init(void *pool, const char *server_name, void *additi
 	}
 
 	return;
+ fail:
+	fprintf(stderr, "radius initialization error\n");
+	exit(1);
 }
 
 static void radius_global_deinit()

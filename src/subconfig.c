@@ -192,10 +192,6 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 		fprintf(stderr, "Parsing radius auth method subconfig using legacy format\n");
 
 		additional->config = get_brackets_string1(config, str);
-		if (additional->config == NULL) {
-			fprintf(stderr, "No radius configuration specified: %s\n", str);
-			exit(1);
-		}
 
 		p = get_brackets_string2(config, str);
 		if (p != NULL) {
@@ -221,6 +217,11 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 			}
 		}
 		free_expanded_brackets_string(vals, vals_size);
+	}
+
+	if (additional->config == NULL) {
+		fprintf(stderr, "No radius configuration specified: %s\n", str);
+		exit(1);
 	}
 
 	return additional;
@@ -258,3 +259,39 @@ void *pam_get_brackets_string(struct cfg_st *config, const char *str)
 	return additional;
 }
 #endif
+
+void *plain_get_brackets_string(struct cfg_st *config, const char *str)
+{
+	subcfg_val_st vals[MAX_SUBOPTIONS];
+	unsigned vals_size, i;
+	plain_cfg_st *additional;
+
+	additional = talloc_zero(config, plain_cfg_st);
+	if (additional == NULL) {
+		return NULL;
+	}
+
+	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
+		fprintf(stderr, "Parsing plain auth method subconfig using legacy format\n");
+		additional->passwd = get_brackets_string1(config, str);
+	} else {
+		vals_size = expand_brackets_string(config, str, vals);
+		for (i=0;i<vals_size;i++) {
+			if (c_strcasecmp(vals[i].name, "passwd") == 0) {
+				additional->passwd = vals[i].value;
+				vals[i].value = NULL;
+			} else {
+				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
+				exit(1);
+			}
+		}
+		free_expanded_brackets_string(vals, vals_size);
+	}
+
+	if (additional->passwd == NULL) {
+		fprintf(stderr, "plain: no password file specified\n");
+		exit(1);
+	}
+
+	return additional;
+}

@@ -87,7 +87,7 @@ An example configuration file follows.
 #  The gid-min option is used by auto-select-group option, in order to
 # select the minimum valid group ID.
 #
-# plain[/etc/ocserv/ocpasswd]
+# plain[passwd=/etc/ocserv/ocpasswd]
 #  The plain option requires specifying a password file which contains
 # entries of the following format.
 # "username:groupname1,groupname2:encoded-password"
@@ -105,7 +105,7 @@ An example configuration file follows.
 #auth = "certificate"
 #auth = "pam"
 #auth = "pam[gid-min=1000]"
-#auth = "plain[/etc/ocserv/ocpasswd]"
+#auth = "plain[passwd=/etc/ocserv/ocpasswd]"
 #auth = "radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true]"
 
 # Specify alternative authentication methods that are sufficient

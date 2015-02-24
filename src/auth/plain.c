@@ -29,6 +29,7 @@
 #include <vpn.h>
 #include <c-ctype.h>
 #include "plain.h"
+#include "cfg.h"
 #include "auth/common.h"
 #include <ccan/htable/htable.h>
 #include <ccan/hash/hash.h>
@@ -50,7 +51,9 @@ static char *password_file = NULL;
 
 static void plain_global_init(void *pool, const char *server_name, void *additional)
 {
-	password_file = talloc_strdup(pool, (char*)additional);
+	struct plain_cfg_st *config = additional;
+
+	password_file = talloc_strdup(pool, config->passwd);
 	if (password_file == NULL) {
 		fprintf(stderr, "memory error\n");
 		exit(1);
@@ -300,15 +303,16 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 	char *tgroup[MAX_GROUPS];
 	unsigned tgroup_size;
 	struct htable hash;
+	struct plain_cfg_st *config = additional;
 
 	htable_init(&hash, rehash, NULL);
 
 	pool = talloc_init("plain");
-	fp = fopen(additional, "r");
+	fp = fopen(config->passwd, "r");
 	if (fp == NULL) {
 		syslog(LOG_AUTH,
 		       "error in plain authentication; cannot open: %s",
-		       (char*)additional);
+		       (char*)config->passwd);
 		return;
 	}
 

@@ -365,7 +365,7 @@ static auth_types_st avail_auth_types[] =
 #ifdef HAVE_RADIUS
 	{NAME("radius"), &radius_auth_funcs, AUTH_TYPE_RADIUS, radius_get_brackets_string},
 #endif
-	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, get_brackets_string1},
+	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, plain_get_brackets_string},
 	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
 };
 

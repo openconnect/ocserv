@@ -35,9 +35,11 @@
 #include <gssapi/gssapi_ext.h>
 #include <gssapi/gssapi_krb5.h>
 #include <gl/base64.h>
+#include "cfg.h"
 
 static gss_cred_id_t glob_creds;
-gss_OID_set glob_oids;
+static gss_OID_set glob_oids;
+static unsigned no_local_map = 0;
 
 struct gssapi_ctx_st {
 	char username[MAX_USERNAME_SIZE];
@@ -86,17 +88,17 @@ static void gssapi_global_init(void *pool, const char *server_name, void *additi
 	int ret;
 	OM_uint32 time, minor;
 	gss_name_t name = GSS_C_NO_NAME;
+	gssapi_cfg_st *config = additional;
 
-	if (additional && strncmp(additional, "keytab", 6) == 0) {
+	if (config)
+		no_local_map = config->no_local_map;
+
+	if (config && config->keytab) {
 		gss_key_value_element_desc element;
 		gss_key_value_set_desc cred_store;
 
-		if (((uint8_t*)additional)[6] != ':' && ((uint8_t*)additional)[6] != '=') {
-			fprintf(stderr, "syntax error at: %s\n", (char*)additional);
-			exit(1);
-		}
 		element.key = "keytab";
-		element.value = additional+7;
+		element.value = config->keytab;
 		cred_store.count = 1;
 		cred_store.elements = &element;
 
@@ -155,18 +157,21 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 	syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s", (unsigned)name.length, (char*)name.value);
 	gss_release_buffer(&minor, &name);
 
-	ret = gss_localname(&minor, client, mech_type, &name);
-	if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
-		print_gss_err("gss_localname", mech_type, ret, minor);
-		syslog(LOG_INFO, "gssapi: authenticated user doesn't map to a local user");
-		return -1;
+	if (no_local_map == 0) {
+		ret = gss_localname(&minor, client, mech_type, &name);
+		if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
+			print_gss_err("gss_localname", mech_type, ret, minor);
+			syslog(LOG_INFO, "gssapi: authenticated user doesn't map to a local user");
+			return -1;
+		}
+
+		memcpy(pctx->username, name.value, name.length);
+		pctx->username[name.length] = 0;
+		syslog(LOG_INFO, "gssapi: authenticated local user: %s", pctx->username);
+
+		gss_release_buffer(&minor, &name);
 	}
 
-	memcpy(pctx->username, name.value, name.length);
-	pctx->username[name.length] = 0;
-	syslog(LOG_INFO, "gssapi: authenticated local user: %s", pctx->username);
-
-	gss_release_buffer(&minor, &name);
 	if (pctx->username[0] == 0)
 		return -1;
 	else

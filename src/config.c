@@ -50,6 +50,7 @@
 #include <main.h>
 #include <ctl.h>
 #include <tlslib.h>
+#include "cfg.h"
 
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
@@ -167,10 +168,10 @@ static struct cfg_options available_options[] = {
 };
 
 #define get_brackets_string get_brackets_string1
-static char *get_brackets_string1(struct cfg_st *config, const char *str);
+static void *get_brackets_string1(struct cfg_st *config, const char *str);
 
 #ifdef HAVE_RADIUS
-static char *get_brackets_string2(struct cfg_st *config, const char *str)
+static void *get_brackets_string2(struct cfg_st *config, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -204,7 +205,7 @@ static char *get_brackets_string2(struct cfg_st *config, const char *str)
 	return talloc_strndup(config, p, len);
 }
 
-static char *radius_get_brackets_string(struct cfg_st *config, const char *str)
+static void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 {
 	char *ret, *p;
 
@@ -381,7 +382,7 @@ unsigned j;
 	}
 }
 
-static char *get_brackets_string1(struct cfg_st *config, const char *str)
+static void *get_brackets_string1(struct cfg_st *config, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -435,7 +436,7 @@ typedef struct auth_types_st {
 	unsigned name_size;
 	const struct auth_mod_st *mod;
 	unsigned type;
-	char *(*get_brackets_string)(struct cfg_st *config, const char *);
+	void *(*get_brackets_string)(struct cfg_st *config, const char *);
 } auth_types_st;
 
 #define NAME(x) (x),(sizeof(x)-1)
@@ -445,7 +446,7 @@ static auth_types_st avail_auth_types[] =
 	{NAME("pam"), &pam_auth_funcs, AUTH_TYPE_PAM, get_brackets_string},
 #endif
 #ifdef HAVE_GSSAPI
-	{NAME("gssapi"), &gssapi_auth_funcs, AUTH_TYPE_GSSAPI, get_brackets_string},
+	{NAME("gssapi"), &gssapi_auth_funcs, AUTH_TYPE_GSSAPI, gssapi_get_brackets_string},
 #endif
 #ifdef HAVE_RADIUS
 	{NAME("radius"), &radius_auth_funcs, AUTH_TYPE_RADIUS, radius_get_brackets_string},
@@ -541,7 +542,7 @@ typedef struct acct_types_st {
 	const char *name;
 	unsigned name_size;
 	const struct acct_mod_st *mod;
-	char *(*get_brackets_string)(struct cfg_st *config, const char *);
+	void *(*get_brackets_string)(struct cfg_st *config, const char *);
 } acct_types_st;
 
 static acct_types_st avail_acct_types[] =

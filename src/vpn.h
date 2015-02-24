@@ -364,6 +364,8 @@ struct cfg_st {
 	char *per_user_dir;
 	char *default_group_conf;
 	char *default_user_conf;
+
+	bool gssapi_no_local_user_map;
 	
 	/* the tun network */
 	struct vpn_st network;

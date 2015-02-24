@@ -208,6 +208,9 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 			if (c_strcasecmp(vals[i].name, "config") == 0) {
 				additional->config = vals[i].value;
 				vals[i].value = NULL;
+			} else if (c_strcasecmp(vals[i].name, "nas-identifier") == 0) {
+				additional->nas_identifier = vals[i].value;
+				vals[i].value = NULL;
 			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
 				if (CHECK_TRUE(vals[i].value))
 					config->sup_config_type = SUP_CONFIG_RADIUS;

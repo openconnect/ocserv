@@ -51,10 +51,14 @@ static void radius_global_init(void *pool, const char *server_name, void *additi
 		exit(1);
 	}
 
-	if (server_name)
-		strlcpy(nas_identifier, server_name, sizeof(nas_identifier));
-	else
-		nas_identifier[0] = 0;
+	if (config->nas_identifier) {
+		strlcpy(nas_identifier, config->nas_identifier, sizeof(nas_identifier));
+	} else {
+		if (server_name)
+			strlcpy(nas_identifier, server_name, sizeof(nas_identifier));
+		else
+			nas_identifier[0] = 0;
+	}
 
 	if (rc_read_dictionary(rh, rc_conf_str(rh, "dictionary")) != 0) {
 		fprintf(stderr, "error reading the radius dictionary\n");

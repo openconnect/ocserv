@@ -206,6 +206,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 	case HEADER_SUPPORT_SPNEGO:
 		ws_switch_auth_to(ws, AUTH_TYPE_GSSAPI);
+		req->spnego_set = 1;
 		break;
 	case HEADER_AUTHORIZATION:
 		if (req->authorization != NULL)
@@ -508,6 +509,14 @@ int http_header_complete_cb(http_parser * parser)
 	/* handle header value */
 	header_value_check(ws, req);
 
+	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && ws->auth_state == S_AUTH_INACTIVE &&
+	    req->spnego_set == 0) {
+		/* client retried getting the form without the SPNEGO header, probably
+		 * wants a fallback authentication method */
+		if (ws_switch_auth_to(ws, AUTH_TYPE_USERNAME_PASS) == 0)
+			oclog(ws, LOG_INFO, "no fallback to gssapi authentication");
+	}
+
 	req->headers_complete = 1;
 	return 0;
 }
@@ -550,6 +559,7 @@ void http_req_reset(worker_st * ws)
 	ws->req.headers_complete = 0;
 	ws->req.message_complete = 0;
 	ws->req.body_length = 0;
+	ws->req.spnego_set = 0;
 	ws->req.url[0] = 0;
 
 	ws->req.header_state = HTTP_HEADER_INIT;

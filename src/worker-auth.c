@@ -1108,6 +1108,12 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	if (ret < 0)
 		return -1;
 
+	if (ws->config->auth_methods > 1) {
+		ret = cstp_puts(ws, "X-HTTP-Auth-Support: fallback\r\n");
+		if (ret < 0)
+			return -1;
+	}
+
 	if (msg == NULL) {
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: Negotiate");
 		ret = cstp_puts(ws, "WWW-Authenticate: Negotiate\r\n");

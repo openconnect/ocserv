@@ -34,6 +34,7 @@
 #include <common.h>
 #include <str.h>
 #include <worker-bandwidth.h>
+#include <stdbool.h>
 #include <sys/un.h>
 #include <sys/uio.h>
 
@@ -122,7 +123,8 @@ struct http_req_st {
 
 	unsigned int next_header;
 
-	unsigned int is_mobile;
+	bool is_mobile;
+	bool spnego_set;
 
 	unsigned char master_secret[TLS_MASTER_SIZE];
 	unsigned int master_secret_set;

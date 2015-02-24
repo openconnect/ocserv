@@ -215,15 +215,46 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
 				if (CHECK_TRUE(vals[i].value))
 					config->sup_config_type = SUP_CONFIG_RADIUS;
+			} else {
+				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
+				exit(1);
+			}
+		}
+		free_expanded_brackets_string(vals, vals_size);
+	}
+
+	return additional;
+}
+#endif
+
+#ifdef HAVE_PAM
+void *pam_get_brackets_string(struct cfg_st *config, const char *str)
+{
+	subcfg_val_st vals[MAX_SUBOPTIONS];
+	unsigned vals_size, i;
+	pam_cfg_st *additional;
+
+	additional = talloc_zero(config, pam_cfg_st);
+	if (additional == NULL) {
+		return NULL;
+	}
+
+	/* new format */
+	vals_size = expand_brackets_string(config, str, vals);
+	for (i=0;i<vals_size;i++) {
+		if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
+			additional->gid_min = atoi(vals[i].value);
+			if (additional->gid_min < 0) {
+				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
+				exit(1);
+			}
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
 			exit(1);
 		}
 	}
-	free_expanded_brackets_string(vals, vals_size);
-	return additional;
 
-	}
+	free_expanded_brackets_string(vals, vals_size);
 	return additional;
 }
 #endif

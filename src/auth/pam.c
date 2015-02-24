@@ -24,6 +24,7 @@
 #include <syslog.h>
 #include <vpn.h>
 #include "pam.h"
+#include "cfg.h"
 #include <sec-mod-auth.h>
 
 #ifdef HAVE_PAM
@@ -341,17 +342,10 @@ struct pam_ctx_st * pctx = ctx;
 static void pam_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
 {
 	struct group *grp;
+	struct pam_cfg_st *config = _additional;
 	gid_t min = 0;
-	char *additional = _additional;
 
-	if (additional != NULL) {
-		if (strstr(additional, "gid-min=") != NULL) {
-			additional += 8;
-			min = atoi(additional);
-		} else {
-			syslog(LOG_INFO, "unknown PAM auth string '%s'", additional);
-		}
-	}
+	min = config->gid_min;
 
 	setgrent();
 

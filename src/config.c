@@ -357,7 +357,7 @@ typedef struct auth_types_st {
 static auth_types_st avail_auth_types[] =
 {
 #ifdef HAVE_PAM
-	{NAME("pam"), &pam_auth_funcs, AUTH_TYPE_PAM, get_brackets_string1},
+	{NAME("pam"), &pam_auth_funcs, AUTH_TYPE_PAM, pam_get_brackets_string},
 #endif
 #ifdef HAVE_GSSAPI
 	{NAME("gssapi"), &gssapi_auth_funcs, AUTH_TYPE_GSSAPI, gssapi_get_brackets_string},

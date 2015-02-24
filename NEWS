@@ -1,8 +1,8 @@
 * Version 0.10.0 (unreleased)
 - Added support for gssapi (e.g., Kerberos) authentication
 - Added support for alternative authentication methods, via enable-auth.
-  That allows to set a suffcient for login authentication that will be
-  used as alternative to the main authentication.
+  That allows to set a suffcient for login authentication method that will
+  be used as alternative to the main authentication.
 - Added support for MS-KKDCP. That is, the server can be used as an HTTP
   proxy to a KDC.
 - Accounting was split from authentication. That way radius accounting can

@@ -32,6 +32,7 @@ fi
 CONFIG="radius"
 IMAGE=ocserv-radius-test
 IMAGE_NAME=test_ocserv_radius
+TMP=$IMAGE_NAME.tmp
 . ./docker-common.sh
 
 $DOCKER run -P --privileged=true -p $PORT:$PORT/udp -p $PORT2:$PORT2/udp -p 22 -p $PORT_OCSERV:$PORT_OCSERV/udp --tty=false -d --name test_ocserv_radius $IMAGE
@@ -55,25 +56,25 @@ if test ! -z "$QUIT_ON_INIT";then
 	exit 0
 fi
 
-printf "testuser\n" >pass-radius.tmp
-openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius.tmp
+printf "testuser\n" >pass-radius$TMP
+openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
 if test $? = 0;then
 	echo "Authentication with wrong password succeeded!"
 	stop
 fi
 
-printf "test\ntest\n" >pass-radius.tmp
-openconnect $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius.tmp
+printf "test\ntest\n" >pass-radius$TMP
+openconnect $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded!"
 	stop
 fi
 
-printf "test\ntest\n" >pass-radius.tmp
-openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius.tmp &
+printf "test\ntest\n" >pass-radius$TMP
+openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP &
 PID=$!
 
-rm -f pass-radius.tmp
+rm -f pass-radius$TMP
 
 #wait for openconnect
 sleep 5
@@ -100,34 +101,34 @@ if test $? != 0;then
 	stop
 fi
 
-echo "UserKnownHostsFile ./known-hosts.tmp" >config.tmp
-printf "#\!/bin/sh\n" >echo-admin.tmp
-printf "echo yes" >>echo-admin.tmp
-printf "echo root" >>echo-admin.tmp
-printf "\n" >>echo-admin.tmp
-chmod 755 echo-admin.tmp
-export SSH_ASKPASS="./echo-admin.tmp"
-setsid ssh -T -F config.tmp root@192.168.55.1 occtl show user test >out.tmp 2>&1
-cat out.tmp
+echo "UserKnownHostsFile ./known-hosts$TMP" >config$TMP
+printf "#\!/bin/sh\n" >echo-admin$TMP
+printf "echo yes" >>echo-admin$TMP
+printf "echo root" >>echo-admin$TMP
+printf "\n" >>echo-admin$TMP
+chmod 755 echo-admin$TMP
+export SSH_ASKPASS="./echo-admin$TMP"
+setsid ssh -T -F config$TMP root@192.168.55.1 occtl show user test >out$TMP 2>&1
+cat out$TMP
 
-printf "#\!/bin/sh\n" >echo-admin.tmp
-printf "echo root" >>echo-admin.tmp
-printf "\n" >>echo-admin.tmp
-chmod 755 echo-admin.tmp
-setsid ssh -T -F config.tmp root@192.168.55.1 occtl show user test >out.tmp 2>&1
-cat out.tmp
-rm -f echo-admin.tmp
-rm -f config.tmp
-rm -f known-hosts.tmp
+printf "#\!/bin/sh\n" >echo-admin$TMP
+printf "echo root" >>echo-admin$TMP
+printf "\n" >>echo-admin$TMP
+chmod 755 echo-admin$TMP
+setsid ssh -T -F config$TMP root@192.168.55.1 occtl show user test >out$TMP 2>&1
+cat out$TMP
+rm -f echo-admin$TMP
+rm -f config$TMP
+rm -f known-hosts$TMP
 
-grep "Username" out.tmp
+grep "Username" out$TMP
 if test $? != 0;then
 	kill $PID
 	echo "could not find user information"
 	stop
 fi
 
-rm -f out.tmp
+rm -f out$TMP
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.

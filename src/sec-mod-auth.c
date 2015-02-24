@@ -57,6 +57,8 @@
 # include <gssapi/gssapi_ext.h>
 #endif
 
+#define SESSION_STR "(session: %.5s)"
+
 void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 {
 	unsigned i;
@@ -199,10 +201,9 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 {
 	unsigned found, i;
 
-
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
 		if (tls_auth_ok == 0) {
-			seclog(sec, LOG_INFO, "user %s (session: %s) presented no certificate",
+			seclog(sec, LOG_INFO, "user %s "SESSION_STR" presented no certificate",
 			       e->auth_info.username, e->auth_info.psid);
 			return -1;
 		}
@@ -221,7 +222,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 			} else {
 				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->auth_info.username, cert_user) != 0) {
 					seclog(sec, LOG_INFO,
-					       "user '%s' (session: %s) presented a certificate from user '%s'",
+					       "user '%s' "SESSION_STR" presented a certificate from user '%s'",
 					       e->auth_info.username, e->auth_info.psid, cert_user);
 					return -1;
 				}
@@ -236,7 +237,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 					}
 					if (found == 0) {
 						seclog(sec, LOG_INFO,
-							"user '%s' (session: %s) presented a certificate from group '%s' but he isn't a member of it",
+							"user '%s' "SESSION_STR" presented a certificate from group '%s' but he isn't a member of it",
 							e->auth_info.username, e->auth_info.psid, e->auth_info.groupname);
 							return -1;
 					}
@@ -349,7 +350,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s (session: %s)!", e->auth_info.username, e->auth_info.psid);
+		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
 		return -1;
 	}
 
@@ -389,7 +390,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		if (rep.reply == AUTH__REP__OK && sec->config_module && sec->config_module->get_sup_config) {
 			ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
 			if (ret < 0) {
-				seclog(sec, LOG_ERR, "error reading additional configuration for '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
+				seclog(sec, LOG_ERR, "error reading additional configuration for '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 				talloc_free(lpool);
 				return ERR_READ_CONFIG;
 			}
@@ -404,16 +405,16 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		talloc_free(lpool);
 
 		if (rep.reply != AUTH__REP__OK) {
-			seclog(sec, LOG_INFO, "denied open session for user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
+			seclog(sec, LOG_INFO, "denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 			del_client_entry(sec, e);
 		} else { /* set expiration time to unlimited (until someone closes the session) */
-			seclog(sec, LOG_INFO, "initiating session for user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
+			seclog(sec, LOG_INFO, "initiating session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 			e->time = -1;
 			e->in_use++;
 		}
 
 	} else { /* CLOSE */
-		seclog(sec, LOG_INFO, "temporarily closing session for %s (session: %s)", e->auth_info.username, e->auth_info.psid);
+		seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 
 		if (req->has_uptime && req->uptime > e->stats.uptime) {
 				e->stats.uptime = req->uptime;
@@ -451,7 +452,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session stats received in unauthenticated client %s (session: %s)!", e->auth_info.username, e->auth_info.psid);
+		seclog(sec, LOG_ERR, "session stats received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
 		return -1;
 	}
 
@@ -502,16 +503,16 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 	}
 
 	if (e->status != PS_AUTH_INIT && e->status != PS_AUTH_CONT) {
-		seclog(sec, LOG_ERR, "auth cont received for %s (session: %s) but we are on state %u!",
+		seclog(sec, LOG_ERR, "auth cont received for %s "SESSION_STR" but we are on state %u!",
 		       e->auth_info.username, e->auth_info.psid, e->status);
 		ret = -1;
 		goto cleanup;
 	}
 
-	seclog(sec, LOG_DEBUG, "auth cont for user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
+	seclog(sec, LOG_DEBUG, "auth cont for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 
 	if (req->password == NULL) {
-		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s' (session: %s)",
+		seclog(sec, LOG_ERR, "no password given in auth cont for user '%s' "SESSION_STR,
 			e->auth_info.username, e->auth_info.psid);
 		ret = -1;
 		goto cleanup;
@@ -530,7 +531,7 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 			      strlen(req->password));
 	if (ret < 0) {
 		seclog(sec, LOG_DEBUG,
-		       "error in password given in auth cont for user '%s' (session: %s)",
+		       "error in password given in auth cont for user '%s' "SESSION_STR,
 		       e->auth_info.username, e->auth_info.psid);
 		goto cleanup;
 	}
@@ -554,7 +555,7 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 			e->module = sec->config->auth[i].amod;
 			e->auth_type = sec->config->auth[i].type;
 
-			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user (session: %s)", sec->config->auth[i].name, e->auth_info.psid);
+			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user "SESSION_STR, sec->config->auth[i].name, e->auth_info.psid);
 			return 0;
 		}
 	}
@@ -643,7 +644,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	}
 
 	e->status = PS_AUTH_INIT;
-	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' (session: %s) of group: '%s' from '%s'", 
+	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' "SESSION_STR" of group: '%s' from '%s'", 
 	       req->tls_auth_ok?"(with cert) ":"",
 	       e->auth_info.username, e->auth_info.psid, e->auth_info.groupname, req->ip);
 
@@ -662,7 +663,7 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 	if (e->module == NULL)
 		return;
 
-	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' (session: %s)", e->auth_info.username, e->auth_info.psid);
+	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 	if (e->auth_ctx != NULL) {
 		if (sec->config->acct.amod != NULL && sec->config->acct.amod->close_session != NULL && e->session_is_open != 0) {
 			sec->config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats);

@@ -181,6 +181,8 @@ typedef struct main_server_st {
 	struct cookie_entry_db_st cookies;
 
 	tls_sess_db_st tls_db;
+	struct htable *ban_db;
+
 	tls_st *creds;
 	
 	uint8_t cookie_key[COOKIE_KEY_SIZE];

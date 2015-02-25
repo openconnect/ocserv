@@ -35,8 +35,6 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
 #include <tlslib.h>
-#include <sys/un.h>
-#include <cloexec.h>
 #include "common.h"
 #include "str.h"
 #include "setproctitle.h"
@@ -47,6 +45,7 @@
 
 #include <vpn.h>
 #include <main.h>
+#include <main-ban.h>
 #include <ccan/list/list.h>
 
 int handle_sec_mod_commands(main_server_st * s)
@@ -58,7 +57,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	uint8_t *raw;
 	int ret, raw_len, e;
 	void *pool = talloc_new(s);
-	//PROTOBUF_ALLOCATOR(pa, pool);
+	PROTOBUF_ALLOCATOR(pa, pool);
 
 	if (pool == NULL)
 		return -1;
@@ -112,6 +111,21 @@ int handle_sec_mod_commands(main_server_st * s)
 	}
 
 	switch (cmd) {
+	case SM_CMD_AUTH_BAN_IP:{
+			SecAuthBanIp *tmsg;
+
+			tmsg = sec_auth_ban_ip__unpack(&pa, raw_len, raw);
+			if (tmsg == NULL) {
+				mslog(s, NULL, LOG_ERR, "error unpacking sec-mod data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+			add_ip_to_ban_list(s, tmsg->ip, tmsg->score);
+
+			sec_auth_ban_ip__free_unpacked(tmsg, &pa);
+		}
+
+		break;
 	default:
 		mslog(s, NULL, LOG_ERR, "unknown CMD from sec-mod 0x%x.", (unsigned)cmd);
 		ret = ERR_BAD_COMMAND;

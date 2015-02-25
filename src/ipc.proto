@@ -255,3 +255,10 @@ message sec_auth_session_reply_msg
 	optional string explicit_ipv6 = 27;
 	repeated string no_routes = 28;
 }
+
+/* SEC_BAN_IP: sent from sec-mod to main */
+message sec_auth_ban_ip
+{
+	required string ip = 1;
+	required uint32 score = 2;
+}

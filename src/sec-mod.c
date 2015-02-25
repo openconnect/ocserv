@@ -368,7 +368,6 @@ static void check_other_work(sec_mod_st *sec)
 		}
 
 		sec_mod_client_db_deinit(sec);
-		sec_mod_ban_db_deinit(sec);
 		talloc_free(sec);
 		exit(0);
 	}
@@ -382,10 +381,8 @@ static void check_other_work(sec_mod_st *sec)
 	if (need_maintainance) {
 		seclog(sec, LOG_DEBUG, "performing maintenance");
 		cleanup_client_entries(sec);
-		cleanup_banned_entries(sec);
-		seclog(sec, LOG_DEBUG, "active sessions %d, banned entries %d", 
-			sec_mod_client_db_elems(sec),
-			sec_mod_ban_db_elems(sec));
+		seclog(sec, LOG_DEBUG, "active sessions %d", 
+			sec_mod_client_db_elems(sec));
 		alarm(MAINTAINANCE_TIME);
 		need_maintainance = 0;
 	}
@@ -492,7 +489,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
 #endif
-
 	sigemptyset(&blockset);
 	sigemptyset(&emptyset);
 	sigaddset(&blockset, SIGALRM);
@@ -538,6 +534,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	alarm(MAINTAINANCE_TIME);
 
 	sec_auth_init(sec, config);
+	sec->cmd_fd = cmd_fd;
 
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();
@@ -551,10 +548,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		seclog(sec, LOG_ERR, "error in client db initialization");
 		exit(1);
 	}
-
-	if (config->min_reauth_time > 0)
-		sec_mod_ban_db_init(sec);
-
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {

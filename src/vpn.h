@@ -32,6 +32,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <minmax.h>
+#include <auth/common.h>
 
 #ifdef __GNUC__
 # define _OCSERV_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -55,6 +56,14 @@ typedef enum {
 	OC_COMP_LZ4,
 	OC_COMP_LZS,
 } comp_type_t;
+
+/* Banning works with a point system. A wrong password
+ * attempt gives you PASSWORD_POINTS, and you are banned
+ * when the maximum ban score is reached.
+ */
+#define PASSWORD_POINTS 5
+#define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*PASSWORD_POINTS)
+#define DEFAULT_BAN_RESET_TIME 300
 
 #define MIN_NO_COMPRESS_LIMIT 64
 #define DEFAULT_NO_COMPRESS_LIMIT 256
@@ -134,15 +143,19 @@ typedef enum {
 	CMD_SESSION_INFO = 13,
 	CMD_CLI_STATS = 15,
 
+	/* from worker to sec-mod */
 	SM_CMD_AUTH_INIT = 120,
 	SM_CMD_AUTH_CONT,
 	SM_CMD_AUTH_REP,
 	SM_CMD_DECRYPT,
 	SM_CMD_SIGN,
+	SM_CMD_CLI_STATS,
+
+	/* from main to sec-mod and vice versa */
 	SM_CMD_AUTH_SESSION_OPEN,
 	SM_CMD_AUTH_SESSION_CLOSE,
 	SM_CMD_AUTH_SESSION_REPLY,
-	SM_CMD_CLI_STATS,
+	SM_CMD_AUTH_BAN_IP,
 } cmd_request_t;
 
 #define MAX_IP_STR 46
@@ -307,7 +320,8 @@ struct cfg_st {
 	unsigned rekey_method; /* REKEY_METHOD_ */
 
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
-	int max_password_retries;	/* the number of retries allowed prior to applying min_reauth_time */
+	int max_ban_score;	/* the score allowed before a user is banned (see vpn.h) */
+	int ban_reset_time;
 
 	unsigned isolate; /* whether seccomp should be enabled or not */
 

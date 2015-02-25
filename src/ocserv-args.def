@@ -288,9 +288,14 @@ auth-timeout = 40
 # a failed authentication attempt.
 min-reauth-time = 120
 
-# The maximum number of password retries before applying the min-reauth-time
-# delay. Set to zero to disable.
-max-password-retries = 5
+# Banning clients in ocserv works with a point system. IP addresses
+# that get a score over that configured number are banned for
+# min-reauth-time seconds. A wrong password attempt is 5 points.
+# Set to zero to disable.
+max-ban-score = 30
+
+# The time (in seconds) that all score kept for a client is reset.
+ban-reset-time = 300
 
 # Cookie timeout (in seconds)
 # Once a client is authenticated he's provided a cookie with

@@ -80,7 +80,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
-	{ .name = "max-password-retries", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "max-ban-score", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -137,6 +137,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "mobile-idle-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "min-reauth-time", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ban-reset-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-same-clients", .type = OPTION_NUMERIC, .mandatory = 0 },
 
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -818,11 +819,15 @@ unsigned urlfw_size = 0;
 
 	READ_NUMERIC("max-clients", config->max_clients);
 	READ_NUMERIC("min-reauth-time", config->min_reauth_time);
+	config->ban_reset_time = -1;
+	READ_NUMERIC("ban-reset-time", config->ban_reset_time);
+	if (config->ban_reset_time == -1)
+		config->ban_reset_time = DEFAULT_BAN_RESET_TIME;
 
-	config->max_password_retries = -1;
-	READ_NUMERIC("max-password-retries", config->max_password_retries);
-	if (config->max_password_retries == -1)
-		config->max_password_retries = MAX_PASSWORD_TRIES;
+	config->max_ban_score = -1;
+	READ_NUMERIC("max-ban-score", config->max_ban_score);
+	if (config->max_ban_score == -1)
+		config->max_ban_score = DEFAULT_MAX_BAN_SCORE;
 
 	READ_NUMERIC("max-same-clients", config->max_same_clients);
 

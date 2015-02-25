@@ -72,6 +72,33 @@ void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 		config->acct.amod->global_init(sec, config->server_name, config->acct.additional);
 }
 
+static
+void sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsigned points)
+{
+	void *lpool;
+	int ret, e;
+	SecAuthBanIp msg = SEC_AUTH_BAN_IP__INIT;
+
+	msg.ip = (char*)ip;
+	msg.score = points;
+
+	lpool = talloc_new(pool);
+	if (lpool == NULL) {
+		return;
+	}
+
+	ret = send_msg(lpool, sec->cmd_fd, SM_CMD_AUTH_BAN_IP, &msg,
+				(pack_size_func) sec_auth_ban_ip__get_packed_size,
+				(pack_func) sec_auth_ban_ip__pack);
+	if (ret < 0) {
+		e = errno;
+		seclog(sec, LOG_WARNING, "error in sending BAN IP message: %s", strerror(e));
+	}
+	talloc_free(lpool);
+
+	return;
+}
+
 static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
 {
 	int ret;
@@ -272,7 +299,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	if (result == ERR_AUTH_CONTINUE) {
 		/* if the module allows multiple retries for the password */
 		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries) {
-			add_ip_to_ban_list(sec, e->auth_info.remote_ip, 1, time(0) + sec->config->min_reauth_time);
+			sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, PASSWORD_POINTS);
 		}
 
 		ret = send_sec_auth_reply_msg(cfd, sec, e);
@@ -296,13 +323,12 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			seclog(sec, LOG_ERR, "could not send reply auth cmd.");
 			return ret;
 		}
-		remove_ip_from_ban_list(sec, e->auth_info.remote_ip);
 
 		ret = 0;
 	} else {
 		e->status = PS_AUTH_FAILED;
 
-		add_ip_to_ban_list(sec, e->auth_info.remote_ip, 1, time(0) + sec->config->min_reauth_time);
+		sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, PASSWORD_POINTS);
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {
@@ -484,12 +510,6 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 	client_entry_st *e;
 	int ret;
 
-	if (check_if_banned(sec, req->ip) != 0) {
-		seclog(sec, LOG_INFO,
-		       "IP '%s' is banned", req->ip);
-		return -1;
-	}
-
 	if (req->sid.len != SID_SIZE) {
 		seclog(sec, LOG_ERR, "auth cont but with illegal sid size (%d)!",
 		       (int)req->sid.len);
@@ -568,12 +588,6 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	int ret = -1;
 	client_entry_st *e;
 	unsigned need_continue = 0;
-
-	if (check_if_banned(sec, req->ip) != 0) {
-		seclog(sec, LOG_INFO,
-		       "IP '%s' is banned", req->ip);
-		return -1;
-	}
 
 	e = new_client_entry(sec, req->ip);
 	if (e == NULL) {

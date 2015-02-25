@@ -52,6 +52,7 @@
 #endif
 #include <main.h>
 #include <main-ctl.h>
+#include <main-ban.h>
 #include <route-add.h>
 #include <worker.h>
 #include <cookies.h>
@@ -633,6 +634,7 @@ void clear_lists(main_server_st *s)
 	ip_lease_deinit(&s->ip_leases);
 	proc_table_deinit(s);
 	ctl_handler_deinit(s);
+	main_ban_db_deinit(s);
 }
 
 static void kill_children(main_server_st* s)
@@ -863,11 +865,12 @@ unsigned total = 10;
 		exit(0);
 	}
 
-	/* Check if we need to expire any cookies */
+	/* Check if we need to expire any data */
 	if (need_maintenance != 0) {
 		need_maintenance = 0;
-		mslog(s, NULL, LOG_DEBUG, "performing maintenance");
+		mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
 		expire_tls_sessions(s);
+		cleanup_banned_entries(s);
 		alarm(MAINTAINANCE_TIME(s));
 	}
 }
@@ -943,6 +946,7 @@ int main(int argc, char** argv)
 	tls_cache_init(s, &s->tls_db);
 	ip_lease_init(&s->ip_leases);
 	proc_table_init(s);
+	main_ban_db_init(s);
 
 	sigemptyset(&blockset);
 	sigemptyset(&emptyset);
@@ -1153,6 +1157,12 @@ int main(int argc, char** argv)
 				if (check_tcp_wrapper(fd) < 0) {
 					close(fd);
 					mslog(s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts->[allow|deny])");
+					break;
+				}
+
+				if (check_if_banned(s, &ws->remote_addr, ws->remote_addr_len) != 0) {
+					close(fd);
+					mslog(s, NULL, LOG_INFO, "Rejected connection from banned IP");
 					break;
 				}
 

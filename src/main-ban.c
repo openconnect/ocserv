@@ -38,14 +38,16 @@
 #include <syslog.h>
 #include <vpn.h>
 #include <tlslib.h>
-#include <sec-mod.h>
+#include <main.h>
+#include <main-ban.h>
 #include <ccan/hash/hash.h>
 #include <ccan/htable/htable.h>
 
 typedef struct ban_entry_st {
 	char ip[MAX_IP_STR];
-	unsigned failed_attempts;
+	unsigned score;
 
+	time_t last_reset; /* the time its score counting started */
 	time_t expires; /* the time after the client is allowed to login */
 } ban_entry_st;
 
@@ -70,21 +72,23 @@ static bool ban_entry_cmp(const void *_c1, void *_c2)
 }
 
 
-void *sec_mod_ban_db_init(sec_mod_st *sec)
+void *main_ban_db_init(main_server_st *s)
 {
-	struct htable *db = talloc(sec, struct htable);
-	if (db == NULL)
-		return NULL;
+	struct htable *db = talloc(s, struct htable);
+	if (db == NULL) {
+		fprintf(stderr, "error initializing ban DB\n");
+		exit(1);
+	}
 
 	htable_init(db, rehash, NULL);
-	sec->ban_db = db;
+	s->ban_db = db;
 
 	return db;
 }
 
-void sec_mod_ban_db_deinit(sec_mod_st *sec)
+void main_ban_db_deinit(main_server_st *s)
 {
-struct htable *db = sec->ban_db;
+struct htable *db = s->ban_db;
 
 	if (db != NULL) {
 		htable_clear(db);
@@ -92,9 +96,9 @@ struct htable *db = sec->ban_db;
 	}
 }
 
-unsigned sec_mod_ban_db_elems(sec_mod_st *sec)
+unsigned main_ban_db_elems(main_server_st *s)
 {
-struct htable *db = sec->ban_db;
+struct htable *db = s->ban_db;
 
 	if (db)
 		return db->elems;
@@ -102,12 +106,13 @@ struct htable *db = sec->ban_db;
 		return 0;
 }
 
-void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, unsigned attempts, time_t reset_time)
+void add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 {
-	struct htable *db = sec->ban_db;
+	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
 	ban_entry_st t;
 	time_t now = time(0);
+	time_t reset_time = now + s->config->min_reauth_time;
 
 	if (db == NULL || ip == NULL || ip[0] == 0)
 		return;
@@ -124,24 +129,26 @@ void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, unsigned attempts, time
 		}
 
 		strlcpy(e->ip, ip, sizeof(e->ip));
+		e->last_reset = now;
 
 		if (htable_add(db, rehash(e, NULL), e) == 0) {
-			seclog(sec, LOG_INFO,
+			mslog(s, NULL, LOG_INFO,
 			       "could not add ban entry to hash table");
 			goto fail;
 		}
 	} else {
-		if (now > e->expires) {
-			e->failed_attempts = 0;
+		if (now > e->last_reset + s->config->ban_reset_time) {
+			e->score = 0;
+			e->last_reset = now;
 		}
 	}
-	e->failed_attempts += attempts;
+	e->score += score;
 	e->expires = reset_time;
 
-	if (sec->config->max_password_retries > 0 && e->failed_attempts >= sec->config->max_password_retries) {
-		seclog(sec, LOG_INFO,"added IP '%s' (with failed attempts %d) to ban list, will be reset at: %s", ip, e->failed_attempts, ctime(&reset_time));
+	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
+		mslog(s, NULL, LOG_INFO,"added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&reset_time));
 	} else {
-		seclog(sec, LOG_DEBUG,"added failed attempt for IP '%s' to ban list, will be reset at: %s", ip, ctime(&reset_time));
+		mslog(s, NULL, LOG_DEBUG,"added failed attempt for IP '%s' to ban list", ip);
 	}
 
 	return;
@@ -150,9 +157,9 @@ void add_ip_to_ban_list(sec_mod_st *sec, const char *ip, unsigned attempts, time
 	return;
 }
 
-void remove_ip_from_ban_list(sec_mod_st *sec, const char *ip)
+void remove_ip_from_ban_list(main_server_st *s, const char *ip)
 {
-	struct htable *db = sec->ban_db;
+	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
 	ban_entry_st t;
 
@@ -165,41 +172,42 @@ void remove_ip_from_ban_list(sec_mod_st *sec, const char *ip)
 
 	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
 	if (e != NULL) { /* new entry */
-		e->failed_attempts = 0;
+		e->score = 0;
 		e->expires = 0;
 	}
 
 	return;
 }
 
-unsigned check_if_banned(sec_mod_st *sec, const char *ip)
+unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, socklen_t addr_size)
 {
-	struct htable *db = sec->ban_db;
+	struct htable *db = s->ban_db;
 	time_t now;
 	ban_entry_st t, *e;
 
-	if (db == NULL || ip == NULL || ip[0] == 0)
+	if (db == NULL)
 		return 0;
 
-	/* pass the current time somehow */
-	now = time(0);
-	strlcpy(t.ip, ip, sizeof(t.ip));
+	if (human_addr2((struct sockaddr*)addr, addr_size, t.ip, sizeof(t.ip), 0) != NULL) {
+		/* pass the current time somehow */
+		now = time(0);
+		e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
+		if (e != NULL) {
+			if (now > e->expires)
+				return 0;
 
-	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
-	if (e != NULL) {
-		if (now > e->expires)
-			return 0;
-
-		if (sec->config->max_password_retries > 0 &&
-		    e->failed_attempts >= sec->config->max_password_retries)
-			return 1;
+			if (s->config->max_ban_score > 0 &&
+			    e->score >= s->config->max_ban_score) {
+				return 1;
+			}
+		}
 	}
 	return 0;
 }
 
-void cleanup_banned_entries(sec_mod_st *sec)
+void cleanup_banned_entries(main_server_st *s)
 {
-	struct htable *db = sec->ban_db;
+	struct htable *db = s->ban_db;
 	ban_entry_st *t;
 	struct htable_iter iter;
 	time_t now = time(0);
@@ -209,7 +217,7 @@ void cleanup_banned_entries(sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if (now >= t->expires) {
+		if (now >= t->expires && now > t->last_reset + s->config->ban_reset_time) {
 			htable_delval(db, &iter);
 			talloc_free(t);
 		}

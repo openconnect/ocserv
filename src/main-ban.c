@@ -148,7 +148,7 @@ void add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
 		mslog(s, NULL, LOG_INFO,"added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&reset_time));
 	} else {
-		mslog(s, NULL, LOG_DEBUG,"added failed attempt for IP '%s' to ban list", ip);
+		mslog(s, NULL, LOG_DEBUG,"added %d points (total %d) for IP '%s' to ban list", score, e->score, ip);
 	}
 
 	return;

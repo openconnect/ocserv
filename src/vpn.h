@@ -70,7 +70,7 @@ typedef enum {
 #define DEFAULT_NO_COMPRESS_LIMIT 256
 
 #define DEBUG_BASIC 1
-#define DEBUG_HTTP  2
+#define DEBUG_HTTP  4
 #define DEBUG_TRANSFERRED 5
 #define DEBUG_TLS   9
 

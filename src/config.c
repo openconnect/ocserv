@@ -1189,12 +1189,14 @@ void print_version(tOptions *opts, tOptDesc *desc)
 
 void reload_cfg_file(void *pool, struct cfg_st* config)
 {
-	auth_struct_st bak[MAX_AUTH_METHODS];
-	unsigned bak_size, i;
+	auth_struct_st auth_bak[MAX_AUTH_METHODS];
+	acct_struct_st acct_bak;
+	unsigned auth_bak_size, i;
 
-	/* authentication methods can't change on reload */
-	memcpy(bak, config->auth, sizeof(config->auth));
-	bak_size = config->auth_methods;
+	/* authentication and accounting methods can't change on reload */
+	memcpy(auth_bak, config->auth, sizeof(config->auth));
+	memcpy(&acct_bak, &config->acct, sizeof(config->acct));
+	auth_bak_size = config->auth_methods;
 
 	clear_cfg_file(config);
 
@@ -1203,16 +1205,20 @@ void reload_cfg_file(void *pool, struct cfg_st* config)
 	parse_cfg_file(cfg_file, config, 1);
 
 	/* check if the authentication methods remained the same */
-	if (config->auth_methods != bak_size) {
+	if (config->acct.amod != acct_bak.amod) {
+		goto auth_fail;
+	}
+
+	if (config->auth_methods != auth_bak_size) {
 		goto auth_fail;
 	}
 
 	for (i=0;i<config->auth_methods;i++) {
-		if (config->auth[i].enabled != bak[i].enabled) {
+		if (config->auth[i].enabled != auth_bak[i].enabled) {
 			goto auth_fail;
 		}
 
-		if (config->auth[i].type != bak[i].type) {
+		if (config->auth[i].type != auth_bak[i].type) {
 			goto auth_fail;
 		}
 	}
@@ -1221,7 +1227,7 @@ void reload_cfg_file(void *pool, struct cfg_st* config)
 
 	return;
  auth_fail:
- 	syslog(LOG_ERR, "you cannot switch authentication methods on reload");
+ 	syslog(LOG_ERR, "you cannot switch authentication or accounting methods on reload");
 	exit(1);
 }
 

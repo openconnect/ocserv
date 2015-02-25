@@ -77,7 +77,7 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsign
 {
 	void *lpool;
 	int ret, e;
-	SecAuthBanIp msg = SEC_AUTH_BAN_IP__INIT;
+	BanIpMsg msg = BAN_IP_MSG__INIT;
 
 	msg.ip = (char*)ip;
 	msg.score = points;
@@ -88,8 +88,8 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsign
 	}
 
 	ret = send_msg(lpool, sec->cmd_fd, SM_CMD_AUTH_BAN_IP, &msg,
-				(pack_size_func) sec_auth_ban_ip__get_packed_size,
-				(pack_func) sec_auth_ban_ip__pack);
+				(pack_size_func) ban_ip_msg__get_packed_size,
+				(pack_func) ban_ip_msg__pack);
 	if (ret < 0) {
 		e = errno;
 		seclog(sec, LOG_WARNING, "error in sending BAN IP message: %s", strerror(e));

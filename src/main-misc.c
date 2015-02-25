@@ -55,6 +55,7 @@
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
+#include <main-ban.h>
 #include <ccan/list/list.h>
 
 int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
@@ -505,6 +506,21 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	}
 
 	switch (cmd) {
+	case CMD_BAN_IP:{
+			BanIpMsg *tmsg;
+
+			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
+			if (tmsg == NULL) {
+				mslog(s, NULL, LOG_ERR, "error unpacking sec-mod data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+			add_ip_to_ban_list(s, tmsg->ip, tmsg->score);
+
+			ban_ip_msg__free_unpacked(tmsg, &pa);
+		}
+
+		break;
 	case CMD_TUN_MTU:{
 			TunMtuMsg *tmsg;
 

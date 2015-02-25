@@ -137,6 +137,13 @@ message session_info_msg
 	optional string dtls_compr = 5;
 }
 
+/* WORKER_BAN_IP: sent from worker to main */
+message ban_ip_msg
+{
+	required string ip = 1;
+	required uint32 score = 2;
+}
+
 
 /* Messages to and from the security module */
 
@@ -257,8 +264,4 @@ message sec_auth_session_reply_msg
 }
 
 /* SEC_BAN_IP: sent from sec-mod to main */
-message sec_auth_ban_ip
-{
-	required string ip = 1;
-	required uint32 score = 2;
-}
+/* same as: ban_ip_msg */

@@ -63,6 +63,7 @@ typedef enum {
  */
 #define PASSWORD_POINTS 10
 #define CONNECT_POINTS 1
+#define KKDCP_POINTS 1
 #define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*PASSWORD_POINTS)
 #define DEFAULT_BAN_RESET_TIME 300
 
@@ -143,6 +144,7 @@ typedef enum {
 	CMD_TERMINATE = 12,
 	CMD_SESSION_INFO = 13,
 	CMD_CLI_STATS = 15,
+	CMD_BAN_IP = 16,
 
 	/* from worker to sec-mod */
 	SM_CMD_AUTH_INIT = 120,

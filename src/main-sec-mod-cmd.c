@@ -112,9 +112,9 @@ int handle_sec_mod_commands(main_server_st * s)
 
 	switch (cmd) {
 	case SM_CMD_AUTH_BAN_IP:{
-			SecAuthBanIp *tmsg;
+			BanIpMsg *tmsg;
 
-			tmsg = sec_auth_ban_ip__unpack(&pa, raw_len, raw);
+			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, NULL, LOG_ERR, "error unpacking sec-mod data");
 				ret = ERR_BAD_COMMAND;
@@ -122,7 +122,7 @@ int handle_sec_mod_commands(main_server_st * s)
 			}
 			add_ip_to_ban_list(s, tmsg->ip, tmsg->score);
 
-			sec_auth_ban_ip__free_unpacked(tmsg, &pa);
+			ban_ip_msg__free_unpacked(tmsg, &pa);
 		}
 
 		break;

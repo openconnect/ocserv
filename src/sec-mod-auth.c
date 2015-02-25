@@ -385,13 +385,17 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 
 		if (e->time != -1 && time(0) > e->time + sec->config->cookie_timeout) {
 			seclog(sec, LOG_ERR, "session is expired");
-			return -1;
+			e->status = PS_AUTH_FAILED;
+			rep.reply = AUTH__REP__FAILED;
+			goto reply;
 		}
 
 		if (req->has_cookie == 0 || (req->cookie.len != e->cookie_size) ||
 		    memcmp(req->cookie.data, e->cookie, e->cookie_size) != 0) {
 			seclog(sec, LOG_ERR, "cookie doesn't match the one sent");
-			return -1;
+			e->status = PS_AUTH_FAILED;
+			rep.reply = AUTH__REP__FAILED;
+			goto reply;
 		}
 
 		if (sec->config->acct.amod != NULL && sec->config->acct.amod->open_session != NULL && e->session_is_open == 0) {
@@ -408,6 +412,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 			rep.reply = AUTH__REP__OK;
 		}
 
+ reply:
 		lpool = talloc_new(e);
 		if (lpool == NULL) {
 			return ERR_MEM;

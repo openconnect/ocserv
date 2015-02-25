@@ -72,19 +72,22 @@ void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 		config->acct.amod->global_init(sec, config->server_name, config->acct.additional);
 }
 
+/* returns a negative number if we have reached the score for this client.
+ */
 static
-void sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsigned points)
+int sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsigned points)
 {
-	void *lpool;
+	void *lpool = talloc_new(pool);
 	int ret, e;
 	BanIpMsg msg = BAN_IP_MSG__INIT;
+	BanIpReplyMsg *reply = NULL;
+	PROTOBUF_ALLOCATOR(pa, lpool);
 
 	msg.ip = (char*)ip;
 	msg.score = points;
 
-	lpool = talloc_new(pool);
 	if (lpool == NULL) {
-		return;
+		return 0;
 	}
 
 	ret = send_msg(lpool, sec->cmd_fd, SM_CMD_AUTH_BAN_IP, &msg,
@@ -93,10 +96,30 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsign
 	if (ret < 0) {
 		e = errno;
 		seclog(sec, LOG_WARNING, "error in sending BAN IP message: %s", strerror(e));
+		ret = -1;
+		goto fail;
 	}
+
+	ret = recv_msg(lpool, sec->cmd_fd, SM_CMD_AUTH_BAN_IP_REPLY, (void*)&reply,
+		       (unpack_func) ban_ip_reply_msg__unpack);
+	if (ret < 0) {
+		seclog(sec, LOG_ERR, "error receiving BAN IP reply message");
+		ret = -1;
+		goto fail;
+	}
+
+	if (reply->reply != AUTH__REP__OK) {
+		/* we have exceeded the maximum score */
+		ret = -1;
+	} else {
+		ret = 0;
+	}
+	ban_ip_reply_msg__free_unpacked(reply, &pa);
+
+ fail:
 	talloc_free(lpool);
 
-	return;
+	return ret;
 }
 
 static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
@@ -299,7 +322,11 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	if (result == ERR_AUTH_CONTINUE) {
 		/* if the module allows multiple retries for the password */
 		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries) {
-			sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, PASSWORD_POINTS);
+			ret = sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, PASSWORD_POINTS);
+			if (ret < 0) {
+				e->status = PS_AUTH_FAILED;
+				return send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
+			}
 		}
 
 		ret = send_sec_auth_reply_msg(cfd, sec, e);

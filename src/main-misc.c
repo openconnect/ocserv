@@ -508,6 +508,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	switch (cmd) {
 	case CMD_BAN_IP:{
 			BanIpMsg *tmsg;
+			BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
 
 			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
@@ -515,11 +516,34 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
-			add_ip_to_ban_list(s, tmsg->ip, tmsg->score);
+
+			ret = add_ip_to_ban_list(s, tmsg->ip, tmsg->score);
 
 			ban_ip_msg__free_unpacked(tmsg, &pa);
-		}
 
+			if (ret < 0) {
+				reply.reply =
+				    AUTH__REP__FAILED;
+			} else {
+				reply.reply =
+				    AUTH__REP__OK;
+			}
+
+			ret =
+			    send_msg_to_worker(s, NULL, CMD_BAN_IP_REPLY, &reply,
+					       (pack_size_func)
+					       ban_ip_reply_msg__get_packed_size,
+					       (pack_func)
+					       ban_ip_reply_msg__pack);
+
+			if (ret < 0) {
+				mslog(s, NULL, LOG_ERR,
+				      "could not send reply cmd %d.",
+				      (unsigned)cmd);
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+		}
 		break;
 	case CMD_TUN_MTU:{
 			TunMtuMsg *tmsg;

@@ -106,16 +106,18 @@ struct htable *db = s->ban_db;
 		return 0;
 }
 
-void add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
+/* returns -1 if the user is already banned, and zero otherwise */
+int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 {
 	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
 	ban_entry_st t;
 	time_t now = time(0);
 	time_t reset_time = now + s->config->min_reauth_time;
+	int ret = 0;
 
 	if (db == NULL || ip == NULL || ip[0] == 0)
-		return;
+		return 0;
 
 	/* check if the IP is already there */
 	/* pass the current time somehow */
@@ -125,7 +127,7 @@ void add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	if (e == NULL) { /* new entry */
 		e = talloc_zero(db, ban_entry_st);
 		if (e == NULL) {
-			return;
+			return 0;
 		}
 
 		strlcpy(e->ip, ip, sizeof(e->ip));
@@ -147,14 +149,16 @@ void add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 
 	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
 		mslog(s, NULL, LOG_INFO,"added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&reset_time));
+		ret = -1;
 	} else {
 		mslog(s, NULL, LOG_DEBUG,"added %d points (total %d) for IP '%s' to ban list", score, e->score, ip);
+		ret = 0;
 	}
 
-	return;
+	return ret;
  fail:
 	talloc_free(e);
-	return;
+	return ret;
 }
 
 void remove_ip_from_ban_list(main_server_st *s, const char *ip)

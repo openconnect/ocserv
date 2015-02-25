@@ -59,6 +59,10 @@ static char tmp[32];
 		return "session info";
 	case CMD_CLI_STATS:
 		return "cli stats";
+	case CMD_BAN_IP:
+		return "ban IP";
+	case CMD_BAN_IP_REPLY:
+		return "ban IP reply";
 
 	case SM_CMD_CLI_STATS:
 		return "sm: cli stats";
@@ -76,6 +80,10 @@ static char tmp[32];
 		return "sm: session close";
 	case SM_CMD_AUTH_SESSION_OPEN:
 		return "sm: session open";
+	case SM_CMD_AUTH_BAN_IP:
+		return "sm: ban IP";
+	case SM_CMD_AUTH_BAN_IP_REPLY:
+		return "sm: ban IP reply";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

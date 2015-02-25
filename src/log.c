@@ -92,7 +92,6 @@ void __attribute__ ((format(printf, 3, 4)))
     _oclog(const worker_st * ws, int priority, const char *fmt, ...)
 {
 	char buf[512];
-	char ipbuf[128];
 	const char* ip;
 	va_list args;
 
@@ -111,8 +110,7 @@ void __attribute__ ((format(printf, 3, 4)))
                 priority = LOG_DEBUG;
         }
 
-	ip = human_addr((void*)&ws->remote_addr, ws->remote_addr_len,
-			    ipbuf, sizeof(ipbuf));
+	ip = ws->remote_ip_str;
 
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);

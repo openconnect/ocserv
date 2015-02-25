@@ -145,6 +145,7 @@ typedef enum {
 	CMD_SESSION_INFO = 13,
 	CMD_CLI_STATS = 15,
 	CMD_BAN_IP = 16,
+	CMD_BAN_IP_REPLY = 17,
 
 	/* from worker to sec-mod */
 	SM_CMD_AUTH_INIT = 120,
@@ -155,10 +156,11 @@ typedef enum {
 	SM_CMD_CLI_STATS,
 
 	/* from main to sec-mod and vice versa */
-	SM_CMD_AUTH_SESSION_OPEN,
+	SM_CMD_AUTH_SESSION_OPEN=240,
 	SM_CMD_AUTH_SESSION_CLOSE,
 	SM_CMD_AUTH_SESSION_REPLY,
 	SM_CMD_AUTH_BAN_IP,
+	SM_CMD_AUTH_BAN_IP_REPLY,
 } cmd_request_t;
 
 #define MAX_IP_STR 46

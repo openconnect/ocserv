@@ -179,6 +179,8 @@ typedef struct worker_st {
 
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
+	char remote_ip_str[MAX_IP_STR];
+
 	int proto; /* AF_INET or AF_INET6 */
 
 	time_t session_start_time;
@@ -332,6 +334,7 @@ void exit_worker(worker_st * ws);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth);
 void ws_disable_auth(struct worker_st *ws, unsigned auth);
+void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final);
 
 int connect_to_secmod(worker_st * ws);
 inline static

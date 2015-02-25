@@ -144,6 +144,11 @@ message ban_ip_msg
 	required uint32 score = 2;
 }
 
+message ban_ip_reply_msg
+{
+	/* whether to disconnect the user */
+	required AUTH_REP reply = 1;
+}
 
 /* Messages to and from the security module */
 

@@ -240,29 +240,49 @@ static int setup_dtls_connection(struct worker_st *ws)
 	return -1;
 }
 
-static
-void worker_add_score_to_ip(worker_st *ws, const char *ip, unsigned points)
+void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 {
-	void *lpool;
 	int ret, e;
 	BanIpMsg msg = BAN_IP_MSG__INIT;
+	BanIpReplyMsg *reply = NULL;
+	PROTOBUF_ALLOCATOR(pa, ws);
 
-	msg.ip = (char*)ip;
-	msg.score = points;
-
-	lpool = talloc_new(ws);
-	if (lpool == NULL) {
-		return;
+	/* In final call, no score added, we simply send */
+	if (final == 0) {
+		ws->ban_points += points;
+		/* do not use IPC for small values */
+		if (points < PASSWORD_POINTS)
+			return;
 	}
 
-	ret = send_msg(lpool, ws->cmd_fd, CMD_BAN_IP, &msg,
+	msg.ip = ws->remote_ip_str;
+	msg.score = points;
+
+	ret = send_msg(ws, ws->cmd_fd, CMD_BAN_IP, &msg,
 				(pack_size_func) ban_ip_msg__get_packed_size,
 				(pack_func) ban_ip_msg__pack);
 	if (ret < 0) {
 		e = errno;
 		oclog(ws, LOG_WARNING, "error in sending BAN IP message: %s", strerror(e));
+		return;
 	}
-	talloc_free(lpool);
+
+	if (final != 0)
+		return;
+
+	ret = recv_msg(ws, ws->cmd_fd, CMD_BAN_IP_REPLY,
+		       (void *)&reply, (unpack_func) ban_ip_reply_msg__unpack);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "error receiving BAN IP reply message");
+		return;
+	}
+
+	if (reply->reply != AUTH__REP__OK) {
+		/* we have exceeded the maximum score */
+		exit(1);
+	}
+
+	ban_ip_reply_msg__free_unpacked(reply, &pa);
 
 	return;
 }
@@ -272,8 +292,6 @@ void worker_add_score_to_ip(worker_st *ws, const char *ip, unsigned points)
  */
 void exit_worker(worker_st * ws)
 {
-	char buf[MAX_IP_STR];
-
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
 		CliStatsMsg msg = CLI_STATS_MSG__INIT;
@@ -292,8 +310,8 @@ void exit_worker(worker_st * ws)
 		      (unsigned long)msg.bytes_out);
 	}
 
-	if (ws->ban_points > 0 && human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, buf, sizeof(buf), 0) != NULL)
-		worker_add_score_to_ip(ws, buf, ws->ban_points);
+	if (ws->ban_points > 0)
+		ws_add_score_to_ip(ws, 0, 1);
 
 	talloc_free(ws->main_pool);
 	closelog();
@@ -401,6 +419,8 @@ void vpn_server(struct worker_st *ws)
 	settings.on_message_complete = http_message_complete_cb;
 	settings.on_body = http_body_cb;
 	http_req_init(ws);
+
+	human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
 
 	ws->session = session;
 	ws->parser = &parser;

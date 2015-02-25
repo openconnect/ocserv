@@ -1017,7 +1017,7 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 
-	run_sec_mod(s);
+	s->sec_mod_fd = run_sec_mod(s);
 
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
@@ -1079,6 +1079,7 @@ int main(int argc, char** argv)
 		check_other_work(s);
 
 		/* initialize select */
+		n = 0;
 		FD_ZERO(&rd_set);
 		FD_ZERO(&wr_set);
 
@@ -1095,6 +1096,9 @@ int main(int argc, char** argv)
 				n = MAX(n, ctmp->fd);
 			}
 		}
+
+		FD_SET(s->sec_mod_fd, &rd_set);
+		n = MAX(n, s->sec_mod_fd);
 
 		ret = ctl_handler_set_fds(s, &rd_set, &wr_set);
 		n = MAX(n, ret);
@@ -1241,6 +1245,10 @@ fork_failed:
 					remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
 				}
 			}
+		}
+
+		if (FD_ISSET(s->sec_mod_fd, &rd_set)) {
+			handle_sec_mod_commands(s);
 		}
 
 		/* Check for pending control commands */

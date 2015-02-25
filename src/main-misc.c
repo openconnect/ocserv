@@ -165,7 +165,7 @@ struct proc_st *ctmp;
 static
 int session_cmd(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
-	int sd, ret, e;
+	int ret, e;
 	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
 	SecAuthSessionReplyMsg *msg = NULL;
 	unsigned type, i;
@@ -175,26 +175,6 @@ int session_cmd(main_server_st * s, struct proc_st *proc, const uint8_t *cookie,
 		type = SM_CMD_AUTH_SESSION_OPEN;
 	else
 		type = SM_CMD_AUTH_SESSION_CLOSE;
-
-	sd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sd == -1) {
-		e = errno;
-		mslog(s, proc, LOG_ERR, "error opening unix socket (for sec-mod) %s",
-		      strerror(e));
-		return -1;
-	}
-
-	ret =
-	    connect(sd, (struct sockaddr *)&s->secmod_addr,
-		    s->secmod_addr_len);
-	if (ret < 0) {
-		e = errno;
-		close(sd);
-		mslog(s, proc, LOG_ERR,
-		      "error connecting to sec-mod socket '%s': %s",
-		      s->secmod_addr.sun_path, strerror(e));
-		return -1;
-	}
 
 	ireq.uptime = time(0)-proc->conn_time;
 	ireq.has_uptime = 1;
@@ -213,23 +193,21 @@ int session_cmd(main_server_st * s, struct proc_st *proc, const uint8_t *cookie,
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(type));
 
-	ret = send_msg(proc, sd, type,
+	ret = send_msg(proc, s->sec_mod_fd, type,
 		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
 		(pack_func)sec_auth_session_msg__pack);
 	if (ret < 0) {
-		close(sd);
 		mslog(s, proc, LOG_ERR,
-		      "error sending message to sec-mod socket '%s'",
-		      s->secmod_addr.sun_path);
+		      "error sending message to sec-mod cmd socket");
 		return -1;
 	}
 
 	if (type == SM_CMD_AUTH_SESSION_OPEN) {
-		ret = recv_msg(proc, sd, SM_CMD_AUTH_SESSION_REPLY,
+		ret = recv_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_SESSION_REPLY,
 		       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack);
-		close(sd);
 		if (ret < 0) {
-			mslog(s, proc, LOG_ERR, "error receiving auth reply message");
+			e = errno;
+			mslog(s, proc, LOG_ERR, "error receiving auth reply message from sec-mod cmd socket: %s", strerror(e));
 			return ret;
 		}
 
@@ -322,8 +300,6 @@ int session_cmd(main_server_st * s, struct proc_st *proc, const uint8_t *cookie,
 			proc->config.nbns_size = msg->n_nbns;
 		}
 		sec_auth_session_reply_msg__free_unpacked(msg, &pa);
-	} else {
-		close(sd);
 	}
 
 	return 0;
@@ -755,9 +731,11 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	return ret;
 }
 
-void run_sec_mod(main_server_st * s)
+/* Returns a file descriptor to be used for communication with sec-mod
+ */
+int run_sec_mod(main_server_st * s)
 {
-	int e;
+	int e, fd[2], ret;
 	pid_t pid;
 	const char *p;
 
@@ -773,6 +751,12 @@ void run_sec_mod(main_server_st * s)
 	}
 	p = s->full_socket_file;
 
+	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error creating sec-mod command socket");
+		exit(1);
+	}
+
 	pid = fork();
 	if (pid == 0) {		/* child */
 		clear_lists(s);
@@ -784,11 +768,13 @@ void run_sec_mod(main_server_st * s)
 		malloc_trim(0);
 #endif
 		setproctitle(PACKAGE_NAME "-secmod");
-
-		sec_mod_server(s->main_pool, s->config, p, s->cookie_key);
+		close(fd[1]);
+		sec_mod_server(s->main_pool, s->config, p, s->cookie_key, fd[0]);
 		exit(0);
 	} else if (pid > 0) {	/* parent */
+		close(fd[0]);
 		s->sec_mod_pid = pid;
+		return fd[1];
 	} else {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "error in fork(): %s", strerror(e));

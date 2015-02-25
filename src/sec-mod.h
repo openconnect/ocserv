@@ -125,7 +125,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
-		    uint8_t cookie_key[COOKIE_KEY_SIZE]);
+		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd);
 
 void cleanup_banned_entries(sec_mod_st *sec);
 unsigned check_if_banned(sec_mod_st *sec, const char *ip);

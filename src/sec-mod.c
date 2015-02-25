@@ -48,6 +48,7 @@
 #define MAX_WAIT_SECS 3
 #define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
 #define MAINTAINANCE_TIME 310
+#define MAX_MSG_SIZE 8*1024
 
 static int need_maintainance = 0;
 static int need_reload = 0;
@@ -188,7 +189,7 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 
 static
 int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
-		   uid_t uid, uint8_t * buffer, size_t buffer_size)
+		   uint8_t * buffer, size_t buffer_size)
 {
 	unsigned i;
 	gnutls_datum_t data, out;
@@ -295,14 +296,31 @@ int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
 			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
 			return ret;
 		}
+	default:
+		seclog(sec, LOG_WARNING, "unknown type 0x%.2x", cmd);
+		return -1;
+	}
+
+	return 0;
+}
+
+static
+int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
+		   uint8_t * buffer, size_t buffer_size)
+{
+	gnutls_datum_t data;
+	int ret;
+	PROTOBUF_ALLOCATOR(pa, pool);
+
+	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s\n", (int)buffer_size,
+	       cmd_request_to_str(cmd));
+	data.data = buffer;
+	data.size = buffer_size;
+
+	switch (cmd) {
 	case SM_CMD_AUTH_SESSION_OPEN:
 	case SM_CMD_AUTH_SESSION_CLOSE:{
 			SecAuthSessionMsg *msg;
-
-			if (uid != 0) {
-				seclog(sec, LOG_INFO, "received session open/close from unauthorized uid (%u)\n", (unsigned)uid);
-				return -1;
-			}
 
 			msg =
 			    sec_auth_session_msg__unpack(&pa, data.size,
@@ -374,7 +392,7 @@ static void check_other_work(sec_mod_st *sec)
 }
 
 static
-void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigned buffer_size)
+void serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
@@ -410,20 +428,22 @@ void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigne
 		goto leave;
 	}
 
-	ret = process_packet(pool, cfd, sec, cmd, uid, buffer, ret);
+	if (is_main)
+		ret = process_packet_from_main(pool, cfd, sec, cmd, buffer, ret);
+	else
+		ret = process_packet(pool, cfd, sec, cmd, buffer, ret);
 	if (ret < 0) {
 		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
 	
  leave:
- 	talloc_free(pool);
-	close(cfd);
 	return;
 }
 
 /* sec_mod_server:
  * @config: server configuration
  * @socket_file: the name of the socket
+ * @cmd_fd: socket to exchange commands with main
  *
  * This is the main part of the security module.
  * It creates the unix domain socket identified by @socket_file
@@ -449,11 +469,11 @@ void serve_request(sec_mod_st *sec, uid_t uid, int cfd, uint8_t *buffer, unsigne
  * key operations.
  */
 void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
-		    uint8_t cookie_key[COOKIE_KEY_SIZE])
+		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd)
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
-	int cfd, ret, e;
+	int cfd, ret, e, n;
 	unsigned i, buffer_size;
 	uid_t uid;
 	uint8_t *buffer;
@@ -461,10 +481,25 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	int sd;
 	sec_mod_st *sec;
 	void *sec_mod_pool;
+	fd_set rd_set;
+	sigset_t emptyset, blockset;
+#ifdef HAVE_PSELECT
+	struct timespec ts;
+#else
+	struct timeval ts;
+#endif
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
 #endif
+
+	sigemptyset(&blockset);
+	sigemptyset(&emptyset);
+	sigaddset(&blockset, SIGALRM);
+	sigaddset(&blockset, SIGTERM);
+	sigaddset(&blockset, SIGINT);
+	sigaddset(&blockset, SIGCHLD);
+	sigaddset(&blockset, SIGHUP);
 
 	sec_mod_pool = talloc_init("sec-mod");
 	if (sec_mod_pool == NULL) {
@@ -599,37 +634,82 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		}
 	}
 
+	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
 	seclog(sec, LOG_INFO, "sec-mod initialized (socket: %s)", SOCKET_FILE);
 
 	for (;;) {
 		check_other_work(sec);
 
-		sa_len = sizeof(sa);
-		cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
-		if (cfd == -1) {
-			e = errno;
-			if (e != EINTR) {
-				seclog(sec, LOG_DEBUG,
-				       "sec-mod error accepting connection: %s",
-				       strerror(e));
-			}
+		FD_ZERO(&rd_set);
+		n = 0;
+
+		FD_SET(cmd_fd, &rd_set);
+		n = MAX(n, cmd_fd);
+
+		FD_SET(sd, &rd_set);
+		n = MAX(n, sd);
+
+#ifdef HAVE_PSELECT
+		ts.tv_nsec = 0;
+		ts.tv_sec = 30;
+		ret = pselect(n + 1, &rd_set, NULL, NULL, &ts, &emptyset);
+#else
+		ts.tv_usec = 0;
+		ts.tv_sec = 30;
+		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
+		ret = select(n + 1, &rd_set, &wr_set, NULL, &ts);
+		sigprocmask(SIG_BLOCK, &blockset, NULL);
+#endif
+		if (ret == -1 && errno == EINTR)
 			continue;
+
+		if (ret < 0) {
+			e = errno;
+			seclog(sec, LOG_ERR, "Error in pselect(): %s",
+			       strerror(e));
+			exit(1);
 		}
 
-		/* do not allow unauthorized processes to issue commands
-		 */
-		ret = check_upeer_id("sec-mod", config->debug, cfd, config->uid, config->gid, &uid);
-		if (ret < 0) {
-			seclog(sec, LOG_INFO, "rejected unauthorized connection");
-		} else {
-			buffer_size = 8 * 1024;
+		if (FD_ISSET(cmd_fd, &rd_set)) {
+			buffer_size = MAX_MSG_SIZE;
 			buffer = talloc_size(sec, buffer_size);
 			if (buffer == NULL) {
 				seclog(sec, LOG_ERR, "error in memory allocation");
-				close(cfd);
 			} else {
-				serve_request(sec, uid, cfd, buffer, buffer_size);
+				serve_request(sec, cmd_fd, 1, buffer, buffer_size);
+				talloc_free(buffer);
 			}
+		}
+
+		if (FD_ISSET(sd, &rd_set)) {
+			sa_len = sizeof(sa);
+			cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
+			if (cfd == -1) {
+				e = errno;
+				if (e != EINTR) {
+					seclog(sec, LOG_DEBUG,
+					       "sec-mod error accepting connection: %s",
+					       strerror(e));
+					continue;
+				}
+			}
+
+			/* do not allow unauthorized processes to issue commands
+			 */
+			ret = check_upeer_id("sec-mod", config->debug, cfd, config->uid, config->gid, &uid);
+			if (ret < 0) {
+				seclog(sec, LOG_INFO, "rejected unauthorized connection");
+			} else {
+				buffer_size = MAX_MSG_SIZE;
+				buffer = talloc_size(sec, buffer_size);
+				if (buffer == NULL) {
+					seclog(sec, LOG_ERR, "error in memory allocation");
+				} else {
+					serve_request(sec, cfd, 0, buffer, buffer_size);
+					talloc_free(buffer);
+				}
+			}
+			close(cfd);
 		}
 #ifdef DEBUG_LEAKS
 		talloc_report_full(sec, stderr);

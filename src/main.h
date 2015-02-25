@@ -208,12 +208,14 @@ typedef struct main_server_st {
 #else
 	int ctl_fd;
 #endif
+	int sec_mod_fd;
 	void *main_pool; /* talloc main pool */
 } main_server_st;
 
 void clear_lists(main_server_st *s);
 
 int handle_commands(main_server_st *s, struct proc_st* cur);
+int handle_sec_mod_commands(main_server_st *s);
 
 int user_connected(main_server_st *s, struct proc_st* cur);
 void user_disconnected(main_server_st *s, struct proc_st* cur);
@@ -264,7 +266,7 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
-void run_sec_mod(main_server_st * s);
+int run_sec_mod(main_server_st * s);
 
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,

@@ -78,7 +78,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
 	icmp-ping.c icmp-ping.h worker-kkdcp.c subconfig.c \
 	sec-mod-sup-config.c sec-mod-sup-config.h \
-	sup-config/file.c sup-config/file.h \
+	sup-config/file.c sup-config/file.h main-sec-mod-cmd.c \
 	sup-config/radius.c sup-config/radius.h \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
 	vasprintf.c vasprintf.h lzs.c lzs.h cfg.h \

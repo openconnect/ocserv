@@ -290,9 +290,11 @@ min-reauth-time = 120
 
 # Banning clients in ocserv works with a point system. IP addresses
 # that get a score over that configured number are banned for
-# min-reauth-time seconds. A wrong password attempt is 5 points.
+# min-reauth-time seconds. A wrong password attempt is 10 points,
+# a connection is 1 point.
+#
 # Set to zero to disable.
-max-ban-score = 30
+max-ban-score = 50
 
 # The time (in seconds) that all score kept for a client is reset.
 ban-reset-time = 300

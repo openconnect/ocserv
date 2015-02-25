@@ -61,7 +61,8 @@ typedef enum {
  * attempt gives you PASSWORD_POINTS, and you are banned
  * when the maximum ban score is reached.
  */
-#define PASSWORD_POINTS 5
+#define PASSWORD_POINTS 10
+#define CONNECT_POINTS 1
 #define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*PASSWORD_POINTS)
 #define DEFAULT_BAN_RESET_TIME 300
 

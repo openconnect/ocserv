@@ -7,6 +7,8 @@
   proxy to a KDC.
 - Accounting was split from authentication. That way radius accounting can
   be used in addition to any authentication method.
+- Added a score-based system for banning IP addresses. See
+  min-reauth-time, max-ban-score and ban-reset-time.
 - Support for 'certificate[optional]' authentication has been removed.
 
 

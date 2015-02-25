@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <system.h>
 #include <main-ctl.h>
+#include <main-ban.h>
 
 #include <ctl.pb-c.h>
 #include <str.h>
@@ -162,6 +163,7 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.active_clients = ctx->s->active_clients;
 	rep.stored_cookies = ctx->s->cookies.total;
 	rep.stored_tls_sessions = ctx->s->tls_db.entries;
+	rep.banned_ips = main_ban_db_elems(ctx->s);
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,

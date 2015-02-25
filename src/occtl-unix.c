@@ -237,6 +237,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 	printf("       Up since: %s\n", str_since);
 
 	printf("        Clients: %u\n", (unsigned)rep->active_clients);
+	printf("     Banned IPs: %u\n", (unsigned)rep->banned_ips);
 	printf("        Cookies: %u\n", (unsigned)rep->stored_cookies);
 	printf(" TLS DB entries: %u\n", (unsigned)rep->stored_tls_sessions);
 	printf("\n");

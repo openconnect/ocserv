@@ -200,6 +200,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 
 			if (s->config->max_ban_score > 0 &&
 			    e->score >= s->config->max_ban_score) {
+			    	mslog(s, NULL, LOG_INFO, "Rejected connection from banned IP: %s", t.ip);
 				return 1;
 			}
 		}

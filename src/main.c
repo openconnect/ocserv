@@ -1162,7 +1162,6 @@ int main(int argc, char** argv)
 
 				if (check_if_banned(s, &ws->remote_addr, ws->remote_addr_len) != 0) {
 					close(fd);
-					mslog(s, NULL, LOG_INFO, "Rejected connection from banned IP");
 					break;
 				}
 

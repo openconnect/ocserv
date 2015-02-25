@@ -79,7 +79,7 @@ static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
-static void exit_worker(worker_st * ws);
+void exit_worker(worker_st * ws);
 static int connect_handler(worker_st * ws);
 
 static void handle_alarm(int signo)
@@ -241,8 +241,39 @@ static int setup_dtls_connection(struct worker_st *ws)
 }
 
 static
+void worker_add_score_to_ip(worker_st *ws, const char *ip, unsigned points)
+{
+	void *lpool;
+	int ret, e;
+	BanIpMsg msg = BAN_IP_MSG__INIT;
+
+	msg.ip = (char*)ip;
+	msg.score = points;
+
+	lpool = talloc_new(ws);
+	if (lpool == NULL) {
+		return;
+	}
+
+	ret = send_msg(lpool, ws->cmd_fd, CMD_BAN_IP, &msg,
+				(pack_size_func) ban_ip_msg__get_packed_size,
+				(pack_func) ban_ip_msg__pack);
+	if (ret < 0) {
+		e = errno;
+		oclog(ws, LOG_WARNING, "error in sending BAN IP message: %s", strerror(e));
+	}
+	talloc_free(lpool);
+
+	return;
+}
+
+/* Terminates the worker process, but communicates any required
+ * data to main process before (stats/ban points).
+ */
 void exit_worker(worker_st * ws)
 {
+	char buf[MAX_IP_STR];
+
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
 		CliStatsMsg msg = CLI_STATS_MSG__INIT;
@@ -260,6 +291,10 @@ void exit_worker(worker_st * ws)
 		      (unsigned long)msg.bytes_in,
 		      (unsigned long)msg.bytes_out);
 	}
+
+	if (ws->ban_points > 0 && human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, buf, sizeof(buf), 0) != NULL)
+		worker_add_score_to_ip(ws, buf, ws->ban_points);
+
 	talloc_free(ws->main_pool);
 	closelog();
 	exit(1);

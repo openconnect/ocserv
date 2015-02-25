@@ -1161,7 +1161,7 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 
 int post_auth_handler(worker_st * ws, unsigned http_ver)
 {
-	int ret, sd = -1;
+	int ret = -1, sd = -1;
 	struct http_req_st *req = &ws->req;
 	const char *reason = "Authentication failed";
 	char *username = NULL;
@@ -1412,7 +1412,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		   http_ver, reason);
 	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 	talloc_free(msg);
-	exit(1);
+	exit_worker(ws);
  cleanup:
  	talloc_free(msg);
  	return ret;

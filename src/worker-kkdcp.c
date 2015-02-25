@@ -30,33 +30,6 @@
 
 #ifdef HAVE_GSSAPI
 
-static
-void worker_add_score_to_ip(worker_st *ws, const char *ip, unsigned points)
-{
-	void *lpool;
-	int ret, e;
-	BanIpMsg msg = BAN_IP_MSG__INIT;
-
-	msg.ip = (char*)ip;
-	msg.score = points;
-
-	lpool = talloc_new(ws);
-	if (lpool == NULL) {
-		return;
-	}
-
-	ret = send_msg(lpool, ws->cmd_fd, CMD_BAN_IP, &msg,
-				(pack_size_func) ban_ip_msg__get_packed_size,
-				(pack_func) ban_ip_msg__pack);
-	if (ret < 0) {
-		e = errno;
-		oclog(ws, LOG_WARNING, "error in sending BAN IP message: %s", strerror(e));
-	}
-	talloc_free(lpool);
-
-	return;
-}
-
 int der_decode(const uint8_t *der, unsigned der_size, uint8_t *out, unsigned *out_size, 
 	       char *realm, unsigned realm_size, int *error)
 {
@@ -167,11 +140,8 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		return -1;
 	}
 
-	if (human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, realm, sizeof(realm), 0) != NULL)
-		worker_add_score_to_ip(ws, realm, KKDCP_POINTS);
-
+	ws->ban_points += KKDCP_POINTS;
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
-
 
 	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, realm, sizeof(realm), &e);
 	if (ret < 0) {

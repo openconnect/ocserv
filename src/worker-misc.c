@@ -88,7 +88,7 @@ int handle_worker_commands(struct worker_st *ws)
 	if (ret == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
-		exit(1);
+		exit_worker(ws);
 	}
 
 	if (ret == 0) {
@@ -98,7 +98,7 @@ int handle_worker_commands(struct worker_st *ws)
 
 	if (length > ret - 3) {
 		oclog(ws, LOG_DEBUG, "worker received invalid message %s of %u bytes that claims to be %u\n", cmd_request_to_str(cmd), (unsigned)ret-3, (unsigned)length);
-		exit(1);
+		exit_worker(ws);
 	} else {
 		oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
 	}
@@ -107,7 +107,7 @@ int handle_worker_commands(struct worker_st *ws)
 	
 	switch(cmd) {
 		case CMD_TERMINATE:
-			exit(0);
+			exit_worker(ws);
 		case CMD_UDP_FD: {
 			unsigned hello = 1;
 			int fd;
@@ -163,7 +163,7 @@ int handle_worker_commands(struct worker_st *ws)
 			break;
 		default:
 			oclog(ws, LOG_ERR, "unknown CMD 0x%x", (unsigned)cmd);
-			exit(1);
+			exit_worker(ws);
 	}
 	
 	return 0;

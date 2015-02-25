@@ -248,6 +248,9 @@ typedef struct worker_st {
 	unsigned cert_auth_ok;
 	int tun_fd;
 
+	/* ban points to be sent on exit */
+	unsigned ban_points;
+
 	/* tun device stats */
 	uint64_t tun_bytes_in;
 	uint64_t tun_bytes_out;
@@ -324,6 +327,8 @@ int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);
 int disable_system_calls(struct worker_st *ws);
 void ocsigaltstack(struct worker_st *ws);
+
+void exit_worker(worker_st * ws);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth);
 void ws_disable_auth(struct worker_st *ws, unsigned auth);

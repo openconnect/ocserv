@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Red Hat
+ * Copyright (C) 2014, 2015 Red Hat
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -32,6 +32,7 @@
 #include <occtl.h>
 #include <common.h>
 #include <c-strcase.h>
+#include <arpa/inet.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -348,6 +349,9 @@ int handle_unban_ip_cmd(struct unix_ctx *ctx, const char *arg)
 	BoolMsg *rep;
 	unsigned status;
 	UnbanReq req = UNBAN_REQ__INIT;
+	char txt[MAX_IP_STR];
+	int af;
+	struct sockaddr_storage st;
 	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	if (arg == NULL || need_help(arg)) {
@@ -357,7 +361,20 @@ int handle_unban_ip_cmd(struct unix_ctx *ctx, const char *arg)
 	
 	init_reply(&raw);
 
-	req.ip = (void*)arg;
+	/* convert the IP to the simplest form */
+	if (strchr(arg, ':') != 0) {
+		af = AF_INET6;
+	} else {
+		af = AF_INET;
+	}
+
+	ret = inet_pton(af, arg, &st);
+	if (ret == 1) {
+		inet_ntop(af, &st, txt, sizeof(txt));
+		req.ip = txt;
+	} else {
+		req.ip = (char*)arg;
+	}
 
 	ret = send_cmd(ctx, CTL_CMD_UNBAN_IP, &req, 
 		(pack_size_func)unban_req__get_packed_size, 

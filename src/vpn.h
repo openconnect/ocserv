@@ -163,8 +163,6 @@ typedef enum {
 	SM_CMD_AUTH_BAN_IP_REPLY,
 } cmd_request_t;
 
-#define MAX_IP_STR 46
-
 struct group_cfg_st {
 	/* routes to be forwarded to the client */
 	char **routes;

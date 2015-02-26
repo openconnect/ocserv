@@ -158,14 +158,15 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	return ret;
 }
 
-void remove_ip_from_ban_list(main_server_st *s, const char *ip)
+/* returns non-zero if there is an IP removed */
+int remove_ip_from_ban_list(main_server_st *s, const char *ip)
 {
 	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
 	ban_entry_st t;
 
 	if (db == NULL || ip == NULL || ip[0] == 0)
-		return;
+		return 0;
 
 	/* check if the IP is already there */
 	/* pass the current time somehow */
@@ -175,9 +176,10 @@ void remove_ip_from_ban_list(main_server_st *s, const char *ip)
 	if (e != NULL) { /* new entry */
 		e->score = 0;
 		e->expires = 0;
+		return 1;
 	}
 
-	return;
+	return 0;
 }
 
 unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, socklen_t addr_size)

@@ -604,11 +604,11 @@ static void method_unban_ip(method_ctx *ctx,
 		return;
 	}
 
-	if (req->ip) {
-		remove_ip_from_ban_list(ctx->s, req->ip);
+	if (remove_ip_from_ban_list(ctx->s, req->ip) != 0) {
+		if (req->ip)
+			mslog(ctx->s, NULL, LOG_INFO,
+				      "unbanning IP '%s' due to ctl request", req->ip);
 		rep.status = 1;
-		mslog(ctx->s, NULL, LOG_INFO,
-		      "unbanning IP '%s' due to ctl request", req->ip);
 	}
 
 	unban_req__free_unpacked(req, NULL);

@@ -121,7 +121,7 @@ unsigned need_help(const char *arg)
 unsigned check_cmd_help(const char *line)
 {
 	unsigned int i;
-	unsigned len = strlen(line);
+	unsigned len = (line!=NULL)?strlen(line):0;
 	unsigned status = 0, tlen;
 
 	while (len > 0 && (line[len - 1] == '?' || whitespace(line[len - 1])))

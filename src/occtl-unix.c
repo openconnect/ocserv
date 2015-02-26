@@ -585,7 +585,8 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 	return ret;
 }
 
-int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg)
+static
+int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, unsigned points)
 {
 	int ret;
 	struct cmd_reply_st raw;
@@ -615,21 +616,34 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg)
 			continue;
 
 		/* add header */
-		if (i == 0) {
-			fprintf(out, "%14s %14s %30s\n",
-				"IP", "score", "expires");
-		}
+		if (points == 0) {
+			if (rep->info[i]->has_expires) {
+				t = rep->info[i]->expires;
+				tm = localtime(&t);
+				strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+			} else {
+				if (points)
+					str_since[0] = 0;
+				else
+				continue;
+			}
 
-		if (rep->info[i]->has_expires) {
-			t = rep->info[i]->expires;
-			tm = localtime(&t);
-			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+			if (i == 0) {
+				fprintf(out, "%14s %14s %30s\n",
+					"IP", "score", "expires");
+			}
+
+			fprintf(out, "%14s %14u %30s\n",
+				rep->info[i]->ip, (unsigned)rep->info[i]->score, str_since);
 		} else {
-			str_since[0] = 0;
-		}
+			if (i == 0) {
+				fprintf(out, "%14s %14s\n",
+					"IP", "score");
+			}
 
-		fprintf(out, "%14s %14u %30s\n",
-			rep->info[i]->ip, (unsigned)rep->info[i]->score, str_since);
+			fprintf(out, "%14s %14u\n",
+				rep->info[i]->ip, (unsigned)rep->info[i]->score);
+		}
 	}
 
 	ret = 0;
@@ -647,6 +661,16 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg)
 	pager_stop(out);
 
 	return ret;
+}
+
+int handle_list_banned_ips_cmd(struct unix_ctx *ctx, const char *arg)
+{
+	return handle_list_banned_cmd(ctx, arg, 0);
+}
+
+int handle_list_banned_points_cmd(struct unix_ctx *ctx, const char *arg)
+{
+	return handle_list_banned_cmd(ctx, arg, 1);
 }
 
 int print_list_entries(FILE* out, const char* name, char **val, unsigned vsize)

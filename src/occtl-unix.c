@@ -237,7 +237,9 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 	t = rep->start_time;
 	tm = localtime(&t);
 	strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
-	printf("       Up since: %s\n", str_since);
+	printf("       Up since: %s (", str_since);
+	print_time_ival7(time(0), t, stdout);
+	fputs(")\n", stdout);
 
 	printf("        Clients: %u\n", (unsigned)rep->active_clients);
 	printf("     Banned IPs: %u\n", (unsigned)rep->banned_ips);

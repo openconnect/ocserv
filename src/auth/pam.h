@@ -21,7 +21,11 @@
 #ifndef PAM_H
 #define PAM_H
 
+#include <config.h>
 #include <sec-mod-auth.h>
+
+#ifdef HAVE_PAM
+
 #include <security/pam_appl.h>
 #include <str.h>
 #include <pcl.h>
@@ -42,5 +46,6 @@ struct pam_ctx_st {
 	unsigned state; /* PAM_S_ */
 };
 
+#endif
 
 #endif

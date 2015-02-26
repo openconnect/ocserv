@@ -74,7 +74,6 @@ static struct cfg_options available_options[] = {
 	{ .name = "custom-header", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "split-dns", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "acct", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "server-name", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -702,7 +701,6 @@ unsigned urlfw_size = 0;
 	READ_STRING("user-profile", config->xml_config_file);
 #endif
 
-	READ_STRING("server-name", config->server_name);
 	READ_STRING("ca-cert", config->ca);
 	READ_STRING("default-domain", config->default_domain);
 	READ_STRING("crl", config->crl);
@@ -1084,7 +1082,6 @@ unsigned i;
 	DEL(config->banner);
 	DEL(config->dh_params_file);
 	DEL(config->listen_host);
-	DEL(config->server_name);
 	DEL(config->pin_file);
 	DEL(config->srk_pin_file);
 	DEL(config->ca);

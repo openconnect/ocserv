@@ -27,7 +27,7 @@
 typedef struct acct_mod_st {
 	unsigned int type; /* ACCT_TYPE_ */
 	unsigned int auth_types; /* or of the AUTH_TYPEs which are compatible with this */
-	void (*global_init)(void *pool, const char *server_name, void* additional);
+	void (*global_init)(void *pool, void* additional);
 	void (*global_deinit)(void);
 
 	/* The context provided below is of the authentication method */

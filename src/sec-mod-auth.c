@@ -65,11 +65,11 @@ void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
 
 	for (i=0;i<config->auth_methods;i++) {
 		if (config->auth[i].enabled && config->auth[i].amod && config->auth[i].amod->global_init)
-			config->auth[i].amod->global_init(sec, config->server_name, config->auth[i].additional);
+			config->auth[i].amod->global_init(sec, config->auth[i].additional);
 	}
 
 	if (config->acct.amod && config->acct.amod->global_init)
-		config->acct.amod->global_init(sec, config->server_name, config->acct.additional);
+		config->acct.amod->global_init(sec, config->acct.additional);
 }
 
 /* returns a negative number if we have reached the score for this client.

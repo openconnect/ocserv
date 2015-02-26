@@ -265,7 +265,6 @@ typedef struct kkdcp_st {
 } kkdcp_st;
 
 struct cfg_st {
-	char *server_name;
 	char *listen_host;
 	unsigned int port;
 	unsigned int udp_port;

@@ -41,7 +41,7 @@
 static rc_handle *rh = NULL;
 static char nas_identifier[64];
 
-static void radius_global_init(void *pool, const char *server_name, void *additional)
+static void radius_global_init(void *pool, void *additional)
 {
 	radius_cfg_st *config = additional;
 
@@ -56,10 +56,7 @@ static void radius_global_init(void *pool, const char *server_name, void *additi
 	if (config->nas_identifier) {
 		strlcpy(nas_identifier, config->nas_identifier, sizeof(nas_identifier));
 	} else {
-		if (server_name)
-			strlcpy(nas_identifier, server_name, sizeof(nas_identifier));
-		else
-			nas_identifier[0] = 0;
+		nas_identifier[0] = 0;
 	}
 
 	if (rc_read_dictionary(rh, rc_conf_str(rh, "dictionary")) != 0) {

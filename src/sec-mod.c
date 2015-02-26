@@ -480,11 +480,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	void *sec_mod_pool;
 	fd_set rd_set;
 	sigset_t emptyset, blockset;
-#ifdef HAVE_PSELECT
-	struct timespec ts;
-#else
-	struct timeval ts;
-#endif
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
@@ -494,7 +489,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	sigaddset(&blockset, SIGALRM);
 	sigaddset(&blockset, SIGTERM);
 	sigaddset(&blockset, SIGINT);
-	sigaddset(&blockset, SIGCHLD);
 	sigaddset(&blockset, SIGHUP);
 
 	sec_mod_pool = talloc_init("sec-mod");
@@ -531,7 +525,6 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	ocsignal(SIGTERM, handle_sigterm);
 	ocsignal(SIGALRM, handle_alarm);
 
-	alarm(MAINTAINANCE_TIME);
 
 	sec_auth_init(sec, config);
 	sec->cmd_fd = cmd_fd;
@@ -628,6 +621,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	}
 
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
+	alarm(MAINTAINANCE_TIME);
 	seclog(sec, LOG_INFO, "sec-mod initialized (socket: %s)", SOCKET_FILE);
 
 	for (;;) {
@@ -643,14 +637,10 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		n = MAX(n, sd);
 
 #ifdef HAVE_PSELECT
-		ts.tv_nsec = 0;
-		ts.tv_sec = 30;
-		ret = pselect(n + 1, &rd_set, NULL, NULL, &ts, &emptyset);
+		ret = pselect(n + 1, &rd_set, NULL, NULL, NULL, &emptyset);
 #else
-		ts.tv_usec = 0;
-		ts.tv_sec = 30;
 		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-		ret = select(n + 1, &rd_set, &wr_set, NULL, &ts);
+		ret = select(n + 1, &rd_set, &wr_set, NULL, NULL);
 		sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 		if (ret == -1 && errno == EINTR)

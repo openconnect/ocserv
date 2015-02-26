@@ -893,8 +893,6 @@ static int check_tcp_wrapper(int fd)
 # define check_tcp_wrapper(x) 0
 #endif
 
-typedef pid_t (*fork_func)(void);
-
 int main(int argc, char** argv)
 {
 	int fd, pid, e;
@@ -917,7 +915,6 @@ int main(int argc, char** argv)
 	sigset_t emptyset, blockset;
 	/* tls credentials */
 	struct tls_st creds;
-	fork_func our_fork = fork;
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
@@ -1014,10 +1011,6 @@ int main(int argc, char** argv)
 			exit(1);
 		}
 	}
-
-	/* override the default fork function */
-	if (s->config->isolate)
-		our_fork = safe_fork;
 
 	write_pid_file();
 
@@ -1173,7 +1166,7 @@ int main(int argc, char** argv)
 					break;
 				}
 
-				pid = our_fork();
+				pid = fork();
 				if (pid == 0) {	/* child */
 					/* close any open descriptors, and erase
 					 * sensitive data before running the worker

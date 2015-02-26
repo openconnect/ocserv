@@ -21,11 +21,6 @@
 #include <unistd.h>
 #ifdef __linux__
 # include <sys/prctl.h>
-# if defined(ENABLE_LINUX_NS)
-#  include <sched.h>
-#  include <linux/sched.h>
-#  include <sys/syscall.h>
-# endif
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -53,23 +48,6 @@ void pr_set_undumpable(const char *mod)
 	}
 #endif
 }
-
-#if defined(__linux__) && defined(ENABLE_LINUX_NS)
-pid_t safe_fork(void)
-{
-	long ret;
-	/* fork: 100%
-	 * CLONE_NEWPID|CLONE_NEWNET|CLONE_NEWIPC: 3%
-	 * CLONE_NEWPID|CLONE_NEWIPC: 27%
-	 * CLONE_NEWPID: 36%
-	 */
-	int flags = SIGCHLD|CLONE_NEWPID|CLONE_NEWIPC;
-	ret = syscall(SYS_clone, flags, 0, 0, 0);
-	if (ret == 0 && syscall(SYS_getpid)!= 1)
-		return -1;
-	return ret;
-}
-#endif
 
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 {

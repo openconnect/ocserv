@@ -36,12 +36,6 @@ typedef void (*sighandler_t)(int);
 # define SIGHANDLER_T sighandler_t
 #endif
 
-#if defined(__linux__) && defined(ENABLE_LINUX_NS)
-pid_t safe_fork(void);
-#else
-# define safe_fork fork
-#endif
-
 void pr_set_undumpable(const char* mod);
 void kill_on_parent_kill(int sig);
 

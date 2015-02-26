@@ -291,29 +291,6 @@ AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <seccomp.h>
  fi
 fi
 
-AC_ARG_ENABLE(linux-namespaces,
-  AS_HELP_STRING([--enable-linux-namespaces], [enable support for namespaces (containers) in Linux]),
-    linux_ns_enabled=$enableval, linux_ns_enabled=no)
-
-if [ test "$linux_ns_enabled" = "yes" ];then
-AC_MSG_CHECKING([for Linux namespaces])
-dnl We use Linux namespaces only in the platforms clone() works as expected
-AC_LINK_IFELSE([AC_LANG_PROGRAM([
-		   #include <sched.h>
-		   #include <linux/sched.h>],[
-		   #if defined(__i386__) || defined(__arm__) || defined(__x86_64__) || defined(__mips__)
-		   unshare(CLONE_NEWPID|CLONE_NEWIPC);
-		   #else
-		   # error 1
-		   #endif])],
-		  [AC_MSG_RESULT(yes)
-	  	   AC_DEFINE([ENABLE_LINUX_NS], 1, [Enable Linux namespaces support])
-		   linux_ns_enabled=yes],
-		  [AC_MSG_RESULT(no)
-		   linux_ns_enabled=no
-])
-fi
-
 AC_ARG_ENABLE(systemd,
   AS_HELP_STRING([--disable-systemd], [disable systemd support]),
     systemd_enabled=$enableval, systemd_enabled=yes)
@@ -510,7 +487,6 @@ Summary of build options:
 AC_MSG_NOTICE([
 
 Experimental (not recommended) options:
-  Linux namespaces:     ${linux_ns_enabled}
   dbus:                 ${dbus_enabled}
 ])
 

@@ -640,7 +640,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		ret = pselect(n + 1, &rd_set, NULL, NULL, NULL, &emptyset);
 #else
 		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-		ret = select(n + 1, &rd_set, &wr_set, NULL, NULL);
+		ret = select(n + 1, &rd_set, NULL, NULL, NULL);
 		sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 		if (ret == -1 && errno == EINTR)

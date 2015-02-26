@@ -570,7 +570,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
 		fprintf(out, "%8d %8s %8s %14s %14s %6s ",
 			(int)rep->user[i]->id, username, groupname, rep->user[i]->ip, vpn_ip, rep->user[i]->tun);
 
-		print_time_ival7(t, out);
+		print_time_ival7(time(0), t, out);
 
 		dtls_ciphersuite = rep->user[i]->dtls_ciphersuite;
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0) {
@@ -652,8 +652,10 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, unsigned point
 					"IP", "score", "expires");
 			}
 
-			fprintf(out, "%14s %14u %30s\n",
+			fprintf(out, "%14s %14u %30s (",
 				rep->info[i]->ip, (unsigned)rep->info[i]->score, str_since);
+			print_time_ival7(t, time(0), out);
+			fputs(")\n", out);
 		} else {
 			if (i == 0) {
 				fprintf(out, "%14s %14s\n",
@@ -794,7 +796,7 @@ int common_info_cmd(UserListRep * args)
 			fprintf(out, "\tHostname: %s\n", args->user[i]->hostname);
 
 		fprintf(out, "\tConnected at: %s (", str_since);
-		print_time_ival7(t, out);
+		print_time_ival7(time(0), t, out);
 		fprintf(out, ")\n");
 
 		fprintf(out, "\tTLS ciphersuite: %s\n", args->user[i]->tls_ciphersuite);

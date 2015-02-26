@@ -31,9 +31,9 @@
 #define _(x) x
 
 /* compact 7 char format for time intervals (belongs in libproc?) */
-void print_time_ival7(time_t t, FILE * fout)
+void print_time_ival7(time_t t1, time_t t2, FILE * fout)
 {
-	t = time(0) - t;
+	time_t t = t1 - t2;
 
 	if ((long)t < (long)0) {
 		/* system clock changed? */

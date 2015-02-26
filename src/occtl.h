@@ -16,7 +16,7 @@
 
 FILE* pager_start(void);
 void pager_stop(FILE* fp);
-void print_time_ival7(time_t t, FILE * fout);
+void print_time_ival7(time_t t1, time_t t2, FILE * fout);
 void print_iface_stats(const char *iface, time_t since, FILE * out);
 
 void

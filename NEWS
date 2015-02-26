@@ -1,8 +1,6 @@
 * Version 0.9.3 (unreleased)
 - Corrected usage counting issue in security module. That affected
   accounting information in radius.
-- Added configuration option server-name. That is translated to
-  NAS IDENTIFIER in radius messages.
 - Restored security checks on control socket file. That affects mainly
   non-Linux systems.
 

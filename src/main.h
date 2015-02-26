@@ -155,18 +155,6 @@ struct script_list_st {
 	struct list_head head;
 };
 
-struct banned_st {
-	struct list_node list;
-	time_t failed_time;	/* The time authentication failed */
-	struct sockaddr_storage addr; /* local socket address */
-	socklen_t addr_len;
-};
-
-struct cookie_entry_db_st {
-	struct htable *db;
-	unsigned total;
-};
-
 struct proc_hash_db_st {
 	struct htable *db_ip;
 	struct htable *db_dtls_id;
@@ -178,7 +166,6 @@ typedef struct main_server_st {
 	struct cfg_st *config;
 	
 	struct ip_lease_db_st ip_leases;
-	struct cookie_entry_db_st cookies;
 
 	tls_sess_db_st tls_db;
 	struct htable *ban_db;

@@ -167,7 +167,6 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.start_time = ctx->s->start_time;
 	rep.sec_mod_pid = ctx->s->sec_mod_pid;
 	rep.active_clients = ctx->s->active_clients;
-	rep.stored_cookies = ctx->s->cookies.total;
 	rep.stored_tls_sessions = ctx->s->tls_db.entries;
 	rep.banned_ips = main_ban_db_elems(ctx->s);
 

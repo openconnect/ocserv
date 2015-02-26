@@ -85,10 +85,10 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	proc-search.c proc-search.h http-heads.h \
 	main-ban.c main-ban.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	$(PROTOBUF_SOURCES) kkdcp.asn kkdcp_asn1_tab.c sec-mod-acct.h
+	$(PROTOBUF_SOURCES) sec-mod-acct.h
 
 if HAVE_GSSAPI
-ocserv_SOURCES += kkdcp_asn1_tab.c
+ocserv_SOURCES += kkdcp_asn1_tab.c kkdcp.asn 
 endif
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h

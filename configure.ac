@@ -390,6 +390,8 @@ PKG_CHECK_MODULES(LIBTASN1, [libtasn1 >= 3.9])
 
 fi
 
+AM_CONDITIONAL(HAVE_GSSAPI, test "$enable_gssapi" = yes)
+
 dnl needed in the included PCL
 AC_C_VOLATILE
 AC_C_CONST

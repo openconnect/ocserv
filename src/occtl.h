@@ -27,6 +27,10 @@ char* search_for_user(unsigned idx, const char* match, int match_size);
 void entries_add(void *pool, const char* user, unsigned user_size, unsigned id);
 void entries_clear(void);
 
+char* search_for_ip(unsigned idx, const char* match, int match_size);
+void ip_entries_add(void *pool, const char* ip, unsigned ip_size);
+void ip_entries_clear(void);
+
 #define DEFAULT_TIMEOUT (10*1000)
 #define NO_GROUP "(none)"
 #define NO_USER "(none)"

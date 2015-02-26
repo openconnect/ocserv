@@ -437,6 +437,10 @@ static char *command_generator(const char *text, int state)
 						ret =
 						    search_for_id(entries_idx,
 								  text, len);
+					else if (strcmp(arg, "[IP]") == 0)
+						ret =
+						    search_for_ip(entries_idx,
+								  text, len);
 					if (ret != NULL) {
 						entries_idx++;
 					}

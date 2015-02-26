@@ -617,6 +617,8 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, unsigned point
 
 	init_reply(&raw);
 
+	ip_entries_clear();
+
 	out = pager_start();
 
 	ret = send_cmd(ctx, CTL_CMD_LIST_BANNED, NULL, NULL, NULL, &raw);
@@ -661,6 +663,8 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, unsigned point
 			fprintf(out, "%14s %14u\n",
 				rep->info[i]->ip, (unsigned)rep->info[i]->score);
 		}
+
+		ip_entries_add(ctx, rep->info[i]->ip, strlen(rep->info[i]->ip));
 	}
 
 	ret = 0;

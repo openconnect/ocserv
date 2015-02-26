@@ -61,3 +61,21 @@ message id_req
 {
 	required sint32 id = 1;
 }
+
+message ban_info_rep
+{
+	required string ip = 1;
+	required uint32 score = 2;
+	optional uint32 expires = 3;
+}
+
+message ban_list_rep
+{
+	repeated ban_info_rep info = 1;
+}
+
+message unban_req
+{
+	required string ip = 1;
+}
+

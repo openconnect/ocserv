@@ -50,10 +50,12 @@ static uint8_t msg_map[] = {
         [CTL_CMD_RELOAD] = CTL_CMD_RELOAD_REP,
         [CTL_CMD_STOP] = CTL_CMD_STOP_REP,
         [CTL_CMD_LIST] = CTL_CMD_LIST_REP,
+        [CTL_CMD_LIST_BANNED] = CTL_CMD_LIST_BANNED_REP,
         [CTL_CMD_USER_INFO] = CTL_CMD_LIST_REP,
         [CTL_CMD_ID_INFO] = CTL_CMD_LIST_REP,
         [CTL_CMD_DISCONNECT_NAME] = CTL_CMD_DISCONNECT_NAME_REP,
         [CTL_CMD_DISCONNECT_ID] = CTL_CMD_DISCONNECT_ID_REP,
+        [CTL_CMD_UNBAN_IP] = CTL_CMD_UNBAN_IP_REP,
 };
 
 struct cmd_reply_st {
@@ -339,6 +341,56 @@ int handle_stop_cmd(struct unix_ctx *ctx, const char *arg)
 	return ret;
 }
 
+int handle_unban_ip_cmd(struct unix_ctx *ctx, const char *arg)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	BoolMsg *rep;
+	unsigned status;
+	UnbanReq req = UNBAN_REQ__INIT;
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	if (arg == NULL || need_help(arg)) {
+		check_cmd_help(rl_line_buffer);
+		return 1;
+	}
+	
+	init_reply(&raw);
+
+	req.ip = (void*)arg;
+
+	ret = send_cmd(ctx, CTL_CMD_UNBAN_IP, &req, 
+		(pack_size_func)unban_req__get_packed_size, 
+		(pack_func)unban_req__pack, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = bool_msg__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	status = rep->status;
+	bool_msg__free_unpacked(rep, &pa);
+
+	if (status != 0) {
+		printf("IP '%s' was unbanned\n", arg);
+	} else {
+		printf("could not unban IP '%s'\n", arg);
+	}
+
+	ret = 0;
+	goto cleanup;
+
+ error:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	ret = 1;
+ cleanup:
+	free_reply(&raw);
+
+	return ret;
+}
+
 int handle_disconnect_user_cmd(struct unix_ctx *ctx, const char *arg)
 {
 	int ret;
@@ -526,6 +578,70 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg)
  cleanup:
 	if (rep != NULL)
 		user_list_rep__free_unpacked(rep, &pa);
+
+	free_reply(&raw);
+	pager_stop(out);
+
+	return ret;
+}
+
+int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	BanListRep *rep = NULL;
+	unsigned i;
+	char str_since[64];
+	FILE *out;
+	struct tm *tm;
+	time_t t;
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	init_reply(&raw);
+
+	out = pager_start();
+
+	ret = send_cmd(ctx, CTL_CMD_LIST_BANNED, NULL, NULL, NULL, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = ban_list_rep__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	for (i=0;i<rep->n_info;i++) {
+		if (rep->info[i]->ip == NULL)
+			continue;
+
+		/* add header */
+		if (i == 0) {
+			fprintf(out, "%14s %14s %30s\n",
+				"IP", "score", "expires");
+		}
+
+		if (rep->info[i]->has_expires) {
+			t = rep->info[i]->expires;
+			tm = localtime(&t);
+			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+		} else {
+			str_since[0] = 0;
+		}
+
+		fprintf(out, "%14s %14u %30s\n",
+			rep->info[i]->ip, (unsigned)rep->info[i]->score, str_since);
+	}
+
+	ret = 0;
+	goto cleanup;
+
+ error:
+	ret = 1;
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+
+ cleanup:
+	if (rep != NULL)
+		ban_list_rep__free_unpacked(rep, &pa);
 
 	free_reply(&raw);
 	pager_stop(out);

@@ -43,14 +43,6 @@
 #include <ccan/hash/hash.h>
 #include <ccan/htable/htable.h>
 
-typedef struct ban_entry_st {
-	char ip[MAX_IP_STR];
-	unsigned score;
-
-	time_t last_reset; /* the time its score counting started */
-	time_t expires; /* the time after the client is allowed to login */
-} ban_entry_st;
-
 static size_t rehash(const void *_e, void *unused)
 {
 	ban_entry_st *e = (void*)_e;
@@ -232,3 +224,4 @@ void cleanup_banned_entries(main_server_st *s)
 
 	}
 }
+

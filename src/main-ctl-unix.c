@@ -50,6 +50,8 @@ static void method_disconnect_user_name(method_ctx *ctx, int cfd,
 					uint8_t * msg, unsigned msg_size);
 static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 				      uint8_t * msg, unsigned msg_size);
+static void method_unban_ip(method_ctx *ctx, int cfd,
+				      uint8_t * msg, unsigned msg_size);
 static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 			unsigned msg_size);
 static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -57,6 +59,8 @@ static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 static void method_user_info(method_ctx *ctx, int cfd, uint8_t * msg,
 			     unsigned msg_size);
 static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
+			   unsigned msg_size);
+static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 			   unsigned msg_size);
 
 typedef void (*method_func) (method_ctx *ctx, int cfd, uint8_t * msg,
@@ -76,8 +80,10 @@ static const ctl_method_st methods[] = {
 	ENTRY(CTL_CMD_RELOAD, method_reload),
 	ENTRY(CTL_CMD_STOP, method_stop),
 	ENTRY(CTL_CMD_LIST, method_list_users),
+	ENTRY(CTL_CMD_LIST_BANNED, method_list_banned),
 	ENTRY(CTL_CMD_USER_INFO, method_user_info),
 	ENTRY(CTL_CMD_ID_INFO, method_id_info),
+	ENTRY(CTL_CMD_UNBAN_IP, method_unban_ip),
 	ENTRY(CTL_CMD_DISCONNECT_NAME, method_disconnect_user_name),
 	ENTRY(CTL_CMD_DISCONNECT_ID, method_disconnect_user_id),
 	{NULL, 0, NULL}
@@ -425,6 +431,68 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 	return;
 }
 
+static int append_ban_info(method_ctx *ctx,
+			    BanListRep *list,
+			    struct ban_entry_st *e)
+{
+	BanInfoRep *rep;
+
+	list->info =
+	    talloc_realloc(ctx->pool, list->info, BanInfoRep *, (1 + list->n_info));
+	if (list->info == NULL)
+		return -1;
+
+	rep = list->info[list->n_info] = talloc(ctx->pool, BanInfoRep);
+	if (rep == NULL)
+		return -1;
+	list->n_info++;
+
+	ban_info_rep__init(rep);
+
+	rep->ip = e->ip;
+	rep->score = e->score;
+
+	if (ctx->s->config->max_ban_score > 0 && e->score >= ctx->s->config->max_ban_score) {
+		rep->expires = e->expires;
+		rep->has_expires = 1;
+	}
+
+	return 0;
+}
+
+static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
+			      unsigned msg_size)
+{
+	BanListRep rep = BAN_LIST_REP__INIT;
+	struct ban_entry_st *e = NULL;
+	struct htable *db = ctx->s->ban_db;
+	int ret;
+	struct htable_iter iter;
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-banned-ips");
+
+	e = htable_first(db, &iter);
+	while (e != NULL) {
+		ret = append_ban_info(ctx, &rep, e);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR,
+			      "error appending ban info to reply");
+			goto error;
+		}
+		e = htable_next(db, &iter);
+	}
+
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_BANNED_REP, &rep,
+		       (pack_size_func) ban_list_rep__get_packed_size,
+		       (pack_func) ban_list_rep__pack);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending ban list reply");
+	}
+
+ error:
+	return;
+}
+
 static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 			       unsigned msg_size, const char *user, unsigned id)
 {
@@ -515,6 +583,42 @@ static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	single_info_common(ctx, cfd, msg, msg_size, NULL, req->id);
 	id_req__free_unpacked(req, NULL);
+
+	return;
+}
+
+static void method_unban_ip(method_ctx *ctx,
+			    int cfd, uint8_t * msg,
+			    unsigned msg_size)
+{
+	UnbanReq *req;
+	BoolMsg rep = BOOL_MSG__INIT;
+	int ret;
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: unban IP");
+
+	req = unban_req__unpack(NULL, msg_size, msg);
+	if (req == NULL) {
+		mslog(ctx->s, NULL, LOG_ERR,
+		      "error parsing unban IP request");
+		return;
+	}
+
+	if (req->ip) {
+		remove_ip_from_ban_list(ctx->s, req->ip);
+		rep.status = 1;
+		mslog(ctx->s, NULL, LOG_INFO,
+		      "unbanning IP '%s' due to ctl request", req->ip);
+	}
+
+	unban_req__free_unpacked(req, NULL);
+
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_UNBAN_IP_REP, &rep,
+		       (pack_size_func) bool_msg__get_packed_size,
+		       (pack_func) bool_msg__pack);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending unban IP ctl reply");
+	}
 
 	return;
 }

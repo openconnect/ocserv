@@ -53,9 +53,11 @@ typedef int (*cmd_func) (CONN_TYPE * conn, const char *arg);
 
 int handle_status_cmd(CONN_TYPE * conn, const char *arg);
 int handle_list_users_cmd(CONN_TYPE * conn, const char *arg);
+int handle_list_banned_cmd(CONN_TYPE * conn, const char *arg);
 int handle_show_user_cmd(CONN_TYPE * conn, const char *arg);
 int handle_show_id_cmd(CONN_TYPE * conn, const char *arg);
 int handle_disconnect_user_cmd(CONN_TYPE * conn, const char *arg);
+int handle_unban_ip_cmd(CONN_TYPE * conn, const char *arg);
 int handle_disconnect_id_cmd(CONN_TYPE * conn, const char *arg);
 int handle_reload_cmd(CONN_TYPE * conn, const char *arg);
 int handle_stop_cmd(CONN_TYPE * conn, const char *arg);

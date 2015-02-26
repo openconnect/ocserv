@@ -23,6 +23,14 @@
 
 # include "main.h"
 
+typedef struct ban_entry_st {
+	char ip[MAX_IP_STR];
+	unsigned score;
+
+	time_t last_reset; /* the time its score counting started */
+	time_t expires; /* the time after the client is allowed to login */
+} ban_entry_st;
+
 void cleanup_banned_entries(main_server_st *s);
 unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, socklen_t addr_size);
 int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score);

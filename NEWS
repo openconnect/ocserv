@@ -10,6 +10,8 @@
 - Added a score-based system for banning IP addresses. See
   min-reauth-time, max-ban-score and ban-reset-time.
 - Support for 'certificate[optional]' authentication has been removed.
+- occtl: Added commands to view banned IP list, as well as a command
+  to unban selected IPs.
 
 
 * Version 0.9.2 (released 2015-02-18)

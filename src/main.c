@@ -1064,6 +1064,7 @@ int main(int argc, char** argv)
 		FD_ZERO(&rd_set);
 		FD_ZERO(&wr_set);
 
+		n = 0;
 		list_for_each(&s->listen_list.head, ltmp, list) {
 			if (ltmp->fd == -1) continue;
 

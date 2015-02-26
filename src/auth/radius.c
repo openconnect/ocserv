@@ -38,20 +38,14 @@
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
 
 static rc_handle *rh = NULL;
-static char nas_identifier[64];
 
-static void radius_global_init(void *pool, const char *server_name, void *additional)
+static void radius_global_init(void *pool, void *additional)
 {
 	rh = rc_read_config(additional);
 	if (rh == NULL) {
 		fprintf(stderr, "radius initialization error\n");
 		exit(1);
 	}
-
-	if (server_name)
-		strlcpy(nas_identifier, server_name, sizeof(nas_identifier));
-	else
-		nas_identifier[0] = 0;
 
 	if (rc_read_dictionary(rh, rc_conf_str(rh, "dictionary")) != 0) {
 		fprintf(stderr, "error reading the radius dictionary\n");
@@ -182,16 +176,6 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
-	}
-
-	if (nas_identifier[0] != 0) {
-		if (rc_avpair_add(rh, &send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0) == NULL) {
-			syslog(LOG_ERR,
-			       "%s:%u: user '%s' auth error", __func__, __LINE__,
-			       pctx->username);
-			ret = ERR_AUTH_FAIL;
-			goto cleanup;
-		}
 	}
 
 	if (rc_avpair_add(rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
@@ -358,12 +342,6 @@ static void append_acct_standard(struct radius_ctx_st * pctx, rc_handle *rh,
 			    VALUE_PAIR **send)
 {
 	int i;
-
-	if (nas_identifier[0] != 0) {
-		if (rc_avpair_add(rh, send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0) == NULL) {
-			return;
-		}
-	}
 
 	if (rc_avpair_add(rh, send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
 		return;

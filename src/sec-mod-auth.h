@@ -29,7 +29,7 @@
 
 struct auth_mod_st {
 	unsigned int type;
-	void (*global_init)(void *pool, const char *server_name, void* additional);
+	void (*global_init)(void *pool, void* additional);
 	void (*global_deinit)(void);
 	int (*auth_init)(void** ctx, void *pool, const char* username, const char* ip, void* additional);
 	int (*auth_msg)(void* ctx, char* msg, size_t msg_size);

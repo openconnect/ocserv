@@ -61,7 +61,7 @@ static const commands_st commands[] = {
 	      "Prints the connected users", 1, 1),
 	ENTRY("show ip bans", NULL, handle_list_banned_ips_cmd,
 	      "Prints the banned IP addresses", 1, 1),
-	ENTRY("show ip points", NULL, handle_list_banned_points_cmd,
+	ENTRY("show ip ban points", NULL, handle_list_banned_points_cmd,
 	      "Prints all the known IP addresses which have points", 1, 1),
 	ENTRY("show user", "[NAME]", handle_show_user_cmd,
 	      "Prints information on the specified user", 1, 1),

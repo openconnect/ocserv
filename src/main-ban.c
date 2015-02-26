@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Red Hat
+ * Copyright (C) 2014, 2015 Red Hat
  *
  * This file is part of ocserv.
  *
@@ -105,7 +105,7 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	struct ban_entry_st *e;
 	ban_entry_st t;
 	time_t now = time(0);
-	time_t reset_time = now + s->config->min_reauth_time;
+	time_t expiration = now + s->config->min_reauth_time;
 	int ret = 0;
 
 	if (db == NULL || ip == NULL || ip[0] == 0)
@@ -136,11 +136,16 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 			e->last_reset = now;
 		}
 	}
+
+	/* if the user is already banned, don't increase the expiration time
+	 * on further attempts, or the user will never be unbanned if he
+	 * periodically polls the server */
+	if (e->score < s->config->max_ban_score)
+		e->expires = expiration;
 	e->score += score;
-	e->expires = reset_time;
 
 	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
-		mslog(s, NULL, LOG_INFO,"added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&reset_time));
+		mslog(s, NULL, LOG_INFO,"added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&expiration));
 		ret = -1;
 	} else {
 		mslog(s, NULL, LOG_DEBUG,"added %d points (total %d) for IP '%s' to ban list", score, e->score, ip);

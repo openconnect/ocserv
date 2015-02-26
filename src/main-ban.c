@@ -107,6 +107,7 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	time_t now = time(0);
 	time_t expiration = now + s->config->min_reauth_time;
 	int ret = 0;
+	unsigned print_msg;
 
 	if (db == NULL || ip == NULL || ip[0] == 0)
 		return 0;
@@ -140,15 +141,19 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	/* if the user is already banned, don't increase the expiration time
 	 * on further attempts, or the user will never be unbanned if he
 	 * periodically polls the server */
-	if (e->score < s->config->max_ban_score)
+	if (e->score < s->config->max_ban_score) {
 		e->expires = expiration;
+		print_msg = 0;
+	} else
+		print_msg = 1;
 	e->score += score;
 
 	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
-		mslog(s, NULL, LOG_INFO,"added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&e->expires));
+		if (print_msg)
+			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&e->expires));
 		ret = -1;
 	} else {
-		mslog(s, NULL, LOG_DEBUG,"added %d points (total %d) for IP '%s' to ban list", score, e->score, ip);
+		mslog(s, NULL, LOG_DEBUG, "added %d points (total %d) for IP '%s' to ban list", score, e->score, ip);
 		ret = 0;
 	}
 

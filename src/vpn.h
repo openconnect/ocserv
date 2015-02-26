@@ -61,10 +61,10 @@ typedef enum {
  * attempt gives you PASSWORD_POINTS, and you are banned
  * when the maximum ban score is reached.
  */
-#define PASSWORD_POINTS 10
-#define CONNECT_POINTS 1
-#define KKDCP_POINTS 1
-#define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*PASSWORD_POINTS)
+#define DEFAULT_PASSWORD_POINTS 10
+#define DEFAULT_CONNECT_POINTS 1
+#define DEFAULT_KKDCP_POINTS 1
+#define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*DEFAULT_PASSWORD_POINTS)
 #define DEFAULT_BAN_RESET_TIME 300
 
 #define MIN_NO_COMPRESS_LIMIT 64
@@ -327,6 +327,10 @@ struct cfg_st {
 	int max_ban_score;	/* the score allowed before a user is banned (see vpn.h) */
 	int ban_reset_time;
 
+	unsigned ban_points_wrong_password;
+	unsigned ban_points_connect;
+	unsigned ban_points_kkdcp;
+
 	unsigned isolate; /* whether seccomp should be enabled or not */
 
 	unsigned auth_timeout; /* timeout of HTTP auth */
@@ -364,7 +368,7 @@ struct cfg_st {
 
 	char *connect_script;
 	char *disconnect_script;
-	
+
 	char *cgroup;
 	char *proxy_url;
 
@@ -384,7 +388,7 @@ struct cfg_st {
 	char *default_user_conf;
 
 	bool gssapi_no_local_user_map;
-	
+
 	/* the tun network */
 	struct vpn_st network;
 };

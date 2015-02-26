@@ -322,7 +322,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	if (result == ERR_AUTH_CONTINUE) {
 		/* if the module allows multiple retries for the password */
 		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries) {
-			ret = sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, PASSWORD_POINTS);
+			ret = sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, sec->config->ban_points_wrong_password);
 			if (ret < 0) {
 				e->status = PS_AUTH_FAILED;
 				return send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
@@ -355,7 +355,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 	} else {
 		e->status = PS_AUTH_FAILED;
 
-		sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, PASSWORD_POINTS);
+		sec_mod_add_score_to_ip(sec, e, e->auth_info.remote_ip, sec->config->ban_points_wrong_password);
 
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__FAILED);
 		if (ret < 0) {

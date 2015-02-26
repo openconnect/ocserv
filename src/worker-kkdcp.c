@@ -140,7 +140,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		return -1;
 	}
 
-	ws_add_score_to_ip(ws, KKDCP_POINTS, 0);
+	ws_add_score_to_ip(ws, ws->config->ban_points_kkdcp, 0);
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
 
 	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, realm, sizeof(realm), &e);

@@ -80,6 +80,9 @@ static struct cfg_options available_options[] = {
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-ban-score", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ban-points-wrong-password", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ban-connection", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ban-points-kkdcp", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -826,6 +829,13 @@ unsigned urlfw_size = 0;
 	READ_NUMERIC("max-ban-score", config->max_ban_score);
 	if (config->max_ban_score == -1)
 		config->max_ban_score = DEFAULT_MAX_BAN_SCORE;
+
+	config->ban_points_wrong_password = DEFAULT_PASSWORD_POINTS;
+	READ_NUMERIC("ban-points-wrong-password", config->ban_points_wrong_password);
+	config->ban_points_connect = DEFAULT_CONNECT_POINTS;
+	READ_NUMERIC("ban-points-connection", config->ban_points_connect);
+	config->ban_points_kkdcp = DEFAULT_KKDCP_POINTS;
+	READ_NUMERIC("ban-points-kkdcp", config->ban_points_kkdcp);
 
 	READ_NUMERIC("max-same-clients", config->max_same_clients);
 

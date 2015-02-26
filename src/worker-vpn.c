@@ -251,7 +251,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	if (final == 0) {
 		ws->ban_points += points;
 		/* do not use IPC for small values */
-		if (points < PASSWORD_POINTS)
+		if (points < ws->config->ban_points_wrong_password)
 			return;
 	}
 

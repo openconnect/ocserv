@@ -297,6 +297,11 @@ max-ban-score = 50
 # The time (in seconds) that all score kept for a client is reset.
 ban-reset-time = 300
 
+# In case you'd like to change the default points.
+#ban-points-wrong-password = 10
+#ban-points-connection = 1
+#ban-points-kkdcp = 1
+
 # Cookie timeout (in seconds)
 # Once a client is authenticated he's provided a cookie with
 # which he can reconnect. That cookie will be invalided if not

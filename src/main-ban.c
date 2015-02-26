@@ -194,7 +194,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 
 	if (human_addr2((struct sockaddr*)addr, addr_size, t.ip, sizeof(t.ip), 0) != NULL) {
 		/* add its current connection points */
-		add_ip_to_ban_list(s, t.ip, CONNECT_POINTS);
+		add_ip_to_ban_list(s, t.ip, s->config->ban_points_connect);
 
 		now = time(0);
 		e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);

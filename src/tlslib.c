@@ -567,8 +567,7 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 
 	memcpy(output->data, reply->data.data, reply->data.len);
 
-	if (reply != NULL)
-		sec_op_msg__free_unpacked(reply, &pa);
+	sec_op_msg__free_unpacked(reply, &pa);
 	return 0;
 
 error:

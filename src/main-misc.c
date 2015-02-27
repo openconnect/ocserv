@@ -320,7 +320,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 {
-	mslog(s, proc, LOG_DEBUG, "removing client '%s' with id '%d'", proc->username, (int)proc->pid);
+	mslog(s, proc, LOG_INFO, "user '%s' disconnected", proc->username);
 
 	list_del(&proc->list);
 	s->active_clients--;

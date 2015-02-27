@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <signal.h>
 #include <sys/un.h>
 #include <main.h>
 #include <vpn.h>
@@ -622,6 +623,16 @@ static void method_unban_ip(method_ctx *ctx,
 	return;
 }
 
+static void terminate_proc(main_server_st *s, proc_st *proc)
+{
+	/* if it has an IP, send a signal so that we cleanup
+	 * and get stats properly */
+	if (proc->pid != -1 && proc->pid != 0)
+                kill(proc->pid, SIGTERM);
+	else
+		remove_proc(s, proc, 1);
+}
+
 static void method_disconnect_user_name(method_ctx *ctx,
 					int cfd, uint8_t * msg,
 					unsigned msg_size)
@@ -644,7 +655,7 @@ static void method_disconnect_user_name(method_ctx *ctx,
 	/* got the name. Try to disconnect */
 	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
 		if (strcmp(ctmp->username, req->username) == 0) {
-			remove_proc(ctx->s, ctmp, 1);
+			terminate_proc(ctx->s, ctmp);
 			rep.status = 1;
 		}
 	}
@@ -681,7 +692,7 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	/* got the ID. Try to disconnect */
 	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid == req->id) {
-			remove_proc(ctx->s, ctmp, 1);
+			terminate_proc(ctx->s, ctmp);
 			rep.status = 1;
 			if (req->id != -1)
 				break;

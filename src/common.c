@@ -57,8 +57,6 @@ static char tmp[32];
 		return "terminate";
 	case CMD_SESSION_INFO:
 		return "session info";
-	case CMD_CLI_STATS:
-		return "cli stats";
 	case CMD_BAN_IP:
 		return "ban IP";
 	case CMD_BAN_IP_REPLY:
@@ -66,6 +64,8 @@ static char tmp[32];
 
 	case SM_CMD_CLI_STATS:
 		return "sm: cli stats";
+	case SM_CMD_AUTH_CLI_STATS:
+		return "sm: auth cli stats";
 	case SM_CMD_AUTH_INIT:
 		return "sm: auth init";
 	case SM_CMD_AUTH_CONT:

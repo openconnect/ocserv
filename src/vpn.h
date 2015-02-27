@@ -143,7 +143,6 @@ typedef enum {
 	CMD_TUN_MTU = 11,
 	CMD_TERMINATE = 12,
 	CMD_SESSION_INFO = 13,
-	CMD_CLI_STATS = 15,
 	CMD_BAN_IP = 16,
 	CMD_BAN_IP_REPLY = 17,
 
@@ -161,6 +160,7 @@ typedef enum {
 	SM_CMD_AUTH_SESSION_REPLY,
 	SM_CMD_AUTH_BAN_IP,
 	SM_CMD_AUTH_BAN_IP_REPLY,
+	SM_CMD_AUTH_CLI_STATS,
 } cmd_request_t;
 
 struct group_cfg_st {

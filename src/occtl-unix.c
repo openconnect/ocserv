@@ -642,9 +642,6 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, unsigned point
 				tm = localtime(&t);
 				strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 			} else {
-				if (points)
-					str_since[0] = 0;
-				else
 				continue;
 			}
 

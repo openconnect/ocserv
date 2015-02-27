@@ -113,11 +113,11 @@ int der_encode_inplace(uint8_t *raw, unsigned *raw_size, unsigned max_size, int 
 #define BUF_SIZE 16*1024
 int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 {
-	int ret, e, fd;
+	int ret, e, fd = -1;
 	struct http_req_st *req = &ws->req;
 	unsigned i, length;
 	kkdcp_st *kkdcp = NULL;
-	uint8_t *buf = NULL;
+	uint8_t *buf;
 	uint32_t mlength;
 	char realm[128] = "";
 	const char *reason = "Unknown";
@@ -143,11 +143,19 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	ws_add_score_to_ip(ws, ws->config->ban_points_kkdcp, 0);
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
 
+	length = BUF_SIZE;
+	buf = talloc_size(ws, length);
+	if (buf == NULL) {
+		oclog(ws, LOG_ERR, "kkdcp: memory error");
+		reason = "memory error";
+		return -1;
+	}
+
 	ret = der_decode((uint8_t*)req->body, req->body_length, buf, &length, realm, sizeof(realm), &e);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "kkdcp: DER decoding error: %s", asn1_strerror(e));
 		reason = "DER decoding error";
-		return -1;
+		goto fail;
 	}
 
 	kr = &kkdcp->realms[0];
@@ -167,7 +175,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		e = errno;
 		oclog(ws, LOG_ERR, "kkdcp: socket error: %s", strerror(e));
 		reason = "socket error";
-		return -1;
+		goto fail;
 	}
 
 	ret = connect(fd, (struct sockaddr*)&kr->addr, kr->addr_len);
@@ -175,14 +183,6 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		e = errno;
 		oclog(ws, LOG_ERR, "kkdcp: connect error: %s", strerror(e));
 		reason = "connect error";
-		goto fail;
-	}
-
-	length = BUF_SIZE;
-	buf = talloc_size(ws, length);
-	if (buf == NULL) {
-		oclog(ws, LOG_ERR, "kkdcp: memory error");
-		reason = "memory error";
 		goto fail;
 	}
 
@@ -297,7 +297,8 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 
  cleanup:
  	talloc_free(buf);
- 	close(fd);
+ 	if (fd != -1)
+	 	close(fd);
  	return ret;
 }
 

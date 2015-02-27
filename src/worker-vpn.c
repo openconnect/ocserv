@@ -291,6 +291,46 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	return;
 }
 
+void send_stats_to_secmod(worker_st * ws, time_t now)
+{
+	CliStatsMsg msg = CLI_STATS_MSG__INIT;
+	int sd, ret, e;
+
+	ws->last_stats_msg = now;
+
+	sd = connect_to_secmod(ws);
+	if (sd >= 0) {
+		char buf[64];
+		msg.bytes_in = ws->tun_bytes_in;
+		msg.bytes_out = ws->tun_bytes_out;
+		msg.uptime = now - ws->session_start_time;
+		msg.sid.len = sizeof(ws->sid);
+		msg.sid.data = ws->sid;
+		msg.has_sid = 1;
+
+		msg.remote_ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
+		       		     buf, sizeof(buf), 0);
+
+		msg.ipv4 = ws->vinfo.ipv4;
+		msg.ipv6 = ws->vinfo.ipv6;
+
+		ret = send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
+				 (pack_size_func)cli_stats_msg__get_packed_size,
+				 (pack_func) cli_stats_msg__pack);
+		close(sd);
+
+		if (ret >= 0) {
+			oclog(ws, LOG_DEBUG,
+			      "sent periodic stats (in: %lu, out: %lu) to sec-mod",
+			      (unsigned long)msg.bytes_in,
+			      (unsigned long)msg.bytes_out);
+		} else {
+			e = errno;
+			oclog(ws, LOG_WARNING, "could not send periodic stats to sec-mod: %s\n", strerror(e));	      
+		}
+	}
+}
+
 /* Terminates the worker process, but communicates any required
  * data to main process before (stats/ban points).
  */
@@ -298,20 +338,7 @@ void exit_worker(worker_st * ws)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		CliStatsMsg msg = CLI_STATS_MSG__INIT;
-
-		msg.bytes_in = ws->tun_bytes_in;
-		msg.bytes_out = ws->tun_bytes_out;
-
-		send_msg_to_main(ws, CMD_CLI_STATS, &msg,
-				 (pack_size_func)
-				 cli_stats_msg__get_packed_size,
-				 (pack_func) cli_stats_msg__pack);
-
-		oclog(ws, LOG_DEBUG,
-		      "sending stats (in: %lu, out: %lu) to main",
-		      (unsigned long)msg.bytes_in,
-		      (unsigned long)msg.bytes_out);
+		send_stats_to_secmod(ws, time(0));
 	}
 
 	if (ws->ban_points > 0)
@@ -662,37 +689,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 	if (ws->config->stats_report_time > 0 &&
 	    now - ws->last_stats_msg >= ws->config->stats_report_time &&
 	    ws->sid_set) {
-		CliStatsMsg msg = CLI_STATS_MSG__INIT;
-		int sd;
-
-		ws->last_stats_msg = now;
-
-		sd = connect_to_secmod(ws);
-		if (sd >= 0) {
-			char buf[64];
-			msg.bytes_in = ws->tun_bytes_in;
-			msg.bytes_out = ws->tun_bytes_out;
-			msg.uptime = now - ws->session_start_time;
-			msg.sid.len = sizeof(ws->sid);
-			msg.sid.data = ws->sid;
-			msg.has_sid = 1;
-
-			msg.remote_ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
-			       		     buf, sizeof(buf), 0);
-
-			msg.ipv4 = ws->vinfo.ipv4;
-			msg.ipv6 = ws->vinfo.ipv6;
-
-			send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
-					 (pack_size_func)cli_stats_msg__get_packed_size,
-					 (pack_func) cli_stats_msg__pack);
-			close(sd);
-
-			oclog(ws, LOG_DEBUG,
-			      "sending periodic stats (in: %lu, out: %lu) to sec-mod",
-			      (unsigned long)msg.bytes_in,
-			      (unsigned long)msg.bytes_out);
-		}
+		send_stats_to_secmod(ws, now);
 	}
 
 	/* check DPD. Otherwise exit */

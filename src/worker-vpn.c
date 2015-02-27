@@ -247,6 +247,10 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	BanIpReplyMsg *reply = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
+	/* no reporting if banning is disabled */
+	if (ws->config->max_ban_score == 0)
+		return;
+
 	/* In final call, no score added, we simply send */
 	if (final == 0) {
 		ws->ban_points += points;

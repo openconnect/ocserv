@@ -83,6 +83,10 @@ int sec_mod_add_score_to_ip(sec_mod_st *sec, void *pool, const char *ip, unsigne
 	BanIpReplyMsg *reply = NULL;
 	PROTOBUF_ALLOCATOR(pa, lpool);
 
+	/* no reporting if banning is disabled */
+	if (sec->config->max_ban_score == 0)
+		return 0;
+
 	msg.ip = (char*)ip;
 	msg.score = points;
 

@@ -109,7 +109,7 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	int ret = 0;
 	unsigned print_msg;
 
-	if (db == NULL || ip == NULL || ip[0] == 0)
+	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || ip[0] == 0)
 		return 0;
 
 	/* check if the IP is already there */
@@ -193,7 +193,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 	time_t now;
 	ban_entry_st t, *e;
 
-	if (db == NULL)
+	if (db == NULL || s->config->max_ban_score == 0)
 		return 0;
 
 	if (human_addr2((struct sockaddr*)addr, addr_size, t.ip, sizeof(t.ip), 0) != NULL) {
@@ -206,8 +206,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 			if (now > e->expires)
 				return 0;
 
-			if (s->config->max_ban_score > 0 &&
-			    e->score >= s->config->max_ban_score) {
+			if (e->score >= s->config->max_ban_score) {
 			    	mslog(s, NULL, LOG_INFO, "Rejected connection from banned IP: %s", t.ip);
 				return 1;
 			}

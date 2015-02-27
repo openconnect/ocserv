@@ -386,14 +386,11 @@ static void stats_add_to(stats_st *dst, stats_st *src1, stats_st *src2)
 }
 
 static
-int send_failed_auth_sec_reply(int cfd, sec_mod_st *sec, unsigned cmd)
+int send_failed_auth_sec_reply(int cfd, sec_mod_st *sec)
 {
 	SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 	void *lpool;
 	int ret;
-
-	if (cmd == SM_CMD_AUTH_SESSION_CLOSE)
-		return -1;
 
 	rep.reply = AUTH__REP__FAILED;
 
@@ -413,104 +410,134 @@ int send_failed_auth_sec_reply(int cfd, sec_mod_st *sec, unsigned cmd)
 	return -1;
 }
 
-int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req,
-				unsigned cmd)
+static
+int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req)
 {
 	client_entry_st *e;
-	void *lpool;
-	int ret;
 
 	if (req->sid.len != SID_SIZE) {
-		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
+		seclog(sec, LOG_ERR, "auth session close but with illegal sid size (%d)!",
 		       (int)req->sid.len);
-		return send_failed_auth_sec_reply(cfd, sec, cmd);
+		return -1;
 	}
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(sec, LOG_INFO, "session open/close but with non-existing SID!");
-		return send_failed_auth_sec_reply(cfd, sec, cmd);
+		seclog(sec, LOG_INFO, "session close but with non-existing SID!");
+		return -1;
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
-		return send_failed_auth_sec_reply(cfd, sec, cmd);
+		seclog(sec, LOG_ERR, "session close received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
+		return -1;
 	}
 
-	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
-		SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
+	seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 
-		if (e->time != -1 && time(0) > e->time + sec->config->cookie_timeout) {
-			seclog(sec, LOG_ERR, "session expired; denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-			e->status = PS_AUTH_FAILED;
-			return send_failed_auth_sec_reply(cfd, sec, cmd);
-		}
-
-		if (req->has_cookie == 0 || (req->cookie.len != e->cookie_size) ||
-		    memcmp(req->cookie.data, e->cookie, e->cookie_size) != 0) {
-			seclog(sec, LOG_ERR, "cookie error; denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-			e->status = PS_AUTH_FAILED;
-			return send_failed_auth_sec_reply(cfd, sec, cmd);
-		}
-
-		if (sec->config->acct.amod != NULL && sec->config->acct.amod->open_session != NULL && e->session_is_open == 0) {
-			ret = sec->config->acct.amod->open_session(e->module->type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
-			if (ret < 0) {
-				e->status = PS_AUTH_FAILED;
-				seclog(sec, LOG_INFO, "denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-				return send_failed_auth_sec_reply(cfd, sec, cmd);
-			} else {
-				e->session_is_open = 1;
-			}
-		}
-
-		rep.reply = AUTH__REP__OK;
-
-		lpool = talloc_new(e);
-		if (lpool == NULL) {
-			return ERR_MEM;
-		}
-
-		if (sec->config_module && sec->config_module->get_sup_config) {
-			ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
-			if (ret < 0) {
-				seclog(sec, LOG_ERR, "error reading additional configuration for '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-				talloc_free(lpool);
-				return ERR_READ_CONFIG;
-			}
-		}
-
-		ret = send_msg(lpool, cfd, SM_CMD_AUTH_SESSION_REPLY, &rep,
-				(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
-				(pack_func) sec_auth_session_reply_msg__pack);
-		if (ret < 0) {
-			seclog(sec, LOG_WARNING, "error in sending session reply");
-		}
-		talloc_free(lpool);
-
-		seclog(sec, LOG_INFO, "initiating session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-		e->time = -1;
-		e->in_use++;
-
-	} else { /* CLOSE */
-		seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-
-		if (req->has_uptime && req->uptime > e->stats.uptime) {
-				e->stats.uptime = req->uptime;
-		}
-		if (req->has_bytes_in && req->bytes_in > e->stats.bytes_in) {
-				e->stats.bytes_in = req->bytes_in;
-		}
-		if (req->has_bytes_out && req->bytes_out > e->stats.bytes_out) {
-				e->stats.bytes_out = req->bytes_out;
-		}
-
-		stats_add_to(&e->saved_stats, &e->saved_stats, &e->stats);
-		memset(&e->stats, 0, sizeof(e->stats));
-		expire_client_entry(sec, e);
+	if (req->has_uptime && req->uptime > e->stats.uptime) {
+			e->stats.uptime = req->uptime;
 	}
+	if (req->has_bytes_in && req->bytes_in > e->stats.bytes_in) {
+			e->stats.bytes_in = req->bytes_in;
+	}
+	if (req->has_bytes_out && req->bytes_out > e->stats.bytes_out) {
+			e->stats.bytes_out = req->bytes_out;
+	}
+
+	stats_add_to(&e->saved_stats, &e->saved_stats, &e->stats);
+	memset(&e->stats, 0, sizeof(e->stats));
+	expire_client_entry(sec, e);
 
 	return 0;
+}
+
+static
+int handle_sec_auth_session_open(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req)
+{
+	client_entry_st *e;
+	void *lpool;
+	int ret;
+	SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
+
+	if (req->sid.len != SID_SIZE) {
+		seclog(sec, LOG_ERR, "auth session open but with illegal sid size (%d)!",
+		       (int)req->sid.len);
+		return send_failed_auth_sec_reply(cfd, sec);
+	}
+
+	e = find_client_entry(sec, req->sid.data);
+	if (e == NULL) {
+		seclog(sec, LOG_INFO, "session open but with non-existing SID!");
+		return send_failed_auth_sec_reply(cfd, sec);
+	}
+
+	if (e->status != PS_AUTH_COMPLETED) {
+		seclog(sec, LOG_ERR, "session open received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
+		return send_failed_auth_sec_reply(cfd, sec);
+	}
+
+	if (e->time != -1 && time(0) > e->time + sec->config->cookie_timeout) {
+		seclog(sec, LOG_ERR, "session expired; denied session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+		e->status = PS_AUTH_FAILED;
+		return send_failed_auth_sec_reply(cfd, sec);
+	}
+
+	if (req->has_cookie == 0 || (req->cookie.len != e->cookie_size) ||
+	    memcmp(req->cookie.data, e->cookie, e->cookie_size) != 0) {
+		seclog(sec, LOG_ERR, "cookie error; denied session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+		e->status = PS_AUTH_FAILED;
+		return send_failed_auth_sec_reply(cfd, sec);
+	}
+
+	if (sec->config->acct.amod != NULL && sec->config->acct.amod->open_session != NULL && e->session_is_open == 0) {
+		ret = sec->config->acct.amod->open_session(e->module->type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
+		if (ret < 0) {
+			e->status = PS_AUTH_FAILED;
+			seclog(sec, LOG_INFO, "denied session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+			return send_failed_auth_sec_reply(cfd, sec);
+		} else {
+			e->session_is_open = 1;
+		}
+	}
+
+	rep.reply = AUTH__REP__OK;
+
+	lpool = talloc_new(e);
+	if (lpool == NULL) {
+		return ERR_MEM;
+	}
+
+	if (sec->config_module && sec->config_module->get_sup_config) {
+		ret = sec->config_module->get_sup_config(sec->config, e, &rep, lpool);
+		if (ret < 0) {
+			seclog(sec, LOG_ERR, "error reading additional configuration for '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+			talloc_free(lpool);
+			return send_failed_auth_sec_reply(cfd, sec);
+		}
+	}
+
+	ret = send_msg(lpool, cfd, SM_CMD_AUTH_SESSION_REPLY, &rep,
+			(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
+			(pack_func) sec_auth_session_reply_msg__pack);
+	if (ret < 0) {
+		seclog(sec, LOG_WARNING, "error in sending session reply");
+	}
+	talloc_free(lpool);
+
+	seclog(sec, LOG_INFO, "initiating session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+	e->time = -1;
+	e->in_use++;
+
+	return 0;
+}
+
+int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req,
+				unsigned cmd)
+{
+	if (cmd == SM_CMD_AUTH_SESSION_OPEN)
+		return handle_sec_auth_session_open(cfd, sec, req);
+	else
+		return handle_sec_auth_session_close(cfd, sec, req);
 }
 
 int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
@@ -519,14 +546,14 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	stats_st totals;
 
 	if (req->sid.len != SID_SIZE) {
-		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
+		seclog(sec, LOG_ERR, "auth session stats but with illegal sid size (%d)!",
 		       (int)req->sid.len);
 		return -1;
 	}
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(sec, LOG_INFO, "session open/close but with non-existing sid!");
+		seclog(sec, LOG_INFO, "session stats but with non-existing sid!");
 		return -1;
 	}
 

@@ -1069,6 +1069,10 @@ int main(int argc, char** argv)
 	}
 #endif
 
+	/* we don't need them */
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
 	alarm(MAINTAINANCE_TIME(s));
 

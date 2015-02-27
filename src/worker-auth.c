@@ -683,8 +683,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 
 	ret = 0;
  cleanup:
-	if (msg != NULL)
-		auth_reply_msg__free_unpacked(msg, &pa);
+	auth_reply_msg__free_unpacked(msg, &pa);
 	return ret;
 }
 
@@ -793,8 +792,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt)
 
 	ret = 0;
  cleanup:
-	if (msg != NULL)
-		sec_auth_reply_msg__free_unpacked(msg, &pa);
+	sec_auth_reply_msg__free_unpacked(msg, &pa);
 	return ret;
 }
 

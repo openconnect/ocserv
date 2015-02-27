@@ -382,11 +382,14 @@ static void stats_add_to(stats_st *dst, stats_st *src1, stats_st *src2)
 }
 
 static
-int send_failed_auth_sec_reply(int cfd, sec_mod_st *sec)
+int send_failed_auth_sec_reply(int cfd, sec_mod_st *sec, unsigned cmd)
 {
 	SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
 	void *lpool;
 	int ret;
+
+	if (cmd == SM_CMD_AUTH_SESSION_CLOSE)
+		return -1;
 
 	rep.reply = AUTH__REP__FAILED;
 
@@ -416,18 +419,18 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 	if (req->sid.len != SID_SIZE) {
 		seclog(sec, LOG_ERR, "auth session open/close but with illegal sid size (%d)!",
 		       (int)req->sid.len);
-		return send_failed_auth_sec_reply(cfd, sec);
+		return send_failed_auth_sec_reply(cfd, sec, cmd);
 	}
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
 		seclog(sec, LOG_INFO, "session open/close but with non-existing SID!");
-		return send_failed_auth_sec_reply(cfd, sec);
+		return send_failed_auth_sec_reply(cfd, sec, cmd);
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
 		seclog(sec, LOG_ERR, "session cmd received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
-		return send_failed_auth_sec_reply(cfd, sec);
+		return send_failed_auth_sec_reply(cfd, sec, cmd);
 	}
 
 	if (cmd == SM_CMD_AUTH_SESSION_OPEN) {
@@ -436,14 +439,14 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 		if (e->time != -1 && time(0) > e->time + sec->config->cookie_timeout) {
 			seclog(sec, LOG_ERR, "session expired; denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 			e->status = PS_AUTH_FAILED;
-			return send_failed_auth_sec_reply(cfd, sec);
+			return send_failed_auth_sec_reply(cfd, sec, cmd);
 		}
 
 		if (req->has_cookie == 0 || (req->cookie.len != e->cookie_size) ||
 		    memcmp(req->cookie.data, e->cookie, e->cookie_size) != 0) {
 			seclog(sec, LOG_ERR, "cookie error; denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 			e->status = PS_AUTH_FAILED;
-			return send_failed_auth_sec_reply(cfd, sec);
+			return send_failed_auth_sec_reply(cfd, sec, cmd);
 		}
 
 		if (sec->config->acct.amod != NULL && sec->config->acct.amod->open_session != NULL && e->session_is_open == 0) {
@@ -451,7 +454,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 			if (ret < 0) {
 				e->status = PS_AUTH_FAILED;
 				seclog(sec, LOG_INFO, "denied open session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-				return send_failed_auth_sec_reply(cfd, sec);
+				return send_failed_auth_sec_reply(cfd, sec, cmd);
 			} else {
 				e->session_is_open = 1;
 			}

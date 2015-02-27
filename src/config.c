@@ -414,9 +414,9 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 				fprintf(stderr, "Unknown or unsupported auth method: %s\n", auth[j]);
 				exit(1);
 			}
-			fprintf(stderr, "Setting '%s' as primary authentication method\n", config->auth[0].name);
 			talloc_free(auth[j]);
 		}
+		fprintf(stderr, "Setting '%s' as primary authentication method\n", config->auth[0].name);
 	} else {
 		unsigned x = config->auth_methods;
 		/* Append authentication methods (alternative options) */

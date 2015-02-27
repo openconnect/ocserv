@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4497
+
+. `dirname $0`/common.sh
+
+echo "Testing whether ban operates as expected... "
+
+launch_server -d 1 -f -c ${srcdir}/test-ban.config & PID=$!
+wait_server $PID
+
+echo "Connecting with wrong password 5 times... "
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+
+echo ""
+echo "Connecting with correct password... "
+eval `echo "test" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+
+if [ -n "$COOKIE" ];then
+	fail $PID "Obtained cookie although should have been banned"
+fi
+
+#echo "Cookie: $COOKIE"
+sleep 25
+echo ""
+
+echo "Connecting with correct password after ban time... "
+eval `echo "test" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+
+if [ -z "$COOKIE" ];then
+	fail $PID "Could not obtain cookie even though ban should be lifted"
+fi
+
+echo ""
+echo "Checking ban reset time... "
+
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+sleep 11
+echo "notest" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+
+echo ""
+echo "Connecting with correct password after ban reset time... "
+eval `echo "test" | openconnect --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+
+if [ -z "$COOKIE" ];then
+	fail $PID "Could not obtain cookie even though ban should be lifted"
+fi
+
+kill $PID
+wait
+
+exit 0

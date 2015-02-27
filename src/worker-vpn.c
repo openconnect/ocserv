@@ -681,7 +681,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 			       		     buf, sizeof(buf), 0);
 
 			msg.ipv4 = ws->vinfo.ipv4;
-			msg.ipv4 = ws->vinfo.ipv6;
+			msg.ipv6 = ws->vinfo.ipv6;
 
 			send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
 					 (pack_size_func)cli_stats_msg__get_packed_size,

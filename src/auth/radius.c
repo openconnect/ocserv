@@ -157,7 +157,6 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	struct radius_ctx_st *pctx = ctx;
 	VALUE_PAIR *send = NULL, *recvd = NULL;
 	uint32_t service;
-	uint8_t ip[16];
 	char route[64];
 	char txt[64];
 	int ret;
@@ -221,7 +220,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 					/* Framed-IPv6-Prefix */
 					memset(ipv6, 0, sizeof(ipv6)); 
 					memcpy(ipv6, vp->strvalue+2, vp->lvalue-2); 
-					if (inet_ntop(AF_INET6, ip, txt, sizeof(txt)) != NULL) {
+					if (inet_ntop(AF_INET6, ipv6, txt, sizeof(txt)) != NULL) {
 						snprintf(route, sizeof(route), "%s/%u", txt, (unsigned)(unsigned char)vp->strvalue[1]);
 						append_route(pctx, vp->strvalue, vp->lvalue);
 					}

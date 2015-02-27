@@ -207,10 +207,11 @@ int __attribute__ ((format(printf, 2, 3)))
 
 	va_start(args, fmt);
 	s = vasprintf(&buf, fmt, args);
+	va_end(args);
+
 	if (s == -1)
 		return -1;
 
-	va_end(args);
 	ret = cstp_send(ws, buf, s);
 	free(buf);
 	return ret;

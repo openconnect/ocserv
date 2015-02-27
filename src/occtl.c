@@ -51,7 +51,7 @@ static const commands_st commands[] = {
 	      "Disconnect the specified user", 1, 1),
 	ENTRY("disconnect id", "[ID]", handle_disconnect_id_cmd,
 	      "Disconnect the specified ID", 1, 1),
-	ENTRY("unban", "[IP]", handle_unban_ip_cmd,
+	ENTRY("unban ip", "[IP]", handle_unban_ip_cmd,
 	      "Unban the specified IP", 1, 1),
 	ENTRY("reload", NULL, handle_reload_cmd,
 	      "Reloads the server configuration", 1, 1),

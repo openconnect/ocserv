@@ -38,6 +38,9 @@ unsigned expand_brackets_string(struct cfg_st *config, const char *str, subcfg_v
 	unsigned len, len2;
 	unsigned pos = 0, finish = 0;
 
+	if (str == NULL)
+		return 0;
+
 	p = strchr(str, '[');
 	if (p == NULL) {
 		return 0;

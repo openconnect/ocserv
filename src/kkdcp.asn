@@ -6,7 +6,7 @@ BEGIN
 
 KDC-PROXY-MESSAGE ::= SEQUENCE {
   kerb-message [0] OCTET STRING,
-  target-domain [1] IA5String OPTIONAL,
+  target-domain [1] GeneralString OPTIONAL,
   dclocator-hint [2] INTEGER OPTIONAL
 }
 

@@ -134,7 +134,8 @@ int handle_worker_commands(struct worker_st *ws)
 					if ((ws->udp_state != UP_ACTIVE && ws->udp_state != UP_INACTIVE) ||
 						time(0) - ws->last_msg_udp < ACTIVE_SESSION_TIMEOUT) {
 						oclog(ws, LOG_INFO, "received UDP fd message but our session is active!");
-						udp_fd_msg__free_unpacked(tmsg, NULL);
+						if (tmsg)
+							udp_fd_msg__free_unpacked(tmsg, NULL);
 						close(fd);
 						return 0;
 					}
@@ -144,8 +145,8 @@ int handle_worker_commands(struct worker_st *ws)
 
 				if (ws->dtls_tptr.fd != -1)
 					close(ws->dtls_tptr.fd);
-				if (ws->dtls_tptr.msg != NULL)
-					udp_fd_msg__free_unpacked(tmsg, NULL);
+				if (tmsg && ws->dtls_tptr.msg != NULL)
+					udp_fd_msg__free_unpacked(ws->dtls_tptr.msg, NULL);
 
 				ws->dtls_tptr.msg = tmsg;
 

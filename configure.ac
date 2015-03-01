@@ -348,6 +348,18 @@ LIBS="$oldlibs"
 fi
 AM_CONDITIONAL(LOCAL_HTTP_PARSER, test "x$with_local_http_parser" != xno)
 
+dnl compression
+AC_ARG_ENABLE(compression,
+  AS_HELP_STRING([--disable-compression], [Disable compression support]),
+  enable_compression=$enableval,
+  enable_compression=yes)
+
+if test "$enable_compression" = yes;then
+AC_DEFINE([ENABLE_COMPRESSION], [], [compression enabled]),
+fi
+
+AM_CONDITIONAL(ENABLE_COMPRESSION, test "$enable_compression" = yes)
+
 dnl LZ4
 AC_ARG_WITH(lz4,
   AS_HELP_STRING([--without-lz4], [disable support for LZ4 compression]),
@@ -355,7 +367,8 @@ AC_ARG_WITH(lz4,
   test_for_lz4=yes)
 
 enable_lz4=no
-if test "$test_for_lz4" = yes;then
+
+if test "$test_for_lz4" = yes && test "$enable_compression" = yes;then
 PKG_CHECK_MODULES([LIBLZ4], [liblz4], [
 enable_lz4=yes
 AC_DEFINE([HAVE_LZ4], [], [LZ4 was found])
@@ -475,6 +488,7 @@ Summary of build options:
   systemd:              ${systemd_enabled}
   (socket activation)
   seccomp:              ${seccomp_enabled}
+  Compression:          ${enable_compression}
   LZ4 compression:      ${enable_lz4}
   readline:             ${have_readline}
   libnl3:               ${have_libnl3}

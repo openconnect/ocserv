@@ -24,10 +24,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef HAVE_LZ4
-# include <lz4.h>
+#ifdef ENABLE_COMPRESSION
+# ifdef HAVE_LZ4
+#  include <lz4.h>
+# endif
+# include "lzs.h"
 #endif
-#include "lzs.h"
 
 #include <base64.h>
 #include <c-strcase.h>
@@ -130,6 +132,7 @@ int lz4_compress(void *dst, int dstlen, const void *src, int srclen)
 }
 #endif
 
+#ifdef ENABLE_COMPRESSION
 struct compression_method_st comp_methods[] = {
 #ifdef HAVE_LZ4
 	{
@@ -148,6 +151,7 @@ struct compression_method_st comp_methods[] = {
 		.server_prio = 80,
 	}
 };
+#endif
 
 static
 void header_value_check(struct worker_st *ws, struct http_req_st *req)
@@ -273,7 +277,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	        req->selected_ciphersuite = cand;
 
 		break;
-
+#ifdef ENABLE_COMPRESSION
 	case HEADER_DTLS_ENCODING:
 	case HEADER_CSTP_ENCODING:
 	        if (ws->config->enable_compression == 0)
@@ -302,8 +306,8 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			str = NULL;
 		}
 	        *selected_comp = comp_cand;
-
 		break;
+#endif
 
 	case HEADER_CSTP_BASE_MTU:
 		req->base_mtu = atoi((char *)value);

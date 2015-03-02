@@ -1041,7 +1041,7 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 		perm_config->config->keepalive = 3600;
 
 	if (perm_config->config->dpd == 0)
-		perm_config->config->keepalive = 60;
+		perm_config->config->dpd = 60;
 
 	if (perm_config->config->priorities == NULL)
 		perm_config->config->priorities = talloc_strdup(perm_config->config, "NORMAL:%SERVER_PRECEDENCE:%COMPAT");

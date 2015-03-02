@@ -170,7 +170,8 @@ int handle_worker_commands(struct worker_st *ws)
 	return 0;
 
 udp_fd_fail:
-	udp_fd_msg__free_unpacked(tmsg, NULL);
+	if (tmsg)
+		udp_fd_msg__free_unpacked(tmsg, NULL);
 	if (ws->dtls_tptr.fd == -1)
 		ws->udp_state = UP_DISABLED;
 

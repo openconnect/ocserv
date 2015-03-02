@@ -389,7 +389,7 @@ static void check_other_work(sec_mod_st *sec)
 }
 
 static
-void serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, unsigned buffer_size)
+int serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
@@ -404,6 +404,7 @@ void serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, 
 		e = errno;
 		seclog(sec, LOG_INFO, "error receiving msg head: %s",
 		       strerror(e));
+		ret = -1;
 		goto leave;
 	}
 
@@ -413,6 +414,7 @@ void serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, 
 
 	if (length > buffer_size - 4) {
 		seclog(sec, LOG_INFO, "too big message (%d)", length);
+		ret = -1;
 		goto leave;
 	}
 
@@ -422,6 +424,7 @@ void serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, 
 		e = errno;
 		seclog(sec, LOG_INFO, "error receiving msg body: %s",
 		       strerror(e));
+		ret = -1;
 		goto leave;
 	}
 
@@ -434,7 +437,7 @@ void serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, 
 	}
 	
  leave:
-	return;
+	return ret;
 }
 
 /* sec_mod_server:
@@ -659,7 +662,11 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 			if (buffer == NULL) {
 				seclog(sec, LOG_ERR, "error in memory allocation");
 			} else {
-				serve_request(sec, cmd_fd, 1, buffer, buffer_size);
+				ret = serve_request(sec, cmd_fd, 1, buffer, buffer_size);
+				if (ret < 0) {
+					seclog(sec, LOG_ERR, "error processing command from main");
+					exit(1);
+				}
 				talloc_free(buffer);
 			}
 		}

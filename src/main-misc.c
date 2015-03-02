@@ -632,7 +632,7 @@ int run_sec_mod(main_server_st * s)
 #endif
 		setproctitle(PACKAGE_NAME "-secmod");
 		close(fd[1]);
-		sec_mod_server(s->main_pool, s->config, p, s->cookie_key, fd[0]);
+		sec_mod_server(s->main_pool, s->perm_config, p, s->cookie_key, fd[0]);
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);

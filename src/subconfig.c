@@ -30,9 +30,19 @@
 #include <vpn.h>
 #include "cfg.h"
 
+static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS], unsigned size)
+{
+	unsigned i;
+	for (i=0;i<size;i++) {
+		talloc_free(out[i].name);
+		talloc_free(out[i].value);
+	}
+}
+
 /* Returns the number of suboptions processed.
  */
-unsigned expand_brackets_string(struct cfg_st *config, const char *str, subcfg_val_st out[MAX_SUBOPTIONS])
+static
+unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[MAX_SUBOPTIONS])
 {
 	char *p, *p2, *p3;
 	unsigned len, len2;
@@ -79,8 +89,8 @@ unsigned expand_brackets_string(struct cfg_st *config, const char *str, subcfg_v
 		while (c_isspace(p2[len2-1]))
 			len2--;
 
-		out[pos].name = talloc_strndup(config, p, len);
-		out[pos].value = talloc_strndup(config, p2, len2);
+		out[pos].name = talloc_strndup(pool, p, len);
+		out[pos].value = talloc_strndup(pool, p2, len2);
 		pos++;
 		
 	} while(finish == 0 && pos < MAX_SUBOPTIONS);
@@ -89,7 +99,7 @@ unsigned expand_brackets_string(struct cfg_st *config, const char *str, subcfg_v
 }
 
 #ifdef HAVE_GSSAPI
-void *gssapi_get_brackets_string(struct cfg_st *config, const char *str)
+void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
@@ -117,7 +127,7 @@ void *gssapi_get_brackets_string(struct cfg_st *config, const char *str)
 }
 #endif
 
-void *get_brackets_string1(struct cfg_st *config, const char *str)
+void *get_brackets_string1(struct perm_cfg_st *config, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -145,7 +155,7 @@ void *get_brackets_string1(struct cfg_st *config, const char *str)
 }
 
 #ifdef HAVE_RADIUS
-static void *get_brackets_string2(struct cfg_st *config, const char *str)
+static void *get_brackets_string2(struct perm_cfg_st *config, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -179,7 +189,7 @@ static void *get_brackets_string2(struct cfg_st *config, const char *str)
 	return talloc_strndup(config, p, len);
 }
 
-void *radius_get_brackets_string(struct cfg_st *config, const char *str)
+void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)
 {
 	char *p;
 	subcfg_val_st vals[MAX_SUBOPTIONS];
@@ -235,7 +245,7 @@ void *radius_get_brackets_string(struct cfg_st *config, const char *str)
 #endif
 
 #ifdef HAVE_PAM
-void *pam_get_brackets_string(struct cfg_st *config, const char *str)
+void *pam_get_brackets_string(struct perm_cfg_st *config, const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
@@ -266,7 +276,7 @@ void *pam_get_brackets_string(struct cfg_st *config, const char *str)
 }
 #endif
 
-void *plain_get_brackets_string(struct cfg_st *config, const char *str)
+void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;

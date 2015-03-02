@@ -430,8 +430,8 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		goto fail;
 	}
 
-	if (s->config->uid != -1) {
-		t = s->config->uid;
+	if (s->perm_config->uid != -1) {
+		t = s->perm_config->uid;
 		ret = ioctl(tunfd, TUNSETOWNER, t);
 		if (ret < 0) {
 			e = errno;
@@ -441,8 +441,8 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		}
 	}
 #ifdef TUNSETGROUP
-	if (s->config->gid != -1) {
-		t = s->config->uid;
+	if (s->perm_config->gid != -1) {
+		t = s->perm_config->uid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
 		if (ret < 0) {
 			e = errno;

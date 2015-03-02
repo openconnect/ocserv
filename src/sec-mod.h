@@ -31,6 +31,7 @@ typedef struct sec_mod_st {
 	uint8_t cookie_key[COOKIE_KEY_SIZE];
 
 	struct cfg_st *config;
+	struct perm_cfg_st *perm_config;
 	gnutls_privkey_t *key;
 	unsigned key_size;
 	struct htable *client_db;
@@ -116,7 +117,7 @@ void cleanup_client_entries(sec_mod_st *sec);
 void  seclog_hex(const struct sec_mod_st* sec, int priority,
 		const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);
 
-void sec_auth_init(sec_mod_st *sec, struct cfg_st *config);
+void sec_auth_init(sec_mod_st *sec, struct perm_cfg_st *config);
 
 int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);
@@ -124,7 +125,7 @@ int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMs
 int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 
-void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
+void sec_mod_server(void *main_pool, struct perm_cfg_st *config, const char *socket_file,
 		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd);
 
 #endif

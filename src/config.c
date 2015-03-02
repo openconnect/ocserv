@@ -240,14 +240,17 @@ unsigned j;
 		exit(1); \
 	}}
 
-#define READ_STRING(name, s_name) { \
+#define PREAD_STRING(pool, name, s_name) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
-		s_name = talloc_strdup(config, val->v.strVal); \
+		s_name = talloc_strdup(pool, val->v.strVal); \
 	else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
+
+#define READ_STRING(name, s_name) \
+	PREAD_STRING(config, name, s_name)
 
 #define READ_STATIC_STRING(name, s_name) { \
 	val = get_option(name, &mand); \
@@ -353,7 +356,7 @@ typedef struct auth_types_st {
 	unsigned name_size;
 	const struct auth_mod_st *mod;
 	unsigned type;
-	void *(*get_brackets_string)(struct cfg_st *config, const char *);
+	void *(*get_brackets_string)(struct perm_cfg_st *config, const char *);
 } auth_types_st;
 
 #define NAME(x) (x),(sizeof(x)-1)
@@ -372,7 +375,7 @@ static auth_types_st avail_auth_types[] =
 	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
 };
 
-static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_size,
+static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned auth_size,
 			      unsigned primary)
 {
 	unsigned j, i;
@@ -386,7 +389,7 @@ static void figure_auth_funcs(struct cfg_st *config, char **auth, unsigned auth_
 				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[0].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
-				
+
 					if (config->auth[0].amod != NULL && avail_auth_types[i].mod != NULL) {
 						fprintf(stderr, "%s: You cannot mix multiple authentication methods of this type\n", auth[j]);
 						exit(1);
@@ -459,7 +462,7 @@ typedef struct acct_types_st {
 	const char *name;
 	unsigned name_size;
 	const struct acct_mod_st *mod;
-	void *(*get_brackets_string)(struct cfg_st *config, const char *);
+	void *(*get_brackets_string)(struct perm_cfg_st *config, const char *);
 } acct_types_st;
 
 static acct_types_st avail_acct_types[] =
@@ -472,7 +475,7 @@ static acct_types_st avail_acct_types[] =
 #endif
 };
 
-static void figure_acct_funcs(struct cfg_st *config, const char *acct)
+static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
 {
 	unsigned i;
 	unsigned found = 0;
@@ -604,7 +607,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 }
 #endif
 
-static void parse_cfg_file(const char* file, struct cfg_st *config, unsigned reload)
+static void parse_cfg_file(void *pool, const char* file, struct perm_cfg_st *perm_config, unsigned reload)
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
@@ -615,6 +618,7 @@ unsigned prefix = 0, auto_select_group = 0;
 unsigned prefix4 = 0;
 char *tmp;
 unsigned force_cert_auth;
+struct cfg_st *config = perm_config->config;
 #ifdef HAVE_GSSAPI
 char **urlfw = NULL;
 unsigned urlfw_size = 0;
@@ -644,36 +648,61 @@ unsigned urlfw_size = 0;
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
-	config->sup_config_type = SUP_CONFIG_FILE;
+	if (reload == 0) {
+		perm_config->sup_config_type = SUP_CONFIG_FILE;
 
-	READ_MULTI_LINE("auth", auth, auth_size);
-	figure_auth_funcs(config, auth, auth_size, 1);
-	auth = NULL;
-	auth_size = 0;
+		READ_MULTI_LINE("auth", auth, auth_size);
+		figure_auth_funcs(perm_config, auth, auth_size, 1);
+		auth = NULL;
+		auth_size = 0;
 
-	READ_MULTI_LINE("enable-auth", auth, auth_size);
-	figure_auth_funcs(config, auth, auth_size, 0);
-	auth = NULL;
-	auth_size = 0;
+		READ_MULTI_LINE("enable-auth", auth, auth_size);
+		figure_auth_funcs(perm_config, auth, auth_size, 0);
+		auth = NULL;
+		auth_size = 0;
 
-	if (config->auth[0].enabled == 0) {
-		fprintf(stderr, "No authentication method was specified!\n");
-		exit(1);
-	}
+		if (perm_config->auth[0].enabled == 0) {
+			fprintf(stderr, "No authentication method was specified!\n");
+			exit(1);
+		}
 
-	tmp = NULL;
-	READ_STRING("acct", tmp);
-	if (tmp != NULL) {
-		figure_acct_funcs(config, tmp);
-		talloc_free(tmp);
+		tmp = NULL;
+		READ_STRING("acct", tmp);
+		if (tmp != NULL) {
+			figure_acct_funcs(perm_config, tmp);
+			talloc_free(tmp);
+		}
+
+		PREAD_STRING(pool, "listen-host", perm_config->listen_host);
+		PREAD_STRING(pool, "listen-clear-file", perm_config->unix_conn_file);
+		READ_NUMERIC("tcp-port", perm_config->port);
+		READ_NUMERIC("udp-port", perm_config->udp_port);
+
+		val = get_option("run-as-user", NULL);
+		if (val != NULL && val->valType == OPARG_TYPE_STRING) {
+			const struct passwd* pwd = getpwnam(val->v.strVal);
+			if (pwd == NULL) {
+				fprintf(stderr, "Unknown user: %s\n", val->v.strVal);
+				exit(1);
+			}
+			perm_config->uid = pwd->pw_uid;
+		}
+
+		val = get_option("run-as-group", NULL);
+		if (val != NULL && val->valType == OPARG_TYPE_STRING) {
+			const struct group *grp = getgrnam(val->v.strVal);
+			if (grp == NULL) {
+				fprintf(stderr, "Unknown group: %s\n", val->v.strVal);
+				exit(1);
+			}
+			perm_config->gid = grp->gr_gid;
+		}
 	}
 
 	/* When adding allocated data, remember to modify
 	 * reload_cfg_file();
 	 */
-	READ_STRING("listen-host", config->listen_host);
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
-	READ_STRING("listen-clear-file", config->unix_conn_file);
 
 #ifdef HAVE_GSSAPI
 	READ_MULTI_LINE("kkdcp", urlfw, urlfw_size);
@@ -683,8 +712,6 @@ unsigned urlfw_size = 0;
 	}
 #endif
 
-	READ_NUMERIC("tcp-port", config->port);
-	READ_NUMERIC("udp-port", config->udp_port);
 	READ_NUMERIC("keepalive", config->keepalive);
 	READ_NUMERIC("dpd", config->dpd);
 	if (config->dpd == 0)
@@ -841,26 +868,6 @@ unsigned urlfw_size = 0;
 
 	READ_NUMERIC("max-same-clients", config->max_same_clients);
 
-	val = get_option("run-as-user", NULL);
-	if (val != NULL && val->valType == OPARG_TYPE_STRING) {
-		const struct passwd* pwd = getpwnam(val->v.strVal);
-		if (pwd == NULL) {
-			fprintf(stderr, "Unknown user: %s\n", val->v.strVal);
-			exit(1);
-		}
-		config->uid = pwd->pw_uid;
-	}
-
-	val = get_option("run-as-group", NULL);
-	if (val != NULL && val->valType == OPARG_TYPE_STRING) {
-		const struct group *grp = getgrnam(val->v.strVal);
-		if (grp == NULL) {
-			fprintf(stderr, "Unknown group: %s\n", val->v.strVal);
-			exit(1);
-		}
-		config->gid = grp->gr_gid;
-	}
-
 	READ_STATIC_STRING("device", config->network.name);
 	READ_STRING("cgroup", config->cgroup);
 	READ_STRING("proxy-url", config->proxy_url);
@@ -910,8 +917,8 @@ unsigned urlfw_size = 0;
 	READ_STRING("default-select-group", config->default_select_group);
 	READ_TF("auto-select-group", auto_select_group, 0);
 
-	if (auto_select_group != 0 && config->auth[0].amod != NULL && config->auth[0].amod->group_list != NULL) {
-		config->auth[0].amod->group_list(config, config->auth[0].additional, &config->group_list, &config->group_list_size);
+	if (auto_select_group != 0 && perm_config->auth[0].amod != NULL && perm_config->auth[0].amod->group_list != NULL) {
+		perm_config->auth[0].amod->group_list(config, perm_config->auth[0].additional, &config->group_list, &config->group_list_size);
 	} else {
 		READ_MULTI_BRACKET_LINE("select-group",
 				config->group_list,
@@ -953,109 +960,114 @@ unsigned urlfw_size = 0;
 
 
 /* sanity checks on config */
-static void check_cfg(struct cfg_st *config)
+static void check_cfg(struct perm_cfg_st *perm_config)
 {
-	if (config->network.ipv4 == NULL && config->network.ipv6 == NULL) {
+	if (perm_config->config->network.ipv4 == NULL && perm_config->config->network.ipv6 == NULL) {
 		fprintf(stderr, "No ipv4-network or ipv6-network options set.\n");
 		exit(1);
 	}
 
-	if (config->network.ipv4 != NULL && config->network.ipv4_netmask == NULL) {
+	if (perm_config->config->network.ipv4 != NULL && perm_config->config->network.ipv4_netmask == NULL) {
 		fprintf(stderr, "No mask found for IPv4 network.\n");
 		exit(1);
 	}
 
-	if (config->network.ipv6 != NULL && config->network.ipv6_prefix == 0) {
+	if (perm_config->config->network.ipv6 != NULL && perm_config->config->network.ipv6_prefix == 0) {
 		fprintf(stderr, "No prefix found for IPv6 network.\n");
 		exit(1);
 	}
 
-	if (config->banner && strlen(config->banner) > MAX_BANNER_SIZE) {
+	if (perm_config->config->banner && strlen(perm_config->config->banner) > MAX_BANNER_SIZE) {
 		fprintf(stderr, "Banner size is too long\n");
 		exit(1);
 	}
 
-	if (config->cert_size != config->key_size) {
+	if (perm_config->config->cert_size != perm_config->config->key_size) {
 		fprintf(stderr, "The specified number of keys doesn't match the certificates\n");
 		exit(1);
 	}
 
-	if (config->auth[0].type & AUTH_TYPE_CERTIFICATE) {
-		if (config->cisco_client_compat == 0)
-			config->cert_req = GNUTLS_CERT_REQUIRE;
+	if (perm_config->auth[0].type & AUTH_TYPE_CERTIFICATE) {
+		if (perm_config->config->cisco_client_compat == 0)
+			perm_config->config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
-			config->cert_req = GNUTLS_CERT_REQUEST;
+			perm_config->config->cert_req = GNUTLS_CERT_REQUEST;
 	} else {
 		unsigned i;
-		for (i=1;i<config->auth_methods;i++) {
-			if (config->auth[i].type & AUTH_TYPE_CERTIFICATE) {
-				config->cert_req = GNUTLS_CERT_REQUEST;
+		for (i=1;i<perm_config->auth_methods;i++) {
+			if (perm_config->auth[i].type & AUTH_TYPE_CERTIFICATE) {
+				perm_config->config->cert_req = GNUTLS_CERT_REQUEST;
 				break;
 			}
 		}
 	}
 
-	if (config->cert_req != 0 && config->cert_user_oid == NULL) {
+	if (perm_config->config->cert_req != 0 && perm_config->config->cert_user_oid == NULL) {
 		fprintf(stderr, "A certificate is requested by the option 'cert-user-oid' is not set\n");
 		exit(1);
 	}
 
-	if (config->unix_conn_file != NULL && (config->cert_req != 0)) {
+	if (perm_config->unix_conn_file != NULL && (perm_config->config->cert_req != 0)) {
 		fprintf(stderr, "The option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
 		exit(1);
 	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	if (config->cert) {
-		config->cert_hash = calc_sha1_hash(config, config->cert[0], 1);
+	if (perm_config->config->cert) {
+		perm_config->config->cert_hash = calc_sha1_hash(perm_config->config, perm_config->config->cert[0], 1);
 	}
 
-	if (config->xml_config_file) {
-		config->xml_config_hash = calc_sha1_hash(config, config->xml_config_file, 0);
-		if (config->xml_config_hash == NULL && config->chroot_dir != NULL) {
+	if (perm_config->config->xml_config_file) {
+		perm_config->config->xml_config_hash = calc_sha1_hash(perm_config->config, perm_config->config->xml_config_file, 0);
+		if (perm_config->config->xml_config_hash == NULL && perm_config->config->chroot_dir != NULL) {
 			char path[_POSIX_PATH_MAX];
 
-			snprintf(path, sizeof(path), "%s/%s", config->chroot_dir, config->xml_config_file);
-			config->xml_config_hash = calc_sha1_hash(config, path, 0);
+			snprintf(path, sizeof(path), "%s/%s", perm_config->config->chroot_dir, perm_config->config->xml_config_file);
+			perm_config->config->xml_config_hash = calc_sha1_hash(perm_config->config, path, 0);
 
-			if (config->xml_config_hash == NULL) {
+			if (perm_config->config->xml_config_hash == NULL) {
 				fprintf(stderr, "Cannot open file '%s'\n", path);
 				exit(1);
 			}
 		}
-		if (config->xml_config_hash == NULL) {
-			fprintf(stderr, "Cannot open file '%s'\n", config->xml_config_file);
+		if (perm_config->config->xml_config_hash == NULL) {
+			fprintf(stderr, "Cannot open file '%s'\n", perm_config->config->xml_config_file);
 			exit(1);
 		}
 	}
 #endif
 
-	if (config->keepalive == 0)
-		config->keepalive = 3600;
+	if (perm_config->config->keepalive == 0)
+		perm_config->config->keepalive = 3600;
 
-	if (config->dpd == 0)
-		config->keepalive = 60;
+	if (perm_config->config->dpd == 0)
+		perm_config->config->keepalive = 60;
 
-	if (config->priorities == NULL)
-		config->priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT";
+	if (perm_config->config->priorities == NULL)
+		perm_config->config->priorities = talloc_strdup(perm_config->config, "NORMAL:%SERVER_PRECEDENCE:%COMPAT");
 }
 
-int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
+int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 {
+	*config = talloc_zero(pool, struct perm_cfg_st);
+	if (*config == NULL)
+		exit(1);
 
-	*config = talloc_zero(pool, struct cfg_st);
+	(*config)->config = talloc_zero(*config, struct cfg_st);
+	if ((*config)->config == NULL)
+		exit(1);
 
 	optionProcess( &ocservOptions, argc, argv);
   
 	if (HAVE_OPT(FOREGROUND))
-		(*config)->foreground = 1;
+		(*config)->config->foreground = 1;
 
 	if (HAVE_OPT(PID_FILE)) {
 		strlcpy(pid_file, OPT_ARG(PID_FILE), sizeof(pid_file));
 	}
 
 	if (HAVE_OPT(DEBUG))
-		(*config)->debug = OPT_VALUE_DEBUG;
+		(*config)->config->debug = OPT_VALUE_DEBUG;
 
 	if (HAVE_OPT(CONFIG)) {
 		cfg_file = OPT_ARG(CONFIG);
@@ -1064,7 +1076,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 		exit(1);
 	}
 
-	parse_cfg_file(cfg_file, *config, 0);
+	parse_cfg_file(pool, cfg_file, *config, 0);
 
 	check_cfg(*config);
 
@@ -1073,87 +1085,82 @@ int cmd_parser (void *pool, int argc, char **argv, struct cfg_st** config)
 }
 
 #define DEL(x) {talloc_free(x);x=NULL;}
-void clear_cfg_file(struct cfg_st* config)
+void clear_cfg_file(struct perm_cfg_st* perm_config)
 {
 unsigned i;
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	DEL(config->xml_config_file);
-	DEL(config->xml_config_hash);
-	DEL(config->cert_hash);
+	DEL(perm_config->config->xml_config_file);
+	DEL(perm_config->config->xml_config_hash);
+	DEL(perm_config->config->cert_hash);
 #endif
-	DEL(config->cgroup);
-	DEL(config->route_add_cmd);
-	DEL(config->route_del_cmd);
-	DEL(config->per_user_dir);
-	DEL(config->per_group_dir);
-	DEL(config->socket_file_prefix);
-	DEL(config->default_domain);
+	DEL(perm_config->config->cgroup);
+	DEL(perm_config->config->route_add_cmd);
+	DEL(perm_config->config->route_del_cmd);
+	DEL(perm_config->config->per_user_dir);
+	DEL(perm_config->config->per_group_dir);
+	DEL(perm_config->config->socket_file_prefix);
+	DEL(perm_config->config->default_domain);
 
-	DEL(config->ocsp_response);
-	DEL(config->banner);
-	DEL(config->dh_params_file);
-	DEL(config->listen_host);
-	DEL(config->pin_file);
-	DEL(config->srk_pin_file);
-	DEL(config->ca);
-	DEL(config->crl);
-	DEL(config->cert_user_oid);
-	DEL(config->cert_group_oid);
-	DEL(config->priorities);
-	DEL(config->chroot_dir);
-	DEL(config->connect_script);
-	DEL(config->disconnect_script);
-	DEL(config->proxy_url);
+	DEL(perm_config->config->ocsp_response);
+	DEL(perm_config->config->banner);
+	DEL(perm_config->config->dh_params_file);
+	DEL(perm_config->config->pin_file);
+	DEL(perm_config->config->srk_pin_file);
+	DEL(perm_config->config->ca);
+	DEL(perm_config->config->crl);
+	DEL(perm_config->config->cert_user_oid);
+	DEL(perm_config->config->cert_group_oid);
+	DEL(perm_config->config->priorities);
+	DEL(perm_config->config->chroot_dir);
+	DEL(perm_config->config->connect_script);
+	DEL(perm_config->config->disconnect_script);
+	DEL(perm_config->config->proxy_url);
 
-	for (i=0;i<config->auth_methods;i++) {
-		if (config->auth[i].enabled)
-			talloc_free(config->auth[i].name);
-	}
 #ifdef HAVE_GSSAPI
-	for (i=0;i<config->kkdcp_size;i++) {
+	for (i=0;i<perm_config->config->kkdcp_size;i++) {
 		unsigned j;
-		DEL(config->kkdcp[i].url);
-		for (j=0;j<config->kkdcp[i].realms_size;j++) {
-			DEL(config->kkdcp[i].realms[j].realm);
+		DEL(perm_config->config->kkdcp[i].url);
+		for (j=0;j<perm_config->config->kkdcp[i].realms_size;j++) {
+			DEL(perm_config->config->kkdcp[i].realms[j].realm);
 		}
 	}
-	DEL(config->kkdcp);
+	DEL(perm_config->config->kkdcp);
 #endif
 
-	DEL(config->network.ipv4);
-	DEL(config->network.ipv4_netmask);
-	DEL(config->network.ipv6);
-	for (i=0;i<config->network.routes_size;i++)
-		DEL(config->network.routes[i]);
-	DEL(config->network.routes);
-	for (i=0;i<config->network.dns_size;i++)
-		DEL(config->network.dns[i]);
-	DEL(config->network.dns);
-	for (i=0;i<config->network.nbns_size;i++)
-		DEL(config->network.nbns[i]);
-	DEL(config->network.nbns);
-	for (i=0;i<config->key_size;i++)
-		DEL(config->key[i]);
-	DEL(config->key);
-	for (i=0;i<config->cert_size;i++)
-		DEL(config->cert[i]);
-	DEL(config->cert);
-	for (i=0;i<config->custom_header_size;i++)
-		DEL(config->custom_header[i]);
-	DEL(config->custom_header);
-	for (i=0;i<config->split_dns_size;i++)
-		DEL(config->split_dns[i]);
-	DEL(config->split_dns);
-	for (i=0;i<config->group_list_size;i++)
-		DEL(config->group_list[i]);
-	DEL(config->group_list);
-	DEL(config->default_select_group);
+	DEL(perm_config->config->network.ipv4);
+	DEL(perm_config->config->network.ipv4_netmask);
+	DEL(perm_config->config->network.ipv6);
+	for (i=0;i<perm_config->config->network.routes_size;i++)
+		DEL(perm_config->config->network.routes[i]);
+	DEL(perm_config->config->network.routes);
+	for (i=0;i<perm_config->config->network.dns_size;i++)
+		DEL(perm_config->config->network.dns[i]);
+	DEL(perm_config->config->network.dns);
+	for (i=0;i<perm_config->config->network.nbns_size;i++)
+		DEL(perm_config->config->network.nbns[i]);
+	DEL(perm_config->config->network.nbns);
+	for (i=0;i<perm_config->config->key_size;i++)
+		DEL(perm_config->config->key[i]);
+	DEL(perm_config->config->key);
+	for (i=0;i<perm_config->config->cert_size;i++)
+		DEL(perm_config->config->cert[i]);
+	DEL(perm_config->config->cert);
+	for (i=0;i<perm_config->config->custom_header_size;i++)
+		DEL(perm_config->config->custom_header[i]);
+	DEL(perm_config->config->custom_header);
+	for (i=0;i<perm_config->config->split_dns_size;i++)
+		DEL(perm_config->config->split_dns[i]);
+	DEL(perm_config->config->split_dns);
+	for (i=0;i<perm_config->config->group_list_size;i++)
+		DEL(perm_config->config->group_list[i]);
+	DEL(perm_config->config->group_list);
+	DEL(perm_config->config->default_select_group);
 #ifdef HAVE_LIBTALLOC
 	/* our included talloc don't include that */
-	talloc_free_children(config);
+	talloc_free_children(perm_config->config);
 #endif
-	memset(config, 0, sizeof(*config));
+	memset(perm_config->config, 0, sizeof(*perm_config->config));
 
 	return;
 }
@@ -1201,48 +1208,15 @@ void print_version(tOptions *opts, tOptDesc *desc)
 }
 
 
-void reload_cfg_file(void *pool, struct cfg_st* config)
+void reload_cfg_file(void *pool, struct perm_cfg_st* perm_config)
 {
-	auth_struct_st auth_bak[MAX_AUTH_METHODS];
-	acct_struct_st acct_bak;
-	unsigned auth_bak_size, i;
+	clear_cfg_file(perm_config);
 
-	/* authentication and accounting methods can't change on reload */
-	memcpy(auth_bak, config->auth, sizeof(config->auth));
-	memcpy(&acct_bak, &config->acct, sizeof(config->acct));
-	auth_bak_size = config->auth_methods;
+	parse_cfg_file(pool, cfg_file, perm_config, 1);
 
-	clear_cfg_file(config);
-
-	memset(config, 0, sizeof(*config));
-
-	parse_cfg_file(cfg_file, config, 1);
-
-	/* check if the authentication methods remained the same */
-	if (config->acct.amod != acct_bak.amod) {
-		goto auth_fail;
-	}
-
-	if (config->auth_methods != auth_bak_size) {
-		goto auth_fail;
-	}
-
-	for (i=0;i<config->auth_methods;i++) {
-		if (config->auth[i].enabled != auth_bak[i].enabled) {
-			goto auth_fail;
-		}
-
-		if (config->auth[i].type != auth_bak[i].type) {
-			goto auth_fail;
-		}
-	}
-
-	check_cfg(config);
+	check_cfg(perm_config);
 
 	return;
- auth_fail:
- 	syslog(LOG_ERR, "you cannot switch authentication or accounting methods on reload");
-	exit(1);
 }
 
 void write_pid_file(void)

@@ -136,7 +136,7 @@ int ctl_handler_init(main_server_st * s)
 		return -1;
 	}
 
-	ret = chown(s->config->occtl_socket_file, s->config->uid, s->config->gid);
+	ret = chown(s->config->occtl_socket_file, s->perm_config->uid, s->perm_config->gid);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not chown socket '%s': %s",

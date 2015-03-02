@@ -159,9 +159,9 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 	return 0;
 }
 
-static void apply_default_sup_config(struct cfg_st *config, struct proc_st *proc)
+static void apply_default_sup_config(struct perm_cfg_st *config, struct proc_st *proc)
 {
-	proc->config.deny_roaming = config->deny_roaming;
+	proc->config.deny_roaming = config->config->deny_roaming;
 	proc->config.no_udp = (config->udp_port!=0)?0:1;
 }
 
@@ -211,7 +211,7 @@ struct proc_st *old_proc;
 	/* cookie is good so far, now read config (in order to know
 	 * whether roaming is allowed or not */
 	memset(&proc->config, 0, sizeof(proc->config));
-	apply_default_sup_config(s->config, proc);
+	apply_default_sup_config(s->perm_config, proc);
 
 	/* loads sup config */
 	ret = session_open(s, proc, req->cookie.data, req->cookie.len);

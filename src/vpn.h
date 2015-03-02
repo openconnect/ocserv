@@ -263,12 +263,7 @@ typedef struct kkdcp_st {
 } kkdcp_st;
 
 struct cfg_st {
-	char *listen_host;
-	unsigned int port;
-	unsigned int udp_port;
 	unsigned int is_dyndns;
-	char* unix_conn_file;
-	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
 	unsigned int stats_report_time;
 
 	kkdcp_st *kkdcp;
@@ -287,9 +282,6 @@ struct cfg_st {
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
 
-	auth_struct_st auth[MAX_AUTH_METHODS];
-	unsigned auth_methods;
-	acct_struct_st acct;
 
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
@@ -376,9 +368,6 @@ struct cfg_st {
 	char *cert_hash;
 #endif
 
-	uid_t uid;
-	gid_t gid;
-
 	/* additional configuration files */
 	char *per_group_dir;
 	char *per_user_dir;
@@ -389,6 +378,25 @@ struct cfg_st {
 
 	/* the tun network */
 	struct vpn_st network;
+};
+
+struct perm_cfg_st {
+	/* gets reloaded */
+	struct cfg_st *config;
+
+	/* stuff here don't change on reload */
+	auth_struct_st auth[MAX_AUTH_METHODS];
+	unsigned auth_methods;
+	acct_struct_st acct;
+	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
+
+	uid_t uid;
+	gid_t gid;
+
+	char *listen_host;
+	char* unix_conn_file;
+	unsigned int port;
+	unsigned int udp_port;
 };
 
 /* generic thing to stop complaints */

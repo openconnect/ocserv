@@ -95,10 +95,10 @@ static void add_listener(void *pool, struct listen_list_st *list,
 	list->total++;
 }
 
-static void set_udp_socket_options(struct cfg_st* config, int fd, int family)
+static void set_udp_socket_options(struct perm_cfg_st* config, int fd, int family)
 {
 int y;
-	if (config->try_mtu) {
+	if (config->config->try_mtu) {
 #if defined(IP_DONTFRAG)
 		y = 1;
 		if (setsockopt(fd, SOL_IP, IP_DONTFRAG,
@@ -139,7 +139,7 @@ static void set_common_socket_options(int fd)
 }
 
 static 
-int _listen_ports(void *pool, struct cfg_st* config, 
+int _listen_ports(void *pool, struct perm_cfg_st* config, 
 		struct addrinfo *res, struct listen_list_st *list)
 {
 	struct addrinfo *ptr;
@@ -158,7 +158,7 @@ int _listen_ports(void *pool, struct cfg_st* config,
 		else
 			continue;
 
-		if (config->foreground != 0)
+		if (config->config->foreground != 0)
 			fprintf(stderr, "listening (%s) on %s...\n",
 				type, human_addr(ptr->ai_addr, ptr->ai_addrlen,
 					   buf, sizeof(buf)));
@@ -218,7 +218,7 @@ int _listen_ports(void *pool, struct cfg_st* config,
 }
 
 static 
-int _listen_unix_ports(void *pool, struct cfg_st* config, 
+int _listen_unix_ports(void *pool, struct perm_cfg_st* config, 
 		       struct listen_list_st *list)
 {
 	int s, e, ret;
@@ -231,7 +231,7 @@ int _listen_unix_ports(void *pool, struct cfg_st* config,
 		strlcpy(sa.sun_path, config->unix_conn_file, sizeof(sa.sun_path));
 		remove(sa.sun_path);
 
-		if (config->foreground != 0)
+		if (config->config->foreground != 0)
 			fprintf(stderr, "listening (UNIX) on %s...\n",
 				sa.sun_path);
 
@@ -276,7 +276,7 @@ int _listen_unix_ports(void *pool, struct cfg_st* config,
 /* Returns 0 on success or negative value on error.
  */
 static int
-listen_ports(void *pool, struct cfg_st* config, 
+listen_ports(void *pool, struct perm_cfg_st* config, 
 		struct listen_list_st *list)
 {
 	struct addrinfo hints, *res;
@@ -352,7 +352,7 @@ listen_ports(void *pool, struct cfg_st* config,
 			exit(1);
 		}
 
-		if (config->foreground != 0)
+		if (config->config->foreground != 0)
 			fprintf(stderr, "listening on %d systemd sockets...\n", list->total);
 
 		return 0;
@@ -536,30 +536,30 @@ static void drop_privileges(main_server_st* s)
 		}
 	}
 
-	if (s->config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
-		ret = setgid(s->config->gid);
+	if (s->perm_config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
+		ret = setgid(s->perm_config->gid);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
-			       (int) s->config->gid, strerror(e));
+			       (int) s->perm_config->gid, strerror(e));
 			exit(1);
 		}
 
-		ret = setgroups(1, &s->config->gid);
+		ret = setgroups(1, &s->perm_config->gid);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set groups to %d: %s\n",
-			       (int) s->config->gid, strerror(e));
+			       (int) s->perm_config->gid, strerror(e));
 			exit(1);
 		}
 	}
 
-	if (s->config->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
-		ret = setuid(s->config->uid);
+	if (s->perm_config->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
+		ret = setuid(s->perm_config->uid);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set uid to %d: %s\n",
-			       (int) s->config->uid, strerror(e));
+			       (int) s->perm_config->uid, strerror(e));
 			exit(1);
 
 		}
@@ -691,7 +691,7 @@ int sfd = -1;
 	ret = oc_recvfrom_at(listener->fd, buffer, sizeof(buffer), 0,
 			  (struct sockaddr*)&cli_addr, &cli_addr_size,
 			  (struct sockaddr*)&our_addr, &our_addr_size,
-			  s->config->udp_port);
+			  s->perm_config->udp_port);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_INFO, "error receiving in UDP socket");
 		return -1;
@@ -733,7 +733,7 @@ int sfd = -1;
 		match_ip_only = 1;
 
 		/* don't bother IP matching when the listen-clear-file is in use */
-		if (s->config->unix_conn_file)
+		if (s->perm_config->unix_conn_file)
 			goto fail;
 	} else {
 		/* read session_id */
@@ -827,7 +827,7 @@ unsigned total = 10;
 
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "reloading configuration");
-		reload_cfg_file(s->main_pool, s->config);
+		reload_cfg_file(s->main_pool, s->perm_config);
 		tls_reload_crl(s, s->creds);
 		reload_conf = 0;
 		kill(s->sec_mod_pid, SIGHUP);
@@ -858,8 +858,8 @@ unsigned total = 10;
 		 */
 		clear_lists(s);
 		tls_global_deinit(s->creds);
-		clear_cfg_file(s->config);
-		talloc_free(s->config);
+		clear_cfg_file(s->perm_config);
+		talloc_free(s->perm_config);
 		talloc_free(s->main_pool);
 		closelog();
 		exit(0);
@@ -972,11 +972,12 @@ int main(int argc, char** argv)
 	}
 
 	/* load configuration */
-	ret = cmd_parser(main_pool, argc, argv, &s->config);
+	ret = cmd_parser(main_pool, argc, argv, &s->perm_config);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
 	}
+	s->config = s->perm_config->config;
 
 	setproctitle(PACKAGE_NAME"-main");
 
@@ -986,7 +987,7 @@ int main(int argc, char** argv)
 	}
 
 	/* Listen to network ports */
-	ret = listen_ports(s, s->config, &s->listen_list);
+	ret = listen_ports(s, s->perm_config, &s->listen_list);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -1107,7 +1108,7 @@ int main(int argc, char** argv)
 #ifdef HAVE_PSELECT
 		ts.tv_nsec = 0;
 		ts.tv_sec = 30;
-		ret = pselect(n + 1, &rd_set, &wr_set, NULL, &ts, &emptyset);
+		ret = pselect(n + 1, &rd_set, NULL/*&wr_set*/, NULL, &ts, &emptyset);
 #else
 		ts.tv_usec = 0;
 		ts.tv_sec = 30;
@@ -1115,6 +1116,7 @@ int main(int argc, char** argv)
 		ret = select(n + 1, &rd_set, &wr_set, NULL, &ts);
 		sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
+
 		if (ret == -1 && errno == EINTR)
 			continue;
 
@@ -1136,7 +1138,7 @@ int main(int argc, char** argv)
 				fd = accept(ltmp->fd, (void*)&ws->remote_addr, &ws->remote_addr_len);
 				if (fd < 0) {
 					mslog(s, NULL, LOG_ERR,
-					       "Error in accept(): %s", strerror(errno));
+					       "error in accept(): %s", strerror(errno));
 					continue;
 				}
 				set_cloexec_flag (fd, 1);
@@ -1147,7 +1149,7 @@ int main(int argc, char** argv)
 
 				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
 					close(fd);
-					mslog(s, NULL, LOG_INFO, "Reached maximum client limit (active: %u)", s->active_clients);
+					mslog(s, NULL, LOG_INFO, "reached maximum client limit (active: %u)", s->active_clients);
 					break;
 				}
 
@@ -1191,6 +1193,7 @@ int main(int argc, char** argv)
 
 					ws->main_pool = main_pool;
 					ws->config = s->config;
+					ws->perm_config = s->perm_config;
 					ws->cmd_fd = cmd_fd[1];
 					ws->tun_fd = -1;
 					ws->dtls_tptr.fd = -1;
@@ -1254,7 +1257,12 @@ fork_failed:
 		}
 
 		if (FD_ISSET(s->sec_mod_fd, &rd_set)) {
-			handle_sec_mod_commands(s);
+			ret = handle_sec_mod_commands(s);
+			if (ret < 0) { /* bad commands from sec-mod are unacceptable */
+				mslog(s, NULL, LOG_ERR,
+				       "error command from sec-mod");
+				exit(1);
+			}
 		}
 
 		/* Check for pending control commands */

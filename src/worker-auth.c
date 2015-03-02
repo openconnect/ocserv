@@ -97,9 +97,9 @@ int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 	    ws->selected_auth->type & auth)
 		return 1;
 
-	for (i=0;i<ws->config->auth_methods;i++) {
-		if (ws->config->auth[i].enabled && (ws->config->auth[i].type & auth) != 0) {
-			ws->selected_auth = &ws->config->auth[i];
+	for (i=0;i<ws->perm_config->auth_methods;i++) {
+		if (ws->perm_config->auth[i].enabled && (ws->perm_config->auth[i].type & auth) != 0) {
+			ws->selected_auth = &ws->perm_config->auth[i];
 			return 1;
 		}
 	}
@@ -110,9 +110,9 @@ void ws_disable_auth(struct worker_st *ws, unsigned auth)
 {
 	unsigned i;
 
-	for (i=0;i<ws->config->auth_methods;i++) {
-		if ((ws->config->auth[i].type & auth) != 0) {
-			ws->config->auth[i].enabled = 0;
+	for (i=0;i<ws->perm_config->auth_methods;i++) {
+		if ((ws->perm_config->auth[i].type & auth) != 0) {
+			ws->perm_config->auth[i].enabled = 0;
 		}
 	}
 }
@@ -611,7 +611,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				ws->config->net_priority = msg->net_priority;
 
 			if (msg->has_no_udp && msg->no_udp != 0)
-				ws->config->udp_port = 0;
+				ws->perm_config->udp_port = 0;
 
 			if (msg->xml_config_file) {
 				talloc_free(ws->config->xml_config_file);
@@ -1106,7 +1106,7 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	if (ret < 0)
 		return -1;
 
-	if (ws->config->auth_methods > 1) {
+	if (ws->perm_config->auth_methods > 1) {
 		ret = cstp_puts(ws, "X-HTTP-Auth-Support: fallback\r\n");
 		if (ret < 0)
 			return -1;

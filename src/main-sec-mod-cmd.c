@@ -83,7 +83,7 @@ int handle_sec_mod_commands(main_server_st * s)
 
 	if (ret == 0) {
 		mslog(s, NULL, LOG_DEBUG, "command socket closed");
-		return ERR_WORKER_TERMINATED;
+		return ERR_BAD_COMMAND;
 	}
 
 	if (ret < 3) {

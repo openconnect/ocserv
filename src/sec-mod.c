@@ -374,7 +374,7 @@ static void check_other_work(sec_mod_st *sec)
 
 	if (need_reload) {
 		seclog(sec, LOG_DEBUG, "reloading configuration");
-		reload_cfg_file(sec, sec->config);
+		reload_cfg_file(sec, sec->perm_config);
 		need_reload = 0;
 	}
 
@@ -468,7 +468,7 @@ int serve_request(sec_mod_st *sec, int cfd, unsigned is_main, uint8_t *buffer, u
  * clients fast without becoming a bottleneck due to private 
  * key operations.
  */
-void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_file,
+void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char *socket_file,
 		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd)
 {
 	struct sockaddr_un sa;
@@ -509,7 +509,8 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	memcpy(sec->cookie_key, cookie_key, COOKIE_KEY_SIZE);
 	sec->dcookie_key.data = sec->cookie_key;
 	sec->dcookie_key.size = COOKIE_KEY_SIZE;
-	sec->config = talloc_steal(sec, config);
+	sec->perm_config = talloc_steal(sec, perm_config);
+	sec->config = sec->perm_config->config;
 
 	sup_config_init(sec);
 
@@ -528,8 +529,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 	ocsignal(SIGTERM, handle_sigterm);
 	ocsignal(SIGALRM, handle_alarm);
 
-
-	sec_auth_init(sec, config);
+	sec_auth_init(sec, perm_config);
 	sec->cmd_fd = cmd_fd;
 
 #ifdef HAVE_PKCS11
@@ -562,7 +562,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		exit(1);
 	}
 
-	ret = chown(SOCKET_FILE, config->uid, config->gid);
+	ret = chown(SOCKET_FILE, perm_config->uid, perm_config->gid);
 	if (ret == -1) {
 		e = errno;
 		seclog(sec, LOG_INFO, "could not chown socket '%s': %s", SOCKET_FILE,
@@ -577,15 +577,15 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		exit(1);
 	}
 
-	ret = load_pins(config, &pins);
+	ret = load_pins(sec->config, &pins);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error loading PIN files");
 		exit(1);
 	}
 
 	/* FIXME: the private key isn't reloaded on reload */
-	sec->key_size = config->key_size;
-	sec->key = talloc_size(sec, sizeof(*sec->key) * config->key_size);
+	sec->key_size = sec->config->key_size;
+	sec->key = talloc_size(sec, sizeof(*sec->key) * sec->config->key_size);
 	if (sec->key == NULL) {
 		seclog(sec, LOG_ERR, "error in memory allocation");
 		exit(1);
@@ -597,19 +597,19 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 		GNUTLS_FATAL_ERR(ret);
 
 		/* load the private key */
-		if (gnutls_url_is_supported(config->key[i]) != 0) {
+		if (gnutls_url_is_supported(sec->config->key[i]) != 0) {
 			gnutls_privkey_set_pin_function(sec->key[i],
 							pin_callback, &pins);
 			ret =
 			    gnutls_privkey_import_url(sec->key[i],
-						      config->key[i], 0);
+						      sec->config->key[i], 0);
 			GNUTLS_FATAL_ERR(ret);
 		} else {
 			gnutls_datum_t data;
-			ret = gnutls_load_file(config->key[i], &data);
+			ret = gnutls_load_file(sec->config->key[i], &data);
 			if (ret < 0) {
 				seclog(sec, LOG_ERR, "error loading file '%s'",
-				       config->key[i]);
+				       sec->config->key[i]);
 				GNUTLS_FATAL_ERR(ret);
 			}
 
@@ -686,7 +686,7 @@ void sec_mod_server(void *main_pool, struct cfg_st *config, const char *socket_f
 
 			/* do not allow unauthorized processes to issue commands
 			 */
-			ret = check_upeer_id("sec-mod", config->debug, cfd, config->uid, config->gid, &uid);
+			ret = check_upeer_id("sec-mod", sec->config->debug, cfd, perm_config->uid, perm_config->gid, &uid);
 			if (ret < 0) {
 				seclog(sec, LOG_INFO, "rejected unauthorized connection");
 			} else {

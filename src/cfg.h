@@ -46,22 +46,12 @@ typedef struct pam_cfg_st {
 	int gid_min;
 } pam_cfg_st;
 
-unsigned expand_brackets_string(struct cfg_st *config, const char *str, subcfg_val_st out[MAX_SUBOPTIONS]);
-inline static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS], unsigned size)
-{
-	unsigned i;
-	for (i=0;i<size;i++) {
-		talloc_free(out[i].name);
-		talloc_free(out[i].value);
-	}
-}
-
 #define CHECK_TRUE(str) (str != NULL && (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0))?1:0
 
-void *get_brackets_string1(struct cfg_st *config, const char *str);
-void *gssapi_get_brackets_string(struct cfg_st *config, const char *str);
-void *radius_get_brackets_string(struct cfg_st *config, const char *str);
-void *pam_get_brackets_string(struct cfg_st *config, const char *str);
-void *plain_get_brackets_string(struct cfg_st *config, const char *str);
+void *get_brackets_string1(struct perm_cfg_st *config, const char *str);
+void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str);
+void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str);
+void *pam_get_brackets_string(struct perm_cfg_st *config, const char *str);
+void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str);
 
 #endif

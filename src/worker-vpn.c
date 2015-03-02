@@ -439,7 +439,7 @@ void vpn_server(struct worker_st *ws)
 
 	memset(&settings, 0, sizeof(settings));
 
-	ws->selected_auth = &ws->config->auth[0];
+	ws->selected_auth = &ws->perm_config->auth[0];
 	if (ws->cert_auth_ok)
 		ws_switch_auth_to(ws, AUTH_TYPE_CERTIFICATE);
 
@@ -1325,7 +1325,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	ws->udp_state = UP_DISABLED;
-	if (ws->config->udp_port != 0 && req->master_secret_set != 0) {
+	if (ws->perm_config->udp_port != 0 && req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
 	} else {
@@ -1616,7 +1616,7 @@ static int connect_handler(worker_st * ws)
 
 		ret =
 		    cstp_printf(ws, "X-DTLS-Port: %u\r\n",
-			       ws->config->udp_port);
+			       ws->perm_config->udp_port);
 		SEND_ERR(ret);
 
 		if (ws->config->rekey_time > 0) {

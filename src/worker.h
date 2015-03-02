@@ -172,6 +172,8 @@ typedef struct worker_st {
 	
 	http_parser *parser;
 	struct cfg_st *config;
+	struct perm_cfg_st *perm_config;
+
 	unsigned int auth_state; /* S_AUTH */
 
 	struct sockaddr_un secmod_addr;	/* sec-mod unix address */

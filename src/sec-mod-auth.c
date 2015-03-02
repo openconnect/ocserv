@@ -59,7 +59,7 @@
 
 #define SESSION_STR "(session: %.5s)"
 
-void sec_auth_init(sec_mod_st * sec, struct cfg_st *config)
+void sec_auth_init(sec_mod_st * sec, struct perm_cfg_st *config)
 {
 	unsigned i;
 
@@ -448,8 +448,8 @@ int handle_sec_auth_session_open(int cfd, sec_mod_st *sec, const SecAuthSessionM
 		return send_failed_session_open_reply(cfd, sec);
 	}
 
-	if (sec->config->acct.amod != NULL && sec->config->acct.amod->open_session != NULL && e->session_is_open == 0) {
-		ret = sec->config->acct.amod->open_session(e->module->type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
+	if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->open_session != NULL && e->session_is_open == 0) {
+		ret = sec->perm_config->acct.amod->open_session(e->module->type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_INFO, "denied session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
@@ -587,7 +587,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->uptime > e->stats.uptime)
 		e->stats.uptime = req->uptime;
 
-	if (sec->config->acct.amod == NULL || sec->config->acct.amod->session_stats == NULL)
+	if (sec->perm_config->acct.amod == NULL || sec->perm_config->acct.amod->session_stats == NULL)
 		return 0;
 
 	stats_add_to(&totals, &e->stats, &e->saved_stats);
@@ -598,7 +598,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->ipv6)
 		strlcpy(e->auth_info.ipv6, req->ipv6, sizeof(e->auth_info.ipv6));
 
-	sec->config->acct.amod->session_stats(e->module->type, e->auth_ctx, &e->auth_info, &totals);
+	sec->perm_config->acct.amod->session_stats(e->module->type, e->auth_ctx, &e->auth_info, &totals);
 	return 0;
 }
 
@@ -667,12 +667,12 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 
 	/* Find the first configured authentication method which contains
 	 * the method asked by the worker, and use that. */
-	for (i=0;i<sec->config->auth_methods;i++) {
-		if (sec->config->auth[i].enabled && (sec->config->auth[i].type & auth_type) == auth_type) {
-			e->module = sec->config->auth[i].amod;
-			e->auth_type = sec->config->auth[i].type;
+	for (i=0;i<sec->perm_config->auth_methods;i++) {
+		if (sec->perm_config->auth[i].enabled && (sec->perm_config->auth[i].type & auth_type) == auth_type) {
+			e->module = sec->perm_config->auth[i].amod;
+			e->auth_type = sec->perm_config->auth[i].type;
 
-			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user "SESSION_STR, sec->config->auth[i].name, e->auth_info.psid);
+			seclog(sec, LOG_INFO, "using '%s' authentication to authenticate user "SESSION_STR, sec->perm_config->auth[i].name, e->auth_info.psid);
 			return 0;
 		}
 	}
@@ -776,8 +776,8 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 
 	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 	if (e->auth_ctx != NULL) {
-		if (sec->config->acct.amod != NULL && sec->config->acct.amod->close_session != NULL && e->session_is_open != 0) {
-			sec->config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats);
+		if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->close_session != NULL && e->session_is_open != 0) {
+			sec->perm_config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats);
 		}
 		e->module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;

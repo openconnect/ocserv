@@ -127,7 +127,7 @@ void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str)
 }
 #endif
 
-void *get_brackets_string1(struct perm_cfg_st *config, const char *str)
+void *get_brackets_string1(void *pool, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -151,11 +151,11 @@ void *get_brackets_string1(struct perm_cfg_st *config, const char *str)
 
 	len = p2 - p;
 
-	return talloc_strndup(config, p, len);
+	return talloc_strndup(pool, p, len);
 }
 
 #ifdef HAVE_RADIUS
-static void *get_brackets_string2(struct perm_cfg_st *config, const char *str)
+static void *get_brackets_string2(void *pool, const char *str)
 {
 	char *p, *p2;
 	unsigned len;
@@ -186,7 +186,7 @@ static void *get_brackets_string2(struct perm_cfg_st *config, const char *str)
 
 	len = p2 - p;
 
-	return talloc_strndup(config, p, len);
+	return talloc_strndup(pool, p, len);
 }
 
 void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)

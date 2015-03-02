@@ -364,7 +364,7 @@ static void append_acct_standard(struct radius_ctx_st * pctx, rc_handle *rh,
 			return;
 		}
 	}
-
+#if 0
 	if (pctx->ipv6[0] != 0) {
 		struct in6_addr in;
 		inet_pton(AF_INET6, pctx->ipv6, &in);
@@ -372,7 +372,7 @@ static void append_acct_standard(struct radius_ctx_st * pctx, rc_handle *rh,
 			return;
 		}
 	}
-
+#endif
 	if (rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, pctx->sid, -1, 0) == NULL) {
 		return;
 	}

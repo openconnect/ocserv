@@ -143,6 +143,7 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 		}
 	}
 
+#if 0 /* bug in freeradius-client */
 	if (ai->ipv6[0] != 0) {
 		struct in6_addr in;
 		inet_pton(AF_INET6, ai->ipv6, &in);
@@ -150,6 +151,7 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 			return;
 		}
 	}
+#endif
 
 	if (rc_avpair_add(rh, send, PW_CALLING_STATION_ID, ai->remote_ip, -1, 0) == NULL) {
 		return;

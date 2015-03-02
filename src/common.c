@@ -474,7 +474,7 @@ struct msghdr mh = {
 	for (cmsg = CMSG_FIRSTHDR(&mh); cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 #if defined(IP_PKTINFO)
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
-			struct in_pktinfo *pi = CMSG_DATA(cmsg);
+			struct in_pktinfo *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
 
 			if (*our_addrlen < sizeof(struct sockaddr_in))
@@ -488,7 +488,7 @@ struct msghdr mh = {
 		}
 #elif defined(IP_RECVDSTADDR)
 		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-			struct in_addr *pi = CMSG_DATA(cmsg);
+			struct in_addr *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
 
 			if (*our_addrlen < sizeof(struct sockaddr_in))
@@ -503,7 +503,7 @@ struct msghdr mh = {
 #endif
 #ifdef IPV6_RECVPKTINFO
 		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_RECVPKTINFO) {
-			struct in6_pktinfo *pi = CMSG_DATA(cmsg);
+			struct in6_pktinfo *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in6 *a = (struct sockaddr_in6*)our_addr;
 
 			if (*our_addrlen < sizeof(struct sockaddr_in6))

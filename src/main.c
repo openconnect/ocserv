@@ -858,7 +858,7 @@ unsigned total = 10;
 		 */
 		clear_lists(s);
 		tls_global_deinit(s->creds);
-		clear_cfg_file(s->perm_config);
+		clear_cfg(s->perm_config);
 		talloc_free(s->perm_config);
 		talloc_free(s->main_pool);
 		closelog();

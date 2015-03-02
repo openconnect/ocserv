@@ -1085,7 +1085,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 }
 
 #define DEL(x) {talloc_free(x);x=NULL;}
-void clear_cfg_file(struct perm_cfg_st* perm_config)
+void clear_cfg(struct perm_cfg_st* perm_config)
 {
 unsigned i;
 
@@ -1210,7 +1210,7 @@ void print_version(tOptions *opts, tOptDesc *desc)
 
 void reload_cfg_file(void *pool, struct perm_cfg_st* perm_config)
 {
-	clear_cfg_file(perm_config);
+	clear_cfg(perm_config);
 
 	parse_cfg_file(pool, cfg_file, perm_config, 1);
 

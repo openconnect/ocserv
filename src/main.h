@@ -42,7 +42,7 @@
 extern sigset_t sig_default_set;
 int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config);
 void reload_cfg_file(void *pool, struct perm_cfg_st* config);
-void clear_cfg_file(struct perm_cfg_st* config);
+void clear_cfg(struct perm_cfg_st* config);
 void write_pid_file(void);
 void remove_pid_file(void);
 

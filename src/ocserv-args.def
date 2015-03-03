@@ -101,6 +101,13 @@ An example configuration file follows.
 # radius configuration are:
 # Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,
 # Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
+#
+# gssapi[keytab=/etc/key.tab,require-local-user-map=false]
+#  The gssapi option allows to use authentication methods supported by GSSAPI,
+# such as Kerberos tickets with ocserv. It should be best used as an alternative
+# to PAM (i.e., have pam in auth and gssapi in enable-auth), to allow users with
+# tickets and without tickets to login. The default value for require-local-user-map
+# is true.
 
 #auth = "certificate"
 #auth = "pam"

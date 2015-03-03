@@ -7,7 +7,7 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-cookie-timeout-2.config user-config-explicit/test test-explicit-ip.config \
 	test-explicit-ip user-config-explicit/test2 user-config-explicit/test3 \
 	user-config-explicit/test4 test-pass-opt-cert.config test-gssapi.config \
-	test-ban.config test-sighup.config
+	test-ban.config test-sighup.config test-gssapi-local-map.config
 
 SUBDIRS = docker-ocserv docker-kerberos
 

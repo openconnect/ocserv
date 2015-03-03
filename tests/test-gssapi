@@ -52,6 +52,21 @@ echo "Connecting with curl and wrong password... "
 curl https://test:wrongpass@localhost:4449 --cacert ca.pem --negotiate -f -v &&
 	fail $PID "Connected to server with wrong password"
 
+kill $PID
+wait
+
+echo ""
+echo "Testing local backend with gssapi and local-map on... "
+sleep 2
+
+# Test whether no-local-map is by default true
+launch_server -d 1 -f -c test-gssapi-local-map.config & PID=$!
+wait_server $PID
+
+echo "Connecting with curl... "
+curl https://test:testpass@localhost:4449 --cacert ca.pem --negotiate -f -v &&
+	fail $PID "Connected to server even when local map was required"
+
 rm -f $srcdir/ntlm.pass
 rm -f $srcdir/ntlm.pass.wrong
 

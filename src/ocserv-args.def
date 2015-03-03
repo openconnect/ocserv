@@ -366,7 +366,7 @@ rekey-method = ssl
 # UTMP
 # Register the connected clients to utmp. This will allow viewing
 # the connected clients using the command 'who'.
-use-utmp = true
+#use-utmp = true
 
 # Whether to enable support for the occtl tool (i.e., either through D-BUS,
 # or via a unix socket).
@@ -383,7 +383,8 @@ pid-file = /var/run/ocserv.pid
 #chroot-dir = /path/to/chroot
 
 # socket file used for server IPC (worker - sec-mod), will be appended with .PID
-# It must be accessible within the chroot environment (if any)
+# It must be accessible within the chroot environment (if any), so it is best
+# specified relatively to the chroot directory.
 socket-file = /var/run/ocserv-socket
 
 # The user the worker processes will be run as. It should be
@@ -417,7 +418,7 @@ predictable-ips = true
 default-domain = example.com
 
 # The pool of addresses that leases will be given from. If the leases
-# are given via Radius, or via explicit-ip? per-user config option then 
+# are given via Radius, or via the explicit-ip? per-user config option then 
 # these network values should contain a network with at least a single
 # address that will remain under the full control of ocserv (that is
 # to be able to assign the local part of the tun device address).

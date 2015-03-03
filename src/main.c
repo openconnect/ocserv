@@ -1124,7 +1124,8 @@ int main(int argc, char** argv)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "Error in pselect(): %s",
 			       strerror(e));
-			exit(1);
+			terminate = 1;
+			continue;
 		}
 
 		/* Check for new connections to accept */
@@ -1261,7 +1262,8 @@ fork_failed:
 			if (ret < 0) { /* bad commands from sec-mod are unacceptable */
 				mslog(s, NULL, LOG_ERR,
 				       "error command from sec-mod");
-				exit(1);
+				terminate = 1;
+				continue;
 			}
 		}
 

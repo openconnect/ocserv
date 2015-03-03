@@ -412,7 +412,7 @@ struct main_server_st;
 #define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_SESSION_DATA_SIZE (4*1024)
 
-#define MAX_CONFIG_ENTRIES 64
+#define MAX_CONFIG_ENTRIES 96
 
 #include <tun.h>
 

@@ -604,11 +604,11 @@ int run_sec_mod(main_server_st * s)
 
 	/* make socket name */
 	snprintf(s->socket_file, sizeof(s->socket_file), "%s.%u",
-		 s->config->socket_file_prefix, (unsigned)getpid());
+		 s->perm_config->socket_file_prefix, (unsigned)getpid());
 
-	if (s->config->chroot_dir != NULL) {
+	if (s->perm_config->chroot_dir != NULL) {
 		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
-			 s->config->chroot_dir, s->socket_file);
+			 s->perm_config->chroot_dir, s->socket_file);
 	} else {
 		strlcpy(s->full_socket_file, s->socket_file, sizeof(s->full_socket_file));
 	}

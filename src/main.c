@@ -520,18 +520,18 @@ static void drop_privileges(main_server_st* s)
 	int ret, e;
 	struct rlimit rl;
 
-	if (s->config->chroot_dir) {
-		ret = chdir(s->config->chroot_dir);
+	if (s->perm_config->chroot_dir) {
+		ret = chdir(s->perm_config->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->perm_config->chroot_dir, strerror(e));
 			exit(1);
 		}
 
-		ret = chroot(s->config->chroot_dir);
+		ret = chroot(s->perm_config->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s", s->config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s", s->perm_config->chroot_dir, strerror(e));
 			exit(1);
 		}
 	}
@@ -841,7 +841,7 @@ unsigned total = 10;
 		mslog(s, NULL, LOG_INFO, "termination request received; waiting for children to die");
 		kill_children(s);
 		remove(s->full_socket_file);
-		remove(s->config->occtl_socket_file);
+		remove(s->perm_config->occtl_socket_file);
 		remove_pid_file();
 
 		while (waitpid(-1, NULL, WNOHANG) >= 0) {
@@ -1027,10 +1027,10 @@ int main(int argc, char** argv)
 
 	/* chdir to our chroot directory, to allow opening the sec-mod
 	 * socket if necessary. */
-	if (s->config->chroot_dir) {
-		if (chdir(s->config->chroot_dir) != 0) {
+	if (s->perm_config->chroot_dir) {
+		if (chdir(s->perm_config->chroot_dir) != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->perm_config->chroot_dir, strerror(e));
 			exit(1);
 		}
 	}
@@ -1041,7 +1041,7 @@ int main(int argc, char** argv)
 
 	s->secmod_addr.sun_family = AF_UNIX;
 	p = s->socket_file;
-	if (s->config->chroot_dir) /* if we are on chroot make the socket file path relative */
+	if (s->perm_config->chroot_dir) /* if we are on chroot make the socket file path relative */
 		while (*p == '/') p++;
 	strlcpy(s->secmod_addr.sun_path, p, sizeof(s->secmod_addr.sun_path));
 	s->secmod_addr_len = SUN_LEN(&s->secmod_addr);

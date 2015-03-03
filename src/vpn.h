@@ -287,7 +287,7 @@ struct cfg_st {
 	char *priorities;
 	unsigned enable_compression;
 	unsigned no_compress_limit;	/* under this size (in bytes) of data there will be no compression */
-	char *chroot_dir;	/* where the xml files are served from */
+
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */
 	char *default_domain; /* domain to be advertised */
@@ -305,7 +305,6 @@ struct cfg_st {
 	char **split_dns;
 	unsigned split_dns_size;;
 
-	char* socket_file_prefix;
 
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */
@@ -336,7 +335,6 @@ struct cfg_st {
 	unsigned use_utmp;
 	unsigned use_dbus; /* whether the D-BUS service is registered */
 	unsigned use_occtl; /* whether support for the occtl tool will be enabled */
-	char* occtl_socket_file;
 
 	unsigned try_mtu; /* MTU discovery enabled */
 	unsigned cisco_client_compat; /* do not require client certificate, 
@@ -389,6 +387,10 @@ struct perm_cfg_st {
 	unsigned auth_methods;
 	acct_struct_st acct;
 	unsigned int sup_config_type; /* one of SUP_CONFIG_ */
+
+	char *chroot_dir;	/* where the xml files are served from */
+	char* occtl_socket_file;
+	char* socket_file_prefix;
 
 	uid_t uid;
 	gid_t gid;

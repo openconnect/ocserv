@@ -746,10 +746,10 @@ unsigned urlfw_size = 0;
 		READ_STATIC_STRING("pid-file", pid_file);
 
 
-	READ_STRING("socket-file", config->socket_file_prefix);
-	READ_STRING("occtl-socket-file", config->occtl_socket_file);
-	if (config->occtl_socket_file == NULL)
-		config->occtl_socket_file = talloc_strdup(config, OCCTL_UNIX_SOCKET);
+	PREAD_STRING(perm_config, "socket-file", perm_config->socket_file_prefix);
+	PREAD_STRING(perm_config, "occtl-socket-file", perm_config->occtl_socket_file);
+	if (perm_config->occtl_socket_file == NULL)
+		perm_config->occtl_socket_file = talloc_strdup(perm_config, OCCTL_UNIX_SOCKET);
 
 	val = get_option("session-control", NULL);
 	if (val != NULL) {
@@ -800,7 +800,7 @@ unsigned urlfw_size = 0;
 	READ_TF("ping-leases", config->ping_leases, 0);
 
 	READ_STRING("tls-priorities", config->priorities);
-	READ_STRING("chroot-dir", config->chroot_dir);
+	PREAD_STRING(perm_config, "chroot-dir", perm_config->chroot_dir);
 
 	READ_NUMERIC("mtu", config->default_mtu);
 
@@ -1019,10 +1019,10 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 
 	if (perm_config->config->xml_config_file) {
 		perm_config->config->xml_config_hash = calc_sha1_hash(perm_config->config, perm_config->config->xml_config_file, 0);
-		if (perm_config->config->xml_config_hash == NULL && perm_config->config->chroot_dir != NULL) {
+		if (perm_config->config->xml_config_hash == NULL && perm_config->chroot_dir != NULL) {
 			char path[_POSIX_PATH_MAX];
 
-			snprintf(path, sizeof(path), "%s/%s", perm_config->config->chroot_dir, perm_config->config->xml_config_file);
+			snprintf(path, sizeof(path), "%s/%s", perm_config->chroot_dir, perm_config->config->xml_config_file);
 			perm_config->config->xml_config_hash = calc_sha1_hash(perm_config->config, path, 0);
 
 			if (perm_config->config->xml_config_hash == NULL) {
@@ -1099,7 +1099,6 @@ unsigned i;
 	DEL(perm_config->config->route_del_cmd);
 	DEL(perm_config->config->per_user_dir);
 	DEL(perm_config->config->per_group_dir);
-	DEL(perm_config->config->socket_file_prefix);
 	DEL(perm_config->config->default_domain);
 
 	DEL(perm_config->config->ocsp_response);
@@ -1112,7 +1111,6 @@ unsigned i;
 	DEL(perm_config->config->cert_user_oid);
 	DEL(perm_config->config->cert_group_oid);
 	DEL(perm_config->config->priorities);
-	DEL(perm_config->config->chroot_dir);
 	DEL(perm_config->config->connect_script);
 	DEL(perm_config->config->disconnect_script);
 	DEL(perm_config->config->proxy_url);

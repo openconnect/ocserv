@@ -133,6 +133,41 @@ An example configuration file follows.
 #acct = "pam"
 #acct = "radius[config=/etc/radiusclient/radiusclient.conf]"
 
+# Use listen-host to limit to specific IPs or to the IPs of a provided 
+# hostname.
+#listen-host = [IP|HOSTNAME]
+
+# TCP and UDP port number
+tcp-port = 4443
+udp-port = 4443
+
+# Accept connections using a socket file. It accepts HTTP
+# connections (i.e., without SSL/TLS unlike its TCP counterpart),
+# and uses it as the primary channel. That option cannot be
+# combined with certificate authentication.
+#listen-clear-file = /var/run/ocserv-conn.socket
+
+# The user the worker processes will be run as. It should be
+# unique (no other services run as this user).
+run-as-user = nobody
+run-as-group = nogroup
+
+# The default server directory. Does not require any devices present.
+#chroot-dir = /path/to/chroot
+
+# socket file used for IPC with occtl. You only need to set that,
+# if you use more than a single servers.
+#occtl-socket-file = /var/run/occtl.socket
+
+# socket file used for server IPC (worker - sec-mod), will be appended with .PID
+# It must be accessible within the chroot environment (if any), so it is best
+# specified relatively to the chroot directory.
+socket-file = /var/run/ocserv-socket
+
+
+### All configuration options below this line are reloaded on a SIGHUP.
+### The options above, will remain unchanged.
+
 # Whether to enable seccomp/Linux namespaces worker isolation. That restricts the number of 
 # system calls allowed to a worker process, in order to reduce damage from a
 # bug in the worker process. It is available on Linux systems at a performance cost.
@@ -146,32 +181,18 @@ isolate-workers = true
 #max-clients = 1024
 max-clients = 16
 
-# Limit the number of client connections to one every X milliseconds 
-# (X is the provided value). Set to zero for no limit.
-#rate-limit-ms = 100
-
 # Limit the number of identical clients (i.e., users connecting 
 # multiple times). Unset or set to zero for unlimited.
 max-same-clients = 2
-
-# Use listen-host to limit to specific IPs or to the IPs of a provided 
-# hostname.
-#listen-host = [IP|HOSTNAME]
 
 # When the server has a dynamic DNS address (that may change),
 # should set that to true to ask the client to resolve again on
 # reconnects.
 #listen-host-is-dyndns = true
 
-# TCP and UDP port number
-tcp-port = 4443
-udp-port = 4443
-
-# Accept connections using a socket file. It accepts HTTP
-# connections (i.e., without SSL/TLS unlike its TCP counterpart),
-# and uses it as the primary channel. That option cannot be
-# combined with certificate authentication.
-#listen-clear-file = /var/run/ocserv-conn.socket
+# Limit the number of client connections to one every X milliseconds 
+# (X is the provided value). Set to zero for no limit.
+#rate-limit-ms = 100
 
 # Stats report time. The number of seconds after which each
 # worker process will report its usage statistics (number of
@@ -372,25 +393,8 @@ rekey-method = ssl
 # or via a unix socket).
 use-occtl = true
 
-# socket file used for IPC with occtl. You only need to set that,
-# if you use more than a single servers.
-#occtl-socket-file = /var/run/occtl.socket
-
 # PID file. It can be overriden in the command line.
 pid-file = /var/run/ocserv.pid
-
-# The default server directory. Does not require any devices present.
-#chroot-dir = /path/to/chroot
-
-# socket file used for server IPC (worker - sec-mod), will be appended with .PID
-# It must be accessible within the chroot environment (if any), so it is best
-# specified relatively to the chroot directory.
-socket-file = /var/run/ocserv-socket
-
-# The user the worker processes will be run as. It should be
-# unique (no other services run as this user).
-run-as-user = nobody
-run-as-group = nogroup
 
 # Set the protocol-defined priority (SO_PRIORITY) for packets to
 # be sent. That is a number from 0 to 6 with 0 being the lowest

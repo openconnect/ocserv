@@ -324,10 +324,13 @@ min-reauth-time = 120
 
 # Banning clients in ocserv works with a point system. IP addresses
 # that get a score over that configured number are banned for
-# min-reauth-time seconds. A wrong password attempt is 10 points,
+# min-reauth-time seconds. By default a wrong password attempt is 10 points,
 # a KKDCP POST is 1 point, and a connection is 1 point. Note that
 # due to difference processes being involved the count of points
 # will not be real-time precise.
+#
+# Score banning cannot be reliably used when receiving proxied connections
+# locally from an HTTP server (i.e., when listen-clear-file is used).
 #
 # Set to zero to disable.
 max-ban-score = 50

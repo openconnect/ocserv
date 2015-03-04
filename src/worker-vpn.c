@@ -1325,7 +1325,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	ws->udp_state = UP_DISABLED;
-	if (ws->perm_config->udp_port != 0 && req->master_secret_set != 0) {
+	if (ws->perm_config->udp_port != 0 && req->master_secret_set != 0 && ws->req.selected_ciphersuite != NULL) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
 	} else {

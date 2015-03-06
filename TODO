@@ -1,5 +1,7 @@
 Short term items:
 
+* Use virt-builder for tests, to allow them run without root provileges.
+
 * Separate accounting from authentication. I.e., allow a client which
   is authenticated with certificates to report stats using radius.
 

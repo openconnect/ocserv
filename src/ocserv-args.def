@@ -650,6 +650,14 @@ In that case the 'ocpasswd' tool can be used for its management.
 Note that password authentication can be used in conjunction with certificate 
 authentication.
 
+@subheading GSSAPI authentication
+ocserv will take advantage of the MIT Kerberos project GSSAPI libraries, and
+allow authentication using any method GSSAPI supports. That is, mainly, Kerberos
+authentication. That is often more useful to be combined with PAM or other
+password authentication methods so that a fallback mechanism can be used when
+GSSAPI fails (e.g., when the user doesn't already have a Kerberos ticket). The
+GSSAPI authentication is implemented using SPNEGO.
+
 @subheading Public key (certificate) authentication
 Public key authentication allows the user to be authenticated
 by the possession of the private key that corresponds to a known

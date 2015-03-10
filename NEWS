@@ -1,4 +1,4 @@
-* Version 0.10.0 (unreleased)
+* Version 0.10.0 (released 2015-03-10)
 - Added support for gssapi (e.g., Kerberos) authentication
 - Added support for alternative authentication methods, via enable-auth.
   That allows to set a suffcient for login authentication method that will

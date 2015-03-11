@@ -137,7 +137,7 @@ static int in_cksum(unsigned short *buf, int sz)
 	return ans;
 }
 
-inline static int retry(e)
+inline static int retry(int e)
 {
 	if (e == EAGAIN || e == EWOULDBLOCK || e == EINTR)
 		return 1;

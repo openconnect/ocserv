@@ -224,7 +224,7 @@ unsigned j;
 		} \
 		do { \
 		        char *xp; \
-		        if (val && !strcmp(val->pzName, name)==0) \
+		        if (val && strcmp(val->pzName, name)!=0) \
 				continue; \
 		        s_name[num] = talloc_strdup(config, val->v.strVal); \
 		        xp = strchr(s_name[num], '['); if (xp != NULL) *xp = 0; \

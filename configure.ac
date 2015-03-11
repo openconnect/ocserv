@@ -355,7 +355,7 @@ AC_ARG_ENABLE(compression,
   enable_compression=yes)
 
 if test "$enable_compression" = yes;then
-AC_DEFINE([ENABLE_COMPRESSION], [], [compression enabled]),
+AC_DEFINE([ENABLE_COMPRESSION], [], [compression enabled])
 fi
 
 AM_CONDITIONAL(ENABLE_COMPRESSION, test "$enable_compression" = yes)

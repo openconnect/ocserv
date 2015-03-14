@@ -396,7 +396,7 @@ int send_failed_session_open_reply(int cfd, sec_mod_st *sec)
 
 	lpool = talloc_new(sec);
 	if (lpool == NULL) {
-		return ERR_MEM;
+		return ERR_BAD_COMMAND;
 	}
 
 	ret = send_msg(lpool, cfd, SM_CMD_AUTH_SESSION_REPLY, &rep,
@@ -404,10 +404,11 @@ int send_failed_session_open_reply(int cfd, sec_mod_st *sec)
 			(pack_func) sec_auth_session_reply_msg__pack);
 	if (ret < 0) {
 		seclog(sec, LOG_WARNING, "error in sending session reply");
+		ret = ERR_BAD_COMMAND; /* we desynced */
 	}
 	talloc_free(lpool);
 
-	return -1;
+	return ret;
 }
 
 static
@@ -463,7 +464,7 @@ int handle_sec_auth_session_open(int cfd, sec_mod_st *sec, const SecAuthSessionM
 
 	lpool = talloc_new(e);
 	if (lpool == NULL) {
-		return ERR_MEM;
+		return ERR_BAD_COMMAND; /* we desync */
 	}
 
 	if (sec->config_module && sec->config_module->get_sup_config) {
@@ -480,7 +481,7 @@ int handle_sec_auth_session_open(int cfd, sec_mod_st *sec, const SecAuthSessionM
 			(pack_func) sec_auth_session_reply_msg__pack);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error in sending session reply");
-		exit(1); /* we cannot recover */
+		return ERR_BAD_COMMAND; /* we desync */
 	}
 	talloc_free(lpool);
 
@@ -501,7 +502,7 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	if (req->sid.len != SID_SIZE) {
 		seclog(sec, LOG_ERR, "auth session close but with illegal sid size (%d)!",
 		       (int)req->sid.len);
-		return -1;
+		return ERR_BAD_COMMAND;
 	}
 
 	e = find_client_entry(sec, req->sid.data);
@@ -536,7 +537,7 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 			(pack_func) cli_stats_msg__pack);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error in sending session stats");
-		exit(1); /* we cannot recover */
+		return ERR_BAD_COMMAND;
 	}
 
 	/* save total stats */

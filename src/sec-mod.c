@@ -256,7 +256,6 @@ int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
 			tmsg = cli_stats_msg__unpack(&pa, data.size, data.data);
 			if (tmsg == NULL) {
 				seclog(sec, LOG_ERR, "error unpacking data");
-				ret = ERR_BAD_COMMAND;
 				return -1;
 			}
 
@@ -663,7 +662,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 				seclog(sec, LOG_ERR, "error in memory allocation");
 			} else {
 				ret = serve_request(sec, cmd_fd, 1, buffer, buffer_size);
-				if (ret < 0) {
+				if (ret < 0 && ret == ERR_BAD_COMMAND) {
 					seclog(sec, LOG_ERR, "error processing command from main");
 					exit(1);
 				}

@@ -508,12 +508,16 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
 		seclog(sec, LOG_INFO, "session close but with non-existing SID!");
-		return -1;
+		return send_msg(e, cfd, SM_CMD_AUTH_CLI_STATS, &rep,
+		                (pack_size_func) cli_stats_msg__get_packed_size,
+		                (pack_func) cli_stats_msg__pack);
 	}
 
 	if (e->status != PS_AUTH_COMPLETED) {
-		seclog(sec, LOG_ERR, "session close received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
-		return -1;
+		seclog(sec, LOG_DEBUG, "session close received in unauthenticated client %s "SESSION_STR"!", e->auth_info.username, e->auth_info.psid);
+		return send_msg(e, cfd, SM_CMD_AUTH_CLI_STATS, &rep,
+		                (pack_size_func) cli_stats_msg__get_packed_size,
+		                (pack_func) cli_stats_msg__pack);
 	}
 
 	seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);

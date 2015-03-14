@@ -201,7 +201,6 @@ struct proc_st *old_proc;
 	proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
 
 	memcpy(proc->sid, cmsg->sid.data, cmsg->sid.len);
-	proc->active_sid = 1;
 
 	/* override the group name in order to load the correct configuration in
 	 * case his group is specified in the certificate */
@@ -219,6 +218,8 @@ struct proc_st *old_proc;
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;
 	}
+	/* this hints to call session_close() */
+	proc->active_sid = 1;
 
 	/* Put into right cgroup */
         if (proc->config.cgroup != NULL) {

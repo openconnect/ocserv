@@ -102,6 +102,15 @@ if [ -f ${srcdir}/pid1.$$ ];then
 	wait $CPID
 fi
 
+# test cookie verification after cookie verification failure. That is to verify whether
+# the channel between main and sec-mod is in consistent state.
+echo "Connecting (again) to obtain cookie... "
+echo "test" | openconnect -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+
+if test $? != 0;then
+	fail $PID "Could not obtain cookie"
+fi
+
 kill $PID
 wait
 

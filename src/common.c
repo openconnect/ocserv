@@ -314,7 +314,9 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 		memcpy(CMSG_DATA(cmptr), &socketfd, sizeof(int));
 	}
 
-	ret = sendmsg(fd, &hdr, 0);
+	do {
+		ret = sendmsg(fd, &hdr, 0);
+	} while(ret == -1 && errno == EINTR);
 	if (ret < 0) {
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
@@ -465,7 +467,9 @@ struct msghdr mh = {
 	.msg_controllen = sizeof(cmbuf),
 };
 
-	ret = recvmsg(sockfd, &mh, 0);
+	do {
+		ret = recvmsg(sockfd, &mh, 0);
+	} while (ret == -1 && errno == EINTR);
 	if (ret < 0) {
 		return -1;
 	}

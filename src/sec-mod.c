@@ -336,7 +336,7 @@ int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_
 		}
 	default:
 		seclog(sec, LOG_WARNING, "unknown type 0x%.2x", cmd);
-		return -1;
+		return ERR_BAD_COMMAND;
 	}
 
 	return 0;

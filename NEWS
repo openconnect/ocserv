@@ -1,4 +1,4 @@
-* Version 0.10.1 (unreleased)
+* Version 0.10.1 (released 2015-03-15)
 - Fixed issues with the handling of clients connecting with expired
   cookies. Reported by sskaje.
 

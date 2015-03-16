@@ -943,6 +943,22 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	if (ret < 0)
 		return -1;
 
+	if (ws->sid_set != 0) {
+		char context[BASE64_LENGTH(SID_SIZE) + 1];
+
+		base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
+			      sizeof(context));
+
+		ret =
+		    cstp_printf(ws,
+			       "Set-Cookie: webvpncontext=%s; Secure\r\n",
+			       context);
+		if (ret < 0)
+			return -1;
+
+		oclog(ws, LOG_DEBUG, "sent sid: %s", context);
+	}
+
 	ret =
 	    cstp_printf(ws,
 		       "Set-Cookie: webvpn=%s; Secure\r\n",

@@ -427,7 +427,9 @@ int handle_sec_auth_session_open(int cfd, sec_mod_st *sec, const SecAuthSessionM
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(sec, LOG_INFO, "session open but with non-existing SID!");
+		char tmp[BASE64_LENGTH(SID_SIZE) + 1];
+		base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
+		seclog(sec, LOG_INFO, "session open but with non-existing SID: %s!", tmp);
 		return send_failed_session_open_reply(cfd, sec);
 	}
 
@@ -507,7 +509,9 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(sec, LOG_INFO, "session close but with non-existing SID!");
+		char tmp[BASE64_LENGTH(SID_SIZE) + 1];
+		base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
+		seclog(sec, LOG_INFO, "session close but with non-existing SID: %s", tmp);
 		return send_msg(e, cfd, SM_CMD_AUTH_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
 		                (pack_func) cli_stats_msg__pack);
@@ -575,7 +579,9 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		seclog(sec, LOG_INFO, "session stats but with non-existing sid!");
+		char tmp[BASE64_LENGTH(SID_SIZE) + 1];
+		base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
+		seclog(sec, LOG_INFO, "session stats but with non-existing SID: %s", tmp);
 		return -1;
 	}
 

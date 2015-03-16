@@ -26,6 +26,7 @@ if [ $? != 0 ];then
 	exit 77
 fi
 
+PORT_OCSERV=5551
 CONFIG="tcp"
 IMAGE=ocserv-test1
 IMAGE_NAME=test_ocserv
@@ -112,6 +113,7 @@ printf "#\!/bin/sh\n" >echo-admin$TMP
 printf "echo root" >>echo-admin$TMP
 printf "\n" >>echo-admin$TMP
 chmod 755 echo-admin$TMP
+setsid ssh -T -F config$TMP root@192.168.1.1 occtl show users
 setsid ssh -T -F config$TMP root@192.168.1.1 occtl show user test >out$TMP 2>&1
 cat out$TMP
 rm -f echo-admin$TMP

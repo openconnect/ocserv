@@ -65,6 +65,9 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 		msg.session_id.data = proc->dtls_session_id;
 		msg.session_id.len = sizeof(proc->dtls_session_id);
 
+		msg.sid.data = proc->sid;
+		msg.sid.len = sizeof(proc->sid);
+
 		msg.vname = proc->tun_lease.name;
 		msg.user_name = proc->username;
 		msg.group_name = proc->groupname;

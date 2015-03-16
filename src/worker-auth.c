@@ -525,10 +525,14 @@ static int recv_cookie_auth_reply(worker_st * ws)
 		if (socketfd != -1) {
 			ws->tun_fd = socketfd;
 
-			if (msg->vname == NULL || msg->user_name == NULL) {
+			if (msg->vname == NULL || msg->user_name == NULL || msg->sid.len != sizeof(ws->sid)) {
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
+
+			/* update our sid */
+			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
+			ws->sid_set = 1;
 
 			strlcpy(ws->vinfo.name, msg->vname, sizeof(ws->vinfo.name));
 			strlcpy(ws->username, msg->user_name, sizeof(ws->username));

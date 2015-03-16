@@ -51,7 +51,7 @@ message auth_cookie_request_msg
 message auth_reply_msg
 {
 	required AUTH_REP reply = 1;
-	optional bytes session_id = 3;
+	optional bytes session_id = 3; /* dtls */
 	optional string vname = 4;
 	optional string user_name = 5;
 	optional string group_name = 25;
@@ -78,6 +78,7 @@ message auth_reply_msg
 	optional string ipv4_network = 27;
 	optional string ipv6_network = 28;
 	repeated string no_routes = 29;
+	required bytes sid = 30;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */

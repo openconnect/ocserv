@@ -732,19 +732,21 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		}
 	}
 
-	sl = sizeof(max);
-	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
-		      strerror(e));
-	} else {
-		max -= 13;
-		/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max); */
-		if (max > 0 && max - mtu_overhead < ws->conn_mtu) {
-			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u",
-			      max - mtu_overhead);
-			mtu_set(ws, MIN(ws->conn_mtu, max - mtu_overhead));
+	if (ws->conn_type != SOCK_TYPE_UNIX) {
+		sl = sizeof(max);
+		ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
+		if (ret == -1) {
+			e = errno;
+			oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
+			      strerror(e));
+		} else {
+			max -= 13;
+			/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max); */
+			if (max > 0 && max - mtu_overhead < ws->conn_mtu) {
+				oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u",
+				      max - mtu_overhead);
+				mtu_set(ws, MIN(ws->conn_mtu, max - mtu_overhead));
+			}
 		}
 	}
 
@@ -1342,19 +1344,21 @@ static int connect_handler(worker_st * ws)
 		ws->vinfo.mtu = MIN(ws->vinfo.mtu, req->base_mtu);
 	}
 
-	sl = sizeof(max);
-	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
-		      strerror(e));
-	} else {
-		max -= 13;
-		oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
-		if (max > 0 && max < ws->vinfo.mtu) {
-			oclog(ws, LOG_DEBUG,
-			      "reducing MTU due to TCP MSS to %u", max);
-			ws->vinfo.mtu = max;
+	if (ws->conn_type != SOCK_TYPE_UNIX) {
+		sl = sizeof(max);
+		ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
+		if (ret == -1) {
+			e = errno;
+			oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
+			      strerror(e));
+		} else {
+			max -= 13;
+			oclog(ws, LOG_DEBUG, "TCP MSS is %u", max);
+			if (max > 0 && max < ws->vinfo.mtu) {
+				oclog(ws, LOG_DEBUG,
+				      "reducing MTU due to TCP MSS to %u", max);
+				ws->vinfo.mtu = max;
+			}
 		}
 	}
 

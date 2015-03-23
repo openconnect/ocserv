@@ -1,6 +1,9 @@
 * Version 0.10.2 (unreleased)
 - Fixed issue with stats not being transmitted to sec-mod from workers
   Reported by jacky he.
+- Fixed race condition which caused a desync between sec-mod and main
+  communication channel, if a user was connected at the time one was
+  being added ban points.
 
 
 * Version 0.10.1 (released 2015-03-15)

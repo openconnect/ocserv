@@ -119,6 +119,7 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 
 void sec_auth_init(sec_mod_st *sec, struct perm_cfg_st *config);
 
+void handle_sec_auth_ban_ip_reply(int cfd, sec_mod_st *sec, const BanIpReplyMsg *msg);
 int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req);
 int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);
 int handle_sec_auth_session_cmd(int cfd, sec_mod_st *sec, const SecAuthSessionMsg *req, unsigned cmd);

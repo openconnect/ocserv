@@ -144,12 +144,14 @@ message ban_ip_msg
 {
 	required string ip = 1;
 	required uint32 score = 2;
+	optional bytes sid = 3; /* sec-mod sends it */
 }
 
 message ban_ip_reply_msg
 {
 	/* whether to disconnect the user */
 	required AUTH_REP reply = 1;
+	optional bytes sid = 2; /* sec-mod needs it */
 }
 
 /* Messages to and from the security module */

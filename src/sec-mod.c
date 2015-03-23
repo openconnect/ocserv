@@ -317,6 +317,22 @@ int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_
 	data.size = buffer_size;
 
 	switch (cmd) {
+	case SM_CMD_AUTH_BAN_IP_REPLY:{
+		BanIpReplyMsg *msg = NULL;
+
+		msg =
+		    ban_ip_reply_msg__unpack(&pa, data.size,
+					     data.data);
+		if (msg == NULL) {
+			seclog(sec, LOG_INFO, "error unpacking auth ban ip reply\n");
+			return -1;
+		}
+
+		handle_sec_auth_ban_ip_reply(cfd, sec, msg);
+		ban_ip_reply_msg__free_unpacked(msg, &pa);
+
+		return 0;
+	}
 	case SM_CMD_AUTH_SESSION_OPEN:
 	case SM_CMD_AUTH_SESSION_CLOSE:{
 			SecAuthSessionMsg *msg;

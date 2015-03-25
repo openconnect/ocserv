@@ -4,7 +4,8 @@ FROM fedora:21
 RUN yum install -y krb5-libs krb5-workstation 
 RUN yum install -y gnutls gnutls-utils iproute systemd
 RUN yum install -y bash net-tools nuttcp iputils openssh-clients passwd
-RUN yum install -y lz4 openconnect
+RUN yum install -y lz4
+RUN yum install -y openconnect
 
 # To be able to debug
 RUN yum install -y openssh-server strace lsof && yum clean all
@@ -23,8 +24,6 @@ ADD ca.pem /etc/
 # template, so we untar it from this archive.
 ADD dev-tun.tgz /dev/
 
-ADD openconnect /usr/sbin/
-ADD libopenconnect.so.5.1.0 /usr/lib64/
 RUN ldconfig
 
 CMD sshd-keygen;/usr/sbin/sshd;echo testuser123|kinit testuser@KERBEROS.TEST && /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem -b && sleep 5 && ping -w 5 192.168.1.1 && ping6 -w 5 fd91:6d87:7341:db6a::1 && kdestroy && ( /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem --cookieonly --non-inter || touch /tmp/ok ) ;sleep 3600

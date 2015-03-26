@@ -126,8 +126,9 @@ int handle_sec_mod_commands(main_server_st * s)
 				reply.reply =
 				    AUTH__REP__FAILED;
 			} else {
-				reply.reply =
-				    AUTH__REP__OK;
+				/* no need to send a reply at all */
+				ret = 0;
+				goto cleanup;
 			}
 
 			reply.sid.data = tmsg->sid.data;

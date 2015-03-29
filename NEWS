@@ -1,4 +1,4 @@
-* Version 0.10.2 (unreleased)
+* Version 0.10.2 (released 2015-03-29)
 - Fixed issue with stats not being transmitted to sec-mod from workers
   Reported by jacky he.
 - Fixed race condition which caused a desync between sec-mod and main

@@ -32,6 +32,8 @@ if ! test -x /usr/sbin/openconnect;then
 	exit 77
 fi
 
+OPENCONNECT=/usr/sbin/openconnect
+
 fail() {
    PID=$1
    shift;

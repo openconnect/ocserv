@@ -32,7 +32,7 @@ run_client() {
 	PASS=$1;
 	shift;
 
-	( echo $PASS | openconnect -q $HOST -u $USER --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >/dev/null 2>&1 ) ||
+	( echo $PASS | $OPENCONNECT -q $HOST -u $USER --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >/dev/null 2>&1 ) ||
 		echo "$USER: Could not connect to server"
 }
 

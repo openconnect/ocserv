@@ -31,7 +31,7 @@ launch_server -d 1 -f -c ${srcdir}/test-cookie-timeout.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-eval `echo "test" | openconnect -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie"
@@ -41,7 +41,7 @@ fi
 sleep 10
 echo ""
 echo "Connecting with cookie... "
-echo "test" | openconnect -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
 
 sleep 4
 
@@ -57,7 +57,7 @@ wait $CPID
 sleep 10
 echo ""
 echo "Connecting again with cookie... "
-echo "test" | openconnect -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
 
 sleep 4
 
@@ -73,7 +73,7 @@ wait $CPID
 sleep 10
 echo ""
 echo "Connecting after forced kill with cookie... "
-echo "test" | openconnect -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
 
 sleep 4
 
@@ -90,7 +90,7 @@ wait $CPID
 sleep 40
 echo ""
 echo "Connecting with cookie after expiration... "
-echo "test" | openconnect -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
 
 sleep 4
 
@@ -105,7 +105,7 @@ fi
 # test cookie verification after cookie verification failure. That is to verify whether
 # the channel between main and sec-mod is in consistent state.
 echo "Connecting (again) to obtain cookie... "
-echo "test" | openconnect -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
 
 if test $? != 0;then
 	fail $PID "Could not obtain cookie"

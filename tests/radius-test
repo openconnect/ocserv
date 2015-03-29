@@ -57,14 +57,14 @@ if test ! -z "$QUIT_ON_INIT";then
 fi
 
 printf "testuser\n" >pass-radius$TMP
-openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
 if test $? = 0;then
 	echo "Authentication with wrong password succeeded!"
 	stop
 fi
 
 printf "test\n" >pass-radius$TMP
-openconnect $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded!"
 	stop
@@ -72,7 +72,7 @@ fi
 
 echo "Trying with correct password"
 printf "test\n" >pass-radius$TMP
-openconnect $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP &
+$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP &
 PID=$!
 
 rm -f pass-radius$TMP

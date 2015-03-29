@@ -30,25 +30,25 @@ launch_server -d 1 -f -c test-user-group-cert-no-pass.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
-openconnect --authgroup group1 -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 &&
+$OPENCONNECT --authgroup group1 -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 &&
 	fail $PID "Connected without certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group1 (with certificate)... "
-openconnect --authgroup group1 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+$OPENCONNECT --authgroup group1 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group2 (with certificate)... "
-openconnect --authgroup group2 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+$OPENCONNECT --authgroup group2 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group3 (hidden) (with certificate)... "
-openconnect --authgroup group3 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+$OPENCONNECT --authgroup group3 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok

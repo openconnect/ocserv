@@ -30,19 +30,19 @@ launch_server -d 1 -f -c test-group-pass.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-( echo "test" | openconnect -q localhost:$PORT -u test --authgroup group1 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authgroup group1 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting to obtain cookie... "
-( echo "test" | openconnect -q localhost:$PORT -u test --authgroup group2 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authgroup group2 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting to obtain cookie... "
-( echo "test" | openconnect -q localhost:$PORT -u test --authgroup group2 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authgroup group2 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting to obtain cookie with wrong groupname... "
-( echo "test" | openconnect -q localhost:$PORT -u test --authgroup group4 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authgroup group4 --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
 kill $PID

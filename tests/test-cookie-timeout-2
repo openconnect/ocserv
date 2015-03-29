@@ -31,7 +31,7 @@ launch_server -d 1 -f -c ${srcdir}/test-cookie-timeout-2.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-eval `echo "test" | openconnect -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie"
@@ -41,7 +41,7 @@ fi
 sleep 10
 echo ""
 echo "Connecting with cookie... "
-echo "test" | openconnect -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid.$$ &
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid.$$ &
 
 sleep 4
 
@@ -56,7 +56,7 @@ rm -f "${srcdir}/pid2.$$"
 sleep 30
 echo ""
 echo "Connecting again with cookie (overriding first session)... "
-echo "test" | openconnect -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ &
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ &
 
 sleep 6
 

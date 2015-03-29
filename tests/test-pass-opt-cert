@@ -30,13 +30,13 @@ connect()
 opts=$1
 pass=$2
 COOKIE=''
-eval `echo "$pass" | openconnect -q localhost:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate`
+eval `echo "$pass" | $OPENCONNECT -q localhost:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate`
 if [ -z "$COOKIE" ];then
 	return 1
 fi
 
 rm -f $TMPFILE
-echo "$pass" | openconnect -q localhost:$PORT $opts -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pidx >$TMPFILE 2>&1 &
+echo "$pass" | $OPENCONNECT -q localhost:$PORT $opts -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pidx >$TMPFILE 2>&1 &
 CPID=$!
 
 sleep 3
@@ -85,7 +85,7 @@ fi
 echo ok
 
 #echo "Normal connection... "
-#( echo "test" | openconnect -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
 
 kill $PID

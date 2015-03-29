@@ -34,7 +34,7 @@ launch_server -d 1 -f -c test-pass-script.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie with wrong username... "
-( echo "tost" | openconnect -q localhost:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "tost" | $OPENCONNECT -q localhost:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
 rm -f ${builddir}/connect.ok
@@ -42,11 +42,11 @@ rm -f ${builddir}/disconnect.ok
 #test special characters
 
 echo "Connecting to obtain cookie... "
-( echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Re-connecting to force script run... "
-echo "!@#$%^&*()<>" | openconnect -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./bin/true >/dev/null 2>&1 &
+echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./bin/true >/dev/null 2>&1 &
 kpid=$!
 
 sleep 2

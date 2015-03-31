@@ -4,6 +4,8 @@ else
 DOCKER=/usr/bin/docker.io
 fi
 
+. ./common.sh
+
 if test -x /usr/bin/lockfile-create;then
 LOCKFILE="lockfile-create docker"
 UNLOCKFILE="lockfile-remove docker"

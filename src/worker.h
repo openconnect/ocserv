@@ -102,6 +102,7 @@ typedef struct dtls_ciphersuite_st {
 	unsigned gnutls_cipher;
 	unsigned gnutls_mac;
 	unsigned gnutls_version;
+	const char *txt_version;
 } dtls_ciphersuite_st;
 
 #ifdef HAVE_GSSAPI

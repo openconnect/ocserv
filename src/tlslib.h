@@ -27,6 +27,10 @@
 #include <ccan/htable/htable.h>
 #include <errno.h>
 
+# if GNUTLS_VERSION_NUMBER < 0x030200
+#  define GNUTLS_DTLS1_2 202
+# endif
+
 typedef struct 
 {
 	struct htable *ht;

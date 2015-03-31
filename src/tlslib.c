@@ -834,9 +834,6 @@ size_t tls_get_overhead(gnutls_protocol_t version, gnutls_cipher_algorithm_t cip
 #if GNUTLS_VERSION_NUMBER >= 0x030207
 	return gnutls_est_record_overhead_size(version, cipher, mac, GNUTLS_COMP_NULL, 0);
 #else
-# if GNUTLS_VERSION_NUMBER < 0x030200
-#  define GNUTLS_DTLS1_2 202
-# endif
 unsigned overhead = 0, t;
 unsigned block_size;
 	block_size = gnutls_cipher_get_block_size(cipher);

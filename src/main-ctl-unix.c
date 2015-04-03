@@ -623,16 +623,6 @@ static void method_unban_ip(method_ctx *ctx,
 	return;
 }
 
-static void terminate_proc(main_server_st *s, proc_st *proc)
-{
-	/* if it has an IP, send a signal so that we cleanup
-	 * and get stats properly */
-	if (proc->pid != -1 && proc->pid != 0)
-                kill(proc->pid, SIGTERM);
-	else
-		remove_proc(s, proc, 1);
-}
-
 static void method_disconnect_user_name(method_ctx *ctx,
 					int cfd, uint8_t * msg,
 					unsigned msg_size)

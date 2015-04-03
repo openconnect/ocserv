@@ -1314,13 +1314,17 @@ int ctl_handler_init(main_server_st * s)
 	dbus_error_init(&err);
 
 	conn = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
-	if (conn == NULL)
+	if (conn == NULL) {
+		mslog(s, NULL, LOG_DEBUG, "error initializing DBUS connection");
 		goto error;
+	}
 
 	ret = dbus_bus_request_name(conn, OCSERV_DBUS_NAME,
 				    DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
-	if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
+	if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+		mslog(s, NULL, LOG_DEBUG, "error requesting DBUS name");
 		goto error;
+	}
 
 	ctx->conn = conn;
 	s->ctl_ctx = ctx;
@@ -1328,8 +1332,10 @@ int ctl_handler_init(main_server_st * s)
 	if (!dbus_connection_set_watch_functions(conn,
 						 add_watch, remove_watch,
 						 toggle_watch, ctx, NULL)) {
+		mslog(s, NULL, LOG_DEBUG, "error setting DBUS watchers");
 		goto error;
 	}
+	mslog(s, NULL, LOG_DEBUG, "initialized DBUS connection");
 
 
 	return 0;

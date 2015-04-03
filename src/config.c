@@ -794,6 +794,8 @@ unsigned urlfw_size = 0;
 		READ_TF("use-occtl", config->use_occtl, 0);
 		if (config->use_occtl == 0)
 			config->use_dbus = 0;
+		else
+			config->use_dbus = 1;
 	}
 
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);

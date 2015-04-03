@@ -96,8 +96,10 @@ typedef struct {
 #define ENTRY(name, iface, desc, func) \
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
-#define LIST_USERS_SIG "(issssssssusssss)"
-#define LIST_SINGLE_USER_SIG "(issssssssusssssssuuuasasasasas)"
+#define COMMON_USERS_SIG       "issssssssusssss"
+
+#define LIST_USERS_SIG       "("COMMON_USERS_SIG")"
+#define LIST_SINGLE_USER_SIG "("COMMON_USERS_SIG"ssuuuasasasasas)"
 #define LIST_BANNED_SIG "(usu)"
 
 #define DESC_LIST \

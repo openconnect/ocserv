@@ -502,7 +502,7 @@ Summary of build options:
 
 AC_MSG_NOTICE([
 
-Experimental (not recommended) options:
+Options for specific systems:
   dbus:                 ${dbus_enabled}
 ])
 

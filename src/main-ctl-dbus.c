@@ -688,6 +688,7 @@ static int append_ban_info(main_server_st *s,
 {
 	DBusMessageIter subs;
 	dbus_uint32_t t;
+	char *ip;
 
 	if (dbus_message_iter_open_container
 	    (suba, DBUS_TYPE_STRUCT, NULL, &subs) == 0) {
@@ -702,7 +703,8 @@ static int append_ban_info(main_server_st *s,
 		return -1;
 	}
 
-	if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &e->ip) == 0) {
+	ip = e->ip;
+	if (dbus_message_iter_append_basic(&subs, DBUS_TYPE_STRING, &ip) == 0) {
 		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
 		return -1;
 	}
@@ -765,8 +767,6 @@ static void method_list_banned(main_server_st * s, struct dbus_ctx *ctx,
 		}
 		e = htable_next(db, &iter);
 	}
-
-
 
 	if (dbus_message_iter_close_container(&args, &suba) == 0) {
 		mslog(s, NULL, LOG_ERR,

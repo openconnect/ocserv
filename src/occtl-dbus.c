@@ -624,14 +624,14 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 {
 	DBusMessage *msg;
 	DBusMessageIter args, suba, subs;
-	dbus_int32_t expires = 0;
+	dbus_uint32_t expires = 0;
 	char *ip = "";
-	dbus_int32_t score = 0;
+	dbus_uint32_t score = 0;
 	time_t t;
 	struct tm *tm;
 	int ret = 1;
 	char str_since[64];
-	unsigned iteration = 0;
+	unsigned i = 0;
 	FILE *out;
 
 	ip_entries_clear();
@@ -653,14 +653,14 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 
 	dbus_message_iter_recurse(&args, &suba);
 
-	for (;;) {
+	for (i=0;;i++) {
 		if (dbus_message_iter_get_arg_type(&suba) != DBUS_TYPE_STRUCT)
 			goto cleanup;
 		dbus_message_iter_recurse(&suba, &subs);
 
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_INT32)
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &expires);
+		dbus_message_iter_get_basic(&subs, &score);
 
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
@@ -672,10 +672,9 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
-		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_INT32)
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
 			goto error_parse;
-		dbus_message_iter_get_basic(&subs, &score);
-
+		dbus_message_iter_get_basic(&subs, &expires);
 
 		if (points == 0) {
 			if (expires > 0) {
@@ -683,11 +682,11 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 				tm = localtime(&t);
 				strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 			} else {
-				continue;
+				goto cont;
 			}
 
 			/* add header */
-			if (iteration == 0) {
+			if (i == 0) {
 				fprintf(out, "%14s %14s %30s\n",
 					"IP", "score", "expires");
 			}
@@ -695,7 +694,7 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 			print_time_ival7(t, time(0), out);
 			fputs(")\n", out);
 		} else {
-			if (iteration == 0) {
+			if (i == 0) {
 				fprintf(out, "%14s %14s\n",
 					"IP", "score");
 			}
@@ -704,8 +703,10 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 				ip, (unsigned)score);
 		}
 
-		iteration++;
 		ip_entries_add(ctx, ip, strlen(ip));
+ cont:
+		if (!dbus_message_iter_next(&suba))
+			break;
 	}
 
 	ret = 0;

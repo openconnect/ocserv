@@ -842,9 +842,9 @@ static void single_info_common(main_server_st * s, struct dbus_ctx *ctx,
 	struct proc_st *ctmp = NULL;
 
 	if (user != NULL)
-		mslog(s, NULL, LOG_INFO, "providing info for user '%s'", user);
+		mslog(s, NULL, LOG_DEBUG, "providing info for user '%s'", user);
 	else
-		mslog(s, NULL, LOG_INFO, "providing info for ID '%u'", id);
+		mslog(s, NULL, LOG_DEBUG, "providing info for ID '%u'", id);
 
 	/* no arguments needed */
 	reply = dbus_message_new_method_return(msg);
@@ -906,10 +906,10 @@ static void single_info_common(main_server_st * s, struct dbus_ctx *ctx,
 
 	if (found_user == 0) {
 		if (user != NULL)
-			mslog(s, NULL, LOG_INFO, "could not find user '%s'",
+			mslog(s, NULL, LOG_DEBUG, "could not find user '%s'",
 			      user);
 		else
-			mslog(s, NULL, LOG_INFO, "could not find ID '%u'", id);
+			mslog(s, NULL, LOG_DEBUG, "could not find ID '%u'", id);
 	}
 
 	if (!dbus_connection_send(ctx->conn, reply, NULL)) {
@@ -1266,7 +1266,7 @@ static void ctl_handle_commands(main_server_st * s, struct ctl_handler_st *ctl)
 
 		for (i = 0;; i++) {
 			if (methods[i].name == NULL) {
-				mslog(s, NULL, LOG_INFO,
+				mslog(s, NULL, LOG_DEBUG,
 				      "unknown D-BUS message: %s.%s: %s",
 				      dbus_message_get_interface(msg),
 				      dbus_message_get_member(msg),

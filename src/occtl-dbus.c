@@ -91,7 +91,7 @@ int handle_status_cmd(dbus_ctx *ctx, const char *arg)
 	dbus_bool_t status;
 	dbus_uint32_t pid;
 	dbus_uint32_t sec_mod_pid;
-	dbus_uint32_t clients;
+	dbus_uint32_t clients, stored_tls_sessions, banned_ips;
 
 	msg = send_dbus_cmd(ctx, "org.infradead.ocserv",
 			    "/org/infradead/ocserv",
@@ -128,12 +128,22 @@ int handle_status_cmd(dbus_ctx *ctx, const char *arg)
 		goto error_parse;
 	dbus_message_iter_get_basic(&args, &clients);
 
+	if (DBUS_TYPE_UINT32 != dbus_message_iter_get_arg_type(&args))
+		goto error_parse;
+	dbus_message_iter_get_basic(&args, &stored_tls_sessions);
+
+	if (DBUS_TYPE_UINT32 != dbus_message_iter_get_arg_type(&args))
+		goto error_parse;
+	dbus_message_iter_get_basic(&args, &banned_ips);
+
 	printf("OpenConnect SSL VPN server\n");
-	printf("     Status: %s\n", status != 0 ? "online" : "error");
-	printf("    Clients: %u\n", (unsigned)clients);
+	printf("           Status: %s\n", status != 0 ? "online" : "error");
+	printf("          Clients: %u\n", (unsigned)clients);
+	printf("  IPs in ban list: %u\n", (unsigned)banned_ips);
+	printf("   TLS DB entries: %u\n", (unsigned)stored_tls_sessions);
 	printf("\n");
-	printf(" Server PID: %u\n", (unsigned)pid);
-	printf("Sec-mod PID: %u\n", (unsigned)sec_mod_pid);
+	printf("       Server PID: %u\n", (unsigned)pid);
+	printf("      Sec-mod PID: %u\n", (unsigned)sec_mod_pid);
 
 	dbus_message_unref(msg);
 

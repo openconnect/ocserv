@@ -155,6 +155,8 @@ typedef struct {
 		"      <arg name=\"pid\" direction=\"out\" type=\"u\"/>\n" \
 		"      <arg name=\"sec-mod-pid\" direction=\"out\" type=\"u\"/>\n" \
 		"      <arg name=\"clients\" direction=\"out\" type=\"u\"/>\n" \
+		"      <arg name=\"tls-sessions\" direction=\"out\" type=\"u\"/>\n" \
+		"      <arg name=\"banned-ips\" direction=\"out\" type=\"u\"/>\n" \
 		"    </method>\n"
 
 static const ctl_method_st methods[] = {
@@ -297,6 +299,17 @@ static void method_status(main_server_st * s, struct dbus_ctx *ctx,
 	}
 
 	tmp = s->active_clients;
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &tmp) == 0) {
+		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		goto error;
+	}
+
+	tmp = s->tls_db.entries;
+	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &tmp) == 0) {
+		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
+		goto error;
+	}
+
 	if (dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &tmp) == 0) {
 		mslog(s, NULL, LOG_ERR, "error appending to dbus reply");
 		goto error;

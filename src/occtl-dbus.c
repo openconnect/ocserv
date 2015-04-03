@@ -1053,6 +1053,12 @@ int common_info_cmd(DBusMessageIter * args)
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
+		if ((r = print_list_entries(out, "\tNo-routes:", &subs)) < 0)
+			goto error_parse;
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
 		if (print_list_entries(out, "\tiRoutes:", &subs) < 0)
 			goto error_parse;
 

@@ -97,7 +97,7 @@ typedef struct {
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
 #define LIST_USERS_SIG "(issssssssusssss)"
-#define LIST_SINGLE_USER_SIG "(issssssssusssssssuuuasasasas)"
+#define LIST_SINGLE_USER_SIG "(issssssssusssssssuuuasasasasas)"
 #define LIST_BANNED_SIG "(usu)"
 
 #define DESC_LIST \
@@ -627,6 +627,17 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 		} else {
 			list = s->config->network.routes;
 			list_size = s->config->network.routes_size;
+		}
+		ret = append_list(subs, list, list_size);
+		if (ret < 0)
+			return ret;
+
+		if (ctmp->config.no_routes_size > 0) {
+			list = ctmp->config.no_routes;
+			list_size = ctmp->config.no_routes_size;
+		} else {
+			list = s->config->network.no_routes;
+			list_size = s->config->network.no_routes_size;
 		}
 		ret = append_list(subs, list, list_size);
 		if (ret < 0)

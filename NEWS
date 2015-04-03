@@ -2,6 +2,8 @@
 - Detection of gnutls capabilities was made dynamic. That would allow
   the server to be compiled with old gnutls version but still use new
   functionality when linked with a newer version.
+- The DBUS communication channel with occtl was brough up in par
+  with the unix socket based one.
 - sec-mod: Do not impose timeouts on reads from main. That would prevent
   issues when reading in a very busy system.
 

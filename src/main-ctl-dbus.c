@@ -1058,7 +1058,7 @@ static void method_disconnect_user_name(main_server_st * s,
 	/* got the name. Try to disconnect */
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (strcmp(ctmp->username, name) == 0) {
-			remove_proc(s, ctmp, 1);
+			terminate_proc(s, ctmp);
 			status = 1;
 		}
 	}
@@ -1117,7 +1117,7 @@ static void method_disconnect_user_id(main_server_st * s, struct dbus_ctx *ctx,
 	/* got the ID. Try to disconnect */
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid == id) {
-			remove_proc(s, ctmp, 1);
+			terminate_proc(s, ctmp);
 			status = 1;
 			if (id != -1)
 				break;

@@ -782,7 +782,7 @@ int common_info_cmd(DBusMessageIter * args)
 {
 	DBusMessageIter suba, subs;
 	dbus_int32_t id = 0;
-	dbus_uint32_t rx = 0, tx = 0;
+	dbus_uint32_t rx = 0, tx = 0, mtu = 0;
 	char *username = "";
 	dbus_uint32_t since = 0;
 	char *groupname = "", *ip = "";
@@ -796,6 +796,7 @@ int common_info_cmd(DBusMessageIter * args)
 	FILE *out;
 	unsigned at_least_one = 0;
 	const char *dtls_ciphersuite, *tls_ciphersuite;
+	char *cstp_compr = "", *dtls_compr = "";
 	int ret = 1, r;
 
 	out = pager_start();
@@ -925,6 +926,27 @@ int common_info_cmd(DBusMessageIter * args)
 		if (!dbus_message_iter_next(&subs))
 			goto error_recv;
 
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &cstp_compr);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_STRING)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &dtls_compr);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
+		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
+			goto error_parse;
+		dbus_message_iter_get_basic(&subs, &mtu);
+
+		if (!dbus_message_iter_next(&subs))
+			goto error_recv;
+
 		if (dbus_message_iter_get_arg_type(&subs) != DBUS_TYPE_UINT32)
 			goto error_parse;
 		dbus_message_iter_get_basic(&subs, &rx);
@@ -962,11 +984,14 @@ int common_info_cmd(DBusMessageIter * args)
 			fprintf(out, "P-t-P IPv6: %s\n", vpn_ptp_ipv6);
 		}
 		fprintf(out, "\tDevice: %s  ", device);
+		if (mtu > 0) {
+			fprintf(out, "MTU: %u\n", (unsigned)mtu);
+		} else {
+			fprintf(out, "MTU: (unknown)\n");
+		}
 
 		if (user_agent != NULL && user_agent[0] != 0)
-			fprintf(out, "User-Agent: %s\n", user_agent);
-		else
-			fprintf(out, "\n");
+			fprintf(out, "\tUser-Agent: %s\n", user_agent);
 
 		if (rx > 0 || tx > 0) {
 			/* print limits */
@@ -999,6 +1024,11 @@ int common_info_cmd(DBusMessageIter * args)
 		fprintf(out, "\tTLS ciphersuite: %s\n", tls_ciphersuite);
 		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0)
 			fprintf(out, "\tDTLS cipher: %s\n", dtls_ciphersuite);
+
+		if (cstp_compr != NULL && cstp_compr[0] != 0)
+			fprintf(out, "\tCSTP compression: %s\n", cstp_compr);
+		if (dtls_compr != NULL && dtls_compr[0] != 0)
+			fprintf(out, "\tDTLS compression: %s\n", dtls_compr);
 
 		/* user network info */
 		fputs("\n", out);

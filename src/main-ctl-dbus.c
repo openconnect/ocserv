@@ -97,7 +97,7 @@ typedef struct {
 	{name, sizeof(name)-1, iface, sizeof(iface)-1, desc, sizeof(desc)-1, func}
 
 #define LIST_USERS_SIG "(issssssssusssss)"
-#define LIST_SINGLE_USER_SIG "(issssssssusssssuuasasasas)"
+#define LIST_SINGLE_USER_SIG "(issssssssusssssssuuuasasasas)"
 #define LIST_BANNED_SIG "(usu)"
 
 #define DESC_LIST \
@@ -559,7 +559,26 @@ static int append_user_info(main_server_st * s, DBusMessageIter * subs,
 		return -1;
 	}
 
+
 	if (single > 0) {
+		strtmp = ctmp->cstp_compr;
+		if (dbus_message_iter_append_basic
+		    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			return -1;
+		}
+
+		strtmp = ctmp->dtls_compr;
+		if (dbus_message_iter_append_basic
+		    (subs, DBUS_TYPE_STRING, &strtmp) == 0) {
+			return -1;
+		}
+
+		tmp = ctmp->mtu;
+		if (dbus_message_iter_append_basic
+		    (subs, DBUS_TYPE_UINT32, &tmp) == 0) {
+			return -1;
+		}
+
 		if (ctmp->config.rx_per_sec > 0)
 			tmp = ctmp->config.rx_per_sec;
 		else

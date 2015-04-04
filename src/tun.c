@@ -475,6 +475,20 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
 	}
 
+#ifdef TUNSIFHEAD
+	{
+		int i = 1;
+
+		ret = ioctl(tunfd, TUNSIFHEAD, &i);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNSIFHEAD: %s\n",
+			      proc->tun_lease.name, strerror(e));
+			goto fail;
+		}
+	}
+#endif /* TUNSIFHEAD */
+
 	set_cloexec_flag(tunfd, 1);
 #endif
 

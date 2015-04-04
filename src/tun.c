@@ -345,38 +345,38 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 #ifndef __linux__
 static int bsd_open_tun(void)
 {
-        int fd;
-        int s;
+	int fd;
+	int s;
 	char tun_name[80];
-        struct ifreq ifr;
+	struct ifreq ifr;
 	int unit_nr = 0;
 
-        fd = open("/dev/tun", O_RDWR);
-        if (fd == -1) {
-        	/* try iterating */
+	fd = open("/dev/tun", O_RDWR);
+	if (fd == -1) {
+		/* try iterating */
 		for (unit_nr = 0; unit_nr < 255; unit_nr++) {
 			snprintf(tun_name, sizeof(tun_name), "/dev/tun%d", unit_nr);
 			fd = open(tun_name, O_RDWR);
 # ifdef SIOCIFCREATE
 			if (fd == -1) {
 				/* cannot open tunXX, try creating it */
-		                s = socket(AF_INET, SOCK_DGRAM, 0);
-		                if (s < 0)
-		                        return -1;
+				s = socket(AF_INET, SOCK_DGRAM, 0);
+				if (s < 0)
+					return -1;
 
-		                memset(&ifr, 0, sizeof(ifr));
-		                strncpy(ifr.ifr_name, tun_name + 5, sizeof(ifr.ifr_name) - 1);
-		                if (!ioctl(s, SIOCIFCREATE, &ifr))
-                		        fd = open(tun_name, O_RDWR);
-		                close(s);
+				memset(&ifr, 0, sizeof(ifr));
+				strncpy(ifr.ifr_name, tun_name + 5, sizeof(ifr.ifr_name) - 1);
+				if (!ioctl(s, SIOCIFCREATE, &ifr))
+					fd = open(tun_name, O_RDWR);
+				close(s);
 			}
 # endif
 			if (fd >= 0)
 				break;
 		}
-        }
+	}
 
-        return fd;
+	return fd;
 }
 #endif
 

@@ -533,7 +533,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	return;
 }
 
-#if defined(__OpenBSD__) && defined(TUNSIFHEAD)
+#if defined(__OpenBSD__) || defined(TUNSIFHEAD)
 # define TUN_AF_PREFIX 1
 #endif
 ssize_t tun_write(int sockfd, const void *buf, size_t len)

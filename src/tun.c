@@ -513,7 +513,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	if (proc->tun_lease.name[0] != 0) {
 		fd = socket(AF_INET, SOCK_DGRAM, 0);
 		if (fd == -1)
-			return -1;
+			return;
 
 		memset(&ifr, 0, sizeof(struct ifreq));
 		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);

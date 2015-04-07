@@ -1182,6 +1182,8 @@ static void method_introspect(main_server_st * s, struct dbus_ctx *ctx,
 	}
 
 	for (i = 0; methods[i].name != NULL; i++) {
+		if (methods[i].desc == NULL) continue;
+
 		ret =
 		    str_append_data(&buf, methods[i].desc,
 				    methods[i].desc_size);

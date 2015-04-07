@@ -325,7 +325,7 @@ int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_
 					     data.data);
 		if (msg == NULL) {
 			seclog(sec, LOG_INFO, "error unpacking auth ban ip reply\n");
-			return -1;
+			return ERR_BAD_COMMAND;
 		}
 
 		handle_sec_auth_ban_ip_reply(cfd, sec, msg);
@@ -342,7 +342,7 @@ int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_
 						      data.data);
 			if (msg == NULL) {
 				seclog(sec, LOG_INFO, "error unpacking session close\n");
-				return -1;
+				return ERR_BAD_COMMAND;
 			}
 
 			ret = handle_sec_auth_session_cmd(cfd, sec, msg, cmd);

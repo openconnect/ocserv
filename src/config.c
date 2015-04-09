@@ -989,14 +989,14 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 		exit(1);
 	}
 
-	if (perm_config->auth[0].type & AUTH_TYPE_CERTIFICATE) {
+	if (perm_config->auth[0].type & AUTH_TYPE_CERTIFICATE && perm_config->auth_methods == 1) {
 		if (perm_config->config->cisco_client_compat == 0)
 			perm_config->config->cert_req = GNUTLS_CERT_REQUIRE;
 		else
 			perm_config->config->cert_req = GNUTLS_CERT_REQUEST;
 	} else {
 		unsigned i;
-		for (i=1;i<perm_config->auth_methods;i++) {
+		for (i=0;i<perm_config->auth_methods;i++) {
 			if (perm_config->auth[i].type & AUTH_TYPE_CERTIFICATE) {
 				perm_config->config->cert_req = GNUTLS_CERT_REQUEST;
 				break;

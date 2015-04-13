@@ -105,6 +105,8 @@ struct ip_lease_st t;
 
 void steal_ip_leases(struct proc_st* proc, struct proc_st *thief)
 {
+	reset_tun(proc);
+
 	thief->ipv4 = talloc_move(thief, &proc->ipv4);
 	thief->ipv6 = talloc_move(thief, &proc->ipv6);
 }

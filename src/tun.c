@@ -547,6 +547,52 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	return;
 }
 
+void reset_tun(struct proc_st* proc)
+{
+	if (proc->tun_lease.name[0] != 0) {
+#ifdef SIOCDIFADDR
+		if (proc->ipv4 && proc->ipv4->lip_len > 0) {
+			int fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+			if (fd >= 0) {
+				struct ifreq ifr;
+
+				memset(&ifr, 0, sizeof(ifr));
+				strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+
+				memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
+				ifr.ifr_addr.sa_len = sizeof(struct sockaddr_in);
+				ifr.ifr_addr.sa_family = AF_INET;
+
+				ioctl(fd, SIOCDIFADDR, &ifr);
+				close(fd);
+			}
+		}
+#endif
+
+#ifdef SIOCDIFADDR_IN6
+		if (proc->ipv6 && proc->ipv6->lip_len > 0) {
+			int fd = socket(AF_INET6, SOCK_DGRAM, 0);
+
+			if (fd >= 0) {
+				struct in6_ifreq ifr6;
+
+				memset(&ifr6, 0, sizeof(ifr6));
+				strlcpy(ifr6.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+
+				memcpy(&ifr6.ifr_addr.sin6_addr, SA_IN6_P(&proc->ipv6->lip),
+					SA_IN_SIZE(proc->ipv6->lip_len));
+				ifr6.ifr_addr.sin6_len = sizeof(struct sockaddr_in6);
+				ifr6.ifr_addr.sin6_family = AF_INET6;
+
+				ioctl(fd, SIOCDIFADDR_IN6, &ifr6);
+				close(fd);
+			}
+		}
+#endif
+	}
+}
+
 #if defined(__OpenBSD__) || defined(TUNSIFHEAD)
 # define TUN_AF_PREFIX 1
 #endif

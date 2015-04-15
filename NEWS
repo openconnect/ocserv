@@ -4,7 +4,7 @@
   functionality when linked with a newer version.
 - The DBUS communication channel with occtl was brough up in par
   with the unix socket based one.
-- Fixed issue with FreeBSD tun device handling. Report and patch
+- Fixed issues with FreeBSD tun device handling. Reports and patches
   by Brian Chu.
 - sec-mod: Do not impose timeouts on reads from main. That would prevent
   issues when reading in a very busy system.

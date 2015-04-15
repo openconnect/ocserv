@@ -550,7 +550,7 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 void reset_tun(struct proc_st* proc)
 {
 	if (proc->tun_lease.name[0] != 0) {
-#ifdef SIOCDIFADDR
+#if defined(SIOCDIFADDR) && !defined(__linux__)
 		if (proc->ipv4 && proc->ipv4->lip_len > 0) {
 			int fd = socket(AF_INET, SOCK_DGRAM, 0);
 

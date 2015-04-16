@@ -121,6 +121,9 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	rt6.rtmsg_dst_len = 128;
 	rt6.rtmsg_metric = 1;
 
+	/* the ioctl() parameters in linux for ipv6 are
+	 * well hidden. For that one we use SIOCADDRT as
+	 * in busybox. */
 	ret = ioctl(fd, SIOCADDRT, &rt6);
 	if (ret != 0) {
 		e = errno;

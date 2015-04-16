@@ -632,29 +632,49 @@ void close_tun(main_server_st * s, struct proc_st *proc)
 	return;
 }
 
+static void reset_ipv4_addr(struct proc_st *proc)
+{
+	int fd;
+
+	if (proc->ipv4 == NULL || proc->ipv4->lip_len == 0)
+		return;
+	
+#if defined(SIOCDIFADDR) && !defined(__linux__)
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	if (fd >= 0) {
+		struct ifreq ifr;
+
+		memset(&ifr, 0, sizeof(ifr));
+		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+
+		memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
+		ifr.ifr_addr.sa_len = sizeof(struct sockaddr_in);
+		ifr.ifr_addr.sa_family = AF_INET;
+
+		ioctl(fd, SIOCDIFADDR, &ifr);
+		close(fd);
+	}
+#elif defined(__linux__)
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd >= 0) {
+		struct ifreq ifr;
+
+		strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+		memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
+		ifr.ifr_addr.sa_family = AF_INET;
+
+		ioctl(fd, SIOCDIFADDR, &ifr);
+
+		close(fd);
+	}
+#endif
+}
+
 void reset_tun(struct proc_st* proc)
 {
 	if (proc->tun_lease.name[0] != 0) {
-#if defined(SIOCDIFADDR) && !defined(__linux__)
-		if (proc->ipv4 && proc->ipv4->lip_len > 0) {
-			int fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-			if (fd >= 0) {
-				struct ifreq ifr;
-
-				memset(&ifr, 0, sizeof(ifr));
-				strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
-
-				memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
-				ifr.ifr_addr.sa_len = sizeof(struct sockaddr_in);
-				ifr.ifr_addr.sa_family = AF_INET;
-
-				ioctl(fd, SIOCDIFADDR, &ifr);
-				close(fd);
-			}
-		}
-#endif
-
+		reset_ipv4_addr(proc);
 		reset_ipv6_addr(proc);
 	}
 }

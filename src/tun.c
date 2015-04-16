@@ -151,6 +151,61 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	return ret;
 }
+
+static void reset_ipv6_addr(struct proc_st *proc)
+{
+	int fd, ret;
+	struct in6_ifreq ifr6;
+	struct in6_rtmsg rt6;
+	struct ifreq ifr;
+	unsigned idx;
+
+	if (proc->ipv6 == NULL || proc->ipv6->lip_len == 0)
+		return;
+
+	fd = socket(AF_INET6, SOCK_STREAM, 0);
+	if (fd == -1) {
+		return;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+
+	ret = ioctl(fd, SIOGIFINDEX, &ifr);
+	if (ret != 0) {
+		goto cleanup;
+	}
+
+	idx = ifr.ifr_ifindex;
+
+	memset(&ifr6, 0, sizeof(ifr6));
+	memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip),
+	       SA_IN_SIZE(proc->ipv6->lip_len));
+	ifr6.ifr6_ifindex = idx;
+	ifr6.ifr6_prefixlen = 128;
+
+	ret = ioctl(fd, SIOCDIFADDR, &ifr6);
+	if (ret != 0) {
+		goto cleanup;
+	}
+
+	/* route to our remote address */
+	memset(&rt6, 0, sizeof(rt6));
+	memcpy(&rt6.rtmsg_dst, SA_IN6_P(&proc->ipv6->rip),
+	       SA_IN_SIZE(proc->ipv6->rip_len));
+	rt6.rtmsg_ifindex = idx;
+	rt6.rtmsg_dst_len = 128;
+	rt6.rtmsg_metric = 1;
+
+	ret = ioctl(fd, SIOCDELRT, &rt6);
+	if (ret != 0) {
+		goto cleanup;
+	}
+
+ cleanup:
+	close(fd);
+}
+
 #elif defined(SIOCAIFADDR_IN6)
 
 #include <netinet6/nd6.h>
@@ -220,11 +275,41 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 
 	return ret;
 }
+
+static void reset_ipv6_addr(struct proc_st *proc)
+{
+	struct in6_ifreq ifr6;
+	int fd;
+
+	if (proc->ipv6 == NULL || proc->ipv6->lip_len == 0)
+		return;
+
+	fd = socket(AF_INET6, SOCK_DGRAM, 0);
+
+	if (fd >= 0) {
+		memset(&ifr6, 0, sizeof(ifr6));
+		strlcpy(ifr6.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+
+		memcpy(&ifr6.ifr_addr.sin6_addr, SA_IN6_P(&proc->ipv6->lip),
+			SA_IN_SIZE(proc->ipv6->lip_len));
+		ifr6.ifr_addr.sin6_len = sizeof(struct sockaddr_in6);
+		ifr6.ifr_addr.sin6_family = AF_INET6;
+
+		ioctl(fd, SIOCDIFADDR_IN6, &ifr6);
+		close(fd);
+	}
+}
+
 #else
 #warning "No IPv6 support on this platform"
 static int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 {
 	return -1;
+}
+
+static void reset_ipv6_addr(struct proc_st *proc)
+{
+	return;
 }
 
 #endif
@@ -570,26 +655,7 @@ void reset_tun(struct proc_st* proc)
 		}
 #endif
 
-#ifdef SIOCDIFADDR_IN6
-		if (proc->ipv6 && proc->ipv6->lip_len > 0) {
-			int fd = socket(AF_INET6, SOCK_DGRAM, 0);
-
-			if (fd >= 0) {
-				struct in6_ifreq ifr6;
-
-				memset(&ifr6, 0, sizeof(ifr6));
-				strlcpy(ifr6.ifr_name, proc->tun_lease.name, IFNAMSIZ);
-
-				memcpy(&ifr6.ifr_addr.sin6_addr, SA_IN6_P(&proc->ipv6->lip),
-					SA_IN_SIZE(proc->ipv6->lip_len));
-				ifr6.ifr_addr.sin6_len = sizeof(struct sockaddr_in6);
-				ifr6.ifr_addr.sin6_family = AF_INET6;
-
-				ioctl(fd, SIOCDIFADDR_IN6, &ifr6);
-				close(fd);
-			}
-		}
-#endif
+		reset_ipv6_addr(proc);
 	}
 }
 

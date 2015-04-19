@@ -6,6 +6,8 @@
   with the unix socket based one.
 - Fixed issues with FreeBSD tun device handling. Reports and patches
   by Brian Chu.
+- When multiple authentication methods are set and the primary includes
+  a certificate, no longer require a certificate for all clients.
 - sec-mod: Do not impose timeouts on reads from main. That would prevent
   issues when reading in a very busy system.
 

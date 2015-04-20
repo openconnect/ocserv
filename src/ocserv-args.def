@@ -218,6 +218,8 @@ dpd = 90
 mobile-dpd = 1800
 
 # MTU discovery (DPD must be enabled)
+# If set, this forces all UDP packets to carry the don't fragment 
+# (DF) bit.
 try-mtu-discovery = false
 
 # The key and the certificates of the server

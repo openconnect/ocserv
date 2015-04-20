@@ -8,6 +8,7 @@
   by Brian Chu.
 - When multiple authentication methods are set and the primary includes
   a certificate, no longer require a certificate for all clients.
+- When receiving non-minimal DPD messages, reflect their contents.
 - sec-mod: Do not impose timeouts on reads from main. That would prevent
   issues when reading in a very busy system.
 

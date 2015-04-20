@@ -265,7 +265,7 @@ struct proc_st *old_proc;
 			kill(old_proc->pid, SIGTERM);
 		mslog(s, proc, LOG_INFO, "resumed cookie session for user '%s' (using %s)", proc->username, proc->tls_ciphersuite);
 	} else {
-		mslog(s, proc, LOG_INFO, "new cookie session for user '%s' (using %s)", proc->username, proc->tls_ciphersuite);
+		mslog(s, proc, LOG_INFO, "new cookie session for user '%s'", proc->username);
 	}
 
 	if (cmsg->hostname)

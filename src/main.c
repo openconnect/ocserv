@@ -432,7 +432,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 /* Sets the options needed in the UDP socket we forward to
  * worker */
 static
-void set_worker_udp_opts(int fd, int family)
+void set_worker_udp_opts(main_server_st *s, int fd, int family)
 {
 int y;
 
@@ -449,15 +449,17 @@ int y;
 	y = 1;
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
 
+	if (s->config->try_mtu) {
 #if defined(IP_DONTFRAG)
-	y = 1;
-	setsockopt(fd, IPPROTO_IP, IP_DONTFRAG,
-		       (const void *) &y, sizeof(y));
+		y = 1;
+		setsockopt(fd, IPPROTO_IP, IP_DONTFRAG,
+			       (const void *) &y, sizeof(y));
 #elif defined(IP_MTU_DISCOVER)
-	y = IP_PMTUDISC_DO;
-	setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
-		       (const void *) &y, sizeof(y));
+		y = IP_PMTUDISC_DO;
+		setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
+			       (const void *) &y, sizeof(y));
 #endif
+	}
 	set_cloexec_flag (fd, 1);
 
 	return;
@@ -767,7 +769,7 @@ int sfd = -1;
 			goto fail;
 		}
 
-		set_worker_udp_opts(sfd, listener->family);
+		set_worker_udp_opts(s, sfd, listener->family);
 
 		if (our_addr_size > 0) {
 			ret = bind(sfd, (struct sockaddr *)&our_addr, our_addr_size);

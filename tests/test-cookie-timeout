@@ -41,7 +41,7 @@ fi
 sleep 10
 echo ""
 echo "Connecting with cookie... "
-echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ --background
 
 sleep 4
 
@@ -52,12 +52,11 @@ fi
 CPID=`cat ${srcdir}/pid1.$$`
 kill $CPID
 rm -f "${srcdir}/pid1.$$"
-wait $CPID
 
 sleep 10
 echo ""
 echo "Connecting again with cookie... "
-echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ --background
 
 sleep 4
 
@@ -68,12 +67,11 @@ fi
 CPID=`cat ${srcdir}/pid1.$$`
 kill -9 $CPID
 rm -f "${srcdir}/pid1.$$"
-wait $CPID
 
 sleep 10
 echo ""
 echo "Connecting after forced kill with cookie... "
-echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ --background
 
 sleep 4
 
@@ -84,13 +82,12 @@ fi
 CPID=`cat ${srcdir}/pid1.$$`
 kill $CPID
 rm -f "${srcdir}/pid1.$$"
-wait $CPID
 
 
 sleep 40
 echo ""
 echo "Connecting with cookie after expiration... "
-echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ &
+echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ --background
 
 sleep 4
 
@@ -99,7 +96,6 @@ if [ -f ${srcdir}/pid1.$$ ];then
 	CPID=`cat ${srcdir}/pid1.$$`
 	kill $CPID
 	rm -f "${srcdir}/pid1.$$"
-	wait $CPID
 fi
 
 # test cookie verification after cookie verification failure. That is to verify whether

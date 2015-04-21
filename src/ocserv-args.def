@@ -825,6 +825,17 @@ _EOT_;
 };
 
 doc-section = {
+  ds-type = 'NETWORKING CONSIDERATIONS';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+In certain setups, where a firewall may be blocking ICMP responses, it is setting the
+MSS of TCP connections to MTU will eliminate the "black hole" connection issues.
+See http://lartc.org/howto/lartc.cookbook.mtu-mss.html for instructions
+to enable it on a Linux system.
+_EOT_;
+};
+
+doc-section = {
   ds-type   = 'SEE ALSO';
   ds-format = 'man';
   ds-text   = <<-_EOText_

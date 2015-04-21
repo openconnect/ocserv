@@ -603,6 +603,12 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->uptime > e->stats.uptime)
 		e->stats.uptime = req->uptime;
 
+	if (req->has_invalidate_cookie && req->invalidate_cookie != 0) {
+		seclog(sec, LOG_INFO, "invalidating session user '%s' "SESSION_STR,
+			e->auth_info.username, e->auth_info.psid);
+		e->status = PS_AUTH_USER_TERM;
+	}
+
 	if (sec->perm_config->acct.amod == NULL || sec->perm_config->acct.amod->session_stats == NULL)
 		return 0;
 
@@ -615,6 +621,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 		strlcpy(e->auth_info.ipv6, req->ipv6, sizeof(e->auth_info.ipv6));
 
 	sec->perm_config->acct.amod->session_stats(e->module->type, e->auth_ctx, &e->auth_info, &totals);
+
 	return 0;
 }
 

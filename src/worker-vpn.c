@@ -80,6 +80,11 @@ static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 void exit_worker(worker_st * ws);
+
+#define REASON_ANY 0
+#define REASON_USER_DISCONNECT 1
+static void exit_worker_reason(worker_st * ws, unsigned reason);
+
 static int connect_handler(worker_st * ws);
 
 static void handle_alarm(int signo)
@@ -291,7 +296,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	return;
 }
 
-void send_stats_to_secmod(worker_st * ws, time_t now)
+void send_stats_to_secmod(worker_st * ws, time_t now, unsigned invalidate_cookie)
 {
 	CliStatsMsg msg = CLI_STATS_MSG__INIT;
 	int sd, ret, e;
@@ -307,6 +312,11 @@ void send_stats_to_secmod(worker_st * ws, time_t now)
 		msg.sid.len = sizeof(ws->sid);
 		msg.sid.data = ws->sid;
 		msg.has_sid = 1;
+
+		if (invalidate_cookie) {
+			msg.has_invalidate_cookie = 1;
+			msg.invalidate_cookie = 1;
+		}
 
 		msg.remote_ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
 		       		     buf, sizeof(buf), 0);
@@ -336,9 +346,14 @@ void send_stats_to_secmod(worker_st * ws, time_t now)
  */
 void exit_worker(worker_st * ws)
 {
+	exit_worker_reason(ws, REASON_ANY);
+}
+
+static void exit_worker_reason(worker_st * ws, unsigned reason)
+{
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		send_stats_to_secmod(ws, time(0));
+		send_stats_to_secmod(ws, time(0), (reason==REASON_USER_DISCONNECT)?1:0);
 	}
 
 	if (ws->ban_points > 0)
@@ -689,7 +704,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 	if (ws->config->stats_report_time > 0 &&
 	    now - ws->last_stats_msg >= ws->config->stats_report_time &&
 	    ws->sid_set) {
-		send_stats_to_secmod(ws, now);
+		send_stats_to_secmod(ws, now, 0);
 	}
 
 	/* check DPD. Otherwise exit */
@@ -1938,7 +1953,7 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 		break;
 	case AC_PKT_DISCONN:
 		oclog(ws, LOG_DEBUG, "received BYE packet; exiting");
-		exit_worker(ws);
+		exit_worker_reason(ws, REASON_USER_DISCONNECT);
 		break;
 	case AC_PKT_COMPRESSED:
 		/* decompress */

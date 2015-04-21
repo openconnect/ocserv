@@ -120,6 +120,7 @@ message cli_stats_msg
 	optional string remote_ip = 5;
 	optional string ipv4 = 6;
 	optional string ipv6 = 7;
+	optional bool invalidate_cookie = 8;
 }
 
 /* UDP_FD */

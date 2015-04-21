@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4502
+
+. `dirname $0`/common.sh
+
+echo "Testing whether cookies are being correctly invalidated... "
+rm -f ${srcdir}/pid1.$$ ${srcdir}/pid2.$$
+
+launch_server -d 1 -f -c ${srcdir}/test-cookie-invalidation.config & PID=$!
+wait_server $PID
+
+echo "Connecting to obtain cookie... "
+eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+
+if [ -z "$COOKIE" ];then
+	fail $PID "Could not obtain cookie"
+fi
+
+#echo "Cookie: $COOKIE"
+
+echo "Connecting with cookie... "
+echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ --background >/dev/null 2>&1
+
+sleep 4
+
+if [ ! -f ${srcdir}/pid1.$$ ];then
+	fail $PID "It was not possible to establish session!"
+fi
+
+kill -USR1 `cat ${srcdir}/pid1.$$`
+if test $? != 0;then
+	fail $PID "Process could not be killed"
+fi
+
+echo "Terminating and connecting again with same cookie... "
+#( echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+#	fail $PID "Could not connect to server"
+echo "test" | $OPENCONNECT -q localhost:$PORT -b -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ --background >/dev/null 2>&1
+CPID=$!
+
+sleep 4
+
+if [ ! -f ${srcdir}/pid2.$$ ];then
+	fail $PID "It was not possible to establish session!"
+fi
+
+kill -INT `cat ${srcdir}/pid2.$$`
+
+if test $? != 0;then
+	fail $PID "Process could not be killed"
+fi
+
+rm -f ${srcdir}/pid2.$$
+
+echo "Proper termination and connecting again with same (invalidated) cookie... "
+#( echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+#	fail $PID "Could not connect to server"
+echo "test" | $OPENCONNECT -q localhost:$PORT -b -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ --background >/dev/null 2>&1
+
+sleep 4
+
+if [ -f ${srcdir}/pid2.$$ ];then
+	fail $PID "It was possible to establish session!!"
+fi
+
+rm -f ${srcdir}/pid1.$$ ${srcdir}/pid2.$$
+
+kill $CPID >/dev/null 2>&1
+kill $PID
+wait
+
+exit 0

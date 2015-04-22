@@ -12,6 +12,7 @@
 - The 'try-mtu-discovery' config option was fixed to affect the DF bit
   setting in UDP packets.
 - Invalidate cookies when the user terminates the session explicitly.
+- Fixed 'user-profile' option when isolate-workers is set to true.
 - sec-mod: Do not impose timeouts on reads from main. That would prevent
   issues when reading in a very busy system.
 

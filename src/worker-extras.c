@@ -89,7 +89,7 @@ struct stat st;
 	ret = cstp_uncork(ws);
 	if (ret < 0)
 		return -1;
-	
+
 	ret = cstp_send_file(ws, ws->config->xml_config_file);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error sending file '%s': %s", ws->config->xml_config_file, gnutls_strerror(ret));

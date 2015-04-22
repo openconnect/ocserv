@@ -100,6 +100,13 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(getsockopt, 0);
 	ADD_SYSCALL(setsockopt, 0);
 
+	/* we need to open files when we have an xml_config_file setup */
+	if (ws->config->xml_config_file) {
+		ADD_SYSCALL(fstat, 0);
+		ADD_SYSCALL(lseek, 0);
+		ADD_SYSCALL(open, 0);
+	}
+
 	/* this we need to get the MTU from
 	 * the TUN device */
 	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFMTU));

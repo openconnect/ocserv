@@ -68,7 +68,7 @@ $ certtool --generate-self-signed --load-privkey test-key.pem --outfile test-cer
 (make sure you enable encryption or signing)
 
 To run the server on the foreground edit the doc/sample.config and then run:
-# src/ocserv -f -c src/sample.config
+# cd doc && ../src/ocserv -f -c sample.config
 
 
 === Profiling ===

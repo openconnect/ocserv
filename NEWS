@@ -9,6 +9,7 @@
 - When multiple authentication methods are set and the primary includes
   a certificate, no longer require a certificate for all clients.
 - When receiving non-minimal DPD messages, reflect their contents.
+  This allows using DPD for MTU detection.
 - The 'try-mtu-discovery' config option was fixed to affect the DF bit
   setting in UDP packets.
 - Invalidate cookies when the user terminates the session explicitly.

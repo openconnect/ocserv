@@ -656,7 +656,7 @@ allow authentication using any method GSSAPI supports. That is, mainly, Kerberos
 authentication. That is often more useful to be combined with PAM or other
 password authentication methods so that a fallback mechanism can be used when
 GSSAPI fails (e.g., when the user doesn't already have a Kerberos ticket). The
-GSSAPI authentication is implemented using SPNEGO.
+GSSAPI authentication is implemented using SPNEGO over HTTP (RFC4559).
 
 @subheading Public key (certificate) authentication
 Public key authentication allows the user to be authenticated

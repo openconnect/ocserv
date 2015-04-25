@@ -1,4 +1,4 @@
-* Version 0.10.3 (unreleased)
+* Version 0.10.3 (2015-04-25)
 - Detection of gnutls capabilities was made dynamic. That would allow
   the server to be compiled with old gnutls version but still use new
   functionality when linked with a newer version.

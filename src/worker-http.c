@@ -40,6 +40,7 @@
 
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
+#define CS_CHACHA20_POLY1305 "OC-DTLS1_2-CHACHA20-POLY1305"
 
 struct known_urls_st {
 	const char *url;
@@ -113,6 +114,18 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
 	 .server_prio = 1,
 	 },
+#if GNUTLS_VERSION_NUMBER >= 0x030400
+	{
+	 .oc_name = CS_CHACHA20_POLY1305,
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+CHACHA20-POLY1305:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_cipher = GNUTLS_CIPHER_CHACHA20_POLY1305,
+	 .txt_version = "3.4.0",
+	 .server_prio = 40
+	},
+#endif
 };
 
 #ifdef HAVE_LZ4

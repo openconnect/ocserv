@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,6 +124,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 			goto fail;
 		}
 	}
+	mslog(s, proc, LOG_INFO, "user logged in");
 	ret = 0;
 
  fail:
@@ -167,7 +169,7 @@ struct proc_st *ctmp;
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 {
-	mslog(s, proc, LOG_INFO, "user '%s' disconnected", proc->username);
+	mslog(s, proc, LOG_INFO, "user disconnected");
 
 	list_del(&proc->list);
 	s->active_clients--;
@@ -208,14 +210,12 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 	int ret;
 	const char *group;
 
-	mslog(s, proc, LOG_DEBUG, "accepting user");
-
 	/* check for multiple connections */
 	ret = check_multiple_users(s, proc);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO,
-		      "user '%s' tried to connect more than %u times",
-		      proc->username, s->config->max_same_clients);
+		      "user tried to connect more than %u times",
+		      s->config->max_same_clients);
 		return ret;
 	}
 
@@ -230,21 +230,20 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 		group = proc->groupname;
 
 	if (cmd == AUTH_COOKIE_REQ) {
-		mslog(s, proc, LOG_INFO,
-		      "user '%s' of group '%s' authenticated (using cookie)",
-		      proc->username, group);
+		mslog(s, proc, LOG_DEBUG,
+		      "user of group '%s' authenticated (using cookie)",
+		      group);
 	} else {
 		mslog(s, proc, LOG_INFO,
-		      "user '%s' of group '%s' authenticated but from unknown state!",
-		      proc->username, group);
+		      "user of group '%s' authenticated but from unknown state! rejecting.",
+		      group);
 		return ERR_BAD_COMMAND;
 	}
 
 	/* do scripts and utmp */
 	ret = user_connected(s, proc);
 	if (ret < 0 && ret != ERR_WAIT_FOR_SCRIPT) {
-		mslog(s, proc, LOG_INFO, "user '%s' disconnected due to script",
-		      proc->username);
+		mslog(s, proc, LOG_INFO, "user disconnected due to script");
 	}
 
 	return ret;

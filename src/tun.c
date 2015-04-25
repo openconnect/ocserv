@@ -507,7 +507,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		goto fail;
 	}
 	memcpy(proc->tun_lease.name, ifr.ifr_name, IFNAMSIZ);
-	mslog(s, proc, LOG_INFO, "assigning tun device %s\n",
+	mslog(s, proc, LOG_DEBUG, "assigning tun device %s\n",
 	      proc->tun_lease.name);
 
 	/* we no longer use persistent tun */

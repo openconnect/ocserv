@@ -547,11 +547,11 @@ char buf[128];
 	}
 	
 	if (proc->ipv4)
-		mslog(s, proc, LOG_INFO, "assigned IPv4: %s",
+		mslog(s, proc, LOG_DEBUG, "assigned IPv4: %s",
 			human_addr((void*)&proc->ipv4->rip, proc->ipv4->rip_len, buf, sizeof(buf)));
 
 	if (proc->ipv6)
-		mslog(s, proc, LOG_INFO, "assigned IPv6: %s",
+		mslog(s, proc, LOG_DEBUG, "assigned IPv6: %s",
 			human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));
 
 	return 0;

@@ -1,3 +1,7 @@
+* Version 0.10.4 (unreleased)
+- sec-mod: expire sessions which are in terminated state
+
+
 * Version 0.10.3 (released 2015-04-25)
 - Detection of gnutls capabilities was made dynamic. That would allow
   the server to be compiled with old gnutls version but still use new

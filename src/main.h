@@ -191,6 +191,9 @@ typedef struct main_server_st {
 	unsigned secmod_addr_len;
 	
 	unsigned active_clients;
+	/* updated on the cli_stats_msg from sec-mod. 
+	 * Holds the number of entries in secmod list of users */
+	unsigned secmod_client_entries;
 	time_t start_time;
 
 	void * auth_extra;

@@ -522,6 +522,8 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	/* send reply */
 	rep.bytes_in = e->stats.bytes_in;
 	rep.bytes_out = e->stats.bytes_out;
+	rep.has_secmod_client_entries = 1;
+	rep.secmod_client_entries = sec_mod_client_db_elems(sec);
 
 	ret = send_msg(e, cfd, SM_CMD_AUTH_CLI_STATS, &rep,
 			(pack_size_func) cli_stats_msg__get_packed_size,

@@ -241,12 +241,13 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 	print_time_ival7(time(0), t, stdout);
 	fputs(")\n", stdout);
 
-	printf("          Clients: %u\n", (unsigned)rep->active_clients);
-	printf("  IPs in ban list: %u\n", (unsigned)rep->banned_ips);
-	printf("   TLS DB entries: %u\n", (unsigned)rep->stored_tls_sessions);
+	printf("               Clients: %u\n", (unsigned)rep->active_clients);
+	printf("Sec-mod client entries: %u\n", (unsigned)rep->secmod_client_entries);
+	printf("       IPs in ban list: %u\n", (unsigned)rep->banned_ips);
+	printf("        TLS DB entries: %u\n", (unsigned)rep->stored_tls_sessions);
 	printf("\n");
-	printf("       Server PID: %u\n", (unsigned)rep->pid);
-	printf("      Sec-mod PID: %u\n", (unsigned)rep->sec_mod_pid);
+	printf("            Server PID: %u\n", (unsigned)rep->pid);
+	printf("           Sec-mod PID: %u\n", (unsigned)rep->sec_mod_pid);
 
 	status_rep__free_unpacked(rep, &pa);
 
@@ -255,7 +256,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg)
 
  error_status:
 	printf("OpenConnect SSL VPN server\n");
-	printf("         Status: offline\n");
+	printf("                Status: offline\n");
 	ret = 1;
 
  cleanup:

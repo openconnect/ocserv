@@ -8,6 +8,7 @@ message status_rep
 	required uint32 start_time = 5;
 	required uint32 stored_tls_sessions = 7;
 	required uint32 banned_ips = 8;
+	required uint32 secmod_client_entries = 9;
 }
 
 message bool_msg

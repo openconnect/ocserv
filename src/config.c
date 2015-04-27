@@ -81,7 +81,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "max-ban-score", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "ban-points-wrong-password", .type = OPTION_NUMERIC, .mandatory = 0 },
-	{ .name = "ban-connection", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ban-points-connection", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "ban-points-kkdcp", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },

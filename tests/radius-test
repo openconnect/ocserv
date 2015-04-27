@@ -192,6 +192,15 @@ fi
 
 ret=0
 
+#wait until sec-mod has cleaned up its entries
+echo "Waiting for disconnection report"
+sleep 360
+DISC=`$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep "Acct-Terminate-Cause = User-Request"|tail -1`
+if test -z "$DISC";then
+	echo "No disconnect was detected!"
+	stop
+fi
+
 $DOCKER stop test_ocserv_radius
 $DOCKER rm test_ocserv_radius
 

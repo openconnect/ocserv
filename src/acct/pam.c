@@ -60,7 +60,7 @@ int pret;
 	return 0;
 }
 
-static void pam_acct_close_session(unsigned auth_method, void *ctx, const struct common_auth_info_st *ai, stats_st *stats)
+static void pam_acct_close_session(unsigned auth_method, void *ctx, const struct common_auth_info_st *ai, stats_st *stats, unsigned status)
 {
 struct pam_ctx_st * pctx = ctx;
 int pret;

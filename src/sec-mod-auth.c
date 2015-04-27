@@ -794,7 +794,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req)
 	return handle_sec_auth_res(cfd, sec, e, ret);
 }
 
-void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
+void sec_auth_user_deinit(sec_mod_st *sec, client_entry_st *e)
 {
 	if (e->module == NULL)
 		return;
@@ -802,7 +802,7 @@ void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e)
 	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 	if (e->auth_ctx != NULL) {
 		if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->close_session != NULL && e->session_is_open != 0) {
-			sec->perm_config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats);
+			sec->perm_config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats, e->status);
 		}
 		e->module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;

@@ -1,6 +1,7 @@
 Short term items:
 
-* Use virt-builder for tests, to allow them run without root provileges.
+* Modify the test suite to be able to run without root privileges. That
+  could be done by using virt-builder for the tests instead of docker.
 
 * Use the UDP address to report the client's IP when sniproxy or haproxy
   are being used.

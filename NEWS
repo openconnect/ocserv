@@ -1,4 +1,4 @@
-* Version 0.10.4 (unreleased)
+* Version 0.10.4 (released 2015-04-27)
 - sec-mod: expire sessions which are in terminated state
 
 

@@ -2000,7 +2000,7 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 		      (unsigned)head, (unsigned)buf_size);
 	}
 
-	return head;
+	return 0;
 }
 
 static int parse_cstp_data(struct worker_st *ws,

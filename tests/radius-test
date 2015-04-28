@@ -152,7 +152,7 @@ fi
 echo "Waiting for accounting report"
 sleep 60
 
-kill $PID
+kill -INT $PID
 
 sleep 4
 
@@ -194,9 +194,10 @@ ret=0
 
 #wait until sec-mod has cleaned up its entries
 echo "Waiting for disconnection report"
-sleep 360
+sleep 10
 DISC=`$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep "Acct-Terminate-Cause = User-Request"|tail -1`
 if test -z "$DISC";then
+	$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"
 	echo "No disconnect was detected!"
 	stop
 fi

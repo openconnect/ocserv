@@ -507,7 +507,6 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 		                (pack_func) cli_stats_msg__pack);
 	}
 
-	seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 
 	if (req->has_uptime && req->uptime > e->stats.uptime) {
 			e->stats.uptime = req->uptime;
@@ -537,6 +536,13 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	stats_add_to(&e->saved_stats, &e->saved_stats, &e->stats);
 	memset(&e->stats, 0, sizeof(e->stats));
 	expire_client_entry(sec, e);
+
+	if (e->status == PS_AUTH_USER_TERM) {
+		/* immediately disconnect the user */
+		del_client_entry(sec, e);
+	} else {
+		seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+	}
 
 	return 0;
 }
@@ -799,8 +805,8 @@ void sec_auth_user_deinit(sec_mod_st *sec, client_entry_st *e)
 	if (e->module == NULL)
 		return;
 
-	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 	if (e->auth_ctx != NULL) {
+		seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 		if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->close_session != NULL && e->session_is_open != 0) {
 			sec->perm_config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats, e->status);
 		}

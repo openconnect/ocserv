@@ -534,7 +534,7 @@ int http_header_complete_cb(http_parser * parser)
 		/* client retried getting the form without the SPNEGO header, probably
 		 * wants a fallback authentication method */
 		if (ws_switch_auth_to(ws, AUTH_TYPE_USERNAME_PASS) == 0)
-			oclog(ws, LOG_INFO, "no fallback to gssapi authentication");
+			oclog(ws, LOG_INFO, "no fallback from gssapi authentication");
 	}
 
 	req->headers_complete = 1;

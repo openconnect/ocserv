@@ -1,6 +1,7 @@
 * Version 0.10.5 (unreleased)
 - On definitely terminated sessions contact the radius server as
-  soon as possible.
+  soon as possible. For sessions that can still be resumed the radius
+  server is contacted periodically after the cookies expire.
 - Added tgt-freshness-time option for gssapi/Kerberos authentication
   option. That allows to specify the maximum number of seconds after
   which a reauthentication with Kerberos is required to login to VPN.

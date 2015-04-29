@@ -117,6 +117,12 @@ void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str)
 			vals[i].value = NULL;
 		} else if (c_strcasecmp(vals[i].name, "require-local-user-map") == 0) {
 			additional->no_local_map = 1-CHECK_TRUE(vals[i].value);
+		} else if (c_strcasecmp(vals[i].name, "tgt-freshness-time") == 0) {
+			additional->ticket_freshness_secs = atoi(vals[i].value);
+			if (additional->ticket_freshness_secs == 0) {
+				fprintf(stderr, "Invalid value for '%s': %s\n", vals[i].name, vals[i].value);
+				exit(1);
+			}
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
 			exit(1);

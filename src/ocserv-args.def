@@ -102,12 +102,14 @@ An example configuration file follows.
 # Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,
 # Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
 #
-# gssapi[keytab=/etc/key.tab,require-local-user-map=false]
+# gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=360]
 #  The gssapi option allows to use authentication methods supported by GSSAPI,
 # such as Kerberos tickets with ocserv. It should be best used as an alternative
 # to PAM (i.e., have pam in auth and gssapi in enable-auth), to allow users with
 # tickets and without tickets to login. The default value for require-local-user-map
-# is true.
+# is true. The 'tgt-freshness-time' if set, it would require the TGT tickets presented
+# to have been issued within the provided number of seconds. That option is used to
+# restrict logins even if the KDC provides long time TGT tickets.
 
 #auth = "certificate"
 #auth = "pam"

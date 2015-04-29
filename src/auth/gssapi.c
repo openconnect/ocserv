@@ -40,6 +40,7 @@
 static gss_cred_id_t glob_creds;
 static gss_OID_set glob_oids;
 static unsigned no_local_map = 0;
+static time_t ticket_freshness_secs = 0;
 
 struct gssapi_ctx_st {
 	char username[MAX_USERNAME_SIZE];
@@ -90,8 +91,10 @@ static void gssapi_global_init(void *pool, void *additional)
 	gss_name_t name = GSS_C_NO_NAME;
 	gssapi_cfg_st *config = additional;
 
-	if (config)
+	if (config) {
 		no_local_map = config->no_local_map;
+		ticket_freshness_secs = config->ticket_freshness_secs;
+	}
 
 	if (config && config->keytab) {
 		gss_key_value_element_desc element;
@@ -178,6 +181,32 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 		return 0;
 }
 
+static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type)
+{
+	int ret;
+	OM_uint32 minor;
+	krb5_timestamp authtime;
+
+	if (((mech_type->length != gss_mech_krb5->length || memcmp(mech_type->elements, gss_mech_krb5->elements, mech_type->length) != 0) &&
+	    (mech_type->length != gss_mech_krb5_old->length || memcmp(mech_type->elements, gss_mech_krb5_old->elements, mech_type->length) != 0)) ||
+	    ticket_freshness_secs == 0) {
+		return 0;
+	}
+
+	ret = gsskrb5_extract_authtime_from_sec_context (&minor, pctx->gssctx, &authtime);
+	if (GSS_ERROR(ret)) {
+		print_gss_err("gsskrb5_extract_authtime_from_sec_context", mech_type, ret, minor);
+		return -1;
+	}
+
+	if (time(0) > authtime + ticket_freshness_secs) {
+		syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const char *ip)
 {
 	struct gssapi_ctx_st *pctx;
@@ -217,6 +246,10 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 	} else if (ret == GSS_S_COMPLETE) {
 		ret = get_name(pctx, client, mech_type);
 		gss_release_name(&minor, &client);
+		if (ret < 0)
+			return ret;
+
+		ret = verify_krb5_constraints(pctx, mech_type);
 	} else {
 		print_gss_err("gss_accept_sec_context", mech_type, ret, minor);
 		return ERR_AUTH_FAIL;
@@ -274,6 +307,10 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	} else if (ret == GSS_S_COMPLETE) {
 		ret = get_name(pctx, client, mech_type);
 		gss_release_name(&minor, &client);
+		if (ret < 0)
+			return ret;
+
+		ret = verify_krb5_constraints(pctx, mech_type);
 		return ret;
 	} else {
 		print_gss_err("gss_accept_sec_context", mech_type, ret, minor);

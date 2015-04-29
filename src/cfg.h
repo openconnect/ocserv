@@ -31,6 +31,7 @@ typedef struct subcfg_val_st {
 typedef struct gssapi_cfg_st {
 	char *keytab;
 	unsigned no_local_map;
+	time_t ticket_freshness_secs;
 } gssapi_cfg_st;
 
 typedef struct radius_cfg_st {

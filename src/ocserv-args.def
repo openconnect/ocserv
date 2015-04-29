@@ -102,7 +102,7 @@ An example configuration file follows.
 # Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,
 # Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
 #
-# gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=360]
+# gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=900]
 #  The gssapi option allows to use authentication methods supported by GSSAPI,
 # such as Kerberos tickets with ocserv. It should be best used as an alternative
 # to PAM (i.e., have pam in auth and gssapi in enable-auth), to allow users with
@@ -122,7 +122,7 @@ An example configuration file follows.
 # will be sufficient to login.
 #enable-auth = certificate
 #enable-auth = gssapi
-#enable-auth = "gssapi[keytab=/etc/key.tab,require-local-user-map=true]"
+#enable-auth = "gssapi[keytab=/etc/key.tab,require-local-user-map=true,tgt-freshness-time=900]"
 
 # Accounting methods available:
 # pam: can only be combined with PAM authentication method, it provides

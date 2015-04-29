@@ -95,18 +95,23 @@ if test ! -z "$QUIT_ON_INIT";then
 fi
 
 echo "Waiting for client tests"
-sleep 20
+sleep 100
 
 mkdir -p tmp-kerb
-rm -f ./tmp-kerb/ok
-$DOCKER cp test_ocserv_client_kerberos:/tmp/ok ./tmp-kerb/
+rm -f ./tmp-kerb/ok1 ./tmp-kerb/ok2
+$DOCKER cp test_ocserv_client_kerberos:/tmp/ok1 ./tmp-kerb/
+$DOCKER cp test_ocserv_client_kerberos:/tmp/ok2 ./tmp-kerb/
 
-if ! test -f ./tmp-kerb/ok;then
-	echo "Kerberos client tests failed"
+ret=0
+
+if ! test -f ./tmp-kerb/ok1;then
+	echo "Kerberos client basic test failed"
 	ret=1
-else
-	echo "Kerberos client tests completed"
-	ret=0
+fi
+
+if ! test -f ./tmp-kerb/ok2;then
+	echo "Kerberos client TGT freshness test failed"
+	ret=1
 fi
 
 $DOCKER stop test_ocserv_kerberos

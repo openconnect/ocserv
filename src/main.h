@@ -78,9 +78,7 @@ enum {
 	PS_AUTH_FAILED, /* no tried authenticated but failed */
 	PS_AUTH_INIT, /* worker has sent an auth init msg */
 	PS_AUTH_CONT, /* worker has sent an auth cont msg */
-	PS_AUTH_COMPLETED, /* successful authentication */
-	PS_AUTH_USER_TERM /* user has terminated the session: this state is only valid in sec-mod.
-	                   * The reason for this mode is to indicate the cookie invalidation. */
+	PS_AUTH_COMPLETED /* successful authentication */
 };
 
 /* Each worker process maps to a unique proc_st structure.

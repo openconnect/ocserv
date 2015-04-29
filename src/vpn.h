@@ -104,6 +104,11 @@ extern int syslog_open;
 #define ACCT_TYPE_PAM (1<<1)
 #define ACCT_TYPE_RADIUS (1<<2)
 
+/* User Disconnect reasons (must be > 0) */
+#define REASON_ANY 1
+#define REASON_USER_DISCONNECT 2
+#define REASON_SERVER_DISCONNECT 3
+
 #define ERR_SUCCESS 0
 #define ERR_BAD_COMMAND -2
 #define ERR_AUTH_FAIL -3

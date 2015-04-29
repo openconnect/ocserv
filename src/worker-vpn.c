@@ -81,8 +81,6 @@ static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 void exit_worker(worker_st * ws);
 
-#define REASON_ANY 0
-#define REASON_USER_DISCONNECT 1
 static void exit_worker_reason(worker_st * ws, unsigned reason);
 
 static int connect_handler(worker_st * ws);
@@ -296,7 +294,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	return;
 }
 
-void send_stats_to_secmod(worker_st * ws, time_t now, unsigned invalidate_cookie)
+void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 {
 	CliStatsMsg msg = CLI_STATS_MSG__INIT;
 	int sd, ret, e;
@@ -313,9 +311,9 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned invalidate_cookie
 		msg.sid.data = ws->sid;
 		msg.has_sid = 1;
 
-		if (invalidate_cookie) {
-			msg.has_invalidate_cookie = 1;
-			msg.invalidate_cookie = 1;
+		if (discon_reason) {
+			msg.has_discon_reason = 1;
+			msg.discon_reason = discon_reason;
 		}
 
 		msg.remote_ip = human_addr2((void *)&ws->remote_addr, ws->remote_addr_len,
@@ -353,7 +351,7 @@ static void exit_worker_reason(worker_st * ws, unsigned reason)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {
-		send_stats_to_secmod(ws, time(0), (reason==REASON_USER_DISCONNECT)?1:0);
+		send_stats_to_secmod(ws, time(0), reason);
 	}
 
 	if (ws->ban_points > 0)
@@ -1782,7 +1780,8 @@ static int connect_handler(worker_st * ws)
 			      "sending disconnect message in TLS channel");
 			ret = cstp_send(ws, ws->buffer, 8);
 			FATAL_ERR_CMD(ws, ret, exit_worker(ws));
-			goto exit;
+
+			exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
 		}
 
 		if (ws->session != NULL)

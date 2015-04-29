@@ -86,6 +86,7 @@ typedef struct client_entry_st {
 
 	/* the auth type associated with the user */
 	unsigned auth_type;
+	unsigned discon_reason; /* reason for disconnection */
 
 	struct common_auth_info_st auth_info;
 

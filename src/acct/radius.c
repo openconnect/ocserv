@@ -246,7 +246,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	return ret;
 }
 
-static void radius_acct_close_session(unsigned auth_method, void *ctx, const common_auth_info_st *ai, stats_st *stats, unsigned status)
+static void radius_acct_close_session(unsigned auth_method, void *ctx, const common_auth_info_st *ai, stats_st *stats, unsigned discon_reason)
 {
 int ret;
 uint32_t status_type;
@@ -258,8 +258,10 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL)
 		return;
 
-	if (status == PS_AUTH_USER_TERM)
+	if (discon_reason == REASON_USER_DISCONNECT)
 		ret = PW_USER_REQUEST;
+	else if (discon_reason == REASON_SERVER_DISCONNECT)
+		ret = PW_ADMIN_RESET;
 	else
 		ret = PW_LOST_CARRIER;
 	if (rc_avpair_add(rh, &send, PW_ACCT_TERMINATE_CAUSE, &ret, -1, 0) == NULL) {

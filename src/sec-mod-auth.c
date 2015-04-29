@@ -537,7 +537,7 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	memset(&e->stats, 0, sizeof(e->stats));
 	expire_client_entry(sec, e);
 
-	if (e->status == PS_AUTH_USER_TERM) {
+	if (e->discon_reason != 0) {
 		/* immediately disconnect the user */
 		del_client_entry(sec, e);
 	} else {
@@ -611,10 +611,10 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->uptime > e->stats.uptime)
 		e->stats.uptime = req->uptime;
 
-	if (req->has_invalidate_cookie && req->invalidate_cookie != 0) {
+	if (req->has_discon_reason && (req->discon_reason == REASON_USER_DISCONNECT || req->discon_reason == REASON_SERVER_DISCONNECT)) {
 		seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
 			e->auth_info.username, e->auth_info.psid);
-		e->status = PS_AUTH_USER_TERM;
+		e->discon_reason = req->discon_reason;
 	}
 
 	if (sec->perm_config->acct.amod == NULL || sec->perm_config->acct.amod->session_stats == NULL)
@@ -808,7 +808,7 @@ void sec_auth_user_deinit(sec_mod_st *sec, client_entry_st *e)
 	if (e->auth_ctx != NULL) {
 		seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 		if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->close_session != NULL && e->session_is_open != 0) {
-			sec->perm_config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats, e->status);
+			sec->perm_config->acct.amod->close_session(e->module->type, e->auth_ctx, &e->auth_info, &e->saved_stats, e->discon_reason);
 		}
 		e->module->auth_deinit(e->auth_ctx);
 		e->auth_ctx = NULL;

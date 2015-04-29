@@ -120,7 +120,7 @@ message cli_stats_msg
 	optional string remote_ip = 5;
 	optional string ipv4 = 6;
 	optional string ipv6 = 7;
-	optional bool invalidate_cookie = 8;
+	optional uint32 discon_reason = 8;
 	optional uint32 secmod_client_entries = 9; /* from sec-mod to main only */
 }
 

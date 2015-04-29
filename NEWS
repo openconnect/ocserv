@@ -1,5 +1,5 @@
 * Version 0.10.5 (unreleased)
-- On definitely terminated sessions contact radius server as
+- On definitely terminated sessions contact the radius server as
   soon as possible.
 - Added tgt-freshness-time option for gssapi/Kerberos authentication
   option. That allows to specify the maximum number of seconds after

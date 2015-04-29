@@ -187,7 +187,8 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 	OM_uint32 minor;
 	krb5_timestamp authtime;
 
-	if (((mech_type->length != gss_mech_krb5->length || memcmp(mech_type->elements, gss_mech_krb5->elements, mech_type->length) != 0) &&
+	if (mech_type == NULL ||
+	   ((mech_type->length != gss_mech_krb5->length || memcmp(mech_type->elements, gss_mech_krb5->elements, mech_type->length) != 0) &&
 	    (mech_type->length != gss_mech_krb5_old->length || memcmp(mech_type->elements, gss_mech_krb5_old->elements, mech_type->length) != 0)) ||
 	    ticket_freshness_secs == 0) {
 		return 0;

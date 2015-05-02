@@ -101,7 +101,7 @@ int handle_sec_mod_commands(main_server_st * s)
 		return ERR_MEM;
 	}
 
-	raw_len = force_read_timeout(s->sec_mod_fd, raw, length, 2);
+	raw_len = force_read(s->sec_mod_fd, raw, length);
 	if (raw_len != length) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR,

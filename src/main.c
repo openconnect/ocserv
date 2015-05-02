@@ -1263,7 +1263,7 @@ fork_failed:
 			ret = handle_sec_mod_commands(s);
 			if (ret < 0) { /* bad commands from sec-mod are unacceptable */
 				mslog(s, NULL, LOG_ERR,
-				       "error command from sec-mod");
+				       "error in command from sec-mod");
 				terminate = 1;
 				continue;
 			}

@@ -313,7 +313,9 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
 
-	ret = recvmsg(proc->fd, &hdr, 0);
+	do {
+		ret = recvmsg(proc->fd, &hdr, 0);
+	} while (ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, proc, LOG_ERR,

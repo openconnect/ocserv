@@ -144,19 +144,23 @@ uint8_t * p = buf;
 struct timeval tv;
 fd_set set;
 
-	tv.tv_sec = sec;
-	tv.tv_usec = 0;
+	if (sec > 0) {
+		tv.tv_sec = sec;
+		tv.tv_usec = 0;
 
-	FD_ZERO(&set);
-	FD_SET(sockfd, &set);
+		FD_ZERO(&set);
+		FD_SET(sockfd, &set);
+	}
 
 	while(left > 0) {
-		ret = select(sockfd + 1, &set, NULL, NULL, &tv);
-		if (ret == -1 && errno == EINTR)
-			continue;
-		if (ret == -1 || ret == 0) {
-			errno = ETIMEDOUT;
-			return -1;
+		if (sec > 0) {
+			ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+			if (ret == -1 && errno == EINTR)
+				continue;
+			if (ret == -1 || ret == 0) {
+				errno = ETIMEDOUT;
+				return -1;
+			}
 		}
 
 		ret = read(sockfd, p, left);
@@ -223,22 +227,28 @@ int ret;
 struct timeval tv;
 fd_set set;
 
-	tv.tv_sec = sec;
-	tv.tv_usec = 0;
+	if (sec) {
+		tv.tv_sec = sec;
+		tv.tv_usec = 0;
 
-	FD_ZERO(&set);
-	FD_SET(sockfd, &set);
+		FD_ZERO(&set);
+		FD_SET(sockfd, &set);
 
-	do {
-		ret = select(sockfd + 1, &set, NULL, NULL, &tv);
-	} while (ret == -1 && errno == EINTR);
+		do {
+			ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+		} while (ret == -1 && errno == EINTR);
 
-	if (ret == -1 || ret == 0) {
-		errno = ETIMEDOUT;
-		return -1;
+		if (ret == -1 || ret == 0) {
+			errno = ETIMEDOUT;
+			return -1;
+		}
 	}
 
-	return recvmsg(sockfd, msg, flags);
+	do {
+		ret = recvmsg(sockfd, msg, flags);
+	} while (ret == -1 && errno == EINTR);
+
+	return ret;
 }
 
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
@@ -388,12 +398,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 
-	do {
-		if (timeout)
-			ret = recvmsg_timeout(fd, &hdr, 0, timeout);
-		else
-			ret = recvmsg(fd, &hdr, 0);
-	} while (ret == -1 && errno == EINTR);
+	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));
@@ -430,10 +435,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 			goto cleanup;
 		}
 
-		if (timeout)
-			ret = force_read_timeout(fd, data, length, timeout);
-		else
-			ret = force_read(fd, data, length);
+		ret = force_read_timeout(fd, data, length, timeout);
 		if (ret < length) {
 			int e = errno;
 			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));

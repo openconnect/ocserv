@@ -77,7 +77,7 @@ static void acct_radius_global_deinit(void)
 
 static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
 {
-uint32_t uin, uout;
+	uint32_t uin, uout;
 
 	if (stats->uptime) {
 		uin = stats->uptime;
@@ -112,7 +112,7 @@ uint32_t uin, uout;
 
 static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, VALUE_PAIR **send)
 {
-	int i;
+	uint32_t i;
 
 	if (nas_identifier[0] != 0) {
 		if (rc_avpair_add(rh, send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0) == NULL) {

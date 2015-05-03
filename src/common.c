@@ -217,6 +217,30 @@ fd_set set;
 	return recv(sockfd, buf, len, 0);
 }
 
+ssize_t recvmsg_timeout(int sockfd, struct msghdr *msg, int flags, unsigned sec)
+{
+int ret;
+struct timeval tv;
+fd_set set;
+
+	tv.tv_sec = sec;
+	tv.tv_usec = 0;
+
+	FD_ZERO(&set);
+	FD_SET(sockfd, &set);
+
+	do {
+		ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+	} while (ret == -1 && errno == EINTR);
+
+	if (ret == -1 || ret == 0) {
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	return recvmsg(sockfd, msg, flags);
+}
+
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
 {
 	if (((struct sockaddr*)s1)->sa_family == AF_INET) {
@@ -335,7 +359,8 @@ int send_msg(void *pool, int fd, uint8_t cmd,
 }
 
 int recv_socket_msg(void *pool, int fd, uint8_t cmd, 
-		     int* socketfd, void** msg, unpack_func unpack)
+		     int* socketfd, void** msg, unpack_func unpack,
+		     unsigned timeout)
 {
 	struct iovec iov[3];
 	uint16_t length;
@@ -363,9 +388,11 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 
-	/* FIXME: Add a timeout here */
 	do {
-		ret = recvmsg(fd, &hdr, 0);
+		if (timeout)
+			ret = recvmsg_timeout(fd, &hdr, 0, timeout);
+		else
+			ret = recvmsg(fd, &hdr, 0);
 	} while (ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		int e = errno;
@@ -403,7 +430,10 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 			goto cleanup;
 		}
 
-		ret = force_read(fd, data, length);
+		if (timeout)
+			ret = force_read_timeout(fd, data, length, timeout);
+		else
+			ret = force_read(fd, data, length);
 		if (ret < length) {
 			int e = errno;
 			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));
@@ -429,9 +459,9 @@ cleanup:
 }
 
 int recv_msg(void *pool, int fd, uint8_t cmd, 
-		void** msg, unpack_func unpack)
+		void** msg, unpack_func unpack, unsigned timeout)
 {
-	return recv_socket_msg(pool, fd, cmd, NULL, msg, unpack);
+	return recv_socket_msg(pool, fd, cmd, NULL, msg, unpack, timeout);
 }
 
 void _talloc_free2(void *ctx, void *ptr)

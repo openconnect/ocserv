@@ -278,7 +278,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 		return;
 
 	ret = recv_msg(ws, ws->cmd_fd, CMD_BAN_IP_REPLY,
-		       (void *)&reply, (unpack_func) ban_ip_reply_msg__unpack);
+		       (void *)&reply, (unpack_func) ban_ip_reply_msg__unpack, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving BAN IP reply message");
 		return;

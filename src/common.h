@@ -77,11 +77,12 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 		    int socketfd,
 		    const void* msg, pack_size_func get_size, pack_func pack);
 
+/* the timeout is in seconds */
 int recv_msg(void *pool, int fd, uint8_t cmd, 
-	     void** msg, unpack_func);
+	     void** msg, unpack_func, unsigned timeout);
 
 int recv_socket_msg(void *pool, int fd, uint8_t cmd, 
-			int *socketfd, void** msg, unpack_func);
+			int *socketfd, void** msg, unpack_func, unsigned timeout);
 
 const char* cmd_request_to_str(unsigned cmd);
 

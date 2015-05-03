@@ -548,7 +548,9 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 		goto error;
 	}
 
-	ret = recv_msg(userdata, sd, type, (void*)&reply, (unpack_func)sec_op_msg__unpack);
+	ret = recv_msg(userdata, sd, type, (void*)&reply,
+		       (unpack_func)sec_op_msg__unpack,
+		       DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
 		syslog(LOG_ERR, "error receiving sec-mod reply: %s", 

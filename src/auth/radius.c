@@ -223,6 +223,15 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		goto cleanup;
 	}
 
+	service = PW_ASYNC;
+	if (rc_avpair_add(rh, &send, PW_NAS_PORT_TYPE, &service, -1, 0) == NULL) {
+		syslog(LOG_ERR,
+		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       pctx->username);
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
+	}
+
 	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {

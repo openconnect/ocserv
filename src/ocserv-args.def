@@ -553,14 +553,14 @@ no-route = 192.168.5.0/255.255.255.0
 # You can have the same path used for multiple realms. To authenticate
 # in client side, in MIT kerberos you'll need to add in krb5.conf:
 #   EXAMPLE.COM = {
-#     kdc = https://ocserv.example.com/kerberos
+#     kdc = https://ocserv.example.com/KdcProxy
 #     http_anchors = FILE:/etc/ocserv-ca.pem
 #   }
 # This option is available if ocserv is compiled with GSSAPI support. 
 
 #kkdcp = SERVER-PATH KERBEROS-REALM PROTOCOL@SERVER:PORT
-#kkdcp = /kerberos KERBEROS.REALM udp@127.0.0.1:88
-#kkdcp = /kerberos-tcp KERBEROS.REALM tcp@127.0.0.1:88
+#kkdcp = /KdcProxy KERBEROS.REALM udp@127.0.0.1:88
+#kkdcp = /KdcProxy KERBEROS.REALM tcp@127.0.0.1:88
 
 #
 # The following options are for (experimental) AnyConnect client 

@@ -7,6 +7,8 @@
   which a reauthentication with Kerberos is required to login to VPN.
 - main: Do not impose timeouts on reads from sec-mod. That would prevent
   issues when reading in a blocked in authentication sec-mod.
+- When using radius accounting with certificate authentication, properly
+  notify of user session closure.
 
 
 * Version 0.10.4 (released 2015-04-27)

@@ -39,6 +39,7 @@
 #include "str.h"
 #include "setproctitle.h"
 #include <sec-mod.h>
+#include <ip-lease.h>
 #include <route-add.h>
 #include <ipc.pb-c.h>
 #include <script-list.h>
@@ -173,6 +174,8 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	SecAuthSessionReplyMsg *msg = NULL;
 	unsigned i;
 	PROTOBUF_ALLOCATOR(pa, proc);
+	char str_ipv4[MAX_IP_STR];
+	char str_ipv6[MAX_IP_STR];
 
 	ireq.uptime = time(0)-proc->conn_time;
 	ireq.has_uptime = 1;
@@ -182,6 +185,18 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	ireq.has_bytes_out = 1;
 	ireq.sid.data = proc->sid;
 	ireq.sid.len = sizeof(proc->sid);
+
+	if (proc->ipv4 && 
+	    human_addr2((struct sockaddr *)&proc->ipv4->rip, proc->ipv4->rip_len,
+	    str_ipv4, sizeof(str_ipv4), 0) != NULL) {
+		ireq.ipv4 = str_ipv4;
+	}
+
+	if (proc->ipv6 && 
+	    human_addr2((struct sockaddr *)&proc->ipv6->rip, proc->ipv6->rip_len,
+	    str_ipv6, sizeof(str_ipv6), 0) != NULL) {
+		ireq.ipv6 = str_ipv6;
+	}
 
 	if (cookie) {
 		ireq.cookie.data = (void*)cookie;

@@ -434,6 +434,11 @@ int handle_sec_auth_session_open(int cfd, sec_mod_st *sec, const SecAuthSessionM
 		return send_failed_session_open_reply(cfd, sec);
 	}
 
+	if (req->ipv4)
+		strlcpy(e->auth_info.ipv4, req->ipv4, sizeof(e->auth_info.ipv4));
+	if (req->ipv6)
+		strlcpy(e->auth_info.ipv6, req->ipv6, sizeof(e->auth_info.ipv6));
+
 	if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->open_session != NULL && e->session_is_open == 0) {
 		ret = sec->perm_config->acct.amod->open_session(e->auth_type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
 		if (ret < 0) {

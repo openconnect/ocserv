@@ -125,6 +125,9 @@ uint8_t * p = buf;
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
+		} else if (ret == 0 && left != 0) {
+			errno = ENOENT;
+			return -1;
 		}
 
 		if (ret > 0) {

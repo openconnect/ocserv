@@ -202,7 +202,56 @@ if test -z "$DISC";then
 	stop
 fi
 
+# do the same with a certificate - test radius accounting with certificate auth
+echo "Trying with certificate"
+$DOCKER exec test_ocserv_radius truncate --size=0 /var/log/radius/radacct/127.0.0.1/$FILE
+$OPENCONNECT $IP:$PORT_OCSERV --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 &
+PID=$!
+
+ping -w 5 192.168.55.1
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+
+sleep 4
+
+echo "Waiting for accounting report"
+sleep 60
+FILE=`$DOCKER exec test_ocserv_radius ls /var/log/radius/radacct/127.0.0.1/`
+
+kill -INT $PID
+
+sleep 10
+
+$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP
+cat out$TMP
+OCTETS=`cat out$TMP|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
+if test -z "$OCTETS" || test "$OCTETS" = 0;then
+	echo "Interim update showed no data!"
+	stop
+fi
+
+DISC=`cat out$TMP|grep "Acct-Status-Type = Start"|tail -1`
+if test -z "$DISC";then
+	cat out$TMP
+	echo "No connect status was detected!"
+	stop
+fi
+
+DISC=`cat out$TMP|grep "Acct-Terminate-Cause = User-Request"|tail -1`
+if test -z "$DISC";then
+	cat out$TMP
+	echo "No disconnect was detected!"
+	stop
+fi
+
+
 $DOCKER stop test_ocserv_radius
 $DOCKER rm test_ocserv_radius
+
+rm -f out$TMP
 
 exit $ret

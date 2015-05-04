@@ -28,6 +28,7 @@ RUN mkdir /etc/ocserv
 
 ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
+ADD cert.pem /etc/ocserv/
 ADD ocserv-radius.conf /etc/ocserv/ocserv.conf
 ADD radiusclient.conf /etc/radiusclient/
 ADD radius-clients.conf /etc/freeradius/clients.conf

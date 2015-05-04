@@ -144,19 +144,18 @@ uint8_t * p = buf;
 struct timeval tv;
 fd_set set;
 
-	if (sec > 0) {
-		tv.tv_sec = sec;
-		tv.tv_usec = 0;
-
-		FD_ZERO(&set);
-		FD_SET(sockfd, &set);
-	}
-
 	while(left > 0) {
 		if (sec > 0) {
-			ret = select(sockfd + 1, &set, NULL, NULL, &tv);
-			if (ret == -1 && errno == EINTR)
-				continue;
+			tv.tv_sec = sec;
+			tv.tv_usec = 0;
+
+			FD_ZERO(&set);
+			FD_SET(sockfd, &set);
+
+			do {
+				ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+			} while (ret == -1 && errno == EINTR);
+
 			if (ret == -1 || ret == 0) {
 				errno = ETIMEDOUT;
 				return -1;

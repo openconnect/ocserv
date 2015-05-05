@@ -9,6 +9,8 @@
   issues when reading in a blocked in authentication sec-mod.
 - When using radius accounting with certificate authentication, properly
   notify of user session closure.
+- radius: consider Acct-Interim-Interval sent by the server by default.
+  That can be overriden using override-interim-updates in radius subconfig.
 
 
 * Version 0.10.4 (released 2015-04-27)

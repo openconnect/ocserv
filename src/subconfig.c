@@ -230,6 +230,8 @@ void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)
 			} else if (c_strcasecmp(vals[i].name, "nas-identifier") == 0) {
 				additional->nas_identifier = vals[i].value;
 				vals[i].value = NULL;
+			} else if (c_strcasecmp(vals[i].name, "override-interim-updates") == 0) {
+				additional->override_interim_updates = CHECK_TRUE(vals[i].value);
 			} else if (c_strcasecmp(vals[i].name, "groupconfig") == 0) {
 				if (CHECK_TRUE(vals[i].value))
 					config->sup_config_type = SUP_CONFIG_RADIUS;

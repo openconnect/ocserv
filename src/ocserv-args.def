@@ -94,13 +94,16 @@ An example configuration file follows.
 # One entry must be listed per line, and 'ocpasswd' should be used
 # to generate password entries.
 #
-# radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name]:
+# radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name,override-interim-updates=false]:
 #  The radius option requires specifying freeradius-client configuration
 # file. If the groupconfig option is set, then config-per-user will be overriden,
-# and all configuration will be read from radius. The supported atributes for
-# radius configuration are:
+# and all configuration will be read from radius. The 'override-interim-updates' if set to
+# true will ignore Acct-Interim-Interval from the server and 'stats-report-time' will be considered.
+#
+# The supported atributes for radius configuration are:
 # Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,
-# Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server
+# Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server,
+# Acct-Interim-Interval.
 #
 # gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=900]
 #  The gssapi option allows to use authentication methods supported by GSSAPI,

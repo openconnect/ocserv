@@ -54,6 +54,7 @@ ATTRIBUTE	Acct-Output-Octets	43	integer
 ATTRIBUTE	Acct-Session-Id		44	string
 ATTRIBUTE	Acct-Input-Gigawords	52	integer
 ATTRIBUTE	Acct-Output-Gigawords	53	integer
+ATTRIBUTE	Acct-Interim-Interval	85	integer
 
 #	IPv6 attributes
 ATTRIBUTE       Framed-IPv6-Route       99      string

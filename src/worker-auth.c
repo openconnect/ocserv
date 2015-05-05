@@ -547,6 +547,12 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			memcpy(ws->session_id, msg->session_id.data,
 			       msg->session_id.len);
 
+			if (msg->has_interim_update_secs) {
+				oclog(ws, LOG_DEBUG, "overriding stats-report-time with auth server's value (%u)",
+				      (unsigned)msg->interim_update_secs);
+				ws->config->stats_report_time = msg->interim_update_secs;
+			}
+
 			if (msg->ipv4 != NULL) {
 				talloc_free(ws->vinfo.ipv4);
 				if (strcmp(msg->ipv4, "0.0.0.0") == 0)

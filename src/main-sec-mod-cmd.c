@@ -228,6 +228,9 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		return -1;
 	}
 
+	if (msg->has_interim_update_secs)
+		proc->interim_update_secs = msg->interim_update_secs;
+
 	/* fill in group_cfg_st */
 	if (msg->has_no_udp)
 		proc->config.no_udp = msg->no_udp;

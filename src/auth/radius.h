@@ -29,6 +29,7 @@ struct radius_ctx_st {
 	char groupname[MAX_GROUPNAME_SIZE];
 
 	char remote_ip[MAX_IP_STR];
+	int interim_interval_secs;
 
 	/* variables for configuration */
 	char ipv4[MAX_IP_STR];

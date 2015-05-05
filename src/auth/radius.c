@@ -40,6 +40,7 @@
 
 static rc_handle *rh = NULL;
 static char nas_identifier[64];
+static unsigned override_interim_updates = 0;
 
 static void radius_global_init(void *pool, void *additional)
 {
@@ -52,6 +53,8 @@ static void radius_global_init(void *pool, void *additional)
 	if (rh == NULL) {
 		goto fail;
 	}
+
+	override_interim_updates = config->override_interim_updates;
 
 	if (config->nas_identifier) {
 		strlcpy(nas_identifier, config->nas_identifier, sizeof(nas_identifier));
@@ -168,6 +171,10 @@ static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned
 			pctx->routes_size++;
 	}
 }
+
+#ifndef PW_INTERIM_INTERVAL
+# define PW_INTERIM_INTERVAL 85
+#endif
 
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
@@ -291,6 +298,8 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_FRAMED_IPV6_ROUTE && vp->type == PW_TYPE_STRING) {
 				/* Framed-IPv6-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);
+			} else if (vp->attribute == PW_INTERIM_INTERVAL && vp->type == PW_TYPE_INTEGER) {
+				pctx->interim_interval_secs = vp->lvalue;
 			} else {
 				syslog(LOG_DEBUG, "radius-auth: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);
 			}
@@ -340,6 +349,15 @@ static void radius_auth_deinit(void *ctx)
 	talloc_free(pctx);
 }
 
+static int radius_interim_update(void *ctx)
+{
+	struct radius_ctx_st *pctx = ctx;
+	if (override_interim_updates)
+		return 0;
+	else
+		return pctx->interim_interval_secs;
+}
+
 const struct auth_mod_st radius_auth_funcs = {
 	.type = AUTH_TYPE_RADIUS | AUTH_TYPE_USERNAME_PASS,
 	.allows_retries = 1,
@@ -351,6 +369,7 @@ const struct auth_mod_st radius_auth_funcs = {
 	.auth_pass = radius_auth_pass,
 	.auth_user = radius_auth_user,
 	.auth_group = radius_auth_group,
+	.get_interim_update = radius_interim_update,
 	.group_list = NULL
 };
 

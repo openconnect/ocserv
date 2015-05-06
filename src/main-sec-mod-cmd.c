@@ -74,7 +74,9 @@ int handle_sec_mod_commands(main_server_st * s)
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
 
-	ret = recvmsg(s->sec_mod_fd, &hdr, 0);
+	do {
+		ret = recvmsg(s->sec_mod_fd, &hdr, 0);
+	} while(ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR,

@@ -84,7 +84,9 @@ int handle_worker_commands(struct worker_st *ws)
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
 	
-	ret = recvmsg( ws->cmd_fd, &hdr, 0);
+	do {
+		ret = recvmsg( ws->cmd_fd, &hdr, 0);
+	} while(ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));

@@ -548,7 +548,7 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	memset(&e->stats, 0, sizeof(e->stats));
 	expire_client_entry(sec, e);
 
-	if (e->discon_reason == REASON_USER_DISCONNECT || e->discon_reason == REASON_SERVER_DISCONNECT) {
+	if (e->in_use == 0 && (e->discon_reason == REASON_USER_DISCONNECT || e->discon_reason == REASON_SERVER_DISCONNECT)) {
 		seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
 			e->auth_info.username, e->auth_info.psid);
 		/* immediately disconnect the user */

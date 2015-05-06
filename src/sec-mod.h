@@ -26,6 +26,8 @@
 #include <ccan/htable/htable.h>
 #include <base64.h>
 
+#define SESSION_STR "(session: %.5s)"
+
 typedef struct sec_mod_st {
 	gnutls_datum_t dcookie_key; /* the key to generate cookies */
 	uint8_t cookie_key[COOKIE_KEY_SIZE];

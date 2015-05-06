@@ -313,6 +313,7 @@ struct cfg_st {
 
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */
+	unsigned persistent_cookies; /* whether cookies stay valid after disconnect */
 
 	time_t rekey_time;	/* in seconds */
 	unsigned rekey_method; /* REKEY_METHOD_ */

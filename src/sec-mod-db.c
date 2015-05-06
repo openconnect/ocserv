@@ -188,6 +188,16 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 {
 	if (e->in_use > 0)
 		e->in_use--;
-	if (e->in_use == 0)
+	if (e->in_use == 0) {
 		e->time = time(0);
+
+		if (sec->config->persistent_cookies == 0 && (e->discon_reason == REASON_USER_DISCONNECT || e->discon_reason == REASON_SERVER_DISCONNECT)) {
+			seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
+				e->auth_info.username, e->auth_info.psid);
+			/* immediately disconnect the user */
+			del_client_entry(sec, e);
+		} else {
+			seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
+		}
+	}
 }

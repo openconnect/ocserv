@@ -57,8 +57,6 @@
 # include <gssapi/gssapi_ext.h>
 #endif
 
-#define SESSION_STR "(session: %.5s)"
-
 void sec_auth_init(sec_mod_st * sec, struct perm_cfg_st *config)
 {
 	unsigned i;
@@ -547,15 +545,6 @@ int handle_sec_auth_session_close(int cfd, sec_mod_st *sec, const SecAuthSession
 	stats_add_to(&e->saved_stats, &e->saved_stats, &e->stats);
 	memset(&e->stats, 0, sizeof(e->stats));
 	expire_client_entry(sec, e);
-
-	if (e->in_use == 0 && (e->discon_reason == REASON_USER_DISCONNECT || e->discon_reason == REASON_SERVER_DISCONNECT)) {
-		seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
-			e->auth_info.username, e->auth_info.psid);
-		/* immediately disconnect the user */
-		del_client_entry(sec, e);
-	} else {
-		seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->auth_info.username, e->auth_info.psid);
-	}
 
 	return 0;
 }

@@ -122,6 +122,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "deny-roaming", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-utmp", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-dbus", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "persistent-cookies", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-occtl", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -840,6 +841,7 @@ unsigned urlfw_size = 0;
 	READ_NUMERIC("cookie-timeout", config->cookie_timeout);
 	if (config->cookie_timeout == 0)
 		config->cookie_timeout = DEFAULT_COOKIE_RECON_TIMEOUT;
+	READ_TF("persistent-cookies", config->persistent_cookies, 0);
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
 	READ_NUMERIC("idle-timeout", config->idle_timeout);

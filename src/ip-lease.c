@@ -303,42 +303,6 @@ fail:
 	return ret;
 }
 
-/* returns an allocated string with the mask to apply for the prefix
- */
-static
-char* ipv6_prefix_to_mask(char buf[MAX_IP_STR], unsigned prefix)
-{
-	switch (prefix) {
-		case 16:
-			strlcpy(buf, "ffff::", MAX_IP_STR);
-			break;
-		case 32:
-			strlcpy(buf, "ffff:ffff::", MAX_IP_STR);
-			break;
-		case 48:
-			strlcpy(buf, "ffff:ffff:ffff::", MAX_IP_STR);
-			break;
-		case 64:
-			strlcpy(buf, "ffff:ffff:ffff:ffff::", MAX_IP_STR);
-			break;
-		case 80:
-			strlcpy(buf, "ffff:ffff:ffff:ffff:ffff::", MAX_IP_STR);
-			break;
-		case 96:
-			strlcpy(buf, "ffff:ffff:ffff:ffff:ffff:ffff::", MAX_IP_STR);
-			break;
-		case 112:
-			strlcpy(buf, "ffff:ffff:ffff:ffff:ffff:ffff:ffff::", MAX_IP_STR);
-			break;
-		case 128:
-			strlcpy(buf, "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", MAX_IP_STR);
-			break;
-		default:
-			return NULL;
-	}
-	return buf;
-}
-
 static
 int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 {

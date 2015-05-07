@@ -271,7 +271,7 @@ char* ipv4_prefix_to_mask(void *pool, unsigned prefix)
 	struct in_addr in;
 	char str[MAX_IP_STR];
 
-	if (prefix == 0)
+	if (prefix == 0 || prefix > 32)
 		return NULL;
 
 	in.s_addr = ntohl(((uint32_t)0xFFFFFFFF) << (32 - prefix));
@@ -279,6 +279,29 @@ char* ipv4_prefix_to_mask(void *pool, unsigned prefix)
 		return NULL;
 
 	return talloc_strdup(pool, str);
+}
+
+char* ipv6_prefix_to_mask(char buf[MAX_IP_STR], unsigned prefix)
+{
+	struct in6_addr in6;
+	int i, j;
+
+	if (prefix == 0 || prefix > 128)
+		return NULL;
+
+	memset(&in6, 0x0, sizeof(in6));
+	for (i = prefix, j = 0; i > 0; i -= 8, j++) {
+		if (i >= 8) {
+			in6.s6_addr[j] = 0xff;
+		} else {
+			in6.s6_addr[j] = (unsigned long)(0xffU << ( 8 - i ));
+		}
+	}
+
+	if (inet_ntop(AF_INET6, &in6, buf, MAX_IP_STR) == NULL)
+		return NULL;
+
+	return buf;
 }
 
 /* Sends message + socketfd */

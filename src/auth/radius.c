@@ -79,7 +79,7 @@ static void radius_global_deinit()
 		rc_destroy(rh);
 }
 
-static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip)
+static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip, unsigned id)
 {
 	struct radius_ctx_st *pctx;
 	char *default_realm;
@@ -106,7 +106,7 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	} else {
 		strcpy(pctx->username, username);
 	}
-
+	pctx->id = id;
 
 	*ctx = pctx;
 
@@ -228,6 +228,17 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
+	}
+
+	if (pctx->id) {
+		service = pctx->id;
+		if (rc_avpair_add(rh, &send, PW_NAS_PORT, &service, -1, 0) == NULL) {
+			syslog(LOG_ERR,
+			       "%s:%u: user '%s' auth error", __func__, __LINE__,
+			       pctx->username);
+			ret = ERR_AUTH_FAIL;
+			goto cleanup;
+		}
 	}
 
 	service = PW_ASYNC;

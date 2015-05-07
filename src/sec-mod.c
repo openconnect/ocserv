@@ -188,7 +188,7 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 }
 
 static
-int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
+int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request_t cmd,
 		   uint8_t * buffer, size_t buffer_size)
 {
 	unsigned i;
@@ -276,7 +276,7 @@ int process_packet(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
 				return -1;
 			}
 
-			ret = handle_sec_auth_init(cfd, sec, auth_init);
+			ret = handle_sec_auth_init(cfd, sec, auth_init, pid);
 			sec_auth_init_msg__free_unpacked(auth_init, &pa);
 			return ret;
 		}
@@ -453,7 +453,7 @@ int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffe
 }
 
 static
-int serve_request(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffer_size)
+int serve_request(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
@@ -492,7 +492,7 @@ int serve_request(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffer_siz
 		goto leave;
 	}
 
-	ret = process_packet(pool, cfd, sec, cmd, buffer, ret);
+	ret = process_packet(pool, cfd, pid, sec, cmd, buffer, ret);
 	if (ret < 0) {
 		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
@@ -543,6 +543,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	sec_mod_st *sec;
 	void *sec_mod_pool;
 	fd_set rd_set;
+	pid_t pid;
 	sigset_t emptyset, blockset;
 
 #ifdef DEBUG_LEAKS
@@ -747,7 +748,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 
 			/* do not allow unauthorized processes to issue commands
 			 */
-			ret = check_upeer_id("sec-mod", sec->config->debug, cfd, perm_config->uid, perm_config->gid, &uid);
+			ret = check_upeer_id("sec-mod", sec->config->debug, cfd, perm_config->uid, perm_config->gid, &uid, &pid);
 			if (ret < 0) {
 				seclog(sec, LOG_INFO, "rejected unauthorized connection");
 			} else {
@@ -756,7 +757,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 				if (buffer == NULL) {
 					seclog(sec, LOG_ERR, "error in memory allocation");
 				} else {
-					serve_request(sec, cfd, buffer, buffer_size);
+					serve_request(sec, cfd, pid, buffer, buffer_size);
 					talloc_free(buffer);
 				}
 			}

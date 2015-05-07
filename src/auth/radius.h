@@ -48,6 +48,7 @@ struct radius_ctx_st {
 
 	const char *pass_msg;
 	unsigned retries;
+	unsigned id;
 };
 
 extern const struct auth_mod_st radius_auth_funcs;

@@ -32,7 +32,7 @@ typedef struct auth_mod_st {
 	unsigned int allows_retries; /* whether the module allows retries of the same password */
 	void (*global_init)(void *pool, void* additional);
 	void (*global_deinit)(void);
-	int (*auth_init)(void** ctx, void *pool, const char* username, const char* ip);
+	int (*auth_init)(void** ctx, void *pool, const char* username, const char* ip, unsigned id);
 	int (*auth_msg)(void* ctx, void *pool, char** msg);
 	int (*auth_pass)(void* ctx, const char* pass, unsigned pass_len);
 	int (*auth_group)(void* ctx, const char *suggested, char *groupname, int groupname_size);

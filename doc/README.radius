@@ -45,6 +45,7 @@ seconds), that accounting information should be reported.
 #	Standard attributes
 ATTRIBUTE	User-Name		1	string
 ATTRIBUTE	Password		2	string
+ATTRIBUTE	NAS-IP-Address		4	ipaddr
 ATTRIBUTE	Framed-Protocol		7	integer
 ATTRIBUTE	Framed-IP-Address	8	ipaddr
 ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
@@ -57,6 +58,7 @@ ATTRIBUTE	Acct-Output-Gigawords	53	integer
 ATTRIBUTE	Acct-Interim-Interval	85	integer
 
 #	IPv6 attributes
+ATTRIBUTE	NAS-IPv6-Address	95	string
 ATTRIBUTE       Framed-IPv6-Route       99      string
 ATTRIBUTE	Framed-IPv6-Prefix	97	ipv6prefix
 ATTRIBUTE	Framed-IPv6-Address	168	ipv6addr

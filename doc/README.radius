@@ -61,6 +61,7 @@ ATTRIBUTE	Acct-Interim-Interval	85	integer
 ATTRIBUTE	NAS-IPv6-Address	95	string
 ATTRIBUTE       Framed-IPv6-Route       99      string
 ATTRIBUTE	Framed-IPv6-Prefix	97	ipv6prefix
+ATTRIBUTE	Delegated-IPv6-Prefix	123	ipv6prefix
 ATTRIBUTE	Framed-IPv6-Address	168	ipv6addr
 ATTRIBUTE	DNS-Server-IPv6-Address	169	ipv6addr
 

@@ -38,6 +38,14 @@
 #define RAD_IPV4_DNS1 ((311<<16)|(28))
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
 
+#ifndef PW_INTERIM_INTERVAL
+# define PW_INTERIM_INTERVAL 85
+#endif
+
+#ifndef PW_DELEGATED_IPV6_PREFIX
+# define PW_DELEGATED_IPV6_PREFIX 123
+#endif
+
 static rc_handle *rh = NULL;
 static char nas_identifier[64];
 static unsigned override_interim_updates = 0;
@@ -172,10 +180,6 @@ static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned
 	}
 }
 
-#ifndef PW_INTERIM_INTERVAL
-# define PW_INTERIM_INTERVAL 85
-#endif
-
 /* Returns 0 if the user is successfully authenticated, and sets the appropriate group name.
  */
 static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
@@ -270,6 +274,15 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
 					pctx->ipv6_prefix = 64;
 					strlcpy(pctx->ipv6_net, pctx->ipv6, sizeof(pctx->ipv6_net));
+				}
+			} else if (vp->attribute == PW_DELEGATED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
+				/* Delegated-IPv6-Prefix */
+				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
+					memset(ipv6, 0, sizeof(ipv6)); 
+					memcpy(ipv6, vp->strvalue+2, vp->lvalue-2); 
+					if (inet_ntop(AF_INET6, ipv6, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
+						pctx->ipv6_prefix = (unsigned)(unsigned char)vp->strvalue[1];
+					}
 				}
 			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
 				if (vp->lvalue > 2 && vp->lvalue <= 18) {

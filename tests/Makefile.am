@@ -20,7 +20,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 	test-cookie-invalidation
 
 
-ipv4_prefix_CPPFLAGS = \
+AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/ \
 	-I$(top_builddir)/src/ \
 	-I$(top_srcdir)/gl/ \
@@ -28,7 +28,10 @@ ipv4_prefix_CPPFLAGS = \
 ipv4_prefix_SOURCES = ../src/common.c ../src/common.h ipv4-prefix.c
 ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
-check_PROGRAMS = ipv4-prefix
+ipv6_prefix_SOURCES = ../src/common.c ../src/common.h ipv6-prefix.c
+ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+
+check_PROGRAMS = ipv4-prefix ipv6-prefix
 
 TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie full-test test-group-pass test-pass-group-cert \

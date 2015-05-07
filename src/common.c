@@ -28,6 +28,8 @@
 /* for recvmsg */
 #include <netinet/in.h>
 #include <netinet/ip.h>
+/* for inet_ntop */
+#include <arpa/inet.h>
 
 #include "common.h"
 
@@ -266,28 +268,17 @@ int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
  */
 char* ipv4_prefix_to_mask(void *pool, unsigned prefix)
 {
-	switch (prefix) {
-		case 8:
-			return talloc_strdup(pool, "255.0.0.0");
-		case 16:
-			return talloc_strdup(pool, "255.255.0.0");
-		case 24:
-			return talloc_strdup(pool, "255.255.255.0");
-		case 25:
-			return talloc_strdup(pool, "255.255.255.128");
-		case 26:
-			return talloc_strdup(pool, "255.255.255.192");
-		case 27:
-			return talloc_strdup(pool, "255.255.255.224");
-		case 28:
-			return talloc_strdup(pool, "255.255.255.240");
-		case 29:
-			return talloc_strdup(pool, "255.255.255.248");
-		case 30:
-			return talloc_strdup(pool, "255.255.255.252");
-		default:
-			return NULL;
-	}
+	struct in_addr in;
+	char str[MAX_IP_STR];
+
+	if (prefix == 0)
+		return NULL;
+
+	in.s_addr = ntohl(((uint32_t)0xFFFFFFFF) << (32 - prefix));
+	if (inet_ntop(AF_INET, &in, str, sizeof(str)) == NULL)
+		return NULL;
+
+	return talloc_strdup(pool, str);
 }
 
 /* Sends message + socketfd */

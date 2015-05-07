@@ -48,19 +48,10 @@ int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
 char* ipv4_prefix_to_mask(void *pool, unsigned prefix);
 inline static int valid_ipv6_prefix(unsigned prefix)
 {
-	switch (prefix) {
-		case 16:
-		case 32:
-		case 48:
-		case 64:
-		case 80:
-		case 96:
-		case 112:
-		case 128:
-			return 1;
-		default:
-			return 0;
-	}
+	if (prefix > 10 && prefix <= 128)
+		return 1;
+	else
+		return 0;
 }
 
 typedef size_t (*pack_func)(const void*, uint8_t *);

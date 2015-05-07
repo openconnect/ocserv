@@ -45,11 +45,7 @@ seconds), that accounting information should be reported.
 #	Standard attributes
 ATTRIBUTE	User-Name		1	string
 ATTRIBUTE	Password		2	string
-ATTRIBUTE	NAS-IP-Address		4	ipaddr
 ATTRIBUTE	Framed-Protocol		7	integer
-ATTRIBUTE	Framed-IP-Address	8	ipaddr
-ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
-ATTRIBUTE       Framed-Route            22      string
 ATTRIBUTE	Acct-Input-Octets	42	integer
 ATTRIBUTE	Acct-Output-Octets	43	integer
 ATTRIBUTE	Acct-Session-Id		44	string
@@ -57,20 +53,20 @@ ATTRIBUTE	Acct-Input-Gigawords	52	integer
 ATTRIBUTE	Acct-Output-Gigawords	53	integer
 ATTRIBUTE	Acct-Interim-Interval	85	integer
 
-#	IPv6 attributes
-ATTRIBUTE	NAS-IPv6-Address	95	string
-ATTRIBUTE       Framed-IPv6-Route       99      string
-ATTRIBUTE	Framed-IPv6-Prefix	97	ipv6prefix
-ATTRIBUTE	Delegated-IPv6-Prefix	123	ipv6prefix
-ATTRIBUTE	Framed-IPv6-Address	168	ipv6addr
-ATTRIBUTE	DNS-Server-IPv6-Address	169	ipv6addr
+###########################
+#	IPv4 attributes   #
+###########################
 
+# sets local IPv4 address in link:
+ATTRIBUTE	NAS-IP-Address		4	ipaddr
+# sets remote IPv4 address in link:
+ATTRIBUTE	Framed-IP-Address	8	ipaddr
+ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
 
-#	Experimental Non Protocol Attributes used by Cistron-Radiusd
-#
-ATTRIBUTE	Group-Name		1030	string
+# sets routes (quite a kludge)
+ATTRIBUTE	Framed-Route		22	string
 
-#	DNS server extensions
+# sets DNS servers
 VENDOR Microsoft 311
 
 BEGIN-VENDOR Microsoft
@@ -79,5 +75,36 @@ ATTRIBUTE	MS-Primary-DNS-Server 	28 	ipaddr
 ATTRIBUTE 	MS-Secondary-DNS-Server 29 	ipaddr
 
 END-VENDOR Microsoft
+
+############################
+#	IPv6 attributes    #
+############################
+
+# sets local IPv6 address in link:
+ATTRIBUTE	NAS-IPv6-Address	95	string
+
+# sets remote IPv6 subnet in link:
+ATTRIBUTE	Delegated-IPv6-Prefix	123	ipv6prefix
+
+# sets remote IPv6 address in link:
+ATTRIBUTE	Framed-IPv6-Address	168	ipv6addr
+
+# sets DNS servers
+ATTRIBUTE	DNS-Server-IPv6-Address	169	ipv6addr
+
+# Sets IPv6 routes
+ATTRIBUTE	Framed-IPv6-Prefix	97	ipv6prefix
+ATTRIBUTE	Route-IPv6-Information	170	ipv6prefix
+
+
+
+############################
+#  Experimental attributes #
+############################
+
+#	Experimental Non Protocol Attributes used by Cistron-Radiusd
+#
+ATTRIBUTE	Group-Name		1030	string
+
 
 

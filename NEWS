@@ -9,9 +9,13 @@
   issues when reading in a blocked in authentication sec-mod.
 - When using radius accounting with certificate authentication, properly
   notify of user session closure.
-- radius: consider Acct-Interim-Interval sent by the server by default.
+- radius: consider Acct-Interim-Interval when seen by the server.
   That can be overriden using override-interim-updates in radius subconfig.
 - Added configuration option 'persistent-cookies'.
+- radius: added support for Route-IPv6-Information, Delegated-IPv6-Prefix,
+  NAS-IPv6-Address, NAS-IP-Address.
+- Added configuration option 'persistent-cookies'.
+
 
 * Version 0.10.4 (released 2015-04-27)
 - sec-mod: expire sessions which are in terminated state

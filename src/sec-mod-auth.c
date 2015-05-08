@@ -711,7 +711,7 @@ int set_module(sec_mod_st * sec, client_entry_st *e, unsigned auth_type)
 	return -1;
 }
 
-int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req, pid_t pid)
+int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pid_t pid)
 {
 	int ret = -1;
 	client_entry_st *e;
@@ -735,7 +735,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st * sec, const SecAuthInitMsg * req, 
 
 	if (e->module) {
 		ret =
-		    e->module->auth_init(&e->auth_ctx, e, req->user_name, req->ip, pid);
+		    e->module->auth_init(&e->auth_ctx, e, req->user_name, req->ip, req->our_ip, pid);
 		if (ret == ERR_AUTH_CONTINUE) {
 			need_continue = 1;
 		} else if (ret < 0) {

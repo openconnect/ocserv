@@ -1174,6 +1174,26 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	return ret;
 }
 
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+# define gsocklen int
+#else
+# define gsocklen socklen_t
+#endif
+
+static char *get_our_ip(int fd, char str[MAX_IP_STR])
+{
+	int ret;
+	struct sockaddr_storage sockaddr;
+	gsocklen socklen;
+
+	socklen = sizeof(sockaddr);
+	ret = getsockname(fd, (struct sockaddr*)&sockaddr, &socklen);
+	if (ret == -1)
+		return NULL;
+
+	return human_addr2((struct sockaddr*)&sockaddr, socklen, str, MAX_IP_STR, 0);
+}
+
 #define USERNAME_FIELD "username"
 #define PASSWORD_FIELD "password"
 #define GROUPNAME_FIELD "group%5flist"
@@ -1193,6 +1213,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *username = NULL;
 	char *password = NULL;
 	char *groupname = NULL;
+	char our_ip_str[MAX_IP_STR];
 	char *msg = NULL;
 	unsigned def_group = 0;
 
@@ -1291,6 +1312,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		ireq.hostname = req->hostname;
 		ireq.ip = ws->remote_ip_str;
+		ireq.our_ip = get_our_ip(ws->conn_fd, our_ip_str);
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {

@@ -181,7 +181,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 	return ret;
 }
 
-static int plain_auth_init(void **ctx, void *pool, const char *username, const char *ip, unsigned pid)
+static int plain_auth_init(void **ctx, void *pool, const char *username, const char *ip, const char *our_ip, unsigned pid)
 {
 	struct plain_ctx_st *pctx;
 	int ret;

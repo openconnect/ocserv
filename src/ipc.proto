@@ -189,6 +189,7 @@ message sec_auth_init_msg
 	optional string hostname = 7;
 	required string ip = 8;
 	required uint32 auth_type = 9 [default = 0];
+	optional string our_ip = 10;
 }
 
 /* SEC_AUTH_CONT */

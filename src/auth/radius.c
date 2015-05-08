@@ -87,7 +87,7 @@ static void radius_global_deinit()
 		rc_destroy(rh);
 }
 
-static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip, unsigned id)
+static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip, const char *our_ip, unsigned id)
 {
 	struct radius_ctx_st *pctx;
 	char *default_realm;
@@ -104,6 +104,8 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 
 	strlcpy(pctx->username, username, sizeof(pctx->username));
 	strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
+	if (our_ip)
+		strlcpy(pctx->our_ip, our_ip, sizeof(pctx->our_ip));
 	pctx->pass_msg = pass_msg_first;
 
 	default_realm = rc_conf_str(rh, "default_realm");
@@ -191,6 +193,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	char txt[64];
 	int ret;
 
+	/* send Access-Request */
 	syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
 	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
 		syslog(LOG_ERR,
@@ -205,6 +208,16 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
+	}
+
+	if (pctx->our_ip[0] != 0) {
+		struct sockaddr_storage st;
+
+		if (inet_pton(AF_INET, pctx->our_ip, &st) != 0) {
+			rc_avpair_add(rh, &send, PW_NAS_IP_ADDRESS, (char*)&st, -1, 0);
+		} else if (inet_pton(AF_INET6, pctx->our_ip, &st) != 0) {
+			rc_avpair_add(rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&st, -1, 0);
+		}
 	}
 
 	if (nas_identifier[0] != 0) {

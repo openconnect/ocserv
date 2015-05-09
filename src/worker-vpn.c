@@ -61,6 +61,7 @@
 #define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:257)
 
 #define PERIODIC_CHECK_TIME 30
+#define MIN_STATS_INTERVAL 10
 
 /* The number of DPD packets a client skips before he's kicked */
 #define DPD_TRIES 2
@@ -298,6 +299,9 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 {
 	CliStatsMsg msg = CLI_STATS_MSG__INIT;
 	int sd, ret, e;
+
+	if (now - ws->last_stats_msg < MIN_STATS_INTERVAL)
+		return;
 
 	ws->last_stats_msg = now;
 

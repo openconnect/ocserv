@@ -108,7 +108,9 @@ extern int syslog_open;
 #define REASON_ANY 1
 #define REASON_USER_DISCONNECT 2
 #define REASON_SERVER_DISCONNECT 3
-#define REASON_TIMEOUT 4
+#define REASON_IDLE_TIMEOUT 4
+#define REASON_DPD_TIMEOUT 5
+#define REASON_ERROR 6
 
 #define ERR_SUCCESS 0
 #define ERR_BAD_COMMAND -2

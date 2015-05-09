@@ -257,10 +257,14 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 		ret = PW_USER_REQUEST;
 	else if (discon_reason == REASON_SERVER_DISCONNECT)
 		ret = PW_ADMIN_RESET;
-	else if (discon_reason == REASON_TIMEOUT)
+	else if (discon_reason == REASON_IDLE_TIMEOUT)
 		ret = PW_ACCT_IDLE_TIMEOUT;
-	else
+	else if (discon_reason == REASON_DPD_TIMEOUT)
 		ret = PW_LOST_CARRIER;
+	else if (discon_reason == REASON_ERROR)
+		ret = PW_USER_ERROR;
+	else
+		ret = PW_LOST_SERVICE;
 	if (rc_avpair_add(rh, &send, PW_ACCT_TERMINATE_CAUSE, &ret, -1, 0) == NULL) {
 		goto cleanup;
 	}

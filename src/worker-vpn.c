@@ -76,6 +76,8 @@
 struct worker_st *global_ws = NULL;
 
 static int terminate = 0;
+static int terminate_reason = REASON_SERVER_DISCONNECT;
+
 static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
@@ -97,6 +99,7 @@ static void handle_alarm(int signo)
 static void handle_term(int signo)
 {
 	terminate = 1;
+	terminate_reason = REASON_SERVER_DISCONNECT;
 	alarm(2);		/* force exit by SIGALRM */
 }
 
@@ -731,9 +734,9 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 			      "idle timeout reached for process (%d secs)",
 			      (int)(now - ws->last_nc_msg));
 			terminate = 1;
+			terminate_reason = REASON_IDLE_TIMEOUT;
 			goto cleanup;
 		}
-
 	}
 
 	if (ws->config->stats_report_time > 0 &&
@@ -751,7 +754,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 		ret = dtls_send(ws, ws->buffer, 1);
-		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (now - ws->last_msg_udp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
@@ -773,12 +776,12 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		ws->buffer[7] = 0;
 
 		ret = cstp_send(ws, ws->buffer, 8);
-		FATAL_ERR_CMD(ws, ret, exit_worker(ws));
+		FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
 			      "have not received TCP DPD for very long; tearing down connection");
-			exit_worker_reason(ws, REASON_TIMEOUT);
+			exit_worker_reason(ws, REASON_DPD_TIMEOUT);
 		}
 	}
 
@@ -878,7 +881,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);
 
-		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (ret == GNUTLS_E_REHANDSHAKE) {
 
@@ -902,7 +905,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			} while (ret == GNUTLS_E_AGAIN
 				 || ret == GNUTLS_E_INTERRUPTED);
 
-			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
+			GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 			oclog(ws, LOG_DEBUG, "DTLS rehandshake completed");
 
 			ws->last_dtls_rehandshake = tnow->tv_sec;
@@ -1018,7 +1021,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	data.data = ws->buffer;
 	data.size = ret;
 #endif
-	FATAL_ERR_CMD(ws, ret, exit_worker(ws));
+	FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 
 	if (ret == 0) {		/* disconnect */
 		oclog(ws, LOG_DEBUG, "client disconnected");
@@ -1058,7 +1061,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		do {
 			ret = gnutls_handshake(ws->session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-		GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
+		GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		ws->last_tls_rehandshake = tnow->tv_sec;
 		oclog(ws, LOG_INFO, "TLS rehandshake completed");
@@ -1149,7 +1152,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 			dtls_to_send.data[7] = dtls_type;
 			ret = dtls_send(ws, dtls_to_send.data + 7, dtls_to_send.size + 1);
-			GNUTLS_FATAL_ERR_CMD(ret, exit_worker(ws));
+			GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {
 				mtu_not_ok(ws);
@@ -1176,7 +1179,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			ws->tun_bytes_out += cstp_to_send.size;
 
 			ret = cstp_send(ws, cstp_to_send.data, cstp_to_send.size + 8);
-			FATAL_ERR_CMD(ws, ret, exit_worker(ws));
+			FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 		}
 		ws->last_nc_msg = tnow->tv_sec;
 	}
@@ -1815,10 +1818,8 @@ static int connect_handler(worker_st * ws)
 
 			oclog(ws, LOG_TRANSFER_DEBUG,
 			      "sending disconnect message in TLS channel");
-			ret = cstp_send(ws, ws->buffer, 8);
-			FATAL_ERR_CMD(ws, ret, exit_worker(ws));
-
-			exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
+			cstp_send(ws, ws->buffer, 8);
+			exit_worker_reason(ws, terminate_reason);
 		}
 
 		if (ws->session != NULL)
@@ -1862,6 +1863,7 @@ static int connect_handler(worker_st * ws)
 			if (ret == -1) {
 				if (errno == EINTR)
 					continue;
+				terminate_reason = REASON_ERROR;
 				goto exit;
 			}
 		}
@@ -1869,21 +1871,27 @@ static int connect_handler(worker_st * ws)
 
 		if (periodic_check
 		    (ws, ws->proto_overhead + ws->crypto_overhead, tnow.tv_sec,
-		     ws->config->dpd) < 0)
+		     ws->config->dpd) < 0) {
+			terminate_reason = REASON_ERROR;
 			goto exit;
+		}
 
 		/* send pending data from tun device */
 		if (FD_ISSET(ws->tun_fd, &rfds)) {
 			ret = tun_mainloop(ws, &tnow);
-			if (ret < 0)
+			if (ret < 0) {
+				terminate_reason = REASON_ERROR;
 				goto exit;
+			}
 		}
 
 		/* read pending data from TCP channel */
 		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
 			ret = tls_mainloop(ws, &tnow);
-			if (ret < 0)
+			if (ret < 0) {
+				terminate_reason = REASON_ERROR;
 				goto exit;
+			}
 		}
 
 		/* read data from UDP channel */
@@ -1891,18 +1899,22 @@ static int connect_handler(worker_st * ws)
 		    (FD_ISSET(ws->dtls_tptr.fd, &rfds) || dtls_pending != 0)) {
 
 			ret = dtls_mainloop(ws, &tnow);
-			if (ret < 0)
+			if (ret < 0) {
+				terminate_reason = REASON_ERROR;
 				goto exit;
+			}
 		}
 
 		/* read commands from command fd */
 		if (FD_ISSET(ws->cmd_fd, &rfds)) {
 			ret = handle_worker_commands(ws);
 			if (ret == ERR_NO_CMD_FD) {
+				terminate_reason = REASON_ERROR;
 				goto terminate;
 			}
 
 			if (ret < 0) {
+				terminate_reason = REASON_ERROR;
 				goto exit;
 			}
 		}
@@ -1918,7 +1930,7 @@ static int connect_handler(worker_st * ws)
 		/*gnutls_deinit(ws->dtls_session); */
 	}
 
-	exit_worker(ws);
+	exit_worker_reason(ws, terminate_reason);
 
  send_error:
 	oclog(ws, LOG_DEBUG, "error sending data\n");

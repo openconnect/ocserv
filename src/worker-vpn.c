@@ -774,7 +774,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
 			      "have not received TCP DPD for very long; tearing down connection");
-			return -1;
+			exit_worker_reason(ws, REASON_TIMEOUT);
 		}
 	}
 

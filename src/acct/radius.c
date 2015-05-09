@@ -257,6 +257,8 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 		ret = PW_USER_REQUEST;
 	else if (discon_reason == REASON_SERVER_DISCONNECT)
 		ret = PW_ADMIN_RESET;
+	else if (discon_reason == REASON_TIMEOUT)
+		ret = PW_ACCT_IDLE_TIMEOUT;
 	else
 		ret = PW_LOST_CARRIER;
 	if (rc_avpair_add(rh, &send, PW_ACCT_TERMINATE_CAUSE, &ret, -1, 0) == NULL) {

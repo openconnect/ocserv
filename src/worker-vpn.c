@@ -661,17 +661,19 @@ int mtu_not_ok(worker_st * ws)
 		}
 
 		mtu -= CSTP_DTLS_OVERHEAD - ws->proto_overhead;
-		if (mtu >= ws->conn_mtu) {
-			oclog(ws, LOG_INFO, "the provided IPv6 MTU is larger than the used (was %u, new %d); disabling DTLS",
-			      ws->conn_mtu, mtu);
-			dtls_close(ws);
-			ws->udp_state = UP_DISABLED;
-			return -1;
-		}
 
 		if (ws->dtls_session) {
 			gnutls_dtls_set_mtu(ws->dtls_session, mtu);
-			ws->conn_mtu = gnutls_dtls_get_data_mtu(session);
+			mtu = gnutls_dtls_get_data_mtu(ws->dtls_session);
+
+			if (mtu >= ws->conn_mtu) {
+				oclog(ws, LOG_INFO, "the provided IPv6 MTU is larger than the used (was %u, new %d); disabling DTLS",
+				      ws->conn_mtu, mtu);
+				dtls_close(ws);
+				ws->udp_state = UP_DISABLED;
+				return -1;
+			}
+			ws->conn_mtu = mtu;
 			mtu_send(ws, ws->conn_mtu);
 		}
 	}

@@ -214,9 +214,9 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		struct sockaddr_storage st;
 
 		if (inet_pton(AF_INET, pctx->our_ip, &st) != 0) {
-			rc_avpair_add(rh, &send, PW_NAS_IP_ADDRESS, (char*)&st, -1, 0);
+			rc_avpair_add(rh, &send, PW_NAS_IP_ADDRESS, (char*)&st, sizeof(struct in_addr), 0);
 		} else if (inet_pton(AF_INET6, pctx->our_ip, &st) != 0) {
-			rc_avpair_add(rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&st, -1, 0);
+			rc_avpair_add(rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&st, sizeof(struct in6_addr), 0);
 		}
 	}
 

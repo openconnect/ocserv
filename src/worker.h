@@ -222,6 +222,7 @@ typedef struct worker_st {
 	 *  and the DTLS crypto overhead. */
 	unsigned conn_mtu;
 	unsigned crypto_overhead; /* estimated overhead of DTLS ciphersuite + DTLS CSTP HEADER */
+	unsigned proto_overhead; /* UDP + IP header size */
 	
 	/* Indicates whether the new IPv6 headers will
 	 * be sent or the old */

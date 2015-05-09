@@ -110,6 +110,19 @@ int y;
 		       (const void *) &y, sizeof(y)) < 0)
 			perror("setsockopt(IP_DF) failed");
 #endif
+		if (family == AF_INET6) {
+#if defined(IPV6_DONTFRAG)
+			y = 1;
+			if (setsockopt(fd, IPPROTO_IPV6, IPV6_DONTFRAG,
+				       (const void *) &y, sizeof(y)) < 0)
+				perror("setsockopt(IPV6_DF) failed");
+#elif defined(IPV6_MTU_DISCOVER)
+			y = IP_PMTUDISC_DO;
+			if (setsockopt(fd, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+			       (const void *) &y, sizeof(y)) < 0)
+				perror("setsockopt(IPV6_DF) failed");
+#endif
+		}
 	}
 #if defined(IP_PKTINFO)
 	y = 1;

@@ -554,7 +554,7 @@ struct msghdr mh = {
 		}
 #endif
 #ifdef IPV6_RECVPKTINFO
-		if (cmsg->cmsg_level != IPPROTO_IPV6 || cmsg->cmsg_type != IPV6_RECVPKTINFO) {
+		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_RECVPKTINFO) {
 			struct in6_pktinfo *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in6 *a = (struct sockaddr_in6*)our_addr;
 

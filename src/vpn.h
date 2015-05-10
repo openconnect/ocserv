@@ -71,7 +71,7 @@ typedef enum {
 #define DEFAULT_NO_COMPRESS_LIMIT 256
 
 /* Timeout (secs) for communication between main and sec-mod */
-#define MAIN_SEC_MOD_TIMEOUT 20
+#define MAIN_SEC_MOD_TIMEOUT 30
 
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  4

@@ -219,7 +219,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	}
 
 	ret = recv_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_SESSION_REPLY,
-	       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack, 0);
+	       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
 		mslog(s, proc, LOG_ERR, "error receiving auth reply message from sec-mod cmd socket: %s", strerror(e));
@@ -350,7 +350,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	}
 
 	ret = recv_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_CLI_STATS,
-	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, 0);
+	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
 		mslog(s, proc, LOG_ERR, "error receiving auth cli stats message from sec-mod cmd socket: %s", strerror(e));

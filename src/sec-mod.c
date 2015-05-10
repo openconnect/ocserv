@@ -304,7 +304,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 }
 
 static
-int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_t cmd,
+int process_packet_from_main(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 		   uint8_t * buffer, size_t buffer_size)
 {
 	gnutls_datum_t data;
@@ -328,7 +328,7 @@ int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_
 			return ERR_BAD_COMMAND;
 		}
 
-		handle_sec_auth_ban_ip_reply(cfd, sec, msg);
+		handle_sec_auth_ban_ip_reply(sec, msg);
 		ban_ip_reply_msg__free_unpacked(msg, &pa);
 
 		return 0;
@@ -345,7 +345,7 @@ int process_packet_from_main(void *pool, int cfd, sec_mod_st * sec, cmd_request_
 				return ERR_BAD_COMMAND;
 			}
 
-			ret = handle_sec_auth_session_cmd(cfd, sec, msg, cmd);
+			ret = handle_sec_auth_session_cmd(sec, msg, cmd);
 			sec_auth_session_msg__free_unpacked(msg, &pa);
 
 			return ret;
@@ -404,7 +404,7 @@ static void check_other_work(sec_mod_st *sec)
 }
 
 static
-int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffer_size)
+int serve_request_main(sec_mod_st *sec, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
@@ -412,7 +412,7 @@ int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffe
 	void *pool = buffer;
 
 	/* read request */
-	ret = force_read_timeout(cfd, buffer, 3, MAIN_SEC_MOD_TIMEOUT);
+	ret = force_read_timeout(sec->cmd_fd, buffer, 3, MAIN_SEC_MOD_TIMEOUT);
 	if (ret == 0)
 		goto leave;
 	else if (ret < 3) {
@@ -440,7 +440,7 @@ int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffe
 	}
 
 	/* read the body */
-	ret = force_read_timeout(cfd, buffer, length, MAIN_SEC_MOD_TIMEOUT);
+	ret = force_read_timeout(sec->cmd_fd, buffer, length, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
 		seclog(sec, LOG_ERR, "error receiving msg body of cmd %u with length %u: %s",
@@ -449,7 +449,7 @@ int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffe
 		goto leave;
 	}
 
-	ret = process_packet_from_main(pool, cfd, sec, cmd, buffer, ret);
+	ret = process_packet_from_main(pool, sec, cmd, buffer, ret);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
@@ -730,7 +730,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 			if (buffer == NULL) {
 				seclog(sec, LOG_ERR, "error in memory allocation");
 			} else {
-				ret = serve_request_main(sec, cmd_fd, buffer, buffer_size);
+				ret = serve_request_main(sec, buffer, buffer_size);
 				if (ret < 0 && ret == ERR_BAD_COMMAND) {
 					seclog(sec, LOG_ERR, "error processing command from main");
 					exit(1);

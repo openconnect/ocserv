@@ -113,6 +113,9 @@ const char* script;
 				if (remote[0] == 0)
 					setenv("IP_REMOTE", remote, 1);
 				setenv("IPV6_REMOTE", remote, 1);
+
+				snprintf(remote, sizeof(remote), "%u", proc->ipv6->prefix);
+				setenv("IPV6_PREFIX", remote, 1);
 			}
 		}
 

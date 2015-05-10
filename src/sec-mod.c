@@ -412,12 +412,12 @@ int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffe
 	void *pool = buffer;
 
 	/* read request */
-	ret = force_read(cfd, buffer, 3);
+	ret = force_read_timeout(cfd, buffer, 3, MAIN_SEC_MOD_TIMEOUT);
 	if (ret == 0)
 		goto leave;
 	else if (ret < 3) {
 		e = errno;
-		seclog(sec, LOG_INFO, "error receiving msg head: %s",
+		seclog(sec, LOG_ERR, "error receiving msg head: %s",
 		       strerror(e));
 		ret = ERR_BAD_COMMAND;
 		goto leave;
@@ -427,25 +427,31 @@ int serve_request_main(sec_mod_st *sec, int cfd, uint8_t *buffer, unsigned buffe
 	memcpy(&l16, &buffer[1], 2);
 	length = l16;
 
+	if (cmd <= MIN_SM_MAIN_CMD || cmd >= MAX_SM_MAIN_CMD) {
+		seclog(sec, LOG_ERR, "received invalid message from main of %u bytes (cmd: %u)\n",
+		      (unsigned)length, (unsigned)cmd);
+		return ERR_BAD_COMMAND;
+	}
+
 	if (length > buffer_size - 4) {
-		seclog(sec, LOG_INFO, "too big message (%d)", length);
+		seclog(sec, LOG_ERR, "received too big message (%d)", length);
 		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
 
 	/* read the body */
-	ret = force_read(cfd, buffer, length);
+	ret = force_read_timeout(cfd, buffer, length, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
-		seclog(sec, LOG_INFO, "error receiving msg body: %s",
-		       strerror(e));
+		seclog(sec, LOG_ERR, "error receiving msg body of cmd %u with length %u: %s",
+		       cmd, (unsigned)length, strerror(e));
 		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
 
 	ret = process_packet_from_main(pool, cfd, sec, cmd, buffer, ret);
 	if (ret < 0) {
-		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
+		seclog(sec, LOG_ERR, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
 	
  leave:

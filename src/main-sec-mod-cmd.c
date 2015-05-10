@@ -80,18 +80,19 @@ int handle_sec_mod_commands(main_server_st * s)
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR,
-		      "cannot obtain metadata from command socket: %s",
+		      "cannot obtain metadata from sec-mod socket: %s",
 		      strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
 	if (ret == 0) {
-		mslog(s, NULL, LOG_DEBUG, "command socket closed");
+		mslog(s, NULL, LOG_ERR, "command socket for sec-mod closed");
 		return ERR_BAD_COMMAND;
 	}
 
-	if (ret < 3) {
-		mslog(s, NULL, LOG_ERR, "command error");
+	if (ret < 3 || cmd <= MIN_SM_MAIN_CMD || cmd >= MAX_SM_MAIN_CMD) {
+		mslog(s, NULL, LOG_ERR, "main received invalid message from sec-mod of %u bytes (cmd: %u)\n",
+		      (unsigned)length, (unsigned)cmd);
 		return ERR_BAD_COMMAND;
 	}
 
@@ -104,12 +105,12 @@ int handle_sec_mod_commands(main_server_st * s)
 		return ERR_MEM;
 	}
 
-	raw_len = force_read(s->sec_mod_fd, raw, length);
+	raw_len = force_read_timeout(s->sec_mod_fd, raw, length, MAIN_SEC_MOD_TIMEOUT);
 	if (raw_len != length) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR,
-		      "cannot obtain data from command socket: %s",
-		      strerror(e));
+		      "cannot obtain data of cmd %u with length %u from sec-mod socket: %s",
+		      (unsigned)cmd, (unsigned)length, strerror(e));
 		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}

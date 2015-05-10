@@ -70,6 +70,9 @@ typedef enum {
 #define MIN_NO_COMPRESS_LIMIT 64
 #define DEFAULT_NO_COMPRESS_LIMIT 256
 
+/* Timeout (secs) for communication between main and sec-mod */
+#define MAIN_SEC_MOD_TIMEOUT 20
+
 #define DEBUG_BASIC 1
 #define DEBUG_HTTP  4
 #define DEBUG_TRANSFERRED 5
@@ -163,12 +166,15 @@ typedef enum {
 	SM_CMD_CLI_STATS,
 
 	/* from main to sec-mod and vice versa */
-	SM_CMD_AUTH_SESSION_OPEN=240,
+	MIN_SM_MAIN_CMD=239,
+	SM_CMD_AUTH_SESSION_OPEN,
 	SM_CMD_AUTH_SESSION_CLOSE,
 	SM_CMD_AUTH_SESSION_REPLY,
 	SM_CMD_AUTH_BAN_IP,
 	SM_CMD_AUTH_BAN_IP_REPLY,
 	SM_CMD_AUTH_CLI_STATS,
+
+	MAX_SM_MAIN_CMD,
 } cmd_request_t;
 
 struct group_cfg_st {

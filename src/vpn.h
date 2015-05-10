@@ -45,6 +45,8 @@
 # define _ATTR_PACKED
 #endif
 
+#define MAX_MSG_SIZE 16*1024
+
 typedef enum {
 	SOCK_TYPE_TCP,
 	SOCK_TYPE_UDP,

@@ -248,6 +248,12 @@ if test -z "$DISC";then
 	stop
 fi
 
+DISC=`cat out$TMP|grep "NAS-IP-Address = 127.0.0.1"|tail -1`
+if test -n "$DISC";then
+	cat out$TMP
+	echo "NAS-IP-Address has invalid value!"
+	stop
+fi
 
 $DOCKER stop test_ocserv_radius
 $DOCKER rm test_ocserv_radius

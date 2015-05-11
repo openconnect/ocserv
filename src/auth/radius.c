@@ -212,12 +212,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (pctx->our_ip[0] != 0) {
-		struct sockaddr_storage st;
+		struct in_addr in;
+		struct in6_addr in6;
 
-		if (inet_pton(AF_INET, pctx->our_ip, &st) != 0) {
-			rc_avpair_add(rh, &send, PW_NAS_IP_ADDRESS, (char*)&st, sizeof(struct in_addr), 0);
-		} else if (inet_pton(AF_INET6, pctx->our_ip, &st) != 0) {
-			rc_avpair_add(rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&st, sizeof(struct in6_addr), 0);
+		if (inet_pton(AF_INET, pctx->our_ip, &in) != 0) {
+			in.s_addr = ntohl(in.s_addr);
+			rc_avpair_add(rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0);
+		} else if (inet_pton(AF_INET6, pctx->our_ip, &in6) != 0) {
+			rc_avpair_add(rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0);
 		}
 	}
 

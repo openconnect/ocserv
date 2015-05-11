@@ -41,6 +41,7 @@
 #include <tlslib.h>
 #include <ipc.pb-c.h>
 #include <sec-mod-sup-config.h>
+#include <cloexec.h>
 
 #include <gnutls/gnutls.h>
 #include <gnutls/abstract.h>
@@ -750,6 +751,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 					continue;
 				}
 			}
+			set_cloexec_flag (cfd, 1);
 
 			/* do not allow unauthorized processes to issue commands
 			 */

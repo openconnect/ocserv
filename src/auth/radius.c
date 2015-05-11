@@ -106,6 +106,7 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
 	if (our_ip)
 		strlcpy(pctx->our_ip, our_ip, sizeof(pctx->our_ip));
+
 	pctx->pass_msg = pass_msg_first;
 
 	default_realm = rc_conf_str(rh, "default_realm");

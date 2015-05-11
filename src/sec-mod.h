@@ -53,6 +53,7 @@ typedef struct common_auth_info_st {
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char psid[BASE64_LENGTH(SID_SIZE) + 1]; /* printable */
 	char remote_ip[MAX_IP_STR];
+	char our_ip[MAX_IP_STR];
 	char ipv4[MAX_IP_STR];
 	char ipv6[MAX_IP_STR];
 } common_auth_info_st;

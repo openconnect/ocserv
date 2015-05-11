@@ -751,9 +751,14 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 		}
 		e->auth_info.groupname[sizeof(e->auth_info.groupname) - 1] = 0;
 
-		if (req->user_name != NULL) {
-			strlcpy(e->auth_info.username, req->user_name, sizeof(e->auth_info.username));
-		}
+	}
+
+	if (req->user_name != NULL) {
+		strlcpy(e->auth_info.username, req->user_name, sizeof(e->auth_info.username));
+	}
+
+	if (req->our_ip != NULL) {
+		strlcpy(e->auth_info.our_ip, req->our_ip, sizeof(e->auth_info.our_ip));
 	}
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {

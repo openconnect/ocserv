@@ -120,6 +120,16 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 		}
 	}
 
+	if (ai->our_ip[0] != 0) {
+		struct sockaddr_storage st;
+
+		if (inet_pton(AF_INET, ai->our_ip, &st) != 0) {
+			rc_avpair_add(rh, send, PW_NAS_IP_ADDRESS, (char*)&st, sizeof(struct in_addr), 0);
+		} else if (inet_pton(AF_INET6, ai->our_ip, &st) != 0) {
+			rc_avpair_add(rh, send, PW_NAS_IPV6_ADDRESS, (char*)&st, sizeof(struct in6_addr), 0);
+		}
+	}
+
 	if (rc_avpair_add(rh, send, PW_USER_NAME, ai->username, -1, 0) == NULL) {
 		return;
 	}

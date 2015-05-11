@@ -204,9 +204,18 @@ fi
 
 # do the same with a certificate - test radius accounting with certificate auth
 echo "Trying with certificate"
+rm -f out$TMP.pid
 $DOCKER exec test_ocserv_radius truncate --size=0 /var/log/radius/radacct/127.0.0.1/$FILE
-$OPENCONNECT $IP:$PORT_OCSERV --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 &
-PID=$!
+$OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=out$TMP.pid
+
+sleep 10
+
+if test -f out$TMP.pid;then
+	PID=`cat out$TMP.pid`
+else
+	echo "Cannot determine PID of client"
+	stop
+fi	
 
 ping -w 5 192.168.55.1
 if test $? != 0;then
@@ -220,12 +229,12 @@ sleep 4
 
 echo "Waiting for accounting report"
 sleep 60
-FILE=`$DOCKER exec test_ocserv_radius ls /var/log/radius/radacct/127.0.0.1/`
 
 kill -INT $PID
 
 sleep 10
 
+FILE=`$DOCKER exec test_ocserv_radius ls /var/log/radius/radacct/127.0.0.1/|tail -1`
 $DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP
 cat out$TMP
 OCTETS=`cat out$TMP|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`

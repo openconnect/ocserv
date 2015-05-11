@@ -83,7 +83,7 @@ struct htable *db = sec->client_db;
 		return 0;
 }
 
-client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
+client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip, unsigned pid)
 {
 	struct htable *db = sec->client_db;
 	client_entry_st *e, *te;
@@ -96,6 +96,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip)
 	}
 
 	strlcpy(e->auth_info.remote_ip, ip, sizeof(e->auth_info.remote_ip));
+	e->auth_info.id = pid;
 
 	do {
 		ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));

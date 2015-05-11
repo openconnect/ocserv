@@ -56,6 +56,7 @@ typedef struct common_auth_info_st {
 	char our_ip[MAX_IP_STR];
 	char ipv4[MAX_IP_STR];
 	char ipv6[MAX_IP_STR];
+	unsigned id;
 } common_auth_info_st;
 
 typedef struct client_entry_st {
@@ -100,7 +101,7 @@ typedef struct client_entry_st {
 void *sec_mod_client_db_init(sec_mod_st *sec);
 void sec_mod_client_db_deinit(sec_mod_st *sec);
 unsigned sec_mod_client_db_elems(sec_mod_st *sec);
-client_entry_st * new_client_entry(sec_mod_st *sec, const char *ip);
+client_entry_st * new_client_entry(sec_mod_st *sec, const char *ip, unsigned pid);
 client_entry_st * find_client_entry(sec_mod_st *sec, uint8_t sid[SID_SIZE]);
 void del_client_entry(sec_mod_st *sec, client_entry_st * e);
 void expire_client_entry(sec_mod_st *sec, client_entry_st * e);

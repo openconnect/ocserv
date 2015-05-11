@@ -120,6 +120,13 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 		}
 	}
 
+	if (ai->id) {
+		i = ai->id;
+		if (rc_avpair_add(rh, send, PW_NAS_PORT, &i, -1, 0) == NULL) {
+			return;
+		}
+	}
+
 	if (ai->our_ip[0] != 0) {
 		struct in_addr in;
 		struct in6_addr in6;

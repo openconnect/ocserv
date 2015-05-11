@@ -717,7 +717,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	client_entry_st *e;
 	unsigned need_continue = 0;
 
-	e = new_client_entry(sec, req->ip);
+	e = new_client_entry(sec, req->ip, pid);
 	if (e == NULL) {
 		seclog(sec, LOG_ERR, "cannot initialize memory");
 		return -1;

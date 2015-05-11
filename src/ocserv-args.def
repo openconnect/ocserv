@@ -450,11 +450,6 @@ ipv4-netmask = 255.255.255.0
 # The IPv6 subnet that leases will be given from.
 #ipv6-network = fda9:4efe:7e3b:03ea::/64
 
-# The length, in bits, of the subnet id to give addresses to clients.
-# This also defines the maximum number of clients the server can handle,
-# i.e., 2^(length).
-#ipv6-subnet-id-length = 16
-
 # The advertized DNS server. Use multiple lines for
 # multiple servers.
 # dns = fc00::4be0

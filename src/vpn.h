@@ -66,7 +66,6 @@ typedef enum {
 #define DEFAULT_KKDCP_POINTS 1
 #define DEFAULT_MAX_BAN_SCORE (MAX_PASSWORD_TRIES*DEFAULT_PASSWORD_POINTS)
 #define DEFAULT_BAN_RESET_TIME 300
-#define DEFAULT_SUBNET_ID_LENGTH 16
 
 #define MIN_NO_COMPRESS_LIMIT 64
 #define DEFAULT_NO_COMPRESS_LIMIT 256
@@ -219,7 +218,6 @@ struct vpn_st {
 
 	char *ipv6;
 	char *ipv6_local; /* local IPv6 address */
-	unsigned ipv6_subnet_id_length;
 	unsigned int mtu;
 
 	char **routes;

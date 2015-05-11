@@ -163,7 +163,6 @@ static struct cfg_options available_options[] = {
 
 	{ .name = "ipv6-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
-	{ .name = "ipv6-subnet-id-length", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "route-add-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "route-del-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
@@ -887,9 +886,6 @@ unsigned urlfw_size = 0;
 	}
 
 	READ_STRING("ipv6-network", config->network.ipv6);
-	READ_NUMERIC("ipv6-subnet-id-length", config->network.ipv6_subnet_id_length);
-	if (config->network.ipv6_subnet_id_length == 0)
-		config->network.ipv6_subnet_id_length = DEFAULT_SUBNET_ID_LENGTH;
 
 	prefix = extract_prefix(config->network.ipv6);
 	if (prefix == 0) {

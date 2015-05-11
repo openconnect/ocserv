@@ -102,7 +102,10 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip),
 	       SA_IN_SIZE(proc->ipv6->lip_len));
 	ifr6.ifr6_ifindex = idx;
-	ifr6.ifr6_prefixlen = 128;
+	if (proc->ipv6->prefix)
+		ifr6.ifr6_prefixlen = proc->ipv6->prefix;
+	else
+		ifr6.ifr6_prefixlen = 64;
 
 	ret = ioctl(fd, SIOCSIFADDR, &ifr6);
 	if (ret != 0) {
@@ -219,6 +222,8 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	int fd, e, ret;
 	struct in6_aliasreq ifr6;
 	struct ifreq ifr;
+	char c_netmask_buf[64];
+	char *p;
 
 	fd = socket(AF_INET6, SOCK_STREAM, 0);
 	if (fd == -1) {
@@ -241,7 +246,12 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	ifr6.ifra_dstaddr.sin6_len = sizeof(struct sockaddr_in6);
 	ifr6.ifra_dstaddr.sin6_family = AF_INET6;
 
-	memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff, sizeof(struct in6_addr));
+	p = ipv6_prefix_to_mask(c_netmask_buf, proc->config.ipv6_prefix);
+	if (p) {
+		inet_pton(AF_INET6, p, &ifr6.ifra_prefixmask.sin6_addr);
+	} else {
+		memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff, sizeof(struct in6_addr));
+	}
 	ifr6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);
 	ifr6.ifra_prefixmask.sin6_family = AF_INET6;
 

@@ -33,6 +33,7 @@ struct ip_lease_st {
 
         struct sockaddr_storage lip;
         socklen_t lip_len;
+        unsigned prefix; /* in ipv6 */
 
         struct ip_lease_db_st* db;
 };

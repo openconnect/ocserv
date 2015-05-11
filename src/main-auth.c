@@ -92,7 +92,8 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 		msg.ipv4_network = proc->config.ipv4_network;
 		msg.ipv6_network = proc->config.ipv6_network;
 
-		msg.ipv6_prefix = proc->config.ipv6_prefix;
+		msg.ipv6_prefix = proc->ipv6->prefix;
+		msg.has_ipv6_prefix = 1;
 
 		if (proc->interim_update_secs) {
 			msg.has_interim_update_secs = 1;

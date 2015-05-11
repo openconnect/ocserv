@@ -387,6 +387,12 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			goto fail;
 		}
 
+		if (s->config->network.ipv6_prefix) {
+			proc->ipv6->prefix = s->config->network.ipv6_prefix;
+		} else {
+			proc->ipv6->prefix = 127;
+		}
+
 		return 0;
 	}
 
@@ -436,15 +442,14 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
        		memcpy(&proc->ipv6->rip, &rnd, proc->ipv6->rip_len);
+		SA_IN6_U8_P(&proc->ipv6->rip)[15] &= 0xfe;
 
-		/* LIP = network address + 1 */
-		memcpy(&proc->ipv6->lip, &network, sizeof(struct sockaddr_in6));
+		proc->ipv6->prefix = 127;
+
+		/* LIP = RIP + 1 */
+		memcpy(&proc->ipv6->lip, &proc->ipv6->rip, sizeof(struct sockaddr_in6));
 		proc->ipv6->lip_len = sizeof(struct sockaddr_in6);
 		SA_IN6_U8_P(&proc->ipv6->lip)[15] |= 1;
-
-		if (memcmp(SA_IN6_U8_P(&proc->ipv6->lip), SA_IN6_U8_P(&proc->ipv6->rip), sizeof(struct in6_addr)) == 0) {
-			continue;
-		}
 
 		mslog(s, proc, LOG_DEBUG, "selected IP: %s",
 		      human_addr((void*)&proc->ipv6->rip, proc->ipv6->rip_len, buf, sizeof(buf)));

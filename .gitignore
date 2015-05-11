@@ -67,3 +67,6 @@ tests/docker-kerberos/ocpasswd
 tests/docker-kerberos/occtl
 tests/docker-kerberos/ocserv
 gl/strings.h
+tests/ipv4-prefix
+tests/ipv6-prefix
+src/http-heads.h

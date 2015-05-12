@@ -26,4 +26,4 @@ ADD dev-tun.tgz /dev/
 
 RUN ldconfig
 
-CMD sshd-keygen;/usr/sbin/sshd;echo testuser123|kinit testuser@KERBEROS.TEST && /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem -b && sleep 5 && ping -w 5 192.168.1.1 && ping6 -w 5 fd91:6d87:7341:db6a:0:52:190c:be01 && kdestroy && ( /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem --cookieonly --non-inter || touch /tmp/ok1 );echo testuser123|kinit testuser@KERBEROS.TEST && sleep 61 && ( /usr/sbin/openconnect kerberos.test --non-inter --cafile /etc/ca.pem || touch /tmp/ok2 );sleep 3600
+CMD sshd-keygen;/usr/sbin/sshd;echo testuser123|kinit testuser@KERBEROS.TEST && /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem -b && sleep 5 && ping -w 5 192.168.1.1 && ping6 -w 5 fd91:6d87:7341:db6a:0:6:173c:7901 && kdestroy && ( /usr/sbin/openconnect kerberos.test --cafile /etc/ca.pem --cookieonly --non-inter || touch /tmp/ok1 );echo testuser123|kinit testuser@KERBEROS.TEST && sleep 61 && ( /usr/sbin/openconnect kerberos.test --non-inter --cafile /etc/ca.pem || touch /tmp/ok2 );sleep 3600

@@ -427,6 +427,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	}
 
 	if (rcmd != cmd) {
+		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__, __LINE__, (int)rcmd, (int)cmd);
 		return ERR_BAD_COMMAND;
 	}
 

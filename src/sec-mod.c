@@ -427,6 +427,7 @@ int serve_request_main(sec_mod_st *sec, uint8_t *buffer, unsigned buffer_size)
 	memcpy(&l16, &buffer[1], 2);
 	length = l16;
 
+	seclog(sec, LOG_DEBUG, "received request %s", cmd_request_to_str(cmd));
 	if (cmd <= MIN_SM_MAIN_CMD || cmd >= MAX_SM_MAIN_CMD) {
 		seclog(sec, LOG_ERR, "received invalid message from main of %u bytes (cmd: %u)\n",
 		      (unsigned)length, (unsigned)cmd);

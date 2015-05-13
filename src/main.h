@@ -205,7 +205,7 @@ typedef struct main_server_st {
 	int ctl_fd;
 #endif
 	int sec_mod_fd; /* messages are sent and received async */
-	int sec_mod_fd_sync; /* messages are received in a sync order (ping-pong) */
+	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
 	void *main_pool; /* talloc main pool */
 } main_server_st;
 

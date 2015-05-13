@@ -14,3 +14,73 @@ test	Cleartext-Password := "test"
 	Framed-Routing = Broadcast-Listen,
 	Framed-MTU = 1500,
 
+test2	Cleartext-Password := "test2"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.191,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+
+test3	Cleartext-Password := "test3"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+
+test4	Cleartext-Password := "test4"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+
+test5	Cleartext-Password := "test5"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+
+test6	Cleartext-Password := "test6"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+
+test7	Cleartext-Password := "test7"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+
+test8	Cleartext-Password := "test8"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Framed-MTU = 1500,
+

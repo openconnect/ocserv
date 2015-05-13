@@ -620,6 +620,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		       strerror(e));
 		exit(1);
 	}
+	set_cloexec_flag(sd, 1);
 
 	umask(066);
 	ret = bind(sd, (struct sockaddr *)&sa, SUN_LEN(&sa));

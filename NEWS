@@ -15,6 +15,8 @@
 - radius: added support for Route-IPv6-Information, Delegated-IPv6-Prefix,
   NAS-IPv6-Address, NAS-IP-Address.
 - Added configuration option 'persistent-cookies'.
+- Corrected desync of main and sec-mod by introducing a synchronous
+  communication socket. Reported by Mani Behrouz.
 
 
 * Version 0.10.4 (released 2015-04-27)

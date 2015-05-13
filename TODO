@@ -14,10 +14,9 @@ Short term items:
 
 * Give each worker a limited number of accesses to the security module.
 
-* radius: use acct-interim-interval for stats-report-time (and possibly
-  allow overriding it).
-
 Long term items:
+
+* radius: Consider supporting rfc5176 and session-timeout.
 
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
   is negotiated properly. Using PSK ciphersuites seem to be like a solution, 

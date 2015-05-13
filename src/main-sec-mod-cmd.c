@@ -209,7 +209,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(SM_CMD_AUTH_SESSION_OPEN));
 
-	ret = send_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_SESSION_OPEN,
+	ret = send_msg(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_SESSION_OPEN,
 		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
 		(pack_func)sec_auth_session_msg__pack);
 	if (ret < 0) {
@@ -218,7 +218,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		return -1;
 	}
 
-	ret = recv_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_SESSION_REPLY,
+	ret = recv_msg(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_SESSION_REPLY,
 	       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
@@ -340,7 +340,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(SM_CMD_AUTH_SESSION_CLOSE));
 
-	ret = send_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_SESSION_CLOSE,
+	ret = send_msg(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_SESSION_CLOSE,
 		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
 		(pack_func)sec_auth_session_msg__pack);
 	if (ret < 0) {
@@ -349,7 +349,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 		return -1;
 	}
 
-	ret = recv_msg(proc, s->sec_mod_fd, SM_CMD_AUTH_CLI_STATS,
+	ret = recv_msg(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_CLI_STATS,
 	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;

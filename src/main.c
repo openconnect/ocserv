@@ -1030,7 +1030,7 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 
-	s->sec_mod_fd = run_sec_mod(s);
+	s->sec_mod_fd = run_sec_mod(s, &s->sec_mod_fd_sync);
 
 	ret = ctl_handler_init(s);
 	if (ret < 0) {

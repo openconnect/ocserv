@@ -304,7 +304,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 }
 
 static
-int process_packet_from_main(void *pool, sec_mod_st * sec, cmd_request_t cmd,
+int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t cmd,
 		   uint8_t * buffer, size_t buffer_size)
 {
 	gnutls_datum_t data;
@@ -345,7 +345,7 @@ int process_packet_from_main(void *pool, sec_mod_st * sec, cmd_request_t cmd,
 				return ERR_BAD_COMMAND;
 			}
 
-			ret = handle_sec_auth_session_cmd(sec, msg, cmd);
+			ret = handle_sec_auth_session_cmd(sec, fd, msg, cmd);
 			sec_auth_session_msg__free_unpacked(msg, &pa);
 
 			return ret;
@@ -404,7 +404,7 @@ static void check_other_work(sec_mod_st *sec)
 }
 
 static
-int serve_request_main(sec_mod_st *sec, uint8_t *buffer, unsigned buffer_size)
+int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
@@ -412,7 +412,7 @@ int serve_request_main(sec_mod_st *sec, uint8_t *buffer, unsigned buffer_size)
 	void *pool = buffer;
 
 	/* read request */
-	ret = force_read_timeout(sec->cmd_fd, buffer, 3, MAIN_SEC_MOD_TIMEOUT);
+	ret = force_read_timeout(fd, buffer, 3, MAIN_SEC_MOD_TIMEOUT);
 	if (ret == 0)
 		goto leave;
 	else if (ret < 3) {
@@ -441,7 +441,7 @@ int serve_request_main(sec_mod_st *sec, uint8_t *buffer, unsigned buffer_size)
 	}
 
 	/* read the body */
-	ret = force_read_timeout(sec->cmd_fd, buffer, length, MAIN_SEC_MOD_TIMEOUT);
+	ret = force_read_timeout(fd, buffer, length, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
 		seclog(sec, LOG_ERR, "error receiving msg body of cmd %u with length %u: %s",
@@ -450,7 +450,7 @@ int serve_request_main(sec_mod_st *sec, uint8_t *buffer, unsigned buffer_size)
 		goto leave;
 	}
 
-	ret = process_packet_from_main(pool, sec, cmd, buffer, ret);
+	ret = process_packet_from_main(pool, fd, sec, cmd, buffer, ret);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
@@ -512,6 +512,7 @@ int serve_request(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned
  * @config: server configuration
  * @socket_file: the name of the socket
  * @cmd_fd: socket to exchange commands with main
+ * @cmd_fd_sync: socket to received sync commands from main
  *
  * This is the main part of the security module.
  * It creates the unix domain socket identified by @socket_file
@@ -537,11 +538,11 @@ int serve_request(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned
  * key operations.
  */
 void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char *socket_file,
-		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd)
+		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd, int cmd_fd_sync)
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
-	int cfd, ret, e, n;
+	int cfd, ret, e, n, tfd;
 	unsigned i, buffer_size;
 	uid_t uid;
 	uint8_t *buffer;
@@ -600,6 +601,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 
 	sec_auth_init(sec, perm_config);
 	sec->cmd_fd = cmd_fd;
+	sec->cmd_fd_sync = cmd_fd_sync;
 
 #ifdef HAVE_PKCS11
 	ret = gnutls_pkcs11_reinit();
@@ -706,6 +708,9 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		FD_SET(cmd_fd, &rd_set);
 		n = MAX(n, cmd_fd);
 
+		FD_SET(cmd_fd_sync, &rd_set);
+		n = MAX(n, cmd_fd_sync);
+
 		FD_SET(sd, &rd_set);
 		n = MAX(n, sd);
 
@@ -726,13 +731,18 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 			exit(1);
 		}
 
-		if (FD_ISSET(cmd_fd, &rd_set)) {
+		if (FD_ISSET(cmd_fd, &rd_set) || FD_ISSET(cmd_fd_sync, &rd_set)) {
+			if (FD_ISSET(cmd_fd_sync, &rd_set))
+				tfd = cmd_fd_sync;
+			else
+				tfd = cmd_fd;
+
 			buffer_size = MAX_MSG_SIZE;
 			buffer = talloc_size(sec, buffer_size);
 			if (buffer == NULL) {
 				seclog(sec, LOG_ERR, "error in memory allocation");
 			} else {
-				ret = serve_request_main(sec, buffer, buffer_size);
+				ret = serve_request_main(sec, tfd, buffer, buffer_size);
 				if (ret < 0 && ret == ERR_BAD_COMMAND) {
 					seclog(sec, LOG_ERR, "error processing command from main");
 					exit(1);

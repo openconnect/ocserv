@@ -204,7 +204,8 @@ typedef struct main_server_st {
 #else
 	int ctl_fd;
 #endif
-	int sec_mod_fd;
+	int sec_mod_fd; /* messages are sent and received async */
+	int sec_mod_fd_sync; /* messages are received in a sync order (ping-pong) */
 	void *main_pool; /* talloc main pool */
 } main_server_st;
 
@@ -263,7 +264,7 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
-int run_sec_mod(main_server_st * s);
+int run_sec_mod(main_server_st * s, int *sync_fd);
 
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,

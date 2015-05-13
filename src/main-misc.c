@@ -595,11 +595,14 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 	return ret;
 }
 
-/* Returns a file descriptor to be used for communication with sec-mod
+/* Returns two file descriptors to be used for communication with sec-mod.
+ * The sync_fd is used by main to send synchronous commands- commands which
+ * expect a reply immediately.
  */
-int run_sec_mod(main_server_st * s)
+int run_sec_mod(main_server_st * s, int *sync_fd)
 {
 	int e, fd[2], ret;
+	int sfd[2];
 	pid_t pid;
 	const char *p;
 
@@ -621,6 +624,12 @@ int run_sec_mod(main_server_st * s)
 		exit(1);
 	}
 
+	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sfd);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error creating sec-mod sync command socket");
+		exit(1);
+	}
+
 	pid = fork();
 	if (pid == 0) {		/* child */
 		clear_lists(s);
@@ -633,13 +642,17 @@ int run_sec_mod(main_server_st * s)
 #endif
 		setproctitle(PACKAGE_NAME "-secmod");
 		close(fd[1]);
+		close(sfd[1]);
 		set_cloexec_flag (fd[0], 1);
-		sec_mod_server(s->main_pool, s->perm_config, p, s->cookie_key, fd[0]);
+		set_cloexec_flag (sfd[0], 1);
+		sec_mod_server(s->main_pool, s->perm_config, p, s->cookie_key, fd[0], sfd[0]);
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);
 		s->sec_mod_pid = pid;
 		set_cloexec_flag (fd[1], 1);
+		set_cloexec_flag (sfd[1], 1);
+		*sync_fd = sfd[1];
 		return fd[1];
 	} else {
 		e = errno;

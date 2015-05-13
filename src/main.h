@@ -269,7 +269,7 @@ int run_sec_mod(main_server_st * s, int *sync_fd);
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
 			uint8_t *sid, size_t sid_size);
-void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k);
+void remove_proc(main_server_st* s, struct proc_st *proc, unsigned k, unsigned quit);
 void proc_to_zombie(main_server_st* s, struct proc_st *proc);
 
 void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);

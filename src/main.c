@@ -500,7 +500,7 @@ struct script_wait_st *stmp = NULL, *spos;
 				list_del(&stmp->list);
 				ret = handle_script_exit(s, stmp->proc, estatus);
 				if (ret < 0) {
-					remove_proc(s, stmp->proc, 1);
+					remove_proc(s, stmp->proc, 1, 0);
 				} else {
 					talloc_free(stmp);
 				}
@@ -660,7 +660,7 @@ static void kill_children(main_server_st* s)
 	kill(s->sec_mod_pid, SIGTERM);
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid != -1) {
-			remove_proc(s, ctmp, 1);
+			remove_proc(s, ctmp, 1, 1);
 		}
 	}
 }
@@ -1267,7 +1267,7 @@ fork_failed:
 			if (ctmp->fd >= 0 && FD_ISSET(ctmp->fd, &rd_set)) {
 				ret = handle_commands(s, ctmp);
 				if (ret < 0) {
-					remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0);
+					remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?1:0, 0);
 				}
 			}
 		}

@@ -167,7 +167,7 @@ struct proc_st *ctmp;
 
 /* k: whether to kill the process
  */
-void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
+void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k, unsigned quit)
 {
 	mslog(s, proc, LOG_INFO, "user disconnected");
 
@@ -178,7 +178,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned k)
 		kill(proc->pid, SIGTERM);
 
 	/* close any pending sessions */
-	if (proc->active_sid) {
+	if (proc->active_sid && quit == 0) {
 		session_close(s, proc);
 	}
 

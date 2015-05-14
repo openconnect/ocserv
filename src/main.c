@@ -1196,6 +1196,8 @@ int main(int argc, char** argv)
 					sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
 					close(cmd_fd[0]);
 					clear_lists(s);
+					close(s->sec_mod_fd);
+					close(s->sec_mod_fd_sync);
 
 					/* clear the cookie key */
 					safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));

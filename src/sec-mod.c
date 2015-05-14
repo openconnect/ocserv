@@ -542,7 +542,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
-	int cfd, ret, e, n, tfd;
+	int cfd, ret, e, n;
 	unsigned i, buffer_size;
 	uid_t uid;
 	uint8_t *buffer;
@@ -699,6 +699,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	alarm(MAINTAINANCE_TIME);
 	seclog(sec, LOG_INFO, "sec-mod initialized (socket: %s)", SOCKET_FILE);
 
+
 	for (;;) {
 		check_other_work(sec);
 
@@ -731,26 +732,31 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 			exit(1);
 		}
 
-		if (FD_ISSET(cmd_fd, &rd_set) || FD_ISSET(cmd_fd_sync, &rd_set)) {
-			if (FD_ISSET(cmd_fd_sync, &rd_set))
-				tfd = cmd_fd_sync;
-			else
-				tfd = cmd_fd;
+		/* we do a new allocation, to also use it as pool for the
+		 * parsers to use */
+		buffer_size = MAX_MSG_SIZE;
+		buffer = talloc_size(sec, buffer_size);
+		if (buffer == NULL) {
+			seclog(sec, LOG_ERR, "error in memory allocation");
+			exit(1);
+		}
 
-			buffer_size = MAX_MSG_SIZE;
-			buffer = talloc_size(sec, buffer_size);
-			if (buffer == NULL) {
-				seclog(sec, LOG_ERR, "error in memory allocation");
-			} else {
-				ret = serve_request_main(sec, tfd, buffer, buffer_size);
-				if (ret < 0 && ret == ERR_BAD_COMMAND) {
-					seclog(sec, LOG_ERR, "error processing command from main");
-					exit(1);
-				}
-				talloc_free(buffer);
+		if (FD_ISSET(cmd_fd_sync, &rd_set)) {
+			ret = serve_request_main(sec, cmd_fd_sync, buffer, buffer_size);
+			if (ret < 0 && ret == ERR_BAD_COMMAND) {
+				seclog(sec, LOG_ERR, "error processing sync command from main");
+				exit(1);
 			}
 		}
 
+		if (FD_ISSET(cmd_fd, &rd_set)) {
+			ret = serve_request_main(sec, cmd_fd, buffer, buffer_size);
+			if (ret < 0 && ret == ERR_BAD_COMMAND) {
+				seclog(sec, LOG_ERR, "error processing async command from main");
+				exit(1);
+			}
+		}
+		
 		if (FD_ISSET(sd, &rd_set)) {
 			sa_len = sizeof(sa);
 			cfd = accept(sd, (struct sockaddr *)&sa, &sa_len);
@@ -760,7 +766,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 					seclog(sec, LOG_DEBUG,
 					       "sec-mod error accepting connection: %s",
 					       strerror(e));
-					continue;
+					goto cont;
 				}
 			}
 			set_cloexec_flag (cfd, 1);
@@ -771,17 +777,13 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 			if (ret < 0) {
 				seclog(sec, LOG_INFO, "rejected unauthorized connection");
 			} else {
-				buffer_size = MAX_MSG_SIZE;
-				buffer = talloc_size(sec, buffer_size);
-				if (buffer == NULL) {
-					seclog(sec, LOG_ERR, "error in memory allocation");
-				} else {
-					serve_request(sec, cfd, pid, buffer, buffer_size);
-					talloc_free(buffer);
-				}
+				memset(buffer, '0', buffer_size);
+				serve_request(sec, cfd, pid, buffer, buffer_size);
 			}
 			close(cfd);
 		}
+ cont:
+		talloc_free(buffer);
 #ifdef DEBUG_LEAKS
 		talloc_report_full(sec, stderr);
 #endif

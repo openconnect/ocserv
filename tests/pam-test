@@ -55,7 +55,7 @@ fi
 
 echo ""
 echo "Trying with wrong password and OTP"
-printf "testuser\n999999\n" >pass-pam.tmp
+echo -e "testuser\n999999\n" >pass-pam.tmp
 $OPENCONNECT $IP:$PORT_OCSERV -q -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
 if test $? = 0;then
 	echo "Authentication with wrong password succeeded!"
@@ -64,7 +64,7 @@ fi
 
 echo ""
 echo "Trying with wrong username"
-printf "testuser123\n328482\n" >pass-pam.tmp
+echo -e "testuser123\n328482\n" >pass-pam.tmp
 $OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded!"
@@ -73,7 +73,7 @@ fi
 
 echo ""
 echo "Trying with wrong OTP"
-printf "testuser123\n99999\n" >pass-pam.tmp
+echo -e "testuser123\n99999\n" >pass-pam.tmp
 $OPENCONNECT $IP:$PORT_OCSERV -q -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
 if test $? = 0;then
 	echo "Authentication with wrong OTP succeeded!"
@@ -83,7 +83,7 @@ fi
 echo ""
 echo "Trying with correct password"
 #oathtool -w 0 00
-printf "testuser123\n328482\n" >pass-pam.tmp
+echo -e "testuser123\n328482\n" >pass-pam.tmp
 cat pass-pam.tmp
 $OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-pam.tmp &
 PID=$!
@@ -116,18 +116,18 @@ if test $? != 0;then
 fi
 
 echo "UserKnownHostsFile ./known-hosts.tmp" >config.tmp
-printf "#\!/bin/sh\n" >echo-admin.tmp
-printf "echo yes" >>echo-admin.tmp
-printf "echo root" >>echo-admin.tmp
-printf "\n" >>echo-admin.tmp
+echo -e '#!'"/bin/sh\n" >echo-admin.tmp
+echo -e "echo yes" >>echo-admin.tmp
+echo -e "echo root" >>echo-admin.tmp
+echo -e "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
 export SSH_ASKPASS="./echo-admin.tmp"
 setsid ssh -T -F config.tmp root@192.168.56.1 occtl show user testuser >out.tmp 2>&1
 cat out.tmp
 
-printf "#\!/bin/sh\n" >echo-admin.tmp
-printf "echo root" >>echo-admin.tmp
-printf "\n" >>echo-admin.tmp
+echo -e '#!'"/bin/sh\n" >echo-admin.tmp
+echo -e "echo root" >>echo-admin.tmp
+echo -e "\n" >>echo-admin.tmp
 chmod 755 echo-admin.tmp
 setsid ssh -T -F config.tmp root@192.168.56.1 occtl show user testuser >out.tmp 2>&1
 cat out.tmp

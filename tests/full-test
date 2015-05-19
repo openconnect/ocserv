@@ -54,21 +54,21 @@ if test ! -z "$QUIT_ON_INIT";then
 	exit 0
 fi
 
-printf "testuser\n" >pass-full$TMP
+echo -e "testuser\n" >pass-full$TMP
 $OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-full$TMP
 if test $? = 0;then
 	echo "Authentication with wrong password succeeded!"
 	stop
 fi
 
-printf "test\n" >pass-full$TMP
+echo -e "test\n" >pass-full$TMP
 $OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-full$TMP
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded!"
 	stop
 fi
 
-printf "test\n" >pass-full$TMP
+echo -e "test\n" >pass-full$TMP
 $OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP &
 PID=$!
 
@@ -99,19 +99,20 @@ if test $? != 0;then
 	stop
 fi
 
+rm -f known-hosts$TMP
 echo "UserKnownHostsFile ./known-hosts$TMP" >config$TMP
-printf "#\!/bin/sh\n" >echo-admin$TMP
-printf "echo yes" >>echo-admin$TMP
-printf "echo root" >>echo-admin$TMP
-printf "\n" >>echo-admin$TMP
+echo -e '#!'"/bin/sh\n" >echo-admin$TMP
+echo -e "echo yes" >>echo-admin$TMP
+echo -e "echo root" >>echo-admin$TMP
+echo -e "\n" >>echo-admin$TMP
 chmod 755 echo-admin$TMP
 export SSH_ASKPASS="./echo-admin$TMP"
 setsid ssh -T -F config$TMP root@192.168.1.1 occtl show user test >out$TMP 2>&1
 cat out$TMP
 
-printf "#\!/bin/sh\n" >echo-admin$TMP
-printf "echo root" >>echo-admin$TMP
-printf "\n" >>echo-admin$TMP
+echo -e '#!'"/bin/sh\n" >echo-admin$TMP
+echo -e "echo root" >>echo-admin$TMP
+echo -e "\n" >>echo-admin$TMP
 chmod 755 echo-admin$TMP
 setsid ssh -T -F config$TMP root@192.168.1.1 occtl show users
 setsid ssh -T -F config$TMP root@192.168.1.1 occtl show user test >out$TMP 2>&1

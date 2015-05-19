@@ -53,7 +53,7 @@ if test ! -z "$QUIT_ON_INIT";then
 	exit 0
 fi
 
-printf "test\ntest\n" >pass$TMP
+echo -e "test\ntest\n" >pass$TMP
 $OPENCONNECT $IP:6551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass$TMP &
 PID=$!
 
@@ -78,18 +78,18 @@ if test $? != 0;then
 fi
 
 echo "UserKnownHostsFile ./known-hosts$TMP" >config$TMP
-printf "#\!/bin/sh\n" >echo-admin$TMP
-printf "echo yes" >>echo-admin$TMP
-printf "echo root" >>echo-admin$TMP
-printf "\n" >>echo-admin$TMP
+echo -e '#!'"/bin/sh\n" >echo-admin$TMP
+echo -e "echo yes" >>echo-admin$TMP
+echo -e "echo root" >>echo-admin$TMP
+echo -e "\n" >>echo-admin$TMP
 chmod 755 echo-admin$TMP
 export SSH_ASKPASS="./echo-admin$TMP"
 setsid ssh -T -F config$TMP root@192.168.99.1 occtl show user test >out$TMP 2>&1
 cat out$TMP
 
-printf "#\!/bin/sh\n" >echo-admin$TMP
-printf "echo root" >>echo-admin$TMP
-printf "\n" >>echo-admin$TMP
+echo -e '#!'"/bin/sh\n" >echo-admin$TMP
+echo -e "echo root" >>echo-admin$TMP
+echo -e "\n" >>echo-admin$TMP
 chmod 755 echo-admin$TMP
 setsid ssh -T -F config$TMP root@192.168.99.1 occtl show user test >out$TMP 2>&1
 cat out$TMP

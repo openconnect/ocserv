@@ -416,7 +416,7 @@ void vpn_server(struct worker_st *ws)
 			      "could not disable system calls, kernel might not support seccomp");
 		}
 	}
-	ws->session_start_time = time(0);
+	ws->session_start_time = ws->last_stats_msg = time(0);
 
 	oclog(ws, LOG_DEBUG, "accepted connection");
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))

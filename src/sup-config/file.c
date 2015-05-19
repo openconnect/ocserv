@@ -64,6 +64,8 @@ static struct cfg_options available_options[] = {
 	{ .name = "net-priority", .type = OPTION_STRING },
 	{ .name = "cgroup", .type = OPTION_STRING },
 	{ .name = "user-profile", .type = OPTION_STRING },
+	{ .name = "session-timeout", .type = OPTION_NUMERIC},
+	{ .name = "stats-report-time", .type = OPTION_NUMERIC}
 };
 
 #define READ_RAW_MULTI_LINE(name, s_name, num) { \
@@ -225,6 +227,9 @@ unsigned prefix = 0;
 	READ_RAW_NUMERIC("tx-data-per-sec", msg->tx_per_sec, msg->has_tx_per_sec);
 	msg->rx_per_sec /= 1000; /* in kb */
 	msg->tx_per_sec /= 1000; /* in kb */
+
+	READ_RAW_NUMERIC("stats-report-time", msg->interim_update_secs, msg->has_interim_update_secs);
+	READ_RAW_NUMERIC("session-timeout", msg->session_timeout_secs, msg->has_session_timeout_secs);
 	
 	/* net-priority will contain the actual priority + 1,
 	 * to allow having zero as uninitialized. */

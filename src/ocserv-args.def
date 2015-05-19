@@ -94,11 +94,12 @@ An example configuration file follows.
 # One entry must be listed per line, and 'ocpasswd' should be used
 # to generate password entries.
 #
-# radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name,override-interim-updates=false]:
+# radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name,override-config=false]:
 #  The radius option requires specifying freeradius-client configuration
 # file. If the groupconfig option is set, then config-per-user will be overriden,
-# and all configuration will be read from radius. The 'override-interim-updates' if set to
-# true will ignore Acct-Interim-Interval from the server and 'stats-report-time' will be considered.
+# and all configuration will be read from radius. The 'override-config' if set to
+# false will ignore Acct-Interim-Interval, Session-Timeout from the server and only the
+# configured values will be considered.
 #
 # The supported atributes for radius configuration are:
 # Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,

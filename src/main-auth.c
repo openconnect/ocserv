@@ -97,9 +97,14 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.has_ipv6_prefix = 1;
 		}
 
-		if (proc->interim_update_secs) {
+		if (proc->config.interim_update_secs) {
 			msg.has_interim_update_secs = 1;
-			msg.interim_update_secs = proc->interim_update_secs;
+			msg.interim_update_secs = proc->config.interim_update_secs;
+		}
+
+		if (proc->config.session_timeout_secs) {
+			msg.has_session_timeout_secs = 1;
+			msg.session_timeout_secs = proc->config.session_timeout_secs;
 		}
 
 		if (proc->config.rx_per_sec != 0) {

@@ -47,6 +47,14 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 	if (pctx == NULL)
 		return 0;
 
+	msg->interim_update_secs = pctx->interim_interval_secs;
+	if (msg->interim_update_secs > 0)
+		msg->has_interim_update_secs = 1;
+
+	msg->session_timeout_secs = pctx->session_timeout_secs;
+	if (msg->session_timeout_secs > 0)
+		msg->has_session_timeout_secs = 1;
+
 	if (pctx->ipv4[0] != 0) {
 		msg->explicit_ipv4 = talloc_strdup(pool, pctx->ipv4);
 	}

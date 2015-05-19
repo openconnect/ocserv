@@ -561,6 +561,12 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				ws->config->stats_report_time = msg->interim_update_secs;
 			}
 
+			if (msg->has_session_timeout_secs) {
+				oclog(ws, LOG_DEBUG, "overriding session-timeout with auth server's value (%u)",
+				      (unsigned)msg->session_timeout_secs);
+				ws->config->session_timeout = msg->session_timeout_secs;
+			}
+
 			if (msg->ipv4 != NULL) {
 				talloc_free(ws->vinfo.ipv4);
 				if (strcmp(msg->ipv4, "0.0.0.0") == 0)

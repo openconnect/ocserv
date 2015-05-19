@@ -132,9 +132,6 @@ typedef struct proc_st {
 
 	unsigned status; /* PS_AUTH_ */
 	unsigned resume_reqs; /* the number of requests received */
-	/* the number of secs to send interim updates. If set, it overrides
-	 * stats-report-time. */
-	unsigned interim_update_secs;
 
 	/* these are filled in after the worker process dies, using the
 	 * Cli stats message. */

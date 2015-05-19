@@ -30,7 +30,8 @@ struct radius_ctx_st {
 
 	char remote_ip[MAX_IP_STR];
 	char our_ip[MAX_IP_STR];
-	int interim_interval_secs;
+	unsigned interim_interval_secs;
+	unsigned session_timeout_secs;
 
 	/* variables for configuration */
 	char ipv4[MAX_IP_STR];

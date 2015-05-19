@@ -480,12 +480,6 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 		}
 	}
 
-	if (e->module && e->module->get_interim_update) {
-		rep.interim_update_secs = e->module->get_interim_update(e->auth_ctx);
-		if (rep.interim_update_secs > 0)
-			rep.has_interim_update_secs = 1;
-	}
-
 	ret = send_msg(lpool, fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
 			(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
 			(pack_func) sec_auth_session_reply_msg__pack);

@@ -214,6 +214,11 @@ struct group_cfg_st {
 	size_t rx_per_sec;
 	size_t tx_per_sec;
 
+	/* the number of secs to send interim updates. If set, it overrides
+	 * stats-report-time. */
+	unsigned interim_update_secs;
+	unsigned session_timeout_secs;
+
 	unsigned deny_roaming; /* whether the user is allowed to re-use cookies from another IP */
 	unsigned net_priority;
 	unsigned no_udp; /* whether to disable UDP for this user */

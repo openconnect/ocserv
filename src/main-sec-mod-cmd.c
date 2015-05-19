@@ -232,7 +232,10 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	}
 
 	if (msg->has_interim_update_secs)
-		proc->interim_update_secs = msg->interim_update_secs;
+		proc->config.interim_update_secs = msg->interim_update_secs;
+
+	if (msg->has_session_timeout_secs)
+		proc->config.session_timeout_secs = msg->session_timeout_secs;
 
 	/* fill in group_cfg_st */
 	if (msg->has_no_udp)

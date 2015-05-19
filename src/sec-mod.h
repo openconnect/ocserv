@@ -74,6 +74,7 @@ typedef struct client_entry_st {
 	unsigned tls_auth_ok;
 
 	char *msg_str;
+	char *prompt_str;
 
 	stats_st saved_stats; /* saved from previous cookie usage */
 	stats_st stats; /* current */

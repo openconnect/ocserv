@@ -41,6 +41,7 @@ struct pam_ctx_st {
 	int cr_ret;
 	unsigned changing; /* whether we are entering a new password */
 	str_st msg;
+	str_st prompt;
 	unsigned sent_msg;
 	struct pam_response *replies; /* for safety */
 	unsigned state; /* PAM_S_ */

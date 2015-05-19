@@ -80,13 +80,20 @@ unsigned i;
 				break;
 			case PAM_PROMPT_ECHO_OFF:
 			case PAM_PROMPT_ECHO_ON:
-				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, sent: %d", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", pctx->sent_msg);
-
 				if (pctx->sent_msg == 0) {
 					/* no message, just asking for password */
 					str_reset(&pctx->msg);
 					pctx->sent_msg = 1;
+
 				}
+
+				if (msg[i]->msg) {
+					str_reset(&pctx->prompt);
+					str_append_str(&pctx->prompt, msg[i]->msg);
+				}
+
+				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, sent: %d", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", pctx->sent_msg);
+
 				pctx->state = PAM_S_WAIT_FOR_PASS;
 				pctx->cr_ret = PAM_SUCCESS;
 				co_resume();
@@ -157,6 +164,7 @@ struct pam_ctx_st * pctx;
 		return -1;
 
 	str_init(&pctx->msg, pctx);
+	str_init(&pctx->prompt, pctx);
 
 	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
@@ -186,7 +194,7 @@ fail1:
 	return -1;
 }
 
-static int pam_auth_msg(void* ctx, void *pool, char** msg)
+static int pam_auth_msg(void* ctx, void *pool, char** msg, char **prompt)
 {
 struct pam_ctx_st * pctx = ctx;
 
@@ -218,6 +226,12 @@ struct pam_ctx_st * pctx = ctx;
 
 			*msg = talloc_strdup(pool, (char*)pctx->msg.data);
 		}
+
+	}
+
+	if (prompt != NULL) {
+		if (pctx->prompt.length > 0)
+			*prompt = talloc_strdup(pool, (char*)pctx->prompt.data);
 	}
 
 	return 0;

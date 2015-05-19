@@ -319,7 +319,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	}
 }
 
-static int gssapi_auth_msg(void *ctx, void *pool, char **msg)
+static int gssapi_auth_msg(void *ctx, void *pool, char **msg, char **prompt)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 	OM_uint32 min;

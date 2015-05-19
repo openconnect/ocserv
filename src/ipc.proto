@@ -206,9 +206,10 @@ message sec_auth_reply_msg
 	required AUTH_REP reply = 1;
 	optional bytes cookie = 2;
 	optional string user_name = 3;
-	optional string msg = 4;
+	optional string msg = 4; /* message to display to user */
 	optional bytes dtls_session_id = 5;
 	optional bytes sid = 6;
+	optional string prompt = 7; /* brief prompt */
 }
 
 /* SEC_SIGN/DECRYPT */

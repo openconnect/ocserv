@@ -74,8 +74,8 @@ static const char oc_login_msg_end[] =
 static const char login_msg_user[] =
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
 
-static const char login_msg_password[] =
-    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n";
+#define LOGIN_MSG_PASSWORD \
+    "<input type=\"password\" name=\"password\" label=\"%s\" />\n"
 
 #define OCV3_LOGIN_MSG_START \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
@@ -162,7 +162,7 @@ static int append_group_str(worker_st * ws, str_st *str, const char *group)
 	return 0;
 }
 
-int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
+int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, const char *prompt)
 {
 	int ret;
 	char context[BASE64_LENGTH(SID_SIZE) + 1];
@@ -226,13 +226,16 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 		if (pmsg == NULL)
 			pmsg = "Please enter your password";
 
+		if (prompt == NULL)
+			prompt = "Password:";
+
 		ret = str_append_printf(&str, login_msg_start, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
-		ret = str_append_str(&str, login_msg_password);
+		ret = str_append_printf(&str, LOGIN_MSG_PASSWORD, prompt);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -396,7 +399,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg)
 
 int get_auth_handler(worker_st * ws, unsigned http_ver)
 {
-	return get_auth_handler2(ws, http_ver, NULL);
+	return get_auth_handler2(ws, http_ver, NULL, NULL);
 }
 
 int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
@@ -725,7 +728,7 @@ int connect_to_secmod(worker_st * ws)
 	return sd;
 }
 
-static int recv_auth_reply(worker_st * ws, int sd, char **txt)
+static int recv_auth_reply(worker_st * ws, int sd, char **txt, char **prompt)
 {
 	int ret;
 	SecAuthReplyMsg *msg = NULL;
@@ -751,7 +754,16 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt)
 			return ERR_AUTH_FAIL;
 		}
 
-		*txt = talloc_strdup(ws, msg->msg);
+		if (msg->prompt)
+			*prompt = talloc_strdup(ws, msg->prompt);
+		else
+			*prompt = NULL;
+
+		if (msg->msg)
+			*txt = talloc_strdup(ws, msg->msg);
+		else
+			*txt = NULL;
+
 		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
 			/* update our sid */
 			memcpy(ws->sid, msg->sid.data, sizeof(ws->sid));
@@ -1214,7 +1226,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *password = NULL;
 	char *groupname = NULL;
 	char our_ip_str[MAX_IP_STR];
-	char *msg = NULL;
+	char *msg = NULL, *prompt = NULL;
 	unsigned def_group = 0;
 
 	if (req->body_length > 0) {
@@ -1300,7 +1312,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			if (def_group == 0 && ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
 				oclog(ws, LOG_HTTP_DEBUG, "user has not selected a group");
-				return get_auth_handler2(ws, http_ver, "Please select your group");
+				return get_auth_handler2(ws, http_ver, "Please select your group", NULL);
 			}
 
 			ireq.tls_auth_ok = ws->cert_auth_ok;
@@ -1400,7 +1412,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	ret = recv_auth_reply(ws, sd, &msg);
+	ret = recv_auth_reply(ws, sd, &msg, &prompt);
 	if (sd != -1) {
 		close(sd);
 		sd = -1;
@@ -1414,7 +1426,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			ret = basic_auth_handler(ws, http_ver, msg);
 		} else {
-			ret = get_auth_handler2(ws, http_ver, msg);
+			ret = get_auth_handler2(ws, http_ver, msg, prompt);
 		}
 		goto cleanup;
 	} else if (ret < 0) {
@@ -1455,6 +1467,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		   http_ver, reason);
 	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 	talloc_free(msg);
+	talloc_free(prompt);
 	exit_worker(ws);
  cleanup:
  	talloc_free(msg);

@@ -375,11 +375,12 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 }
 
-static int radius_auth_msg(void *ctx, void *pool, char **msg)
+static int radius_auth_msg(void *ctx, void *pool, char **msg, char **prompt)
 {
 	struct radius_ctx_st *pctx = ctx;
 
 	*msg = talloc_strdup(pool, pctx->pass_msg);
+	/* use default prompt */
 	return 0;
 }
 

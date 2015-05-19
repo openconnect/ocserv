@@ -1033,11 +1033,10 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	return 0;
 }
 
-/* Returns the contents of the provided fields in a newly allocated
+/* Returns the contents of the password field in a newly allocated
  * string, or a negative value on error.
  *
  * @body: is the string to search the xml field at, should be null-terminated.
- * @xml_field: the XML field to check for (e.g., MYFIELD)
  * @value: the value that was found
  */
 static
@@ -1045,7 +1044,6 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 			    char **value)
 {
 	char *p;
-	char temp1[64];
 	unsigned len, xml = 0;
 
 	if (body == NULL || body_length == 0)
@@ -1054,11 +1052,9 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
 		xml = 1;
 
-		strlcpy(temp1, "<password", sizeof(temp1));
-
-		/* body should contain <field>test</field> */
+		/* body should contain <password?>test</password?> */
 		*value =
-		    strcasestr(body, temp1);
+		    strcasestr(body, "<password");
 		if (*value == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find password in client XML message");
@@ -1084,7 +1080,7 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 			len++;
 		}
 	} else {		/* non-xml version */
-		/* body should be "username=test&password=test" */
+		/* body should be "username=test&password?=test" */
 		*value =
 		    strcasestr(body, "password");
 		if (*value == NULL) {

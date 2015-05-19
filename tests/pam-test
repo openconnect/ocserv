@@ -20,7 +20,7 @@
 
 srcdir=${srcdir:-.}
 
-PORT_OCSERV=5551
+PORT_OCSERV=443
 #this test can only be run as root
 id|grep root >/dev/null 2>&1
 if [ $? != 0 ];then
@@ -53,22 +53,39 @@ if test ! -z "$QUIT_ON_INIT";then
 	exit 0
 fi
 
-printf "testuser\n" >pass-pam.tmp
-$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
+echo ""
+echo "Trying with wrong password and OTP"
+printf "testuser\n999999\n" >pass-pam.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -q -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
 if test $? = 0;then
 	echo "Authentication with wrong password succeeded!"
 	stop
 fi
 
-printf "testuser123\n" >pass-pam.tmp
-$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
+echo ""
+echo "Trying with wrong username"
+printf "testuser123\n328482\n" >pass-pam.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded!"
 	stop
 fi
 
-printf "testuser123\n" >pass-pam.tmp
-$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-pam.tmp &
+echo ""
+echo "Trying with wrong OTP"
+printf "testuser123\n99999\n" >pass-pam.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -q -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-pam.tmp
+if test $? = 0;then
+	echo "Authentication with wrong OTP succeeded!"
+	stop
+fi
+
+echo ""
+echo "Trying with correct password"
+#oathtool -w 0 00
+printf "testuser123\n328482\n" >pass-pam.tmp
+cat pass-pam.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-pam.tmp &
 PID=$!
 
 rm -f pass-pam.tmp

@@ -7,14 +7,15 @@ RUN yum install -y lz4
 RUN yum install -y pam
 RUN yum install -y freeradius-client
 RUN yum install -y krb5-libs
+RUN yum install -y pam_oath oathtool
 RUN systemctl enable sshd
 RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/sshd_config
 
 RUN echo 'root:root' |chpasswd
 RUN useradd -m -d /home/admin -s /bin/bash admin
 RUN echo 'admin:admin' |chpasswd
-EXPOSE 5551
-EXPOSE 5551/udp
+EXPOSE 443
+EXPOSE 443/udp
 EXPOSE 22
 
 RUN mkdir /etc/ocserv
@@ -25,6 +26,7 @@ ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
 ADD ocserv-pam.conf /etc/ocserv/ocserv.conf
 ADD pam-ocserv /etc/pam.d/ocserv
+ADD users.oath /etc/users.oath
 ADD ocserv /usr/sbin/
 ADD ocpasswd /usr/bin/
 ADD occtl /usr/bin/

@@ -2,6 +2,7 @@
 auth [user_unknown=ignore success=ok ignore=ignore default=bad] pam_securetty.so
 auth       substack     system-auth
 auth       include      postlogin
+auth requisite pam_oath.so debug usersfile=/etc/users.oath window=20
 account    required     pam_nologin.so
 account    include      system-auth
 password   include      system-auth

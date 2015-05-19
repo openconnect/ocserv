@@ -319,7 +319,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	}
 }
 
-static int gssapi_auth_msg(void *ctx, void *pool, char **msg, char **prompt)
+static int gssapi_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct gssapi_ctx_st *pctx = ctx;
 	OM_uint32 min;
@@ -328,13 +328,11 @@ static int gssapi_auth_msg(void *ctx, void *pool, char **msg, char **prompt)
 	/* our msg is our SPNEGO reply */
 	if (pctx->msg.value != NULL) {
 		length = BASE64_LENGTH(pctx->msg.length)+1;
-		*msg = talloc_size(pool, length);
+		pst->msg_str = talloc_size(pool, length);
 
-		base64_encode((char *)pctx->msg.value, pctx->msg.length, *msg, length);
+		base64_encode((char *)pctx->msg.value, pctx->msg.length, pst->msg_str, length);
 		gss_release_buffer(&min, &pctx->msg);
 		pctx->msg.value = NULL;
-	} else {
-		*msg = NULL;
 	}
 	return 0;
 }

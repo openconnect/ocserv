@@ -214,6 +214,10 @@ int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 
 	msg.msg = e->msg_str;
 	msg.prompt = e->prompt_str;
+	msg.passwd_counter = e->passwd_counter;
+	if (e->passwd_counter > 0)
+		msg.has_passwd_counter = 1;
+
 	msg.reply = AUTH__REP__MSG;
 
 	msg.has_sid = 1;
@@ -301,14 +305,20 @@ static
 int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int result)
 {
 	int ret;
+	passwd_msg_st pst;
 
 	if ((result == ERR_AUTH_CONTINUE || result == 0) && e->module) {
-		ret = e->module->auth_msg(e->auth_ctx, e, &e->msg_str, &e->prompt_str);
+		memset(&pst, 0, sizeof(pst));
+		ret = e->module->auth_msg(e->auth_ctx, e, &pst);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_ERR, "error getting auth msg");
 			return ret;
 		}
+
+		e->msg_str = pst.msg_str;
+		e->prompt_str = pst.prompt_str;
+		e->passwd_counter = pst.counter;
 	}
 
 	if (result == ERR_AUTH_CONTINUE) {

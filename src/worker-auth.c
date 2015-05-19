@@ -76,6 +76,8 @@ static const char login_msg_user[] =
 
 #define LOGIN_MSG_PASSWORD \
     "<input type=\"password\" name=\"password\" label=\"%s\" />\n"
+#define LOGIN_MSG_PASSWORD_CTR \
+    "<input type=\"password\" name=\"password%d\" label=\"%s\" />\n"
 
 #define OCV3_LOGIN_MSG_START \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
@@ -162,7 +164,7 @@ static int append_group_str(worker_st * ws, str_st *str, const char *group)
 	return 0;
 }
 
-int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, const char *prompt)
+int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, const char *prompt, unsigned pcounter)
 {
 	int ret;
 	char context[BASE64_LENGTH(SID_SIZE) + 1];
@@ -235,7 +237,10 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, const
 			goto cleanup;
 		}
 
-		ret = str_append_printf(&str, LOGIN_MSG_PASSWORD, prompt);
+		if (pcounter > 0)
+			ret = str_append_printf(&str, LOGIN_MSG_PASSWORD_CTR, pcounter, prompt);
+		else
+			ret = str_append_printf(&str, LOGIN_MSG_PASSWORD, prompt);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
@@ -399,7 +404,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, const
 
 int get_auth_handler(worker_st * ws, unsigned http_ver)
 {
-	return get_auth_handler2(ws, http_ver, NULL, NULL);
+	return get_auth_handler2(ws, http_ver, NULL, NULL, 0);
 }
 
 int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
@@ -728,7 +733,7 @@ int connect_to_secmod(worker_st * ws)
 	return sd;
 }
 
-static int recv_auth_reply(worker_st * ws, int sd, char **txt, char **prompt)
+static int recv_auth_reply(worker_st * ws, int sd, char **txt, char **prompt, unsigned *pcounter)
 {
 	int ret;
 	SecAuthReplyMsg *msg = NULL;
@@ -749,11 +754,6 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, char **prompt)
 
 	switch (msg->reply) {
 	case AUTH__REP__MSG:
-		if (txt == NULL || msg->msg == NULL) {
-			oclog(ws, LOG_ERR, "received unexpected msg");
-			return ERR_AUTH_FAIL;
-		}
-
 		if (msg->prompt)
 			*prompt = talloc_strdup(ws, msg->prompt);
 		else
@@ -763,6 +763,11 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, char **prompt)
 			*txt = talloc_strdup(ws, msg->msg);
 		else
 			*txt = NULL;
+
+		if (msg->has_passwd_counter)
+			*pcounter = msg->passwd_counter;
+		else
+			*pcounter = 0;
 
 		if (msg->has_sid && msg->sid.len == sizeof(ws->sid)) {
 			/* update our sid */
@@ -1028,10 +1033,104 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	return 0;
 }
 
-#define XMLUSER "<username>"
-#define XMLPASS "<password>"
-#define XMLUSER_END "</username>"
-#define XMLPASS_END "</password>"
+/* Returns the contents of the provided fields in a newly allocated
+ * string, or a negative value on error.
+ *
+ * @body: is the string to search the xml field at, should be null-terminated.
+ * @xml_field: the XML field to check for (e.g., MYFIELD)
+ * @value: the value that was found
+ */
+static
+int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
+			    char **value)
+{
+	char *p;
+	char temp1[64];
+	unsigned len, xml = 0;
+
+	if (body == NULL || body_length == 0)
+		return -1;
+
+	if (memmem(body, body_length, "<?xml", 5) != 0) {
+		xml = 1;
+
+		strlcpy(temp1, "<password", sizeof(temp1));
+
+		/* body should contain <field>test</field> */
+		*value =
+		    strcasestr(body, temp1);
+		if (*value == NULL) {
+			oclog(ws, LOG_HTTP_DEBUG,
+			      "cannot find password in client XML message");
+			return -1;
+		}
+		/* find terminator */
+		p = strchr(*value, '>');
+		if (p == NULL) {
+			oclog(ws, LOG_HTTP_DEBUG,
+			      "unterminated password in client XML message");
+			return -1;
+		}
+		p++;
+
+		*value = p;
+		len = 0;
+		while (*p != 0) {
+			if (*p == '<'
+			    && (strncasecmp(p, "</password", sizeof("</password")-1) == 0)) {
+				break;
+			}
+			p++;
+			len++;
+		}
+	} else {		/* non-xml version */
+		/* body should be "username=test&password=test" */
+		*value =
+		    strcasestr(body, "password");
+		if (*value == NULL) {
+			oclog(ws, LOG_HTTP_DEBUG,
+			      "cannot find password in client message");
+			return -1;
+		}
+
+		p = strchr(*value, '=');
+		if (p == NULL) {
+			oclog(ws, LOG_HTTP_DEBUG,
+			      "unterminated password in client message");
+			return -1;
+		}
+		p++;
+
+		*value = p;
+		len = 0;
+		while (*p != 0) {
+			if (*p == '&') {
+				break;
+			}
+			p++;
+			len++;
+		}
+	}
+
+	if (len == 0) {
+		*value = talloc_strdup(ws->req.body, "");
+		if (*value != NULL)
+			return 0;
+		return -1;
+	}
+	if (xml)
+		*value = unescape_html(ws->req.body, *value, len, NULL);
+	else
+		*value = unescape_url(ws->req.body, *value, len, NULL);
+
+	if (*value == NULL) {
+		oclog(ws, LOG_ERR,
+		      "password requested but no such field in client message");
+		return -1;
+	}
+
+	return 0;
+}
 
 /* Returns the contents of the provided fields in a newly allocated
  * string, or a negative value on error.
@@ -1207,7 +1306,6 @@ static char *get_our_ip(int fd, char str[MAX_IP_STR])
 }
 
 #define USERNAME_FIELD "username"
-#define PASSWORD_FIELD "password"
 #define GROUPNAME_FIELD "group%5flist"
 #define GROUPNAME_FIELD2 "group_list"
 #define GROUPNAME_FIELD_XML "group-select"
@@ -1228,6 +1326,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char our_ip_str[MAX_IP_STR];
 	char *msg = NULL, *prompt = NULL;
 	unsigned def_group = 0;
+	unsigned pcounter = 0;
 
 	if (req->body_length > 0) {
 		oclog(ws, LOG_HTTP_DEBUG, "POST body: '%.*s'", (int)req->body_length,
@@ -1312,7 +1411,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 			if (def_group == 0 && ws->cert_groups_size > 0 && ws->groupname[0] == 0) {
 				oclog(ws, LOG_HTTP_DEBUG, "user has not selected a group");
-				return get_auth_handler2(ws, http_ver, "Please select your group", NULL);
+				return get_auth_handler2(ws, http_ver, "Please select your group", NULL, 0);
 			}
 
 			ireq.tls_auth_ok = ws->cert_auth_ok;
@@ -1361,10 +1460,8 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		}
 
 		if (areq.password == NULL && ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
-			ret = parse_reply(ws, req->body, req->body_length,
-					PASSWORD_FIELD, sizeof(PASSWORD_FIELD)-1,
-					NULL, 0,
-					&password);
+			ret = match_password_in_reply(ws, req->body, req->body_length,
+						      &password);
 			if (ret < 0) {
 				reason = MSG_NO_PASSWORD_ERROR;
 				oclog(ws, LOG_ERR, "failed reading password");
@@ -1412,7 +1509,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		goto auth_fail;
 	}
 
-	ret = recv_auth_reply(ws, sd, &msg, &prompt);
+	ret = recv_auth_reply(ws, sd, &msg, &prompt, &pcounter);
 	if (sd != -1) {
 		close(sd);
 		sd = -1;
@@ -1426,7 +1523,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			ret = basic_auth_handler(ws, http_ver, msg);
 		} else {
-			ret = get_auth_handler2(ws, http_ver, msg, prompt);
+			ret = get_auth_handler2(ws, http_ver, msg, prompt, pcounter);
 		}
 		goto cleanup;
 	} else if (ret < 0) {

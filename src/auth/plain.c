@@ -268,11 +268,13 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 }
 
-static int plain_auth_msg(void *ctx, void *pool, char **msg, char **prompt)
+static int plain_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct plain_ctx_st *pctx = ctx;
 
-	*msg = talloc_strdup(pool, pctx->pass_msg);
+	pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
+	pst->counter = 0; /* we support a single password */
+
 	/* use the default prompt */
 	return 0;
 }

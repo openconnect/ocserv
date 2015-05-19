@@ -26,6 +26,7 @@
 #include "pam.h"
 #include "cfg.h"
 #include <sec-mod-auth.h>
+#include <ccan/hash/hash.h>
 
 #ifdef HAVE_PAM
 
@@ -194,12 +195,12 @@ fail1:
 	return -1;
 }
 
-static int pam_auth_msg(void* ctx, void *pool, char** msg, char **prompt)
+static int pam_auth_msg(void* ctx, void *pool, passwd_msg_st *pst)
 {
 struct pam_ctx_st * pctx = ctx;
+size_t prompt_hash = 0;
 
 	if (pctx->state != PAM_S_INIT && pctx->state != PAM_S_WAIT_FOR_PASS) {
-		*msg = NULL;
 		return 0;
 	}
 
@@ -214,25 +215,30 @@ struct pam_ctx_st * pctx = ctx;
 		}
 	}
 
-	if (msg != NULL) {
-		if (pctx->msg.length == 0)
-                        if (pctx->changing)
-				*msg = talloc_strdup(pool, "Please enter the new password.");
-                        else
-				*msg = talloc_strdup(pool, "Please enter your password.");
-		else {
-			if (str_append_data(&pctx->msg, "\0", 1) < 0)
-				return -1;
+	if (pctx->msg.length == 0) {
+                if (pctx->changing)
+			pst->msg_str = talloc_strdup(pool, "Please enter the new password.");
+                /* else use the default prompt */
+	} else {
+		if (str_append_data(&pctx->msg, "\0", 1) < 0)
+			return -1;
 
-			*msg = talloc_strdup(pool, (char*)pctx->msg.data);
-		}
-
+		pst->msg_str = talloc_strdup(pool, (char*)pctx->msg.data);
 	}
 
-	if (prompt != NULL) {
-		if (pctx->prompt.length > 0)
-			*prompt = talloc_strdup(pool, (char*)pctx->prompt.data);
+	if (pctx->prompt.length > 0) {
+		pst->prompt_str = talloc_strdup(pool, (char*)pctx->prompt.data);
+		prompt_hash = hash_any(pctx->prompt.data, pctx->prompt.length, 0);
 	}
+
+	pst->counter = pctx->passwd_counter;
+
+	/* differentiate password prompts, if the hash of the prompt
+	 * is different. 
+	 */
+	if (pctx->prev_prompt_hash != prompt_hash)
+		pctx->passwd_counter++;
+	pctx->prev_prompt_hash = prompt_hash;
 
 	return 0;
 }

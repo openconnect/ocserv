@@ -45,6 +45,8 @@ struct pam_ctx_st {
 	unsigned sent_msg;
 	struct pam_response *replies; /* for safety */
 	unsigned state; /* PAM_S_ */
+	unsigned passwd_counter;
+	size_t prev_prompt_hash;
 };
 
 #endif

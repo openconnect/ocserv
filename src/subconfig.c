@@ -92,7 +92,9 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		out[pos].name = talloc_strndup(pool, p, len);
 		out[pos].value = talloc_strndup(pool, p2, len2);
 		pos++;
-		
+		p = p2+len2;
+		while (c_isspace(*p)||*p==',')
+			p++;
 	} while(finish == 0 && pos < MAX_SUBOPTIONS);
 
 	return pos;

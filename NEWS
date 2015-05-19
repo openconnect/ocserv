@@ -17,6 +17,8 @@
 - Added configuration option 'persistent-cookies'.
 - Corrected desync of main and sec-mod by introducing a synchronous
   communication socket. Reported by Mani Behrouz.
+- PAM: forward the actual prompt to worker process, and not only informational
+  messages.
 
 
 * Version 0.10.4 (released 2015-04-27)

@@ -48,7 +48,6 @@
 
 static rc_handle *rh = NULL;
 static char nas_identifier[64];
-static unsigned override_config = 0;
 
 static void radius_global_init(void *pool, void *additional)
 {
@@ -61,9 +60,6 @@ static void radius_global_init(void *pool, void *additional)
 	if (rh == NULL) {
 		goto fail;
 	}
-
-	if (config->no_override_config == 0)
-		override_config = 1;
 
 	if (config->nas_identifier) {
 		strlcpy(nas_identifier, config->nas_identifier, sizeof(nas_identifier));
@@ -339,9 +335,9 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_FRAMED_IPV6_ROUTE && vp->type == PW_TYPE_STRING) {
 				/* Framed-IPv6-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);
-			} else if (vp->attribute == PW_INTERIM_INTERVAL && vp->type == PW_TYPE_INTEGER && override_config != 0) {
+			} else if (vp->attribute == PW_INTERIM_INTERVAL && vp->type == PW_TYPE_INTEGER) {
 				pctx->interim_interval_secs = vp->lvalue;
-			} else if (vp->attribute == PW_SESSION_TIMEOUT && vp->type == PW_TYPE_INTEGER && override_config != 0) {
+			} else if (vp->attribute == PW_SESSION_TIMEOUT && vp->type == PW_TYPE_INTEGER) {
 				pctx->session_timeout_secs = vp->lvalue;
 			} else {
 				syslog(LOG_DEBUG, "radius-auth: ignoring server's value %u of type %u", (int)vp->attribute, (int)vp->type);

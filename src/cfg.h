@@ -37,7 +37,6 @@ typedef struct gssapi_cfg_st {
 typedef struct radius_cfg_st {
 	char *config;
 	char *nas_identifier;
-	unsigned no_override_config;
 } radius_cfg_st;
 
 typedef struct plain_cfg_st {

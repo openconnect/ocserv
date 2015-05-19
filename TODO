@@ -16,7 +16,7 @@ Short term items:
 
 Long term items:
 
-* radius: Consider supporting rfc5176 and session-timeout.
+* radius: Consider supporting rfc5176.
 
 * Think how the DTLS part can use better negotiation of algorithms and DTLS
   is negotiated properly. Using PSK ciphersuites seem to be like a solution, 

@@ -84,3 +84,12 @@ test8	Cleartext-Password := "test8"
 	Framed-Routing = Broadcast-Listen,
 	Framed-MTU = 1500,
 
+testtime	Cleartext-Password := "test"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-IP-Address = 192.168.1.192,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-MTU = 1500,
+	Session-Timeout = 120,
+	Acct-Interim-Interval = 60,
+

@@ -6,19 +6,14 @@ RUN yum install -y libnl3 libtalloc
 RUN yum install -y lz4
 RUN yum install -y freeradius-client
 RUN yum install -y freeradius
-RUN yum install -y krb5-libs
 RUN systemctl enable sshd
 RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/sshd_config
 
 RUN echo 'root:root' |chpasswd
 RUN useradd -m -d /home/admin -s /bin/bash admin
 RUN echo 'admin:admin' |chpasswd
-EXPOSE 10500
-EXPOSE 10500/udp
-EXPOSE 10501
-EXPOSE 10501/udp
-EXPOSE 10522
-EXPOSE 10522/udp
+EXPOSE 443
+EXPOSE 443/udp
 EXPOSE 22
 
 RUN mkdir /etc/ocserv
@@ -27,7 +22,7 @@ RUN mkdir /etc/ocserv
 ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
 ADD ca.pem /etc/ocserv/
-ADD ocserv-radius.conf /etc/ocserv/ocserv.conf
+ADD ocserv-radius-config.conf /etc/ocserv/ocserv.conf
 ADD radiusclient.conf /etc/radiusclient/
 ADD radius-clients.conf /etc/raddb/clients.conf
 ADD radiusclient-servers /etc/radiusclient/servers

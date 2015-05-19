@@ -53,7 +53,7 @@ if test ! -z "$QUIT_ON_INIT";then
 	exit 0
 fi
 
-echo -e "test\ntest\n" >pass$TMP
+echo -e "test\ntest" >pass$TMP
 $OPENCONNECT $IP:6551 -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass$TMP &
 PID=$!
 

@@ -55,7 +55,7 @@ if test ! -z "$QUIT_ON_INIT";then
 fi
 
 echo "Trying with correct password"
-printf "test\n" >pass-radius$TMP
+echo "test" >pass-radius$TMP
 $OPENCONNECT $IP:$PORT_OCSERV -u testtime --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP &
 PID=$!
 

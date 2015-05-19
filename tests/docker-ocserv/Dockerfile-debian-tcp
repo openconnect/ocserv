@@ -15,12 +15,8 @@ RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/s
 RUN echo 'root:root' |chpasswd
 RUN useradd -m -d /home/admin -s /bin/bash admin
 RUN echo 'admin:admin' |chpasswd
-EXPOSE 5000
-EXPOSE 5000/udp
-EXPOSE 5001
-EXPOSE 5001/udp
-EXPOSE 5551
-EXPOSE 5551/udp
+EXPOSE 443
+EXPOSE 443/udp
 EXPOSE 22
 
 RUN mkdir /etc/ocserv

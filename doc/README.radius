@@ -33,13 +33,15 @@ To enable accounting, set the following option to the time (in
 seconds), that accounting information should be reported.
 #stats-report-time = 360
 
+That value will be overriden by Acct-Interim-Interval if sent
+by the server.
 
 ============================================
 	Dictionary
 ============================================
 
 #
-# Ocserv would support the following radious attributes.
+# Ocserv supports the following radious attributes.
 #
 
 #	Standard attributes

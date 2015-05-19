@@ -104,7 +104,7 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	if (our_ip)
 		strlcpy(pctx->our_ip, our_ip, sizeof(pctx->our_ip));
 
-	pctx->pass_msg = pass_msg_first;
+	pctx->pass_msg = NULL;
 
 	default_realm = rc_conf_str(rh, "default_realm");
 
@@ -374,11 +374,13 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 }
 
-static int radius_auth_msg(void *ctx, void *pool, char **msg, char **prompt)
+static int radius_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct radius_ctx_st *pctx = ctx;
 
-	*msg = talloc_strdup(pool, pctx->pass_msg);
+	if (pctx->pass_msg)
+		pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
+
 	/* use default prompt */
 	return 0;
 }

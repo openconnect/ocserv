@@ -116,6 +116,7 @@ extern int syslog_open;
 #define REASON_IDLE_TIMEOUT 4
 #define REASON_DPD_TIMEOUT 5
 #define REASON_ERROR 6
+#define REASON_SESSION_TIMEOUT 7
 
 #define ERR_SUCCESS 0
 #define ERR_BAD_COMMAND -2
@@ -324,6 +325,7 @@ struct cfg_st {
 
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */
+	time_t session_timeout;	/* in seconds */
 	unsigned persistent_cookies; /* whether cookies stay valid after disconnect */
 
 	time_t rekey_time;	/* in seconds */

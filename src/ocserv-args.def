@@ -321,6 +321,10 @@ auth-timeout = 40
 # before being disconnected. Unset to disable.
 #idle-timeout = 1200
 
+# The time (in seconds) that a client is allowed to stay connected
+# Unset to disable.
+#session-timeout = 86400
+
 # The time (in seconds) that a mobile client is allowed to stay idle (no
 # traffic) before being disconnected. Unset to disable.
 #mobile-idle-timeout = 2400

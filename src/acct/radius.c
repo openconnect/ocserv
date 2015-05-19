@@ -278,6 +278,8 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 		ret = PW_ADMIN_RESET;
 	else if (discon_reason == REASON_IDLE_TIMEOUT)
 		ret = PW_ACCT_IDLE_TIMEOUT;
+	else if (discon_reason == REASON_SESSION_TIMEOUT)
+		ret = PW_ACCT_SESSION_TIMEOUT;
 	else if (discon_reason == REASON_DPD_TIMEOUT)
 		ret = PW_LOST_CARRIER;
 	else if (discon_reason == REASON_ERROR)

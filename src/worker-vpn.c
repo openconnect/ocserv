@@ -739,6 +739,17 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
 		}
 	}
 
+	if (ws->config->session_timeout > 0) {
+		if (now - ws->session_start_time > ws->config->session_timeout) {
+			oclog(ws, LOG_ERR,
+			      "session timeout reached for process (%d secs)",
+			      (int)(now - ws->session_start_time));
+			terminate = 1;
+			terminate_reason = REASON_SESSION_TIMEOUT;
+			goto cleanup;
+		}
+	}
+
 	if (ws->config->stats_report_time > 0 &&
 	    now - ws->last_stats_msg >= ws->config->stats_report_time &&
 	    ws->sid_set) {

@@ -55,7 +55,6 @@ message auth_reply_msg
 	optional string vname = 4;
 	optional string user_name = 5;
 	optional string group_name = 25;
-	optional string msg = 6;
 
 	/* the ips of the tun device */
 	optional string ipv4 = 7;

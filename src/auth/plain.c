@@ -197,7 +197,7 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 		return ERR_AUTH_FAIL;
 
 	strlcpy(pctx->username, username, sizeof(pctx->username));
-	pctx->pass_msg = pass_msg_first;
+	pctx->pass_msg = NULL; /* use default */
 
 	ret = read_auth_pass(pctx);
 	if (ret < 0) {
@@ -272,7 +272,8 @@ static int plain_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct plain_ctx_st *pctx = ctx;
 
-	pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
+	if (pctx->pass_msg)
+		pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
 	pst->counter = 0; /* we support a single password */
 
 	/* use the default prompt */

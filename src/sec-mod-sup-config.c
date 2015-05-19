@@ -34,9 +34,11 @@
 void sup_config_init(sec_mod_st *sec)
 {
 	if (sec->perm_config->sup_config_type == SUP_CONFIG_FILE) {
+		seclog(sec, LOG_INFO, "reading supplemental config from files");
 		sec->config_module = &file_sup_config;
 #ifdef HAVE_RADIUS
 	} else if (sec->perm_config->sup_config_type == SUP_CONFIG_RADIUS) {
+		seclog(sec, LOG_INFO, "reading supplemental config from radius");
 		sec->config_module = &radius_sup_config;
 #endif
 	}

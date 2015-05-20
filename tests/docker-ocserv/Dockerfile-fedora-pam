@@ -7,7 +7,7 @@ RUN yum install -y lz4
 RUN yum install -y pam
 RUN yum install -y freeradius-client
 RUN yum install -y krb5-libs
-RUN yum install -y pam_oath oathtool
+RUN yum install -y pam_oath oathtool less
 RUN systemctl enable sshd
 RUN sed 's/PermitRootLogin without-password/PermitRootLogin yes/g' -i /etc/ssh/sshd_config
 

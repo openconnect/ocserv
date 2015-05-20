@@ -21,10 +21,6 @@
 srcdir=${srcdir:-.}
 SERV="${SERV:-../src/ocserv}"
 
-PORT=10500
-PORT2=10501
-PORT_OCSERV=443
-
 #this test can only be run as root
 id|grep root >/dev/null 2>&1
 if [ $? != 0 ];then
@@ -50,7 +46,6 @@ IMAGE=ocserv-kerberos-test
 IMAGE_NAME=test_ocserv_kerberos
 . ./docker-common.sh
 
-#-p $PORT:$PORT/udp -p $PORT2:$PORT2/udp -p 22 -p $PORT_OCSERV:$PORT_OCSERV/udp
 $DOCKER run -P --privileged=true --hostname=kerberos.test --add-host='kerberos.test:127.0.0.1' --tty=false -d --name test_ocserv_kerberos $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"

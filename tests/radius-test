@@ -35,7 +35,7 @@ IMAGE_NAME=test_ocserv_radius
 TMP=$IMAGE_NAME.tmp
 . ./docker-common.sh
 
-$DOCKER run -P --privileged=true -p $PORT:$PORT/udp -p $PORT2:$PORT2/udp -p 22 -p $PORT_OCSERV:$PORT_OCSERV/udp --tty=false -d --name test_ocserv_radius $IMAGE
+$DOCKER run -e OCCTL_PAGER=cat -P --privileged=true --tty=false -d --name $IMAGE_NAME $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
@@ -45,7 +45,7 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect test_ocserv_radius | grep IPAddress | cut -d '"' -f 4`
+IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -102,28 +102,12 @@ if test $? != 0;then
 	stop
 fi
 
-echo "UserKnownHostsFile ./known-hosts$TMP" >config$TMP
-echo -e '#!'"/bin/sh\n" >echo-admin$TMP
-echo -e "echo yes" >>echo-admin$TMP
-echo -e "echo root" >>echo-admin$TMP
-echo -e "\n" >>echo-admin$TMP
-chmod 755 echo-admin$TMP
-export SSH_ASKPASS="./echo-admin$TMP"
-setsid ssh -T -F config$TMP root@192.168.55.1 occtl show user test >out$TMP 2>&1
-cat out$TMP
-
-echo -e '#!'"/bin/sh\n" >echo-admin$TMP
-echo -e "echo root" >>echo-admin$TMP
-echo -e "\n" >>echo-admin$TMP
-chmod 755 echo-admin$TMP
-setsid ssh -T -F config$TMP root@192.168.55.1 occtl show user test >out$TMP 2>&1
-cat out$TMP
-rm -f echo-admin$TMP
-rm -f config$TMP
-rm -f known-hosts$TMP
+$DOCKER exec -i -t $IMAGE_NAME occtl show users
+$DOCKER exec -i -t $IMAGE_NAME occtl show user test >out$TMP 2>&1
 
 grep "Username" out$TMP
 if test $? != 0;then
+	cat out$TMP
 	kill $PID
 	echo "could not find user information"
 	stop
@@ -160,7 +144,7 @@ TMPDIR=radius-$TMP
 mkdir -p $TMPDIR
 #check whether /tmp/disconnect/ok was created
 rm -f $TMPDIR/not-ok
-$DOCKER cp test_ocserv_radius:/tmp/disconnect/not-ok $TMPDIR/
+$DOCKER cp $IMAGE_NAME:/tmp/disconnect/not-ok $TMPDIR/
 if test -f $TMPDIR/not-ok;then
 	echo "There was an issue getting stats"
 	stop
@@ -169,18 +153,18 @@ rm -f $TMPDIR/not-ok
 
 rm -f $TMPDIR/stats
 
-FILE=`$DOCKER exec test_ocserv_radius ls /var/log/radius/radacct/127.0.0.1/`
-echo $DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"
-$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"
+FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/`
+echo $DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
+$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
 
-OCTETS=`$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
+OCTETS=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
 if test -z "$OCTETS" || test "$OCTETS" = 0;then
 	echo "Interim update showed no data!"
 	stop
 fi
 
 rm -f $TMPDIR/ok
-$DOCKER cp test_ocserv_radius:/tmp/disconnect/ok $TMPDIR/
+$DOCKER cp $IMAGE_NAME:/tmp/disconnect/ok $TMPDIR/
 if ! test -f $TMPDIR/ok;then
 	echo "Don't know if stats were received"
 	ret=77
@@ -195,9 +179,9 @@ ret=0
 #wait until sec-mod has cleaned up its entries
 echo "Waiting for disconnection report"
 sleep 10
-DISC=`$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep "Acct-Terminate-Cause = User-Request"|tail -1`
+DISC=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep "Acct-Terminate-Cause = User-Request"|tail -1`
 if test -z "$DISC";then
-	$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE"
+	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
 	echo "No disconnect was detected!"
 	stop
 fi
@@ -205,7 +189,7 @@ fi
 # do the same with a certificate - test radius accounting with certificate auth
 echo "Trying with certificate"
 rm -f out$TMP.pid
-$DOCKER exec test_ocserv_radius truncate --size=0 /var/log/radius/radacct/127.0.0.1/$FILE
+$DOCKER exec $IMAGE_NAME truncate --size=0 /var/log/radius/radacct/127.0.0.1/$FILE
 $OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=out$TMP.pid
 
 sleep 10
@@ -234,8 +218,8 @@ kill -INT $PID
 
 sleep 10
 
-FILE=`$DOCKER exec test_ocserv_radius ls /var/log/radius/radacct/127.0.0.1/|tail -1`
-$DOCKER exec test_ocserv_radius cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP
+FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/|tail -1`
+$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP
 cat out$TMP
 OCTETS=`cat out$TMP|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
 if test -z "$OCTETS" || test "$OCTETS" = 0;then
@@ -264,8 +248,8 @@ if test -n "$DISC";then
 	stop
 fi
 
-$DOCKER stop test_ocserv_radius
-$DOCKER rm test_ocserv_radius
+$DOCKER stop $IMAGE_NAME
+$DOCKER rm $IMAGE_NAME
 
 rm -f out$TMP
 

@@ -33,7 +33,7 @@ IMAGE_NAME=test_ocserv_radius_config
 TMP=$IMAGE_NAME.tmp
 . ./docker-common.sh
 
-$DOCKER run -P --privileged=true -p 22 -p $PORT_OCSERV:$PORT_OCSERV/udp --tty=false -d --name $IMAGE_NAME $IMAGE
+$DOCKER run -e OCCTL_PAGER=cat -P --privileged=true --tty=false -d --name $IMAGE_NAME $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
@@ -73,21 +73,8 @@ if test $? != 0;then
 fi
 
 #check whether the routes have been applied
-rm -f known-hosts$TMP
-echo -e '#!'"/bin/sh\n" >echo-admin$TMP
-echo -e "echo yes" >>echo-admin$TMP
-echo -e "\n" >>echo-admin$TMP
-chmod 755 echo-admin$TMP
-export SSH_ASKPASS="./echo-admin$TMP"
-setsid ssh -T -F config$TMP root@192.168.66.1 occtl show users
-
-echo -e '#!'"/bin/sh\n" >echo-admin$TMP
-echo -e "echo root" >>echo-admin$TMP
-echo -e "\n" >>echo-admin$TMP
-chmod 755 echo-admin$TMP
-export SSH_ASKPASS="./echo-admin$TMP"
-setsid ssh -T -F config$TMP root@192.168.66.1 occtl show user testtime >out$TMP 2>&1
-cat out$TMP
+$DOCKER exec -i -t $IMAGE_NAME occtl show users
+$DOCKER exec -i -t $IMAGE_NAME occtl show user testtime >out$TMP 2>&1
 
 grep '192.168.155.0/255.255.255.0' out$TMP
 if test $? != 0;then
@@ -98,8 +85,6 @@ if test $? != 0;then
 fi
 
 rm -f out$TMP
-rm -f known-hosts$TMP
-rm -f echo-admin$TMP
 
 echo "Waiting for accounting report"
 

@@ -33,7 +33,7 @@ IMAGE_NAME=test_unix
 TMP=$IMAGE_NAME.tmp
 . ./docker-common.sh
 
-$DOCKER run -P --privileged=true -p 6000:6000/udp -p 6001:6001/udp -p 22 -p 6551:6551/udp --tty=false -d --name test_unix $IMAGE
+$DOCKER run -e OCCTL_PAGER=cat -P --privileged=true --tty=false -d --name test_unix $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
@@ -77,25 +77,7 @@ if test $? != 0;then
 	stop
 fi
 
-echo "UserKnownHostsFile ./known-hosts$TMP" >config$TMP
-echo -e '#!'"/bin/sh\n" >echo-admin$TMP
-echo -e "echo yes" >>echo-admin$TMP
-echo -e "echo root" >>echo-admin$TMP
-echo -e "\n" >>echo-admin$TMP
-chmod 755 echo-admin$TMP
-export SSH_ASKPASS="./echo-admin$TMP"
-setsid ssh -T -F config$TMP root@192.168.99.1 occtl show user test >out$TMP 2>&1
-cat out$TMP
-
-echo -e '#!'"/bin/sh\n" >echo-admin$TMP
-echo -e "echo root" >>echo-admin$TMP
-echo -e "\n" >>echo-admin$TMP
-chmod 755 echo-admin$TMP
-setsid ssh -T -F config$TMP root@192.168.99.1 occtl show user test >out$TMP 2>&1
-cat out$TMP
-rm -f echo-admin$TMP
-rm -f config$TMP
-rm -f known-hosts$TMP
+$DOCKER exec -i -t $IMAGE_NAME occtl show user test >out$TMP 2>&1
 
 grep "Username" out$TMP
 if test $? != 0;then

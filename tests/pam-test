@@ -30,9 +30,10 @@ fi
 CONFIG="pam"
 IMAGE=ocserv-pam-test
 IMAGE_NAME=test_ocserv_pam
+TMP=$IMAGE_NAME.tmp
 . ./docker-common.sh
 
-$DOCKER run -P --privileged=true --tty=false -d --name test_ocserv_pam $IMAGE
+$DOCKER run -e OCCTL_PAGER=cat -P --privileged=true --tty=false -d --name $IMAGE_NAME $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
@@ -42,7 +43,7 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect test_ocserv_pam | grep IPAddress | cut -d '"' -f 4`
+IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -115,34 +116,18 @@ if test $? != 0;then
 	stop
 fi
 
-echo "UserKnownHostsFile ./known-hosts.tmp" >config.tmp
-echo -e '#!'"/bin/sh\n" >echo-admin.tmp
-echo -e "echo yes" >>echo-admin.tmp
-echo -e "echo root" >>echo-admin.tmp
-echo -e "\n" >>echo-admin.tmp
-chmod 755 echo-admin.tmp
-export SSH_ASKPASS="./echo-admin.tmp"
-setsid ssh -T -F config.tmp root@192.168.56.1 occtl show user testuser >out.tmp 2>&1
-cat out.tmp
+$DOCKER exec -i -t $IMAGE_NAME occtl show users
+$DOCKER exec -i -t $IMAGE_NAME occtl show user testuser >out$TMP 2>&1
 
-echo -e '#!'"/bin/sh\n" >echo-admin.tmp
-echo -e "echo root" >>echo-admin.tmp
-echo -e "\n" >>echo-admin.tmp
-chmod 755 echo-admin.tmp
-setsid ssh -T -F config.tmp root@192.168.56.1 occtl show user testuser >out.tmp 2>&1
-cat out.tmp
-rm -f echo-admin.tmp
-rm -f config.tmp
-rm -f known-hosts.tmp
-
-grep "Username" out.tmp
+grep "Username" out$TMP
 if test $? != 0;then
+	cat out$TMP
 	kill $PID
 	echo "could not find user information"
 	stop
 fi
 
-rm -f out.tmp
+rm -f out$TMP
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
@@ -170,7 +155,7 @@ sleep 4
 
 #check whether /tmp/disconnect/ok was created
 rm -f ./not-ok
-$DOCKER cp test_ocserv_pam:/tmp/disconnect/not-ok ./
+$DOCKER cp $IMAGE_NAME:/tmp/disconnect/not-ok ./
 if test -f ./not-ok;then
 	echo "There was an issue getting stats"
 	stop
@@ -180,7 +165,7 @@ rm -f ./not-ok
 ret=0
 
 rm -f ./tmp-full/ok
-$DOCKER cp test_ocserv_pam:/tmp/disconnect/ok ./tmp-full/
+$DOCKER cp $IMAGE_NAME:/tmp/disconnect/ok ./tmp-full/
 if ! test -f ./tmp-full/ok;then
 	echo "Don't know if stats were received"
 	ret=77
@@ -190,7 +175,7 @@ else
 	rm -rf ./tmp-full/
 fi
 
-$DOCKER stop test_ocserv_pam
-$DOCKER rm test_ocserv_pam
+$DOCKER stop $IMAGE_NAME
+$DOCKER rm $IMAGE_NAME
 
 exit $ret

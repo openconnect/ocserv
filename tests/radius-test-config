@@ -79,10 +79,6 @@ echo "Waiting for accounting report"
 
 sleep 60
 
-
-TMPDIR=radius-$TMP
-mkdir -p $TMPDIR
-
 FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/`
 
 OCTETS=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`

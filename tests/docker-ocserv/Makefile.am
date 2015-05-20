@@ -3,7 +3,7 @@ EXTRA_DIST = passwd ocserv.conf Dockerfile-debian-tcp dev-tun.tgz myscript key.p
 	Dockerfile-fedora-tcp freeradius-users Dockerfile-debian-radius Dockerfile-fedora-radius \
 	freeradius-users ocserv-radius.conf radiusclient.conf radius-clients.conf \
 	radiusclient-servers pam-ocserv ocserv-pam.conf ca.pem ocserv-radius-config.conf \
-	Dockerfile-fedora-radius-config radius-dictionary
+	Dockerfile-fedora-radius-config radius-dictionary Dockerfile-debian-radius-config
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

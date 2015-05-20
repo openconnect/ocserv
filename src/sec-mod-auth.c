@@ -315,7 +315,6 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			seclog(sec, LOG_ERR, "error getting auth msg");
 			return ret;
 		}
-
 		e->msg_str = pst.msg_str;
 		e->prompt_str = pst.prompt_str;
 		e->passwd_counter = pst.counter;
@@ -688,9 +687,11 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 	    e->module->auth_pass(e->auth_ctx, req->password,
 			      strlen(req->password));
 	if (ret < 0) {
-		seclog(sec, LOG_DEBUG,
-		       "error in password given in auth cont for user '%s' "SESSION_STR,
-		       e->auth_info.username, e->auth_info.psid);
+		if (ret != ERR_AUTH_CONTINUE) {
+			seclog(sec, LOG_DEBUG,
+			       "error in password given in auth cont for user '%s' "SESSION_STR,
+			       e->auth_info.username, e->auth_info.psid);
+		}
 		goto cleanup;
 	}
 

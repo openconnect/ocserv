@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -74,8 +75,9 @@ static const char oc_login_msg_end[] =
 static const char login_msg_user[] =
     "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
 
+#define DEFAULT_PASSWD_LABEL "Password:"
 #define LOGIN_MSG_PASSWORD \
-    "<input type=\"password\" name=\"password\" label=\"Password:\" />\n"
+    "<input type=\"password\" name=\"password\" label=\""DEFAULT_PASSWD_LABEL"\" />\n"
 #define LOGIN_MSG_PASSWORD_CTR \
     "<input type=\"password\" name=\"password%d\" label=\"Password:\" />\n"
 
@@ -225,7 +227,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 
 	if (ws->auth_state == S_AUTH_REQ) {
 		/* only ask password */
-		if (pmsg == NULL)
+		if (pmsg == NULL || strncasecmp(pmsg, DEFAULT_PASSWD_LABEL, sizeof(DEFAULT_PASSWD_LABEL)-1) == 0)
 			pmsg = "Please enter your password";
 
 		ret = str_append_printf(&str, login_msg_start, pmsg);

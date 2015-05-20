@@ -79,7 +79,7 @@ static const char login_msg_user[] =
 #define LOGIN_MSG_PASSWORD \
     "<input type=\"password\" name=\"password\" label=\""DEFAULT_PASSWD_LABEL"\" />\n"
 #define LOGIN_MSG_PASSWORD_CTR \
-    "<input type=\"password\" name=\"password%d\" label=\"Password:\" />\n"
+    "<input type=\"password\" name=\"password\" label=\"Password%d:\" />\n"
 
 #define OCV3_LOGIN_MSG_START \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \

@@ -101,18 +101,7 @@ if test $? != 0;then
 	stop
 fi
 
-$DOCKER exec -i -t $IMAGE_NAME occtl show users
-$DOCKER exec -i -t $IMAGE_NAME occtl show user test >out$TMP 2>&1
-
-grep "Username" out$TMP
-if test $? != 0;then
-	kill $PID
-	cat out$TMP
-	echo "could not find user information"
-	stop
-fi
-
-rm -f out$TMP
+retrieve_user_info test
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
@@ -139,25 +128,16 @@ kill $PID
 sleep 4
 
 #check whether /tmp/disconnect/ok was created
-rm -f ./not-ok
-$DOCKER cp $IMAGE_NAME:/tmp/disconnect/not-ok ./
-if test -f ./not-ok;then
-	echo "There was an issue getting stats"
+check_for_file /tmp/disconnect/not-ok
+if test $? = 0;then
+	echo "There was an issue"
 	stop
 fi
-rm -f ./not-ok
 
-ret=0
-
-rm -f ./tmp-full/ok
-$DOCKER cp $IMAGE_NAME:/tmp/disconnect/ok ./tmp-full/
-if ! test -f ./tmp-full/ok;then
-	echo "Don't know if stats were received"
+check_for_file /tmp/disconnect/ok
+if test $? != 0;then
+	echo "There was an issue getting stats"
 	ret=77
-else
-	echo -n "stats: "
-	echo `cat ./tmp-full/ok`
-	rm -rf ./tmp-full/
 fi
 
 $DOCKER stop $IMAGE_NAME

@@ -73,18 +73,7 @@ if test $? != 0;then
 fi
 
 #check whether the routes have been applied
-$DOCKER exec -i -t $IMAGE_NAME occtl show users
-$DOCKER exec -i -t $IMAGE_NAME occtl show user testtime >out$TMP 2>&1
-
-grep '192.168.155.0/255.255.255.0' out$TMP
-if test $? != 0;then
-	cat out$TMP
-	kill $PID
-	echo "routes have not been applied"
-	stop
-fi
-
-rm -f out$TMP
+retrieve_route_info testtime '192.168.155.0/255.255.255.0'
 
 echo "Waiting for accounting report"
 
@@ -93,11 +82,8 @@ sleep 60
 
 TMPDIR=radius-$TMP
 mkdir -p $TMPDIR
-#check whether /tmp/disconnect/ok was created
 
 FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/`
-#echo $DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
-#$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
 
 OCTETS=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
 if test -z "$OCTETS" || test "$OCTETS" = 0;then

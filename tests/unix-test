@@ -111,25 +111,16 @@ kill $PID
 sleep 4
 
 #check whether /tmp/disconnect/ok was created
-rm -f ./not-ok
-$DOCKER cp test_unix:/tmp/disconnect/not-ok ./
-if test -f ./not-ok;then
-	echo "There was an issue getting stats"
+check_for_file /tmp/disconnect/not-ok
+if test $? = 0;then
+	echo "There was an issue"
 	stop
 fi
-rm -f ./not-ok
 
-ret=0
-
-rm -f ./tmp-unix/ok
-$DOCKER cp test_unix:/tmp/disconnect/ok ./tmp-unix/
-if ! test -f ./tmp-unix/ok;then
-	echo "Don't know if stats were received"
+check_for_file /tmp/disconnect/ok
+if test $? != 0;then
+	echo "There was an issue getting stats"
 	ret=77
-else
-	echo -n "stats: "
-	echo `cat ./tmp-unix/ok`
-	rm -rf ./tmp-unix/
 fi
 
 $DOCKER stop test_unix

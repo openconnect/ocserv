@@ -92,7 +92,7 @@ unsigned i;
 					str_append_str(&pctx->msg, msg[i]->msg);
 				}
 
-				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, sent: %d", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", pctx->sent_msg);
+				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
 
 				pctx->state = PAM_S_WAIT_FOR_PASS;
 				pctx->cr_ret = PAM_SUCCESS;

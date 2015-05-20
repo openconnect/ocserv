@@ -37,7 +37,8 @@ TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie full-test test-group-pass test-pass-group-cert \
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip radius-test \
-	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix
+	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix \
+	radius-test-config
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

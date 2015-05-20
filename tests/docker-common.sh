@@ -42,7 +42,7 @@ check_for_file() {
 	FILENAME=$1
 
 	rm -f out$TMP
-	$DOCKER exec -i -t $IMAGE_NAME ls $FILENAME >out$TMP
+	$DOCKER exec $IMAGE_NAME ls $FILENAME >out$TMP
 	grep "$FILENAME" out$TMP|grep -v "cannot access"
 	if test $? != 0;then
 		echo "could not find $FILENAME"
@@ -61,7 +61,7 @@ retrieve_user_info() {
 
 	while [ $counter -lt 4 ]
 	do
-		$DOCKER exec -i -t $IMAGE_NAME occtl show user $USERNAME >out$TMP 2>&1
+		$DOCKER exec $IMAGE_NAME occtl show user $USERNAME >out$TMP 2>&1
 		if test -z "$MATCH";then
 			grep "Username" out$TMP
 		else

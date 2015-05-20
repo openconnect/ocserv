@@ -116,7 +116,7 @@ if test $? != 0;then
 	stop
 fi
 
-retrieve_user_info test
+retrieve_user_info testuser
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.

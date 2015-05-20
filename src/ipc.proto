@@ -209,7 +209,6 @@ message sec_auth_reply_msg
 	optional string msg = 4; /* message to display to user */
 	optional bytes dtls_session_id = 5;
 	optional bytes sid = 6;
-	optional string prompt = 7; /* brief prompt */
 	optional uint32 passwd_counter = 8; /* if that's a password prompt indicates the number of password asked */
 }
 

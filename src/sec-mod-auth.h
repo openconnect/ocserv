@@ -28,7 +28,6 @@
 #define MAX_GROUPS 32
 
 typedef struct passwd_msg_st {
-	char *prompt_str;
 	char *msg_str;
 	unsigned counter;
 } passwd_msg_st;

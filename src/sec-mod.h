@@ -74,8 +74,7 @@ typedef struct client_entry_st {
 	unsigned tls_auth_ok;
 
 	char *msg_str;
-	char *prompt_str;
-	unsigned passwd_counter; /* if prompt_str is for a password this indicates the passwrd number (0,1,2) */
+	unsigned passwd_counter; /* if msg_str is for a password this indicates the passwrd number (0,1,2) */
 
 	stats_st saved_stats; /* saved from previous cookie usage */
 	stats_st stats; /* current */

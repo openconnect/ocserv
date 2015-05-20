@@ -89,8 +89,7 @@ unsigned i;
 				}
 
 				if (msg[i]->msg) {
-					str_reset(&pctx->prompt);
-					str_append_str(&pctx->prompt, msg[i]->msg);
+					str_append_str(&pctx->msg, msg[i]->msg);
 				}
 
 				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, sent: %d", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", pctx->sent_msg);
@@ -165,7 +164,6 @@ struct pam_ctx_st * pctx;
 		return -1;
 
 	str_init(&pctx->msg, pctx);
-	str_init(&pctx->prompt, pctx);
 
 	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
@@ -223,12 +221,9 @@ size_t prompt_hash = 0;
 		if (str_append_data(&pctx->msg, "\0", 1) < 0)
 			return -1;
 
-		pst->msg_str = talloc_strdup(pool, (char*)pctx->msg.data);
-	}
+		prompt_hash = hash_any(pctx->msg.data, pctx->msg.length, 0);
 
-	if (pctx->prompt.length > 0) {
-		pst->prompt_str = talloc_strdup(pool, (char*)pctx->prompt.data);
-		prompt_hash = hash_any(pctx->prompt.data, pctx->prompt.length, 0);
+		pst->msg_str = talloc_strdup(pool, (char*)pctx->msg.data);
 	}
 
 	pst->counter = pctx->passwd_counter;

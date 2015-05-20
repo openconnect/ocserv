@@ -200,8 +200,6 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 
 	talloc_free(entry->msg_str);
 	entry->msg_str = NULL;
-	talloc_free(entry->prompt_str);
-	entry->prompt_str = NULL;
 
 	return 0;
 }
@@ -213,7 +211,6 @@ int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 	int ret;
 
 	msg.msg = e->msg_str;
-	msg.prompt = e->prompt_str;
 	msg.passwd_counter = e->passwd_counter;
 	if (e->passwd_counter > 0)
 		msg.has_passwd_counter = 1;
@@ -233,9 +230,6 @@ int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 
 	talloc_free(e->msg_str);
 	e->msg_str = NULL;
-
-	talloc_free(e->prompt_str);
-	e->prompt_str = NULL;
 
 	return ret;
 }
@@ -316,7 +310,6 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			return ret;
 		}
 		e->msg_str = pst.msg_str;
-		e->prompt_str = pst.prompt_str;
 		e->passwd_counter = pst.counter;
 	}
 

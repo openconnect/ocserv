@@ -77,16 +77,7 @@ if test $? != 0;then
 	stop
 fi
 
-$DOCKER exec -i -t $IMAGE_NAME occtl show user test >out$TMP 2>&1
-
-grep "Username" out$TMP
-if test $? != 0;then
-	kill $PID
-	echo "could not find user information"
-	stop
-fi
-
-rm -f out$TMP
+retrieve_user_info test
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.

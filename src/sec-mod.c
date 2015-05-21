@@ -777,7 +777,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 			if (ret < 0) {
 				seclog(sec, LOG_INFO, "rejected unauthorized connection");
 			} else {
-				memset(buffer, '0', buffer_size);
+				memset(buffer, 0, buffer_size);
 				serve_request(sec, cfd, pid, buffer, buffer_size);
 			}
 			close(cfd);

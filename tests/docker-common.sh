@@ -40,9 +40,14 @@ fi
 
 check_for_file() {
 	FILENAME=$1
+	IMG=$2
+
+	if test -z "$IMG"; then
+		IMG=$IMAGE_NAME
+	fi
 
 	rm -f out$TMP
-	$DOCKER exec $IMAGE_NAME ls $FILENAME >out$TMP
+	$DOCKER exec $IMG ls $FILENAME >out$TMP
 	grep "$FILENAME" out$TMP|grep -v "cannot access"
 	if test $? != 0;then
 		echo "could not find $FILENAME"

@@ -46,7 +46,7 @@ IMAGE=ocserv-kerberos-test
 IMAGE_NAME=test_ocserv_kerberos
 . ./docker-common.sh
 
-$DOCKER run -P --privileged=true --hostname=kerberos.test --add-host='kerberos.test:127.0.0.1' --tty=false -d --name test_ocserv_kerberos $IMAGE
+$DOCKER run -P --privileged=true --hostname=kerberos.test --add-host='kerberos.test:127.0.0.1' --tty=false -d --name $IMAGE_NAME $IMAGE
 if test $? != 0;then
 	echo "Cannot run docker image"
 	exit 1
@@ -56,10 +56,10 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect test_ocserv_kerberos | grep IPAddress | cut -d '"' -f 4`
+IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
 if test -z "$IP";then
 	echo "Detected IP is null!"
-	$DOCKER inspect test_ocserv_kerberos
+	$DOCKER inspect $IMAGE_NAME
 	stop
 fi
 echo "Detected KDC IP: $IP"
@@ -80,7 +80,7 @@ fi
 CIP=`$DOCKER inspect test_ocserv_client_kerberos | grep IPAddress | cut -d '"' -f 4`
 if test -z "$CIP";then
 	echo "Detected client IP is null!"
-	$DOCKER inspect test_ocserv_kerberos
+	$DOCKER inspect $IMAGE_NAME
 	stop
 fi
 echo "Detected client IP: $CIP"
@@ -92,19 +92,14 @@ fi
 echo "Waiting for client tests"
 sleep 100
 
-mkdir -p tmp-kerb
-rm -f ./tmp-kerb/ok1 ./tmp-kerb/ok2
-$DOCKER cp test_ocserv_client_kerberos:/tmp/ok1 ./tmp-kerb/
-$DOCKER cp test_ocserv_client_kerberos:/tmp/ok2 ./tmp-kerb/
-
-ret=0
-
-if ! test -f ./tmp-kerb/ok1;then
+check_for_file /tmp/ok1 test_ocserv_client_kerberos
+if test $? != 0;then
 	echo "Kerberos client basic test failed"
 	ret=1
 fi
 
-if ! test -f ./tmp-kerb/ok2;then
+check_for_file /tmp/ok2 test_ocserv_client_kerberos
+if test $? != 0;then
 	echo "Kerberos client TGT freshness test failed"
 	ret=1
 fi

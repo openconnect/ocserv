@@ -155,19 +155,21 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 
 	if (ai->ipv4[0] != 0) {
 		struct in_addr in;
-		inet_pton(AF_INET, ai->ipv4, &in);
-		in.s_addr = ntohl(in.s_addr);
-		if (rc_avpair_add(rh, send, PW_FRAMED_IP_ADDRESS, &in, sizeof(in), 0) == NULL) {
-			return;
+		if (inet_pton(AF_INET, ai->ipv4, &in) == 1) {
+			in.s_addr = ntohl(in.s_addr);
+			if (rc_avpair_add(rh, send, PW_FRAMED_IP_ADDRESS, &in, sizeof(in), 0) == NULL) {
+				return;
+			}
 		}
 	}
 
 #if 0 /* bug in freeradius-client */
 	if (ai->ipv6[0] != 0) {
 		struct in6_addr in;
-		inet_pton(AF_INET6, ai->ipv6, &in);
-		if (rc_avpair_add(rh, send, PW_FRAMED_IPV6_ADDRESS, &in, sizeof(in), 0) == NULL) {
-			return;
+		if (inet_pton(AF_INET6, ai->ipv6, &in) == 1) {
+			if (rc_avpair_add(rh, send, PW_FRAMED_IPV6_ADDRESS, &in, sizeof(in), 0) == NULL) {
+				return;
+			}
 		}
 	}
 #endif

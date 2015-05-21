@@ -383,6 +383,9 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 	unsigned j, i;
 	unsigned found;
 
+	if (auth == NULL)
+		return;
+
 	if (primary != 0) {
 		/* Set the primary authentication methods */
 		for (j=0;j<auth_size;j++) {
@@ -455,7 +458,6 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 			talloc_free(auth[j]);
 		}
 		config->auth_methods = x;
-
 	}
 	talloc_free(auth);
 }

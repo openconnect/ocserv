@@ -73,7 +73,7 @@ if test $? != 0;then
 fi
 
 #check whether the routes have been applied
-retrieve_route_info testtime '192.168.155.0/255.255.255.0'
+retrieve_route_info testtime '192.168.67.0/24'
 
 echo "Waiting for accounting report"
 

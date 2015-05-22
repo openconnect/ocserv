@@ -6,6 +6,7 @@ fi
 
 . ./common.sh
 
+ECHO_E="/bin/echo -e"
 if test -x /usr/bin/lockfile-create;then
 LOCKFILE="lockfile-create docker"
 UNLOCKFILE="lockfile-remove docker"
@@ -73,7 +74,7 @@ retrieve_user_info() {
 			grep "$MATCH" out$TMP
 		fi
 		ret=$?
-		if test $ret == 0;then
+		if test $ret = 0;then
 			break
 		fi
 		counter=`expr $counter + 1`

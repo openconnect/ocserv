@@ -781,10 +781,9 @@ unsigned urlfw_size = 0;
 	} else {
 		READ_TF("isolate-workers", config->isolate, 0);
 	}
-#if !defined(HAVE_LIBSECCOMP) && !defined(ENABLE_LINUX_NS)
+#if !defined(HAVE_LIBSECCOMP)
 	if (config->isolate != 0) {
 		fprintf(stderr, "error: 'isolate-workers' is set to true, but not compiled with seccomp or Linux namespaces support\n");
-		exit(1);
 	}
 #endif
 
@@ -1180,9 +1179,6 @@ void print_version(tOptions *opts, tOptDesc *desc)
 	fprintf(stderr, "\n\nCompiled with ");
 #ifdef HAVE_LIBSECCOMP
 	fprintf(stderr, "seccomp, ");
-#endif
-#ifdef ENABLE_LINUX_NS
-	fprintf(stderr, "Linux-NS, ");
 #endif
 #ifdef HAVE_LIBWRAP
 	fprintf(stderr, "tcp-wrappers, ");

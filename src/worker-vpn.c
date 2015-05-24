@@ -46,6 +46,11 @@
 #include <c-ctype.h>
 #include <worker-bandwidth.h>
 
+#ifdef __linux__
+/* for IPV6_PATHMTU */
+# include <linux/in6.h>
+#endif
+
 #include <vpn.h>
 #include "ipc.pb-c.h"
 #include <cookies.h>
@@ -657,15 +662,21 @@ int mtu_not_ok(worker_st * ws)
 		      ws->last_bad_mtu, ws->conn_mtu);
 	} else if (ws->proto == AF_INET6) { /* IPv6 */
 		int mtu;
-		socklen_t len = sizeof(mtu);
+#ifdef IPV6_PATHMTU
+		struct ip6_mtuinfo mtuinfo;
+		socklen_t len = sizeof(mtuinfo);
 
-		if (getsockopt(ws->dtls_tptr.fd, IPPROTO_IPV6, IPV6_MTU, &mtu, &len) < 0 || mtu < 1280) {
+		if (getsockopt(ws->dtls_tptr.fd, IPPROTO_IPV6, IPV6_PATHMTU, &mtuinfo, &len) < 0 || mtuinfo.ip6m_mtu < 1280) {
 			oclog(ws, LOG_INFO, "cannot obtain IPv6 MTU (was %u); disabling DTLS",
 			      ws->conn_mtu);
 			dtls_close(ws);
 			ws->udp_state = UP_DISABLED;
 			return -1;
 		}
+		mtu = mtuinfo.ip6m_mtu;
+#else
+		mtu = 1280; /* minimum IPv6 MTU */
+#endif
 
 		mtu -= CSTP_DTLS_OVERHEAD - ws->proto_overhead;
 

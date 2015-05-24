@@ -14,7 +14,6 @@
 - Added configuration options 'persistent-cookies' and 'session-timeout'.
 - radius: added support for Route-IPv6-Information, Delegated-IPv6-Prefix,
   NAS-IPv6-Address, NAS-IP-Address, Session-Timeout.
-- Added configuration option 'persistent-cookies'.
 - Corrected desync of main and sec-mod by introducing a synchronous
   communication socket. Reported by Mani Behrouz.
 - PAM: forward the actual prompt to worker process, and not only informational

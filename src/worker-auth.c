@@ -281,7 +281,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 
 		/* send groups */
 		if (ws->config->group_list_size > 0 || ws->cert_groups_size > 0) {
-			ret = str_append_str(&str, "<select name=\"group_list\" label=\"GROUP:\">\n");
+			ret = str_append_str(&str, "<select name=\"group_list\" label=\"Group:\">\n");
 			if (ret < 0) {
 				ret = -1;
 				goto cleanup;

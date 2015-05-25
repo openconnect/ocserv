@@ -10,7 +10,7 @@
   soon as possible. For sessions that can still be resumed the radius
   server is contacted periodically after the cookies expire.
 - radius: consider Acct-Interim-Interval when seen by the server.
-  That can be overriden using override-interim-updates in radius subconfig.
+  That will be taken into account if groupconfig=true in radius subconfig.
 - Added configuration options 'persistent-cookies' and 'session-timeout'.
 - radius: added support for Route-IPv6-Information, Delegated-IPv6-Prefix,
   NAS-IPv6-Address, NAS-IP-Address, Session-Timeout.

@@ -131,15 +131,8 @@ occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c occtl-i
 occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 
-if HAVE_DBUS
-ocserv_SOURCES += main-ctl-dbus.c
-occtl_SOURCES += occtl-dbus.c
-ocserv_LDADD += $(LIBDBUS_LIBS)
-occtl_LDADD += $(LIBDBUS_LIBS)
-else
 ocserv_SOURCES += main-ctl-unix.c
 occtl_SOURCES += occtl-unix.c
-endif
 
 ipc.pb-c.c: ipc.proto
 	protoc-c --c_out=. --proto_path=$(srcdir) $<

@@ -48,26 +48,6 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
-dbus_enabled=no
-AC_ARG_WITH(dbus,
-  AS_HELP_STRING([--with-dbus], [use dbus instead of unix sockets (dbus support is incomplete)]),
-  test_for_dbus=$withval,
-  test_for_dbus=no)
-
-if test "$test_for_dbus" = yes;then
-PKG_CHECK_MODULES([LIBDBUS], [dbus-1 >= 1.1.1],
-dbus_enabled=yes
-AC_DEFINE([HAVE_DBUS], [], [dbus detected]),
-[dbus_enabled=no])
-fi
-
-AM_CONDITIONAL(HAVE_DBUS, test "x$dbus_enabled" != xno)
-
-if test "x$dbus_enabled" != xno;then
-dbus_conf_dir=$($PKG_CONFIG dbus-1 --variable=sysconfdir)
-AC_SUBST(DBUS_CONFIG_DIR, [$dbus_conf_dir/etc/dbus-1/system.d/])
-fi
-
 AC_ARG_WITH(protobuf,
   AS_HELP_STRING([--without-protobuf], [use the included protobuf library]),
   test_for_protobuf=$withval,
@@ -498,11 +478,5 @@ Summary of build options:
   local PCL library:    ${with_local_pcl}
   local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}
-])
-
-AC_MSG_NOTICE([
-
-Options for specific systems:
-  dbus:                 ${dbus_enabled}
 ])
 

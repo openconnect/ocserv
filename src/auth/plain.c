@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -155,7 +156,25 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 			ll--;
 			line[ll] = 0;
 		}
+#ifdef HAVE_STRSEP
+		sp = line;
+		p = strsep(&sp, ":");
 
+		if (p != NULL && strcmp(pctx->username, p) == 0) {
+			p = strsep(&sp, ":");
+			if (p != NULL) {
+				break_group_list(pctx, p, pctx->groupnames, &pctx->groupnames_size);
+
+				p = strsep(&sp, ":");
+				if (p != NULL) {
+					strlcpy(pctx->cpass, p, sizeof(pctx->cpass));
+					ret = 0;
+					goto exit;
+				}
+			}
+		}
+
+#else
 		p = strtok_r(line, ":", &sp);
 
 		if (p != NULL && strcmp(pctx->username, p) == 0) {
@@ -171,6 +190,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 				}
 			}
 		}
+#endif
 	}
 
 	/* always succeed */
@@ -341,10 +361,18 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 			line[ll] = 0;
 		}
 
+#ifdef HAVE_STRSEP
+		sp = line;
+		p = strsep(&sp, ":");
+
+		if (p != NULL) {
+			p = strsep(&sp, ":");
+#else
 		p = strtok_r(line, ":", &sp);
 
 		if (p != NULL) {
 			p = strtok_r(NULL, ":", &sp);
+#endif
 			if (p != NULL) {
 				break_group_list(pool, p, tgroup, &tgroup_size);
 

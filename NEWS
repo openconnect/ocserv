@@ -1,3 +1,8 @@
+* Version 0.10.6 (unreleased)
+- occtl: added -j/--json option. That allows to output in a JSON format.
+- The dbus communication option has been dropped.
+
+
 * Version 0.10.5 (released 2015-05-24)
 - Added tgt-freshness-time option for gssapi/Kerberos authentication
   option. That allows to specify the maximum number of seconds after

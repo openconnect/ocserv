@@ -43,17 +43,17 @@ void print_time_ival7(time_t t1, time_t t2, FILE * fout)
 	
 	if (t >= 48 * 60 * 60)
 		/* 2 days or more */
-		fprintf(fout, _("%2ludays"), t / (24 * 60 * 60));
+		fprintf(fout, _("%2ludays"), (long)t / (24 * 60 * 60));
 	else if (t >= 60 * 60)
 		/* 1 hour or more */
 	        /* Translation Hint: Hours:Minutes */
-		fprintf(fout, _("%2luh:%02um"), t / (60 * 60),
+		fprintf(fout, _("%2luh:%02um"), (long)t / (60 * 60),
 			(unsigned)((t / 60) % 60));
 	else if (t > 60)
 		/* 1 minute or more */
 	        /* Translation Hint: Minutes:Seconds */
-		fprintf(fout, "%2lum:%02us", t / 60, (unsigned)t % 60);
+		fprintf(fout, "%2lum:%02us", (long)t / 60, (unsigned)t % 60);
 	else
 	        /* Translation Hint: Seconds:Centiseconds */
-		fprintf(fout, _("%5lus"), t);
+		fprintf(fout, _("%5lus"), (long)t);
 }

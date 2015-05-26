@@ -229,7 +229,7 @@ static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 #define IPBUF_SIZE 64
 static int append_user_info(method_ctx *ctx,
 			    UserListRep * list,
-			    struct proc_st *ctmp, unsigned single)
+			    struct proc_st *ctmp)
 {
 	uint32_t tmp;
 	char *ipbuf;
@@ -346,57 +346,55 @@ static int append_user_info(method_ctx *ctx,
 		rep->has_mtu = 1;
 	}
 
-	if (single > 0) {
-		if (ctmp->config.rx_per_sec > 0)
-			tmp = ctmp->config.rx_per_sec;
-		else
-			tmp = ctx->s->config->rx_per_sec;
-		tmp *= 1000;
-		rep->rx_per_sec = tmp;
+	if (ctmp->config.rx_per_sec > 0)
+		tmp = ctmp->config.rx_per_sec;
+	else
+		tmp = ctx->s->config->rx_per_sec;
+	tmp *= 1000;
+	rep->rx_per_sec = tmp;
 
-		if (ctmp->config.tx_per_sec > 0)
-			tmp = ctmp->config.tx_per_sec;
-		else
-			tmp = ctx->s->config->tx_per_sec;
-		tmp *= 1000;
-		rep->tx_per_sec = tmp;
+	if (ctmp->config.tx_per_sec > 0)
+		tmp = ctmp->config.tx_per_sec;
+	else
+		tmp = ctx->s->config->tx_per_sec;
+	tmp *= 1000;
+	rep->tx_per_sec = tmp;
 
-		if (ctmp->config.dns_size > 0) {
-			rep->dns = ctmp->config.dns;
-			rep->n_dns = ctmp->config.dns_size;
-		} else {
-			rep->dns = ctx->s->config->network.dns;
-			rep->n_dns = ctx->s->config->network.dns_size;
-		}
+	if (ctmp->config.dns_size > 0) {
+		rep->dns = ctmp->config.dns;
+		rep->n_dns = ctmp->config.dns_size;
+	} else {
+		rep->dns = ctx->s->config->network.dns;
+		rep->n_dns = ctx->s->config->network.dns_size;
+	}
 
-		if (ctmp->config.nbns_size > 0) {
-			rep->nbns = ctmp->config.nbns;
-			rep->n_nbns = ctmp->config.nbns_size;
-		} else {
-			rep->nbns = ctx->s->config->network.nbns;
-			rep->n_nbns = ctx->s->config->network.nbns_size;
-		}
+	if (ctmp->config.nbns_size > 0) {
+		rep->nbns = ctmp->config.nbns;
+		rep->n_nbns = ctmp->config.nbns_size;
+	} else {
+		rep->nbns = ctx->s->config->network.nbns;
+		rep->n_nbns = ctx->s->config->network.nbns_size;
+	}
 
-		if (ctmp->config.routes_size > 0) {
-			rep->routes = ctmp->config.routes;
-			rep->n_routes = ctmp->config.routes_size;
-		} else {
-			rep->routes = ctx->s->config->network.routes;
-			rep->n_routes = ctx->s->config->network.routes_size;
-		}
+	if (ctmp->config.routes_size > 0) {
+		rep->routes = ctmp->config.routes;
+		rep->n_routes = ctmp->config.routes_size;
+	} else {
+		rep->routes = ctx->s->config->network.routes;
+		rep->n_routes = ctx->s->config->network.routes_size;
+	}
 
-		if (ctmp->config.no_routes_size > 0) {
-			rep->no_routes = ctmp->config.no_routes;
-			rep->n_no_routes = ctmp->config.no_routes_size;
-		} else {
-			rep->no_routes = ctx->s->config->network.no_routes;
-			rep->n_no_routes = ctx->s->config->network.no_routes_size;
-		}
+	if (ctmp->config.no_routes_size > 0) {
+		rep->no_routes = ctmp->config.no_routes;
+		rep->n_no_routes = ctmp->config.no_routes_size;
+	} else {
+		rep->no_routes = ctx->s->config->network.no_routes;
+		rep->n_no_routes = ctx->s->config->network.no_routes_size;
+	}
 
-		if (ctmp->config.iroutes_size > 0) {
-			rep->iroutes = ctmp->config.iroutes;
-			rep->n_iroutes = ctmp->config.iroutes_size;
-		}
+	if (ctmp->config.iroutes_size > 0) {
+		rep->iroutes = ctmp->config.iroutes;
+		rep->n_iroutes = ctmp->config.iroutes_size;
 	}
 
 	return 0;
@@ -413,7 +411,7 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 
 
 	list_for_each(&ctx->s->proc_list.head, ctmp, list) {
-		ret = append_user_info(ctx, &rep, ctmp, 0);
+		ret = append_user_info(ctx, &rep, ctmp);
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending user info to reply");
@@ -518,7 +516,7 @@ static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 			}
 		}
 
-		ret = append_user_info(ctx, &rep, ctmp, 1);
+		ret = append_user_info(ctx, &rep, ctmp);
 		if (ret < 0) {
 			mslog(ctx->s, NULL, LOG_ERR,
 			      "error appending user info to reply");

@@ -13,11 +13,27 @@
 #endif
 
 #define DATE_TIME_FMT "%Y-%m-%d %H:%M"
+#define MAX_TMPSTR_SIZE 64
+
+typedef struct cmd_params_st {
+	unsigned json;
+} cmd_params_st;
 
 FILE* pager_start(void);
 void pager_stop(FILE* fp);
-void print_time_ival7(time_t t1, time_t t2, FILE * fout);
-void print_iface_stats(const char *iface, time_t since, FILE * out);
+void print_time_ival7(char output[MAX_TMPSTR_SIZE], time_t t1, time_t t2);
+void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more);
+int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char **val, unsigned vsize, unsigned have_more);
+void print_start_block(FILE *out, cmd_params_st *params);
+void print_end_block(FILE *out, cmd_params_st *params, unsigned have_more);
+void print_array_block(FILE *out, cmd_params_st *params);
+void print_end_array_block(FILE *out, cmd_params_st *params);
+void print_separator(FILE *out, cmd_params_st *params);
+void print_single_value(FILE *out, cmd_params_st *params, const char *name, const char *value, unsigned have_more);
+void print_single_value_int(FILE *out, cmd_params_st *params, const char *name, long i, unsigned have_more);
+void print_single_value_ex(FILE *out, cmd_params_st *params, const char *name, const char *value, const char *ex, unsigned have_more);
+void print_pair_value(FILE *out, cmd_params_st *params, const char *name1, const char *value1, const char *name2, const char *value2, unsigned have_more);
+
 
 void
 bytes2human(unsigned long bytes, char* output, unsigned output_size, const char* suffix);
@@ -53,18 +69,18 @@ void conn_close(CONN_TYPE*);
 int conn_prehandle(CONN_TYPE *ctx);
 void conn_posthandle(CONN_TYPE *ctx);
 
-typedef int (*cmd_func) (CONN_TYPE * conn, const char *arg);
+typedef int (*cmd_func) (CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 
-int handle_status_cmd(CONN_TYPE * conn, const char *arg);
-int handle_list_users_cmd(CONN_TYPE * conn, const char *arg);
-int handle_list_banned_ips_cmd(CONN_TYPE * conn, const char *arg);
-int handle_list_banned_points_cmd(CONN_TYPE * conn, const char *arg);
-int handle_show_user_cmd(CONN_TYPE * conn, const char *arg);
-int handle_show_id_cmd(CONN_TYPE * conn, const char *arg);
-int handle_disconnect_user_cmd(CONN_TYPE * conn, const char *arg);
-int handle_unban_ip_cmd(CONN_TYPE * conn, const char *arg);
-int handle_disconnect_id_cmd(CONN_TYPE * conn, const char *arg);
-int handle_reload_cmd(CONN_TYPE * conn, const char *arg);
-int handle_stop_cmd(CONN_TYPE * conn, const char *arg);
+int handle_status_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_list_users_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_list_banned_ips_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_list_banned_points_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_show_user_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_show_id_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_disconnect_user_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_unban_ip_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_disconnect_id_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_reload_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_stop_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 
 #endif

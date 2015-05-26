@@ -77,7 +77,7 @@ unsigned long speed;
 	bytes2human(speed, output, output_size, "/sec");
 }
 
-void print_iface_stats(const char *iface, time_t since, FILE * out)
+void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more)
 {
 	uint64_t tx, rx;
 	char buf1[32], buf2[32];
@@ -102,17 +102,24 @@ void print_iface_stats(const char *iface, time_t since, FILE * out)
 
 	bytes2human(rx, buf1, sizeof(buf1), NULL);
 	bytes2human(tx, buf2, sizeof(buf2), NULL);
-	fprintf(out, "\tRX: %"PRIu64" (%s) TX: %"PRIu64" (%s)\n", rx, buf1, tx, buf2);
+	if (params->json) {
+		fprintf(out, "    \"RX\":  \"%"PRIu64"\",\n    \"TX\":  \"%"PRIu64"\",\n", rx, tx);
+		fprintf(out, "    \"_RX\":  \"%s\",\n    \"_TX\":  \"%s\",\n", buf1, buf2);
+	} else
+		fprintf(out, "\tRX: %"PRIu64" (%s)   TX: %"PRIu64" (%s)\n", rx, buf1, tx, buf2);
 
 	value2speed(rx, diff, buf1, sizeof(buf1));
 	value2speed(tx, diff, buf2, sizeof(buf2));
-	fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1, buf2);
+	if (params->json)
+		fprintf(out, "    \"Average RX\":  \"%s\",\n    \"Average TX\":  \"%s\"%s\n", buf1, buf2, have_more?",":"");
+	else
+		fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1, buf2);
 
 	return;
 }
 
 #else
-void print_iface_stats(const char *iface, time_t since, FILE * out)
+void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more)
 {
 	return;
 }

@@ -26,6 +26,7 @@
 #include <ipc.pb-c.h>
 #include <talloc.h>
 #include <time.h>
+#include <string.h>
 
 void _talloc_free2(void *ctx, void *ptr);
 void *_talloc_size2(void *ctx, size_t size);

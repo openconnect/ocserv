@@ -84,7 +84,7 @@ DBusMessage *send_dbus_cmd(dbus_ctx *ctx,
 
 }
 
-int handle_status_cmd(dbus_ctx *ctx, const char *arg)
+int handle_status_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -169,7 +169,7 @@ int handle_status_cmd(dbus_ctx *ctx, const char *arg)
 	return 1;
 }
 
-int handle_reload_cmd(dbus_ctx *ctx, const char *arg)
+int handle_reload_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -214,7 +214,7 @@ int handle_reload_cmd(dbus_ctx *ctx, const char *arg)
 	return 1;
 }
 
-int handle_stop_cmd(dbus_ctx *ctx, const char *arg)
+int handle_stop_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -264,7 +264,7 @@ int handle_stop_cmd(dbus_ctx *ctx, const char *arg)
 	return 1;
 }
 
-int handle_unban_ip_cmd(struct dbus_ctx *ctx, const char *arg)
+int handle_unban_ip_cmd(struct dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	int af;
 	struct sockaddr_storage st;
@@ -328,7 +328,7 @@ int handle_unban_ip_cmd(struct dbus_ctx *ctx, const char *arg)
 	return 1;
 }
 
-int handle_disconnect_user_cmd(dbus_ctx *ctx, const char *arg)
+int handle_disconnect_user_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -372,7 +372,7 @@ int handle_disconnect_user_cmd(dbus_ctx *ctx, const char *arg)
 	return 1;
 }
 
-int handle_disconnect_id_cmd(dbus_ctx *ctx, const char *arg)
+int handle_disconnect_id_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -423,7 +423,7 @@ int handle_disconnect_id_cmd(dbus_ctx *ctx, const char *arg)
 	return 1;
 }
 
-int handle_list_users_cmd(dbus_ctx *ctx, const char *arg)
+int handle_list_users_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args, suba, subs;
@@ -737,12 +737,12 @@ int handle_list_banned_cmd(struct dbus_ctx *ctx, const char *arg, unsigned point
 	return ret;
 }
 
-int handle_list_banned_ips_cmd(struct dbus_ctx *ctx, const char *arg)
+int handle_list_banned_ips_cmd(struct dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	return handle_list_banned_cmd(ctx, arg, 0);
 }
 
-int handle_list_banned_points_cmd(struct dbus_ctx *ctx, const char *arg)
+int handle_list_banned_points_cmd(struct dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	return handle_list_banned_cmd(ctx, arg, 1);
 }
@@ -1084,7 +1084,7 @@ int common_info_cmd(DBusMessageIter * args)
 	return ret;
 }
 
-int handle_show_user_cmd(dbus_ctx *ctx, const char *arg)
+int handle_show_user_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;
@@ -1126,7 +1126,7 @@ int handle_show_user_cmd(dbus_ctx *ctx, const char *arg)
 	return ret;
 }
 
-int handle_show_id_cmd(dbus_ctx *ctx, const char *arg)
+int handle_show_id_cmd(dbus_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	DBusMessage *msg;
 	DBusMessageIter args;

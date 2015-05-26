@@ -29,9 +29,9 @@
 #include <occtl.h>
 #include <c-strcase.h>
 
-static int handle_reset_cmd(CONN_TYPE * conn, const char *arg);
-static int handle_help_cmd(CONN_TYPE * conn, const char *arg);
-static int handle_exit_cmd(CONN_TYPE * conn, const char *arg);
+static int handle_reset_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+static int handle_help_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+static int handle_exit_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 
 typedef struct {
 	char *name;
@@ -157,6 +157,7 @@ void usage(void)
 	printf("  -s --socket-file       Specify the server's occtl socket file\n");
 	printf("  -h --help              Show this help\n");
 	printf("  -v --version           Show the program's version\n");
+	printf("  -j --json              Use JSON formatting for output\n");
 	printf("\n");
 	print_commands(0);
 	printf("\n");
@@ -224,13 +225,13 @@ double data;
 	}
 }
 
-static int handle_help_cmd(CONN_TYPE * conn, const char *arg)
+static int handle_help_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params)
 {
 	print_commands(1);
 	return 0;
 }
 
-static int handle_reset_cmd(CONN_TYPE * conn, const char *arg)
+static int handle_reset_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params)
 {
 	rl_reset_terminal(NULL);
 #ifdef HAVE_ORIG_READLINE
@@ -240,7 +241,7 @@ static int handle_reset_cmd(CONN_TYPE * conn, const char *arg)
 	return 0;
 }
 
-static int handle_exit_cmd(CONN_TYPE * conn, const char *arg)
+static int handle_exit_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params)
 {
 	exit(0);
 }
@@ -248,8 +249,10 @@ static int handle_exit_cmd(CONN_TYPE * conn, const char *arg)
 /* checks whether an input command of type "  list   users" maches 
  * the given cmd (e.g., "list users"). If yes it executes func() and returns true.
  */
+static
 unsigned check_cmd(const char *cmd, const char *input,
-		   CONN_TYPE * conn, int need_preconn, cmd_func func, int *status)
+		   CONN_TYPE * conn, int need_preconn, cmd_func func, int *status,
+		   cmd_params_st *params)
 {
 	char *t, *p;
 	unsigned len, tlen;
@@ -290,10 +293,10 @@ unsigned check_cmd(const char *cmd, const char *input,
 			if (conn_prehandle(conn) < 0) {
 			 	*status = 1;
 			} else {
-				*status = func(conn, p);
+				*status = func(conn, p, params);
 			}
 		} else {
-			*status = func(conn, p);
+			*status = func(conn, p, params);
 		}
 
 		ret = 1;
@@ -325,7 +328,8 @@ char *stripwhite(char *string)
 	return s;
 }
 
-int handle_cmd(CONN_TYPE * conn, char *line)
+static
+int handle_cmd(CONN_TYPE * conn, char *line, cmd_params_st *params)
 {
 	char *cline;
 	unsigned int i;
@@ -344,7 +348,7 @@ int handle_cmd(CONN_TYPE * conn, char *line)
 		    (commands[i].name, cline, conn,
 		     commands[i].need_preconn,
 		     commands[i].func,
-		     &status) != 0)
+		     &status, params) != 0)
 			break;
 	}
 
@@ -497,7 +501,7 @@ void initialize_readline(void)
 	signal(SIGINT, handle_sigint);
 }
 
-static int single_cmd(int argc, char **argv, void *pool, const char *file)
+static int single_cmd(int argc, char **argv, void *pool, const char *file, cmd_params_st *params)
 {
 	CONN_TYPE *conn;
 	char *line;
@@ -506,7 +510,7 @@ static int single_cmd(int argc, char **argv, void *pool, const char *file)
 	conn = conn_init(pool, file);
 
 	line = merge_args(argc, argv);
-	ret = handle_cmd(conn, line);
+	ret = handle_cmd(conn, line, params);
 
 	free(line);
 	return ret;
@@ -519,6 +523,9 @@ int main(int argc, char **argv)
 	CONN_TYPE *conn;
 	const char *file = NULL;
 	void *gl_pool;
+	cmd_params_st params;
+
+	memset(&params, 0, sizeof(params));
 
 	gl_pool = talloc_init("occtl");
 	if (gl_pool == NULL) {
@@ -530,28 +537,36 @@ int main(int argc, char **argv)
 
 
 	if (argc > 1) {
-		if (argv[1][0] == '-') {
-			if (argv[1][1] == 'v'
+		while (argc > 1 && argv[1][0] == '-') {
+			if (argv[1][1] == 'j'
+			    || (argv[1][1] == '-' && argv[1][2] == 'j')) {
+				params.json = 1;
+
+				argv += 1;
+				argc -= 1;
+
+			} else if (argv[1][1] == 'v'
 			    || (argv[1][1] == '-' && argv[1][2] == 'v')) {
 				version();
+				exit(0);
 			} else if (argc > 2 && (argv[1][1] == 's'
 			    || (argv[1][1] == '-' && argv[1][2] == 's'))) {
 				file = talloc_strdup(gl_pool, argv[2]);
+
 				if (argc == 3) {
 					goto interactive;
-				} else {
-					argv += 2;
-					argc -= 2;
-					exit(single_cmd(argc, argv, gl_pool, file));
 				}
+
+				argv += 2;
+				argc -= 2;
 			} else {
 				usage();
+				exit(0);
 			}
-			exit(0);
   		}
 
   		/* handle all arguments as a command */
-		exit(single_cmd(argc, argv, gl_pool, file));
+		exit(single_cmd(argc, argv, gl_pool, file, &params));
 	}
 
  interactive:
@@ -565,7 +580,7 @@ int main(int argc, char **argv)
 		if (line == NULL)
 			return 0;
 
-		handle_cmd(conn, line);
+		handle_cmd(conn, line, 0);
 	}
 
 	conn_close(conn);

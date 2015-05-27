@@ -321,7 +321,7 @@ int icmp_ping6(main_server_st * s,
 				if (pkt->icmp6_id == id1) {
 					if (pkt->icmp6_type == ICMP6_ECHO_REPLY)
 						gotreply++;
-					else if (pkt->icmp6_type == ICMP_DEST_UNREACH)
+					else if (pkt->icmp6_type == ICMP6_DST_UNREACH)
 						unreachable++;
 				}
 			}

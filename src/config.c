@@ -513,7 +513,7 @@ static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
 static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
 {
 	unsigned i, j;
-	char *path, *server, *port, *realm;
+	char *path, *server, *port, *realm, *p;
 	struct addrinfo hints, *res;
 	int ret;
 	struct kkdcp_st *kkdcp;
@@ -560,7 +560,19 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		}
 		server += 4;
 
-		port = strchr(server, ':');
+		p = strchr(server, ']');
+		if (p == NULL) { /* IPv4 address or server.name:port */
+			port = strchr(server, ':');
+		} else { /* [::IPV6address]:PORT */
+			port = strchr(p, ':');
+			if (port) {
+				*p = 0;
+				p = strchr(server, '[');
+				if (p)
+					server = p+1;
+			}
+		}
+
 		if (port == NULL) {
 			fprintf(stderr, "No server port specified in: %s\n", server);
 			exit(1);

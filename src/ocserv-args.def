@@ -574,6 +574,7 @@ no-route = 192.168.5.0/255.255.255.0
 #kkdcp = SERVER-PATH KERBEROS-REALM PROTOCOL@SERVER:PORT
 #kkdcp = /KdcProxy KERBEROS.REALM udp@127.0.0.1:88
 #kkdcp = /KdcProxy KERBEROS.REALM tcp@127.0.0.1:88
+#kkdcp = /KdcProxy KERBEROS.REALM tcp@[::1]:88
 
 #
 # The following options are for (experimental) AnyConnect client 

@@ -55,4 +55,6 @@ void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str);
 void *pam_get_brackets_string(struct perm_cfg_st *config, const char *str);
 void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str);
 
+void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, char **_path, char **_realm);
+
 #endif

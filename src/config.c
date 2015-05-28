@@ -513,7 +513,7 @@ static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
 static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size)
 {
 	unsigned i, j;
-	char *path, *server, *port, *realm, *p;
+	char *path, *server, *port, *realm;
 	struct addrinfo hints, *res;
 	int ret;
 	struct kkdcp_st *kkdcp;
@@ -528,57 +528,9 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 	config->kkdcp_size = 0;
 
 	for (i=0;i<urlfw_size;i++) {
-		path = urlfw[i];
-		realm = strchr(path, ' ');
-		if (realm == NULL) {
-			fprintf(stderr, "Cannot parse kkdcp string: %s\n", path);
-			exit(1);
-		}
-
-		*realm = 0;
-		realm++;
-		while (c_isspace(*realm))
-			realm++;
-
-		server = strchr(realm, ' ');
-		if (server == NULL) {
-			fprintf(stderr, "Cannot parse kkdcp string: %s\n", realm);
-			exit(1);
-		}
-
-		while (c_isspace(*server))
-			server++;
-
 		memset(&hints, 0, sizeof(hints));
-		if (strncmp(server, "udp@", 4) == 0) {
-			hints.ai_socktype = SOCK_DGRAM;
-		} else if (strncmp(server, "tcp@", 4) == 0) {
-			hints.ai_socktype = SOCK_STREAM;
-		} else {
-			fprintf(stderr, "cannot handle protocol %s\n", server);
-			exit(1);
-		}
-		server += 4;
 
-		p = strchr(server, ']');
-		if (p == NULL) { /* IPv4 address or server.name:port */
-			port = strchr(server, ':');
-		} else { /* [::IPV6address]:PORT */
-			port = strchr(p, ':');
-			if (port) {
-				*p = 0;
-				p = strchr(server, '[');
-				if (p)
-					server = p+1;
-			}
-		}
-
-		if (port == NULL) {
-			fprintf(stderr, "No server port specified in: %s\n", server);
-			exit(1);
-		}
-		*port = 0;
-		port++;
+		parse_kkdcp_string(urlfw[i], &hints.ai_socktype, &port, &server, &path, &realm);
 
 		ret = getaddrinfo(server, port, &hints, &res);
 		if (ret != 0) {

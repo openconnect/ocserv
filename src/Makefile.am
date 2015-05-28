@@ -70,7 +70,7 @@ ACCT_SOURCES=acct/pam.c acct/pam.h acct/radius.c acct/radius.h
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \
-	vpn.h cookies.h tlslib.h log.c tun.c tun.h \
+	vpn.h cookies.h tlslib.h log.c tun.c tun.h config-kkdcp.c \
 	config.c worker-resume.c worker.h main-resume.c main.h \
 	worker-extras.c html.c html.h worker-http.c \
 	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \

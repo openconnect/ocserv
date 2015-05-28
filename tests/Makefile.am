@@ -24,21 +24,26 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/ \
 	-I$(top_builddir)/src/ \
 	-I$(top_srcdir)/gl/ \
-	-I$(top_builddir)/gl/
+	-I$(top_builddir)/gl/ \
+	-I$(top_srcdir)/ \
+	-I$(top_builddir)/
+kkdcp_parsing_SOURCES = ../src/config-kkdcp.c kkdcp-parsing.c
+kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+
 ipv4_prefix_SOURCES = ../src/common.c ../src/common.h ipv4-prefix.c
 ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
 ipv6_prefix_SOURCES = ../src/common.c ../src/common.h ipv6-prefix.c
 ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
-check_PROGRAMS = ipv4-prefix ipv6-prefix
+check_PROGRAMS = ipv4-prefix ipv6-prefix kkdcp-parsing
 
 TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie full-test test-group-pass test-pass-group-cert \
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip radius-test \
 	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix \
-	radius-test-config
+	radius-test-config kkdcp-parsing
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

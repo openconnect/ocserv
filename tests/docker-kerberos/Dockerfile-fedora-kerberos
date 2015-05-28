@@ -1,5 +1,5 @@
-# Clone from the Fedora 21 image
-FROM fedora:21
+# Clone from the Fedora 22 image
+FROM fedora:22
 
 RUN yum install -y krb5-libs krb5-server krb5-workstation 
 RUN yum install -y gnutls gnutls-utils protobuf-c iproute pcllib http-parser tcp_wrappers pam systemd libseccomp

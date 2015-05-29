@@ -30,20 +30,23 @@ AM_CPPFLAGS = \
 kkdcp_parsing_SOURCES = ../src/config-kkdcp.c kkdcp-parsing.c
 kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
+json_escape_SOURCES = ../src/common-json.c json-escape.c
+json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+
 ipv4_prefix_SOURCES = ../src/common.c ../src/common.h ipv4-prefix.c
 ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
 ipv6_prefix_SOURCES = ../src/common.c ../src/common.h ipv6-prefix.c
 ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
-check_PROGRAMS = ipv4-prefix ipv6-prefix kkdcp-parsing
+check_PROGRAMS = ipv4-prefix ipv6-prefix kkdcp-parsing json-escape
 
 TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	test-multi-cookie full-test test-group-pass test-pass-group-cert \
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip radius-test \
 	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix \
-	radius-test-config kkdcp-parsing
+	radius-test-config kkdcp-parsing json-escape
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

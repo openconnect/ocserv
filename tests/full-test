@@ -89,14 +89,14 @@ fi
 PID=`cat ${srcdir}/pid1.$$`
 
 # The client IP depends on the username so it shouldn't change.
-ping -w 5 192.168.1.1
+ping -w 5 192.168.79.1
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping -w 5 192.168.1.1 -s 1500
+ping -w 5 192.168.79.1 -s 1500
 if test $? != 0;then
 	kill $PID
 	echo "Cannot ping ocserv"
@@ -115,17 +115,19 @@ retrieve_user_info test
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
 if test "$FEDORA" = 1;then
-nuttcp -T 10 -t 192.168.1.1
+nuttcp -T 10 -t 192.168.79.1
 if test $? != 0;then
-	kill $PID
 	echo "Cannot send to ocserv"
+	exit 77
+	kill $PID
 	stop
 fi
 
-nuttcp -T 10 -r 192.168.1.1
+nuttcp -T 10 -r 192.168.79.1
 if test $? != 0;then
-	kill $PID
 	echo "Cannot recv from ocserv"
+	exit 77
+	kill $PID
 	stop
 fi
 fi

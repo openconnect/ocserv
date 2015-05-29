@@ -127,7 +127,7 @@ ocpasswd-args.h: ocpasswd-args.c
 
 occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c occtl-ip-cache.c \
 	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES) \
-	occtl-print.c $(PROTOBUF_SOURCES)
+	occtl-print.c common-json.c common-json.h $(PROTOBUF_SOURCES)
 occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 

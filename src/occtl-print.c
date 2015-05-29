@@ -29,7 +29,12 @@
 #include <c-ctype.h>
 #include <occtl.h>
 #include <common.h>
+#include <common-json.h>
 #include <c-strcase.h>
+
+#define MAX_STR_SIZE 512
+
+#define escape_val json_escape_val
 
 int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char **val, unsigned vsize, unsigned have_more)
 {
@@ -95,11 +100,12 @@ void print_separator(FILE *out, cmd_params_st *params)
 
 void print_single_value(FILE *out, cmd_params_st *params, const char *name, const char *value, unsigned have_more)
 {
+	char tmp[MAX_STR_SIZE];
 	if (value[0] == 0)
 		return;
 
 	if (params->json)
-		fprintf(out, "    \"%s\":  \"%s\"%s\n", name, value, have_more?",":"");
+		fprintf(out, "    \"%s\":  \"%s\"%s\n", name, escape_val(tmp, sizeof(tmp), value), have_more?",":"");
 	else
 		fprintf(out, "\t%s: %s\n", name, value);
 }
@@ -114,23 +120,25 @@ void print_single_value_int(FILE *out, cmd_params_st *params, const char *name, 
 
 void print_single_value_ex(FILE *out, cmd_params_st *params, const char *name, const char *value, const char *ex, unsigned have_more)
 {
+	char tmp[MAX_STR_SIZE];
 	if (value[0] == 0)
 		return;
 
 	if (params->json) {
-		fprintf(out, "    \"%s\":  \"%s\",\n", name, value);
-		fprintf(out, "    \"_%s\":  \"%s\"%s\n", name, ex, have_more?",":"");
+		fprintf(out, "    \"%s\":  \"%s\",\n", name, escape_val(tmp, sizeof(tmp), value));
+		fprintf(out, "    \"_%s\":  \"%s\"%s\n", name, escape_val(tmp, sizeof(tmp), ex), have_more?",":"");
 	} else
 		fprintf(out, "\t%s: %s (%s)\n", name, value, ex);
 }
 
 void print_pair_value(FILE *out, cmd_params_st *params, const char *name1, const char *value1, const char *name2, const char *value2, unsigned have_more)
 {
+	char tmp[MAX_STR_SIZE];
 	if (params->json) {
 		if (value1 && value1[0] != 0)
-			fprintf(out, "    \"%s\":  \"%s\"%s\n", name1, value1, have_more?",":"");
+			fprintf(out, "    \"%s\":  \"%s\"%s\n", name1, escape_val(tmp, sizeof(tmp), value1), have_more?",":"");
 		if (value2 && value2[0] != 0)
-			fprintf(out, "    \"%s\":  \"%s\"%s\n", name2, value2, have_more?",":"");
+			fprintf(out, "    \"%s\":  \"%s\"%s\n", name2, escape_val(tmp, sizeof(tmp), value2), have_more?",":"");
 	} else {
 		if (value1 && value1[0] != 0)
 			fprintf(out, "\t%s: %s", name1, value1);

@@ -48,6 +48,7 @@ by the server.
 ATTRIBUTE	User-Name		1	string
 ATTRIBUTE	Password		2	string
 ATTRIBUTE	Framed-Protocol		7	integer
+ATTRIBUTE	NAS-Identifier		32	string
 ATTRIBUTE	Acct-Input-Octets	42	integer
 ATTRIBUTE	Acct-Output-Octets	43	integer
 ATTRIBUTE	Acct-Session-Id		44	string

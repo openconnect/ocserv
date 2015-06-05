@@ -32,7 +32,12 @@
 #ifdef HAVE_RADIUS
 
 #include "cfg.h"
-#include <freeradius-client.h>
+
+#ifdef LEGACY_RADIUS
+# include <freeradius-client.h>
+#else
+# include <radcli.h>
+#endif
 
 #define RAD_GROUP_NAME 1030
 #define RAD_IPV4_DNS1 ((311<<16)|(28))

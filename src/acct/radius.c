@@ -31,7 +31,12 @@
 
 #ifdef HAVE_RADIUS
 
-#include <freeradius-client.h>
+#ifdef LEGACY_RADIUS
+# include <freeradius-client.h>
+#else
+# include <radcli.h>
+#endif
+
 #include <sec-mod-acct.h>
 #include "auth/radius.h"
 #include "acct/radius.h"
@@ -163,7 +168,7 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 		}
 	}
 
-#if 0 /* bug in freeradius-client */
+#ifndef LEGACY_RADIUS /* bug in freeradius-client */
 	if (ai->ipv6[0] != 0) {
 		struct in6_addr in;
 		if (inet_pton(AF_INET6, ai->ipv6, &in) == 1) {

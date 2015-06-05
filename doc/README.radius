@@ -1,49 +1,58 @@
-============================================
-	Using Radius with ocserv
-============================================
+Using Radius with ocserv
+========================
 
-For radius support the freeradius-client library is required. The
-minimum requirement is version 1.1.7 as released at:
-https://github.com/FreeRADIUS/freeradius-client
+For radius support the radcli library is required. The
+minimum requirement is version 1.2.0 as released at:
+https://github.com/nmav/radcli
 
-Freeradius-client uses a configuration file to setup the
+radcli uses a configuration file to setup the
 server configuration. That is typically found at:
-/etc/radiusclient/radiusclient.conf
-and is best to copy the default installed by freeradius-client
-as radiusclient-ocserv.conf and edit it accordingly.
+/etc/radcl/radiusclient.conf
+and is best to copy the default installed as radiusclient-ocserv.conf
+and edit it accordingly.
 
 The important options for ocserv usage are the following:
-dictionary 	/etc/radiusclient/dictionary
-servers         /etc/radiusclient/servers
+```
+dictionary 	/etc/radcli/dictionary
+servers         /etc/radcli/servers
+```
 
 The dictionary should contain at least the attributes shown below,
 and the servers file should contain the radius server to use.
 
-============================================
-	Ocserv configuration
-============================================
+
+Ocserv configuration
+====================
 
 For authentication the following line should be enabled.
-#auth = "radius[/path/to/radiusclient.conf,groupconfig]"
+```
+auth = "radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true]"
+```
 
 Check the ocserv manpage for the meaning of the various options
 such as groupconfig.
 
-To enable accounting, set the following option to the time (in
+To enable accounting, use
+```
+acct = "radius[config=/etc/radiusclient/radiusclient.conf]"
+```
+
+and modify the following option to the time (in
 seconds), that accounting information should be reported.
-#stats-report-time = 360
+```
+stats-report-time = 360
+```
 
 That value will be overriden by Acct-Interim-Interval if sent
 by the server.
 
-============================================
-	Dictionary
-============================================
 
-#
-# Ocserv supports the following radious attributes.
-#
+Dictionary
+==========
 
+Ocserv supports the following radious attributes.
+
+```
 #	Standard attributes
 ATTRIBUTE	User-Name		1	string
 ATTRIBUTE	Password		2	string
@@ -108,6 +117,4 @@ ATTRIBUTE	Route-IPv6-Information	170	ipv6prefix
 #	Experimental Non Protocol Attributes used by Cistron-Radiusd
 #
 ATTRIBUTE	Group-Name		1030	string
-
-
-
+```

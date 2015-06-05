@@ -188,25 +188,34 @@ AC_ARG_WITH(radius,
 radius_enabled=no
 
 if test "$test_for_radius" = yes;then
-LIBS="$oldlibs -lfreeradius-client"
-AC_MSG_CHECKING([for freeradius client library])
-AC_LINK_IFELSE([AC_LANG_PROGRAM([
+	PKG_CHECK_MODULES([RADCLI], [radcli >= 1.2.0], radius_enabled=radcli, radius_enabled=no)
+
+	if test "$radius_enabled" = no;then
+		LIBS="$oldlibs -lfreeradius-client"
+		AC_MSG_CHECKING([for freeradius client library])
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		   #include <freeradius-client.h>],[
 #ifndef PW_MAX_MSG_SIZE
 #error 1
 #endif
 		   rc_read_config(0);])],
 		  [AC_MSG_RESULT(yes)
-		   AC_SUBST([FREERADIUS_CLIENT_LIBS], [-lfreeradius-client])
-		   AC_SUBST([FREERADIUS_CLIENT_CFLAGS], [])
-		   radius_enabled=yes
-		   AC_DEFINE([HAVE_RADIUS], 1, [Enable the Radius library])],
+		   AC_SUBST([RADCLI_LIBS], [-lfreeradius-client])
+		   AC_SUBST([RADCLI_CFLAGS], [])
+		   radius_enabled=freeradius-client
+		   AC_DEFINE([LEGACY_RADIUS], 1, [Enable the legacy library support])],
 		  [AC_MSG_RESULT(no)
    	           AC_MSG_WARN([[
 *** 
-*** freeradius-client 1.1.7 or later was not found. Radius support will be disabled.
+*** radcli 1.2.0 or later was not found. Radius support will be disabled.
+*** See https://github.com/nmav/radcli
 *** ]])])
-LIBS="$oldlibs"
+		LIBS="$oldlibs"
+	fi
+
+	if test "$radius_enabled" != no;then
+		AC_DEFINE([HAVE_RADIUS], 1, [Enable the Radius library])
+	fi
 fi
 
 gl_INIT

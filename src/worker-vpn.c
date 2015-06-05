@@ -932,6 +932,8 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 
 			ws->last_dtls_rehandshake = tnow->tv_sec;
 		} else if (ret >= 1) {
+			/* where we receive any DTLS UDP packet we reset the state
+			 * to active */
 			ws->udp_state = UP_ACTIVE;
 
 			if (bandwidth_update
@@ -2096,6 +2098,12 @@ static int parse_cstp_data(struct worker_st *ws,
 		oclog(ws, LOG_INFO, "unexpected CSTP length (have %u, should be %d)",
 		      (unsigned)pktlen, (unsigned)buf_size-8);
 		return -1;
+	}
+
+	if (buf[6] == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) {
+		/* if we received a data packet in the CSTP channel we assume that
+		 * our peer wants to switch to it as the communication channel */
+		ws->udp_state = UP_INACTIVE;
 	}
 
 	ret = parse_data(ws, buf, buf_size, now, 0);

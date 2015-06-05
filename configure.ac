@@ -208,7 +208,7 @@ if test "$test_for_radius" = yes;then
    	           AC_MSG_WARN([[
 *** 
 *** radcli 1.2.0 or later was not found. Radius support will be disabled.
-*** See https://github.com/nmav/radcli
+*** See http://radcli.github.io/radcli/
 *** ]])])
 		LIBS="$oldlibs"
 	fi

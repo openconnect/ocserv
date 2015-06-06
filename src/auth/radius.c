@@ -200,14 +200,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
 	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
 		syslog(LOG_ERR,
-		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		return ERR_AUTH_FAIL;
 	}
 
 	if (rc_avpair_add(rh, &send, PW_USER_PASSWORD, (char*)pass, -1, 0) == NULL) {
 		syslog(LOG_ERR,
-		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
@@ -228,7 +228,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	if (nas_identifier[0] != 0) {
 		if (rc_avpair_add(rh, &send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0) == NULL) {
 			syslog(LOG_ERR,
-			       "%s:%u: user '%s' auth error", __func__, __LINE__,
+			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
@@ -237,7 +237,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	if (rc_avpair_add(rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
 		syslog(LOG_ERR,
-		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
@@ -246,7 +246,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	service = PW_AUTHENTICATE_ONLY;
 	if (rc_avpair_add(rh, &send, PW_SERVICE_TYPE, &service, -1, 0) == NULL) {
 		syslog(LOG_ERR,
-		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;
@@ -256,7 +256,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		service = pctx->id;
 		if (rc_avpair_add(rh, &send, PW_NAS_PORT, &service, -1, 0) == NULL) {
 			syslog(LOG_ERR,
-			       "%s:%u: user '%s' auth error", __func__, __LINE__,
+			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
@@ -266,7 +266,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	service = PW_ASYNC;
 	if (rc_avpair_add(rh, &send, PW_NAS_PORT_TYPE, &service, -1, 0) == NULL) {
 		syslog(LOG_ERR,
-		       "%s:%u: user '%s' auth error", __func__, __LINE__,
+		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		ret = ERR_AUTH_FAIL;
 		goto cleanup;

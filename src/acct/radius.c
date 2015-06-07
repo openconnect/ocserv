@@ -34,7 +34,7 @@
 #ifdef LEGACY_RADIUS
 # include <freeradius-client.h>
 #else
-# include <radcli.h>
+# include <radcli/radcli.h>
 #endif
 
 #include <sec-mod-acct.h>

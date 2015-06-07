@@ -36,18 +36,14 @@
 #ifdef LEGACY_RADIUS
 # include <freeradius-client.h>
 #else
-# include <radcli.h>
+# include <radcli/radcli.h>
 #endif
 
 #define RAD_GROUP_NAME 1030
 #define RAD_IPV4_DNS1 ((311<<16)|(28))
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
 
-#ifndef PW_INTERIM_INTERVAL
-# define PW_INTERIM_INTERVAL 85
-#endif
-
-#ifndef PW_DELEGATED_IPV6_PREFIX
+#if defined(LEGACY_RADIUS) && !defined(PW_DELEGATED_IPV6_PREFIX)
 # define PW_DELEGATED_IPV6_PREFIX 123
 #endif
 
@@ -340,7 +336,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_FRAMED_IPV6_ROUTE && vp->type == PW_TYPE_STRING) {
 				/* Framed-IPv6-Route */
 				append_route(pctx, vp->strvalue, vp->lvalue);
-			} else if (vp->attribute == PW_INTERIM_INTERVAL && vp->type == PW_TYPE_INTEGER) {
+			} else if (vp->attribute == PW_ACCT_INTERIM_INTERVAL && vp->type == PW_TYPE_INTEGER) {
 				pctx->interim_interval_secs = vp->lvalue;
 			} else if (vp->attribute == PW_SESSION_TIMEOUT && vp->type == PW_TYPE_INTEGER) {
 				pctx->session_timeout_secs = vp->lvalue;

@@ -1,6 +1,8 @@
 * Version 0.10.6 (unreleased)
 - Transmit packets to the last incoming source, allowing faster switch
   of the communication channel.
+- The worker processes will utilize the UDP socket address (if any),
+  when reporting peer's address if the listen-clear-file option is set.
 - The dbus communication option has been dropped.
 - Radius: depend on radcli radius library. http://radcli.github.io/radcli/
 - occtl: added -j/--json option. That allows to output in a JSON format.

@@ -1419,7 +1419,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		ireq.hostname = req->hostname;
 		ireq.ip = ws->remote_ip_str;
-		ireq.our_ip = get_our_ip(ws->conn_fd, our_ip_str);
+		if (ws->conn_type != SOCK_TYPE_UNIX) {
+			ireq.our_ip = get_our_ip(ws->conn_fd, our_ip_str);
+		} else if (ws->udp_state == UP_ACTIVE) {
+			/* if we use a UNIX socket then try to get our IP
+			 * from the UDP socket. */
+			ireq.our_ip = get_our_ip(ws->dtls_tptr.fd, our_ip_str);
+		}
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {

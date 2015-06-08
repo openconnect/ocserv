@@ -1,7 +1,9 @@
 * Version 0.10.6 (unreleased)
-- occtl: added -j/--json option. That allows to output in a JSON format.
+- Transmit packets to the last incoming source, allowing faster switch
+  of the communication channel.
 - The dbus communication option has been dropped.
 - Radius: depend on radcli radius library. http://radcli.github.io/radcli/
+- occtl: added -j/--json option. That allows to output in a JSON format.
 
 
 * Version 0.10.5 (released 2015-05-24)

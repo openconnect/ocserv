@@ -49,6 +49,8 @@ typedef struct pam_cfg_st {
 
 #define CHECK_TRUE(str) (str != NULL && (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0))?1:0
 
+struct perm_cfg_st;
+
 void *get_brackets_string1(void *pool, const char *str);
 void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str);
 void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str);

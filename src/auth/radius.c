@@ -43,9 +43,15 @@
 #define RAD_IPV4_DNS1 ((311<<16)|(28))
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
 
-#if defined(LEGACY_RADIUS) && !defined(PW_DELEGATED_IPV6_PREFIX)
-# define PW_DELEGATED_IPV6_PREFIX 123
+#if defined(LEGACY_RADIUS)
+# ifndef PW_DELEGATED_IPV6_PREFIX
+#  define PW_DELEGATED_IPV6_PREFIX 123
+# endif
+# ifndef PW_ACCT_INTERIM_INTERVAL
+#  define PW_ACCT_INTERIM_INTERVAL 85
+# endif
 #endif
+
 
 static rc_handle *rh = NULL;
 static char nas_identifier[64];

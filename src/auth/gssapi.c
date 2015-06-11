@@ -350,6 +350,17 @@ static void gssapi_auth_deinit(void *ctx)
 	talloc_free(ctx);
 }
 
+static void gssapi_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+{
+	gssapi_cfg_st *config = _additional;
+	gid_t min = 0;
+
+	if (config)
+		min = config->gid_min;
+
+	unix_group_list(pool, min, groupname, groupname_size);
+}
+
 const struct auth_mod_st gssapi_auth_funcs = {
 	.type = AUTH_TYPE_GSSAPI,
 	.auth_init = gssapi_auth_init,
@@ -360,6 +371,7 @@ const struct auth_mod_st gssapi_auth_funcs = {
 	.auth_group = gssapi_auth_group,
 	.global_init = gssapi_global_init,
 	.global_deinit = gssapi_global_deinit,
+	.group_list = gssapi_group_list
 };
 
 #endif

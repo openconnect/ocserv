@@ -105,7 +105,7 @@ An example configuration file follows.
 # Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server,
 # Acct-Interim-Interval.
 #
-# gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=900]
+# gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=900,gid-min=1000]
 #  The gssapi option allows to use authentication methods supported by GSSAPI,
 # such as Kerberos tickets with ocserv. It should be best used as an alternative
 # to PAM (i.e., have pam in auth and gssapi in enable-auth), to allow users with
@@ -113,6 +113,8 @@ An example configuration file follows.
 # is true. The 'tgt-freshness-time' if set, it would require the TGT tickets presented
 # to have been issued within the provided number of seconds. That option is used to
 # restrict logins even if the KDC provides long time TGT tickets.
+# The gid-min option is used by auto-select-group option, in order to select the minimum
+# valid group ID.
 
 #auth = "certificate"
 #auth = "pam"

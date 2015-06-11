@@ -317,33 +317,13 @@ struct pam_ctx_st * pctx = ctx;
 
 static void pam_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
 {
-	struct group *grp;
 	struct pam_cfg_st *config = _additional;
 	gid_t min = 0;
 
 	if (config)
 		min = config->gid_min;
 
-	setgrent();
-
-	*groupname_size = 0;
-	*groupname = talloc_size(pool, sizeof(char*)*MAX_GROUPS);
-	if (*groupname == NULL) {
-		goto exit;
-	}
-
-	while((grp = getgrent()) != NULL && (*groupname_size) < MAX_GROUPS) {
-		if (grp->gr_gid >= min) {
-			(*groupname)[(*groupname_size)] = talloc_strdup(*groupname, grp->gr_name);
-			if ((*groupname)[(*groupname_size)] == NULL)
-				break;
-			(*groupname_size)++;
-		}
-	}
-
- exit:
-	endgrent();
-	return;
+	unix_group_list(pool, min, groupname, groupname_size);
 }
 
 const struct auth_mod_st pam_auth_funcs = {

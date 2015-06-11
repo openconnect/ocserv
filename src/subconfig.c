@@ -125,6 +125,12 @@ void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str)
 				fprintf(stderr, "Invalid value for '%s': %s\n", vals[i].name, vals[i].value);
 				exit(1);
 			}
+		} else if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
+			additional->gid_min = atoi(vals[i].value);
+			if (additional->gid_min < 0) {
+				fprintf(stderr, "error in gid-min value: %d\n", additional->gid_min);
+				exit(1);
+			}
 		} else {
 			fprintf(stderr, "unknown option '%s'\n", vals[i].name);
 			exit(1);

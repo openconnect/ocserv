@@ -25,6 +25,7 @@
 #include <vpn.h>
 #include "pam.h"
 #include "cfg.h"
+#include "auth-unix.h"
 #include <sec-mod-auth.h>
 #include <ccan/hash/hash.h>
 
@@ -45,6 +46,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include "auth/pam.h"
+#include "auth-unix.h"
 
 #define PAM_STACK_SIZE (96*1024)
 
@@ -273,50 +275,9 @@ struct pam_ctx_st * pctx = ctx;
  */
 static int pam_auth_group(void* ctx, const char *suggested, char *groupname, int groupname_size)
 {
-struct passwd * pwd;
-struct pam_ctx_st * pctx = ctx;
-struct group *grp;
-int ret;
-unsigned found;
+	struct pam_ctx_st * pctx = ctx;
 
-	groupname[0] = 0;
-
-	pwd = getpwnam(pctx->username);
-	if (pwd != NULL) {
-		if (suggested != NULL) {
-			gid_t groups[MAX_GROUPS];
-			int ngroups = sizeof(groups)/sizeof(groups[0]);
-			unsigned i;
-
-			ret = getgrouplist(pctx->username, pwd->pw_gid, groups, &ngroups);
-			if (ret <= 0) {
-				return 0;
-			}
-
-			found = 0;
-			for (i=0;i<ngroups;i++) {
-				grp = getgrgid(groups[i]);
-				if (grp != NULL && strcmp(suggested, grp->gr_name) == 0) {
-					strlcpy(groupname, grp->gr_name, groupname_size);
-					found = 1;
-					break;
-				}
-			}
-
-			if (found == 0) {
-				syslog(LOG_AUTH,
-				       "user '%s' requested group '%s' but is not a member",
-				       pctx->username, suggested);
-				return -1;
-			}
-		} else {
-			struct group* grp = getgrgid(pwd->pw_gid);
-			if (grp != NULL)
-				strlcpy(groupname, grp->gr_name, groupname_size);
-		}
-	}
-
-	return 0;
+	return get_user_auth_group(pctx->username, suggested, groupname, groupname_size);
 }
 
 static int pam_auth_user(void* ctx, char *username, int username_size)

@@ -31,6 +31,7 @@
 #include <c-ctype.h>
 #include "gssapi.h"
 #include "auth/common.h"
+#include "auth-unix.h"
 #include <gssapi/gssapi.h>
 #include <gssapi/gssapi_ext.h>
 #include <gssapi/gssapi_krb5.h>
@@ -263,8 +264,9 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 
 static int gssapi_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)
 {
-	groupname[0] = 0;
-	return 0;
+	struct gssapi_ctx_st *pctx = ctx;
+
+	return get_user_auth_group(pctx->username, suggested, groupname, groupname_size);
 }
 
 static int gssapi_auth_user(void *ctx, char *username, int username_size)

@@ -64,7 +64,8 @@ COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
 
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
-	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c
+	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c auth-unix.c \
+	auth-unix.h
 
 ACCT_SOURCES=acct/pam.c acct/pam.h acct/radius.c acct/radius.h
 

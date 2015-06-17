@@ -40,7 +40,7 @@
 #include <sec-mod-acct.h>
 #include "auth/radius.h"
 #include "acct/radius.h"
-#include "cfg.h"
+#include "common-config.h"
 
 static rc_handle *rh = NULL;
 static char nas_identifier[64];

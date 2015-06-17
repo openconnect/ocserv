@@ -31,7 +31,7 @@
 
 #ifdef HAVE_RADIUS
 
-#include "cfg.h"
+#include "common-config.h"
 
 #ifdef LEGACY_RADIUS
 # include <freeradius-client.h>

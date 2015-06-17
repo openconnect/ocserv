@@ -28,7 +28,7 @@
 #include <sec-mod-sup-config.h>
 #include <common.h>
 #include <vpn.h>
-#include "cfg.h"
+#include "common-config.h"
 
 static void free_expanded_brackets_string(subcfg_val_st out[MAX_SUBOPTIONS], unsigned size)
 {

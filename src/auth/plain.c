@@ -30,7 +30,7 @@
 #include <vpn.h>
 #include <c-ctype.h>
 #include "plain.h"
-#include "cfg.h"
+#include "common-config.h"
 #include "auth/common.h"
 #include <ccan/htable/htable.h>
 #include <ccan/hash/hash.h>

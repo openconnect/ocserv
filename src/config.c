@@ -50,7 +50,6 @@
 #include <main.h>
 #include <ctl.h>
 #include <tlslib.h>
-#include "cfg.h"
 #include "common-config.h"
 
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"

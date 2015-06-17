@@ -36,7 +36,7 @@
 #include <gssapi/gssapi_ext.h>
 #include <gssapi/gssapi_krb5.h>
 #include <gl/base64.h>
-#include "cfg.h"
+#include "common-config.h"
 
 static gss_cred_id_t glob_creds;
 static gss_OID_set glob_oids;

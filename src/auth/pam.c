@@ -24,7 +24,7 @@
 #include <syslog.h>
 #include <vpn.h>
 #include "pam.h"
-#include "cfg.h"
+#include "common-config.h"
 #include "auth-unix.h"
 #include <sec-mod-auth.h>
 #include <ccan/hash/hash.h>

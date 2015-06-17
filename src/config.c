@@ -51,6 +51,7 @@
 #include <ctl.h>
 #include <tlslib.h>
 #include "cfg.h"
+#include "common-config.h"
 
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
@@ -190,23 +191,10 @@ unsigned j;
 #define READ_MULTI_LINE(name, s_name, num) { \
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
-		if (s_name == NULL) { \
-			num = 0; \
-			s_name = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
-			if (s_name == NULL) { \
-				fprintf(stderr, "memory error\n"); \
-				exit(1); \
-			} \
+		if (add_multi_line_val(config, name, &s_name, &num, pov, val) < 0) { \
+			fprintf(stderr, "memory error\n"); \
+			exit(1); \
 		} \
-		do { \
-		        if (val && strcmp(val->pzName, name)!=0) \
-				continue; \
-		        s_name[num] = talloc_strdup(s_name, val->v.strVal); \
-		        num++; \
-		        if (num>=MAX_CONFIG_ENTRIES) \
-		        break; \
-	      } while((val = optionNextValue(pov, val)) != NULL); \
-	      s_name[num] = NULL; \
 	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
@@ -217,8 +205,8 @@ unsigned j;
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (s_name == NULL || s_name2 == NULL) { \
 			num = 0; \
-			s_name = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
-			s_name2 = talloc_size(config, sizeof(char*)*MAX_CONFIG_ENTRIES); \
+			s_name = talloc_size(config, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
+			s_name2 = talloc_size(config, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
 			if (s_name == NULL || s_name2 == NULL) { \
 				fprintf(stderr, "memory error\n"); \
 				exit(1); \
@@ -232,7 +220,7 @@ unsigned j;
 		        xp = strchr(s_name[num], '['); if (xp != NULL) *xp = 0; \
 		        s_name2[num] = get_brackets_string1(config, val->v.strVal); \
 		        num++; \
-		        if (num>=MAX_CONFIG_ENTRIES) \
+		        if (num>=DEFAULT_CONFIG_ENTRIES) \
 		        break; \
 	      } while((val = optionNextValue(pov, val)) != NULL); \
 	      s_name[num] = NULL; \
@@ -581,7 +569,7 @@ tOptionValue const * pov;
 const tOptionValue* val, *prev;
 unsigned j, i, mand;
 char** auth = NULL;
-unsigned auth_size = 0;
+size_t auth_size = 0;
 unsigned prefix = 0, auto_select_group = 0;
 unsigned prefix4 = 0;
 char *tmp;
@@ -589,7 +577,7 @@ unsigned force_cert_auth;
 struct cfg_st *config = perm_config->config;
 #ifdef HAVE_GSSAPI
 char **urlfw = NULL;
-unsigned urlfw_size = 0;
+size_t urlfw_size = 0;
 #endif
 
 	pov = configFileLoad(file);
@@ -1209,4 +1197,37 @@ void remove_pid_file(void)
 		return;
 
 	remove(pid_file);
+}
+
+int add_multi_line_val(void *pool, const char *name, char ***s_name, size_t *num,
+		       tOptionValue const *pov,
+		       const tOptionValue *val)
+{
+	unsigned _max = DEFAULT_CONFIG_ENTRIES;
+	void *tmp;
+
+	if (*s_name == NULL) {
+		*num = 0;
+		*s_name = talloc_array(pool, char*, _max);
+		if (*s_name == NULL)
+			return -1;
+	}
+
+	do {
+	        if (val && strcmp(val->pzName, name)!=0)
+			continue;
+
+	        if (*num >= _max-1) {
+	        	_max += 128;
+	        	tmp = talloc_realloc(pool, *s_name, char*, _max);
+			if (tmp == NULL)
+				return -1;
+			*s_name = tmp;
+	        }
+
+	        (*s_name)[*num] = talloc_strdup(*s_name, val->v.strVal);
+	        (*num)++;
+      } while((val = optionNextValue(pov, val)) != NULL);
+      (*s_name)[*num] = NULL;
+      return 0;
 }

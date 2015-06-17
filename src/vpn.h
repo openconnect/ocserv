@@ -183,21 +183,21 @@ typedef enum {
 struct group_cfg_st {
 	/* routes to be forwarded to the client */
 	char **routes;
-	unsigned int routes_size;
+	size_t routes_size;
 
 	/* routes that are excluded */
 	char **no_routes;
-	unsigned int no_routes_size;
+	size_t no_routes_size;
 
 	/* routes to be applied to the server */
 	char **iroutes;
-	unsigned int iroutes_size;
+	size_t iroutes_size;
 
 	char **dns;
-	unsigned int dns_size;
+	size_t dns_size;
 
 	char **nbns;
-	unsigned int nbns_size;
+	size_t nbns_size;
 
 	char *ipv4_network;
 	char *ipv6_network;
@@ -238,17 +238,17 @@ struct vpn_st {
 	unsigned int mtu;
 
 	char **routes;
-	unsigned int routes_size;
+	size_t routes_size;
 
 	/* excluded routes */
 	char **no_routes;
-	unsigned int no_routes_size;
+	size_t no_routes_size;
 
 	char **dns;
-	unsigned int dns_size;
+	size_t dns_size;
 
 	char **nbns;
-	unsigned int nbns_size;
+	size_t nbns_size;
 };
 
 #define MAX_AUTH_METHODS 4
@@ -294,9 +294,9 @@ struct cfg_st {
 	char *pin_file;
 	char *srk_pin_file;
 	char **cert;
-	unsigned cert_size;
+	size_t cert_size;
 	char **key;
-	unsigned key_size;
+	size_t key_size;
 
 	char *ca;
 	char *crl;
@@ -322,10 +322,10 @@ struct cfg_st {
 	char *default_select_group;
 
 	char **custom_header;
-	unsigned custom_header_size;;
+	size_t custom_header_size;;
 
 	char **split_dns;
-	unsigned split_dns_size;;
+	size_t split_dns_size;;
 
 
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
@@ -438,7 +438,7 @@ struct main_server_st;
 #define MAX_GROUPNAME_SIZE MAX_USERNAME_SIZE
 #define MAX_SESSION_DATA_SIZE (4*1024)
 
-#define MAX_CONFIG_ENTRIES 96
+#define DEFAULT_CONFIG_ENTRIES 96
 
 #include <tun.h>
 

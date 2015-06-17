@@ -34,6 +34,7 @@
 
 #include <vpn.h>
 #include <main.h>
+#include <common-config.h>
 #include <sec-mod-sup-config.h>
 
 struct cfg_options {
@@ -71,19 +72,7 @@ static struct cfg_options available_options[] = {
 #define READ_RAW_MULTI_LINE(name, s_name, num) { \
 	val = optionGetValue(pov, name); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
-		if (s_name == NULL) { \
-			num = 0; \
-			s_name = talloc_size(pool, sizeof(char*)*MAX_CONFIG_ENTRIES); \
-		} \
-		do { \
-		        if (num >= MAX_CONFIG_ENTRIES) \
-			        break; \
-		        if (val && strcmp(val->pzName, name)!=0) \
-				continue; \
-		        s_name[num] = talloc_strdup(pool, val->v.strVal); \
-		        num++; \
-	      } while((val = optionNextValue(pov, val)) != NULL); \
-	      s_name[num] = NULL; \
+		add_multi_line_val(pool, name, &s_name, &num, pov, val); \
 	}}
 
 #define READ_RAW_STRING(name, s_name) { \

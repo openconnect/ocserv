@@ -111,16 +111,16 @@ static struct cfg_options available_options[] = {
 		} \
 	}}
 
-#define READ_TF(name, s_name, def) { \
+#define READ_TF(name, s_name, is_set) { \
 	{ char* tmp_tf = NULL; \
 		READ_RAW_STRING(name, tmp_tf); \
-		if (tmp_tf == NULL) { def = 0; \
+		if (tmp_tf == NULL) { is_set = 0; \
 		} else { \
 			if (c_strcasecmp(tmp_tf, "true") == 0 || c_strcasecmp(tmp_tf, "yes") == 0) \
 				s_name = 1; \
 			else \
 				s_name = 0; \
-			def = 1; \
+			is_set = 1; \
 		} \
 		talloc_free(tmp_tf); \
 	}}

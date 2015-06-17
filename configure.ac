@@ -188,7 +188,7 @@ AC_ARG_WITH(radius,
 radius_enabled=no
 
 if test "$test_for_radius" = yes;then
-	PKG_CHECK_MODULES([RADCLI], [radcli >= 1.2.0], radius_enabled=radcli, radius_enabled=no)
+	PKG_CHECK_MODULES([RADCLI], [radcli >= 1.2.1], radius_enabled=radcli, radius_enabled=no)
 
 	if test "$radius_enabled" = no;then
 		LIBS="$oldlibs -lfreeradius-client"
@@ -207,7 +207,7 @@ if test "$test_for_radius" = yes;then
 		  [AC_MSG_RESULT(no)
    	           AC_MSG_WARN([[
 *** 
-*** radcli 1.2.0 or later was not found. Radius support will be disabled.
+*** radcli 1.2.1 or later was not found. Radius support will be disabled.
 *** See http://radcli.github.io/radcli/
 *** ]])])
 		LIBS="$oldlibs"

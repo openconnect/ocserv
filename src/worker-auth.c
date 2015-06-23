@@ -1456,6 +1456,8 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			if (req->authorization == NULL || req->authorization_size <= 10) {
 				if (req->authorization != NULL)
 					oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+				else
+					oclog(ws, LOG_HTTP_DEBUG, "No authorization data");
 				goto auth_fail;
 			}
 			areq.password = req->authorization + 10;
@@ -1503,8 +1505,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			ws->auth_state = S_AUTH_REQ;
-		} else
+		} else {
+			oclog(ws, LOG_ERR, "No password provided");
 			goto auth_fail;
+		}
 	} else {
 		oclog(ws, LOG_ERR, "unexpected POST request in auth state %u",
 		      (unsigned)ws->auth_state);

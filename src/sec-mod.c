@@ -165,6 +165,14 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 		s->pin[ret] = 0;
 	}
 
+	if (config->key_pin != NULL) {
+		strlcpy(s->pin, config->key_pin, sizeof(s->pin));
+	}
+
+	if (config->srk_pin != NULL) {
+		strlcpy(s->srk_pin, config->srk_pin, sizeof(s->srk_pin));
+	}
+
 	return 0;
 }
 
@@ -689,6 +697,12 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 			    gnutls_privkey_import_x509_raw(sec->key[i], &data,
 							   GNUTLS_X509_FMT_PEM,
 							   NULL, 0);
+			if (ret == GNUTLS_E_DECRYPTION_FAILED && pins.pin[0]) {
+				ret =
+				    gnutls_privkey_import_x509_raw(sec->key[i], &data,
+								   GNUTLS_X509_FMT_PEM,
+								   pins.pin, 0);
+			}
 			GNUTLS_FATAL_ERR(ret);
 
 			gnutls_free(data.data);

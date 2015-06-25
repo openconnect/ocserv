@@ -93,7 +93,9 @@ static struct cfg_options available_options[] = {
 	{ .name = "server-key", .type = OPTION_STRING, .mandatory = 1 },
 	{ .name = "dh-params", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "pin-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "key-pin", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "srk-pin-file", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "srk-pin", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "user-profile", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ca-cert", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "default-domain", .type = OPTION_STRING, .mandatory = 0 },
@@ -659,6 +661,9 @@ size_t urlfw_size = 0;
 		READ_STRING("pin-file", perm_config->pin_file);
 		READ_STRING("srk-pin-file", perm_config->srk_pin_file);
 		READ_STRING("ca-cert", perm_config->ca);
+
+		READ_STRING("key-pin", perm_config->key_pin);
+		READ_STRING("srk-pin", perm_config->srk_pin);
 
 		PREAD_STRING(perm_config, "socket-file", perm_config->socket_file_prefix);
 		PREAD_STRING(perm_config, "occtl-socket-file", perm_config->occtl_socket_file);

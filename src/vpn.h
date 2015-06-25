@@ -410,6 +410,9 @@ struct perm_cfg_st {
 	uid_t uid;
 	gid_t gid;
 
+	char *key_pin;
+	char *srk_pin;
+
 	char *pin_file;
 	char *srk_pin_file;
 	char **cert;

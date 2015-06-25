@@ -190,11 +190,20 @@ server-key = /path/to/key.pem
 # certtool --generate-dh-params --outfile /path/to/dh.pem
 #dh-params = /path/to/dh.pem
 
-# In case PKCS #11 or TPM keys are used the PINs should be available
+# In case PKCS #11, TPM or encrypted keys are used the PINs should be available
 # in files. The srk-pin-file is applicable to TPM keys only, and is the 
 # storage root key.
 #pin-file = /path/to/pin.txt
 #srk-pin-file = /path/to/srkpin.txt
+
+# The password or PIN needed to unlock the key in server-key file.
+# Only needed if the file is encrypted or a PKCS #11 object. This
+# is an alternative method to pin-file.
+#key-pin = 1234
+
+# The SRK PIN for TPM.
+# This is an alternative method to srk-pin-file.
+#srk-pin = 1234
 
 # The Certificate Authority that will be used to verify
 # client certificates (public keys) if certificate authentication

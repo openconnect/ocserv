@@ -445,12 +445,12 @@ gnutls_x509_crt_t crt = NULL;
 int ret;
 unsigned usage;
 
-	if (s->config->cert_size > 1)
+	if (s->perm_config->cert_size > 1)
 		return;
 
-	if (gnutls_url_is_supported(s->config->cert[0]) == 0) {
+	if (gnutls_url_is_supported(s->perm_config->cert[0]) == 0) {
 		/* no URL */
-		ret = gnutls_load_file(s->config->cert[0], &data);
+		ret = gnutls_load_file(s->perm_config->cert[0], &data);
 		if (ret < 0)
 			return;
 
@@ -469,7 +469,7 @@ unsigned usage;
 			if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
 				mslog(s, NULL, LOG_WARNING, "server certificate key usage prevents key encipherment; unable to support the RSA ciphersuites; "
 					"if that is not intentional, regenerate the server certificate with the key usage flag 'key encipherment' set.");
-				if (s->config->dh_params_file != NULL)
+				if (s->perm_config->dh_params_file != NULL)
 					mslog(s, NULL, LOG_WARNING, "no DH-params file specified; server will be limited to ECDHE ciphersuites\n");
 			}
 		}
@@ -487,11 +487,11 @@ static void set_dh_params(main_server_st* s, tls_st *creds)
 gnutls_datum_t data;
 int ret;
 
-	if (s->config->dh_params_file != NULL) {
+	if (s->perm_config->dh_params_file != NULL) {
 		ret = gnutls_dh_params_init (&creds->dh_params);
 		GNUTLS_FATAL_ERR(ret);
 
-		ret = gnutls_load_file(s->config->dh_params_file, &data);
+		ret = gnutls_load_file(s->perm_config->dh_params_file, &data);
 		GNUTLS_FATAL_ERR(ret);
 
 		ret = gnutls_dh_params_import_pkcs3(creds->dh_params, &data, GNUTLS_X509_FMT_PEM);
@@ -610,15 +610,15 @@ gnutls_privkey_t key;
 gnutls_datum_t data;
 struct key_cb_data * cdata;
 
-	for (i=0;i<s->config->key_size;i++) {
+	for (i=0;i<s->perm_config->key_size;i++) {
 		/* load the certificate */
-		if (gnutls_url_is_supported(s->config->cert[i]) != 0) {
-			mslog(s, NULL, LOG_ERR, "Loading a certificate from '%s' is unsupported", s->config->cert[i]);
+		if (gnutls_url_is_supported(s->perm_config->cert[i]) != 0) {
+			mslog(s, NULL, LOG_ERR, "Loading a certificate from '%s' is unsupported", s->perm_config->cert[i]);
 			return -1;
 		} else {
-			ret = gnutls_load_file(s->config->cert[i], &data);
+			ret = gnutls_load_file(s->perm_config->cert[i], &data);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->config->cert[i]);
+				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->perm_config->cert[i]);
 				return -1;
 			}
 
@@ -688,7 +688,7 @@ const char* perr;
 
 	set_dh_params(s, creds);
 
-	if (s->config->key_size == 0 || s->config->cert_size == 0) {
+	if (s->perm_config->key_size == 0 || s->perm_config->cert_size == 0) {
 		mslog(s, NULL, LOG_ERR, "no certificate or key files were specified"); 
 		exit(1);
 	}
@@ -702,14 +702,14 @@ const char* perr;
 	}
 
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE) {
-		if (s->config->ca != NULL) {
+		if (s->perm_config->ca != NULL) {
 			ret =
 			    gnutls_certificate_set_x509_trust_file(creds->xcred,
-								   s->config->ca,
+								   s->perm_config->ca,
 								   GNUTLS_X509_FMT_PEM);
 			if (ret < 0) {
 				mslog(s, NULL, LOG_ERR, "error setting the CA (%s) file",
-					s->config->ca);
+					s->perm_config->ca);
 				exit(1);
 			}
 

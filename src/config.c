@@ -652,6 +652,20 @@ size_t urlfw_size = 0;
 			}
 			perm_config->gid = grp->gr_gid;
 		}
+
+		READ_MULTI_LINE("server-cert", perm_config->cert, perm_config->cert_size);
+		READ_MULTI_LINE("server-key", perm_config->key, perm_config->key_size);
+		READ_STRING("dh-params", perm_config->dh_params_file);
+		READ_STRING("pin-file", perm_config->pin_file);
+		READ_STRING("srk-pin-file", perm_config->srk_pin_file);
+		READ_STRING("ca-cert", perm_config->ca);
+
+		PREAD_STRING(perm_config, "socket-file", perm_config->socket_file_prefix);
+		PREAD_STRING(perm_config, "occtl-socket-file", perm_config->occtl_socket_file);
+		if (perm_config->occtl_socket_file == NULL)
+			perm_config->occtl_socket_file = talloc_strdup(perm_config, OCCTL_UNIX_SOCKET);
+
+		PREAD_STRING(perm_config, "chroot-dir", perm_config->chroot_dir);
 	}
 
 	/* When adding allocated data, remember to modify
@@ -679,16 +693,11 @@ size_t urlfw_size = 0;
 	READ_NUMERIC("rate-limit-ms", config->rate_limit_ms);
 
 	READ_STRING("ocsp-response", config->ocsp_response);
-	READ_MULTI_LINE("server-cert", config->cert, config->cert_size);
-	READ_MULTI_LINE("server-key", config->key, config->key_size);
-	READ_STRING("dh-params", config->dh_params_file);
-	READ_STRING("pin-file", config->pin_file);
-	READ_STRING("srk-pin-file", config->srk_pin_file);
+
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	READ_STRING("user-profile", config->xml_config_file);
 #endif
 
-	READ_STRING("ca-cert", config->ca);
 	READ_STRING("default-domain", config->default_domain);
 	READ_STRING("crl", config->crl);
 	READ_STRING("cert-user-oid", config->cert_user_oid);
@@ -700,11 +709,6 @@ size_t urlfw_size = 0;
 	if (reload == 0 && pid_file[0] == 0)
 		READ_STATIC_STRING("pid-file", pid_file);
 
-
-	PREAD_STRING(perm_config, "socket-file", perm_config->socket_file_prefix);
-	PREAD_STRING(perm_config, "occtl-socket-file", perm_config->occtl_socket_file);
-	if (perm_config->occtl_socket_file == NULL)
-		perm_config->occtl_socket_file = talloc_strdup(perm_config, OCCTL_UNIX_SOCKET);
 
 	val = get_option("session-control", NULL);
 	if (val != NULL) {
@@ -756,7 +760,6 @@ size_t urlfw_size = 0;
 	READ_TF("ping-leases", config->ping_leases, 0);
 
 	READ_STRING("tls-priorities", config->priorities);
-	PREAD_STRING(perm_config, "chroot-dir", perm_config->chroot_dir);
 
 	READ_NUMERIC("mtu", config->default_mtu);
 
@@ -941,7 +944,7 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 		exit(1);
 	}
 
-	if (perm_config->config->cert_size != perm_config->config->key_size) {
+	if (perm_config->cert_size != perm_config->key_size) {
 		fprintf(stderr, "The specified number of keys doesn't match the certificates\n");
 		exit(1);
 	}
@@ -972,8 +975,8 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	if (perm_config->config->cert) {
-		perm_config->config->cert_hash = calc_sha1_hash(perm_config->config, perm_config->config->cert[0], 1);
+	if (perm_config->cert && perm_config->cert_hash == NULL) {
+		perm_config->cert_hash = calc_sha1_hash(perm_config, perm_config->cert[0], 1);
 	}
 
 	if (perm_config->config->xml_config_file) {
@@ -1051,7 +1054,6 @@ unsigned i;
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	DEL(perm_config->config->xml_config_file);
 	DEL(perm_config->config->xml_config_hash);
-	DEL(perm_config->config->cert_hash);
 #endif
 	DEL(perm_config->config->cgroup);
 	DEL(perm_config->config->route_add_cmd);
@@ -1062,10 +1064,6 @@ unsigned i;
 
 	DEL(perm_config->config->ocsp_response);
 	DEL(perm_config->config->banner);
-	DEL(perm_config->config->dh_params_file);
-	DEL(perm_config->config->pin_file);
-	DEL(perm_config->config->srk_pin_file);
-	DEL(perm_config->config->ca);
 	DEL(perm_config->config->crl);
 	DEL(perm_config->config->cert_user_oid);
 	DEL(perm_config->config->cert_group_oid);
@@ -1097,12 +1095,6 @@ unsigned i;
 	for (i=0;i<perm_config->config->network.nbns_size;i++)
 		DEL(perm_config->config->network.nbns[i]);
 	DEL(perm_config->config->network.nbns);
-	for (i=0;i<perm_config->config->key_size;i++)
-		DEL(perm_config->config->key[i]);
-	DEL(perm_config->config->key);
-	for (i=0;i<perm_config->config->cert_size;i++)
-		DEL(perm_config->config->cert[i]);
-	DEL(perm_config->config->cert);
 	for (i=0;i<perm_config->config->custom_header_size;i++)
 		DEL(perm_config->config->custom_header[i]);
 	DEL(perm_config->config->custom_header);

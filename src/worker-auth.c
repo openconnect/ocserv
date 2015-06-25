@@ -1006,14 +1006,14 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		ret =
 		    cstp_printf(ws,
 			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s&lu:/+CSCOT+/translation-table?textdomain%%3DAnyConnect%%26type%%3Dmanifest&fu:profiles%%2F%s&fh:%s; path=/; Secure\r\n",
-			       ws->config->cert_hash,
+			       ws->perm_config->cert_hash,
 			       ws->config->xml_config_file,
 			       ws->config->xml_config_hash);
 	} else {
 		ret =
 		    cstp_printf(ws,
 			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; Secure\r\n",
-			       ws->config->cert_hash);
+			       ws->perm_config->cert_hash);
 	}
 
 	if (ret < 0)

@@ -116,7 +116,7 @@ int pin_callback(void *user, int attempt, const char *token_url,
 }
 
 static
-int load_pins(struct cfg_st *config, struct pin_st *s)
+int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 {
 	int fd, ret;
 
@@ -649,15 +649,15 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		exit(1);
 	}
 
-	ret = load_pins(sec->config, &pins);
+	ret = load_pins(sec->perm_config, &pins);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error loading PIN files");
 		exit(1);
 	}
 
 	/* FIXME: the private key isn't reloaded on reload */
-	sec->key_size = sec->config->key_size;
-	sec->key = talloc_size(sec, sizeof(*sec->key) * sec->config->key_size);
+	sec->key_size = sec->perm_config->key_size;
+	sec->key = talloc_size(sec, sizeof(*sec->key) * sec->perm_config->key_size);
 	if (sec->key == NULL) {
 		seclog(sec, LOG_ERR, "error in memory allocation");
 		exit(1);
@@ -669,19 +669,19 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		GNUTLS_FATAL_ERR(ret);
 
 		/* load the private key */
-		if (gnutls_url_is_supported(sec->config->key[i]) != 0) {
+		if (gnutls_url_is_supported(sec->perm_config->key[i]) != 0) {
 			gnutls_privkey_set_pin_function(sec->key[i],
 							pin_callback, &pins);
 			ret =
 			    gnutls_privkey_import_url(sec->key[i],
-						      sec->config->key[i], 0);
+						      sec->perm_config->key[i], 0);
 			GNUTLS_FATAL_ERR(ret);
 		} else {
 			gnutls_datum_t data;
-			ret = gnutls_load_file(sec->config->key[i], &data);
+			ret = gnutls_load_file(sec->perm_config->key[i], &data);
 			if (ret < 0) {
 				seclog(sec, LOG_ERR, "error loading file '%s'",
-				       sec->config->key[i]);
+				       sec->perm_config->key[i]);
 				GNUTLS_FATAL_ERR(ret);
 			}
 

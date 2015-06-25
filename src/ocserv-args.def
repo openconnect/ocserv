@@ -171,6 +171,36 @@ run-as-group = nogroup
 # specified relatively to the chroot directory.
 socket-file = /var/run/ocserv-socket
 
+# The key and the certificates of the server
+# The key may be a file, or any URL supported by GnuTLS (e.g., 
+# tpmkey:uuid=xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx;storage=user
+# or pkcs11:object=my-vpn-key;object-type=private)
+#
+# The server-cert file may contain a single certificate, or
+# a sorted certificate chain.
+#
+# There may be multiple server-cert and server-key directives,
+# but each key should correspond to the preceding certificate.
+server-cert = /path/to/cert.pem
+server-key = /path/to/key.pem
+
+# Diffie-Hellman parameters. Only needed if you require support
+# for the DHE ciphersuites (by default this server supports ECDHE).
+# Can be generated using:
+# certtool --generate-dh-params --outfile /path/to/dh.pem
+#dh-params = /path/to/dh.pem
+
+# In case PKCS #11 or TPM keys are used the PINs should be available
+# in files. The srk-pin-file is applicable to TPM keys only, and is the 
+# storage root key.
+#pin-file = /path/to/pin.txt
+#srk-pin-file = /path/to/srkpin.txt
+
+# The Certificate Authority that will be used to verify
+# client certificates (public keys) if certificate authentication
+# is set.
+#ca-cert = /path/to/ca.pem
+
 
 ### All configuration options below this line are reloaded on a SIGHUP.
 ### The options above, will remain unchanged.
@@ -229,24 +259,9 @@ mobile-dpd = 1800
 # (DF) bit.
 try-mtu-discovery = false
 
-# The key and the certificates of the server
-# The key may be a file, or any URL supported by GnuTLS (e.g., 
-# tpmkey:uuid=xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx;storage=user
-# or pkcs11:object=my-vpn-key;object-type=private)
-#
-# The server-cert file may contain a single certificate, or
-# a sorted certificate chain.
-#
-# There may be multiple server-cert and server-key directives,
-# but each key should correspond to the preceding certificate.
-server-cert = /path/to/cert.pem
-server-key = /path/to/key.pem
-
-# Diffie-Hellman parameters. Only needed if you require support
-# for the DHE ciphersuites (by default this server supports ECDHE).
-# Can be generated using:
-# certtool --generate-dh-params --outfile /path/to/dh.pem
-#dh-params = /path/to/dh.pem
+# The revocation list of the certificates issued by the 'ca-cert' above.
+# See the manual to generate an empty CRL initially.
+#crl = /path/to/crl.pem
 
 # If you have a certificate from a CA that provides an OCSP
 # service you may provide a fresh OCSP status response within
@@ -256,17 +271,6 @@ server-key = /path/to/key.pem
 # ocsptool --ask --load-cert=your_cert --load-issuer=your_ca --outfile response
 # Make sure that you replace the following file in an atomic way.
 #ocsp-response = /path/to/ocsp.der
-
-# In case PKCS #11 or TPM keys are used the PINs should be available
-# in files. The srk-pin-file is applicable to TPM keys only, and is the 
-# storage root key.
-#pin-file = /path/to/pin.txt
-#srk-pin-file = /path/to/srkpin.txt
-
-# The Certificate Authority that will be used to verify
-# client certificates (public keys) if certificate authentication
-# is set.
-#ca-cert = /path/to/ca.pem
 
 # The object identifier that will be used to read the user ID in the client 
 # certificate. The object identifier should be part of the certificate's DN
@@ -279,10 +283,6 @@ server-key = /path/to/key.pem
 # DN. Useful OIDs are: 
 #  OU (organizational unit) = 2.5.4.11 
 #cert-group-oid = 2.5.4.11
-
-# The revocation list of the certificates issued by the 'ca-cert' above.
-# See the manual to generate an empty CRL initially.
-#crl = /path/to/crl.pem
 
 # Uncomment this to enable compression negotiation (LZS, LZ4).
 #compression = true

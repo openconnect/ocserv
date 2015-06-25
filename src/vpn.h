@@ -291,16 +291,6 @@ struct cfg_st {
 	kkdcp_st *kkdcp;
 	unsigned int kkdcp_size;
 
-	char *pin_file;
-	char *srk_pin_file;
-	char **cert;
-	size_t cert_size;
-	char **key;
-	size_t key_size;
-
-	char *ca;
-	char *crl;
-	char *dh_params_file;
 	char *cert_user_oid;	/* The OID that will be used to extract the username */
 	char *cert_group_oid;	/* The OID that will be used to extract the groupname */
 
@@ -371,6 +361,8 @@ struct cfg_st {
 	size_t tx_per_sec;
 	unsigned net_priority;
 
+	char *crl;
+
 	unsigned output_buffer;
 	unsigned default_mtu;
 	unsigned predictable_ips; /* boolean */
@@ -387,7 +379,6 @@ struct cfg_st {
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	char *xml_config_file;
 	char *xml_config_hash;
-	char *cert_hash;
 #endif
 
 	/* additional configuration files */
@@ -418,6 +409,19 @@ struct perm_cfg_st {
 
 	uid_t uid;
 	gid_t gid;
+
+	char *pin_file;
+	char *srk_pin_file;
+	char **cert;
+	size_t cert_size;
+	char **key;
+	size_t key_size;
+#ifdef ANYCONNECT_CLIENT_COMPAT
+	char *cert_hash;
+#endif
+
+	char *ca;
+	char *dh_params_file;
 
 	char *listen_host;
 	char* unix_conn_file;

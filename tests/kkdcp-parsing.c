@@ -24,7 +24,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#include "../src/cfg.h"
+#include "../src/common-config.h"
 
 int main()
 {

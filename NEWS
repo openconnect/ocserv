@@ -5,6 +5,8 @@
   when reporting peer's address if the listen-clear-file option is set.
 - Lifted the limit on the number of configuration options. That allows to
   add an "unlimited" number of 'route' options.
+- Support encrypted key files. That adds the key-pin and srk-pin
+  configuration options.
 - The dbus communication option has been dropped.
 - Radius: depend on radcli radius library. http://radcli.github.io/radcli/
 - occtl: added -j/--json option. That allows to output in a JSON format.

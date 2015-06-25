@@ -8,7 +8,8 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-explicit-ip user-config-explicit/test2 user-config-explicit/test3 \
 	user-config-explicit/test4 test-pass-opt-cert.config test-gssapi.config \
 	test-ban.config test-sighup.config test-gssapi-local-map.config \
-	test-cookie-invalidation.config
+	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
+	server-key-ossl.pem server-key-p8.pem
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -17,7 +18,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
 	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \
-	test-cookie-invalidation radius-test-config
+	test-cookie-invalidation radius-test-config test-enc-key
 
 
 AM_CPPFLAGS = \
@@ -46,7 +47,7 @@ TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip radius-test \
 	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix \
-	radius-test-config kkdcp-parsing json-escape
+	radius-test-config kkdcp-parsing json-escape test-enc-key
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

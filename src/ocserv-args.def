@@ -125,8 +125,8 @@ An example configuration file follows.
 # Specify alternative authentication methods that are sufficient
 # for authentication. That is, if set, any of the methods enabled
 # will be sufficient to login.
-#enable-auth = certificate
-#enable-auth = gssapi
+#enable-auth = "certificate"
+#enable-auth = "gssapi"
 #enable-auth = "gssapi[keytab=/etc/key.tab,require-local-user-map=true,tgt-freshness-time=900]"
 
 # Accounting methods available:

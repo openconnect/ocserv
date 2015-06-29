@@ -104,6 +104,12 @@ if test $? != 0;then
 	ret=1
 fi
 
+check_for_file /tmp/group-ok test_ocserv_kerberos
+if test $? != 0;then
+	echo "Kerberos group name detection test failed"
+	ret=1
+fi
+
 $DOCKER stop test_ocserv_kerberos
 $DOCKER rm test_ocserv_kerberos
 $DOCKER stop test_ocserv_client_kerberos

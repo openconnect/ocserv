@@ -6,6 +6,15 @@ if [ "$REASON" != "connect" ];then
 	else
 		echo $STATS_BYTES_IN >/tmp/disconnect/not-ok
 	fi
+elif [ "$REASON" = "connect" ];then
+	rm -f /tmp/disconnect/group-ok
+
+	if test "$GROUPNAME" != "testuser";then
+		echo "Groupname failed: $GROUPNAME" >/tmp/group-not-ok
+		exit 1;
+	else
+		echo "Groupname ok: $GROUPNAME" >/tmp/group-ok
+	fi
 fi
 
 exit 0

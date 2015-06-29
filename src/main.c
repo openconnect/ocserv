@@ -1128,7 +1128,7 @@ int main(int argc, char** argv)
 		ts.tv_usec = 0;
 		ts.tv_sec = 30;
 		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-		ret = select(n + 1, &rd_set, &wr_set, NULL, &ts);
+		ret = select(n + 1, &rd_set, NULL/*&wr_set*/, NULL, &ts);
 		sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 

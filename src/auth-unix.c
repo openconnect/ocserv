@@ -26,6 +26,7 @@
 #include <sec-mod-auth.h>
 #include "auth-unix.h"
 
+#ifdef HAVE_GET_USER_AUTH_GROUP
 /* Fills-in groupname, if the user is in a unix group, via getpwnam().
  * Returns -1 if the suggested group doesn't match one the groups, or
  * zero otherwise (an empty group is still success).
@@ -104,3 +105,4 @@ void unix_group_list(void *pool, unsigned gid_min, char ***groupname, unsigned *
 	return;
 }
 
+#endif

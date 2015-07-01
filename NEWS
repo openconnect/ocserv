@@ -1,4 +1,4 @@
-* Version 0.10.6 (unreleased)
+* Version 0.10.6 (released 2015-07-01)
 - Transmit packets to the last incoming source, allowing faster switch
   of the communication channel.
 - The worker processes will utilize the UDP socket address (if any),

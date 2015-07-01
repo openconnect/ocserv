@@ -41,7 +41,7 @@ int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char 
 	const char * tmp;
 	unsigned int i = 0;
 
-	if (params->json) {
+	if (HAVE_JSON(params)) {
 		fprintf(out, "    \"%s\":\t[", name);
 		for (i=0;i<vsize;i++) {
 			tmp = val[i];
@@ -70,31 +70,31 @@ int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char 
 
 void print_start_block(FILE *out, cmd_params_st *params)
 {
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "  {\n");
 }
 
 void print_end_block(FILE *out, cmd_params_st *params, unsigned have_more)
 {
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "  }%s\n", have_more?",":"");
 }
 
 void print_array_block(FILE *out, cmd_params_st *params)
 {
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "[\n");
 }
 
 void print_end_array_block(FILE *out, cmd_params_st *params)
 {
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "]\n");
 }
 
 void print_separator(FILE *out, cmd_params_st *params)
 {
-	if (!params->json)
+	if (NO_JSON(params))
 		fprintf(out, "\n");
 }
 
@@ -104,7 +104,7 @@ void print_single_value(FILE *out, cmd_params_st *params, const char *name, cons
 	if (value[0] == 0)
 		return;
 
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "    \"%s\":  \"%s\"%s\n", name, escape_val(tmp, sizeof(tmp), value), have_more?",":"");
 	else
 		fprintf(out, "\t%s: %s\n", name, value);
@@ -112,7 +112,7 @@ void print_single_value(FILE *out, cmd_params_st *params, const char *name, cons
 
 void print_single_value_int(FILE *out, cmd_params_st *params, const char *name, long i, unsigned have_more)
 {
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "    \"%s\":  \%lu%s\n", name, i, have_more?",":"");
 	else
 		fprintf(out, "\t%s: %lu\n", name, i);
@@ -124,7 +124,7 @@ void print_single_value_ex(FILE *out, cmd_params_st *params, const char *name, c
 	if (value[0] == 0)
 		return;
 
-	if (params->json) {
+	if (HAVE_JSON(params)) {
 		fprintf(out, "    \"%s\":  \"%s\",\n", name, escape_val(tmp, sizeof(tmp), value));
 		fprintf(out, "    \"_%s\":  \"%s\"%s\n", name, escape_val(tmp, sizeof(tmp), ex), have_more?",":"");
 	} else
@@ -134,7 +134,7 @@ void print_single_value_ex(FILE *out, cmd_params_st *params, const char *name, c
 void print_pair_value(FILE *out, cmd_params_st *params, const char *name1, const char *value1, const char *name2, const char *value2, unsigned have_more)
 {
 	char tmp[MAX_STR_SIZE];
-	if (params->json) {
+	if (HAVE_JSON(params)) {
 		if (value1 && value1[0] != 0)
 			fprintf(out, "    \"%s\":  \"%s\"%s\n", name1, escape_val(tmp, sizeof(tmp), value1), have_more?",":"");
 		if (value2 && value2[0] != 0)

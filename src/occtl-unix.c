@@ -227,7 +227,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	init_reply(&raw);
 
 	print_start_block(stdout, params);
-	if (!params->json)
+	if (NO_JSON(params))
 		printf("OpenConnect SSL VPN server\n");
 
 	ret = send_cmd(ctx, CTL_CMD_STATUS, NULL, NULL, NULL, &raw);
@@ -553,7 +553,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 	if (rep == NULL)
 		goto error;
 
-	if (params->json) {
+	if (HAVE_JSON(params)) {
 		common_info_cmd(rep, out, params);
 	} else for (i=0;i<rep->n_user;i++) {
 		username = rep->user[i]->username;
@@ -661,7 +661,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 				continue;
 			}
 
-			if (i == 0 && !params->json) {
+			if (i == 0 && NO_JSON(params)) {
 				fprintf(out, "%14s %14s %30s\n",
 					"IP", "score", "expires");
 			}
@@ -669,7 +669,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 
 			print_time_ival7(tmpbuf, t, time(0));
 
-			if (params->json) {
+			if (HAVE_JSON(params)) {
 				print_single_value(out, params, "IP", rep->info[i]->ip, 1);
 				print_single_value_ex(out, params, "Since", str_since, tmpbuf, 1);
 				print_single_value_int(out, params, "Score", rep->info[i]->score, 0);
@@ -678,13 +678,13 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 					rep->info[i]->ip, (unsigned)rep->info[i]->score, str_since, tmpbuf);
 			}
 		} else {
-			if (i == 0 && !params->json) {
+			if (i == 0 && NO_JSON(params)) {
 				fprintf(out, "%14s %14s\n",
 					"IP", "score");
 			}
 			print_start_block(out, params);
 
-			if (params->json) {
+			if (HAVE_JSON(params)) {
 				print_single_value(out, params, "IP", rep->info[i]->ip, 1);
 				print_single_value_int(out, params, "Score", rep->info[i]->score, 0);
 			} else {
@@ -754,7 +754,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		init_pager = 1;
 	}
 
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "[\n");
 
 	for (i=0;i<args->n_user;i++) {
@@ -852,7 +852,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		at_least_one = 1;
 	}
 
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "]\n");
 
 	ret = 0;
@@ -863,7 +863,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 	goto cleanup;
  cleanup:
 	if (at_least_one == 0) {
-		if (!params->json)
+		if (NO_JSON(params))
 			fprintf(out, "user or ID not found\n");
 		ret = 2;
 	}

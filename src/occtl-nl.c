@@ -102,7 +102,7 @@ void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_s
 
 	bytes2human(rx, buf1, sizeof(buf1), NULL);
 	bytes2human(tx, buf2, sizeof(buf2), NULL);
-	if (params->json) {
+	if (HAVE_JSON(params)) {
 		fprintf(out, "    \"RX\":  \"%"PRIu64"\",\n    \"TX\":  \"%"PRIu64"\",\n", rx, tx);
 		fprintf(out, "    \"_RX\":  \"%s\",\n    \"_TX\":  \"%s\",\n", buf1, buf2);
 	} else
@@ -110,7 +110,7 @@ void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_s
 
 	value2speed(rx, diff, buf1, sizeof(buf1));
 	value2speed(tx, diff, buf2, sizeof(buf2));
-	if (params->json)
+	if (HAVE_JSON(params))
 		fprintf(out, "    \"Average RX\":  \"%s\",\n    \"Average TX\":  \"%s\"%s\n", buf1, buf2, have_more?",":"");
 	else
 		fprintf(out, "\tAverage bandwidth RX: %s  TX: %s\n", buf1, buf2);

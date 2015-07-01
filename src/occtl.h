@@ -15,6 +15,9 @@
 #define DATE_TIME_FMT "%Y-%m-%d %H:%M"
 #define MAX_TMPSTR_SIZE 64
 
+#define NO_JSON(params) (!params || !params->json)
+#define HAVE_JSON(params) (params && params->json)
+
 typedef struct cmd_params_st {
 	unsigned json;
 } cmd_params_st;

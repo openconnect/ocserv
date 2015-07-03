@@ -47,9 +47,9 @@ int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char 
 			tmp = val[i];
 			if (tmp != NULL) {
 				if (i==0)
-					fprintf(out, "%s", tmp);
+					fprintf(out, "\"%s\"", tmp);
 				else
-					fprintf(out, ", %s", tmp);
+					fprintf(out, ", \"%s\"", tmp);
 			}
 		}
 		fprintf(out, "]%s\n", have_more?",":"");

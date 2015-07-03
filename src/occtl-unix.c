@@ -254,7 +254,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	print_single_value_int(stdout, params, "TLS DB entries", rep->stored_tls_sessions, 1);
 	print_separator(stdout, params);
 	print_single_value_int(stdout, params, "Server PID", rep->pid, 1);
-	print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 1);
+	print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 0);
 	print_end_block(stdout, params, 0);
 
 	status_rep__free_unpacked(rep, &pa);

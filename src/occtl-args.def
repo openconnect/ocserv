@@ -33,6 +33,13 @@ flag = {
     doc   = "This option is only needed if you have multiple servers.";
 };
 
+flag = {
+    name      = json;
+    value     = j;
+    descrip   = "Output will be JSON formatted";
+    doc   = "";
+};
+
 
 doc-section = {
   ds-type = 'SYNOPSIS';

@@ -39,9 +39,12 @@ char* pager;
 }
 
 /* Always succeeds */
-FILE* pager_start(void)
+FILE* pager_start(cmd_params_st *params)
 {
 FILE *fp;
+
+	if (params && params->no_pager != 0)
+		return stdout;
 
 #ifdef HAVE_ISATTY
 	if (isatty(STDOUT_FILENO) == 0)

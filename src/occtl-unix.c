@@ -542,7 +542,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 
 	entries_clear();
 
-	out = pager_start();
+	out = pager_start(params);
 
 	ret = send_cmd(ctx, CTL_CMD_LIST, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
@@ -633,7 +633,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 
 	ip_entries_clear();
 
-	out = pager_start();
+	out = pager_start(params);
 
 	ret = send_cmd(ctx, CTL_CMD_LIST_BANNED, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
@@ -750,7 +750,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 	unsigned init_pager = 0;
 
 	if (out == NULL) {
-		out = pager_start();
+		out = pager_start(params);
 		init_pager = 1;
 	}
 

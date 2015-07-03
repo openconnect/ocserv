@@ -545,6 +545,13 @@ int main(int argc, char **argv)
 				argv += 1;
 				argc -= 1;
 
+			} else if (argv[1][1] == 'n'
+			    || (argv[1][1] == '-' && argv[1][2] == 'n')) {
+				params.no_pager = 1;
+
+				argv += 1;
+				argc -= 1;
+
 			} else if (argv[1][1] == 'v'
 			    || (argv[1][1] == '-' && argv[1][2] == 'v')) {
 				version();

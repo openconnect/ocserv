@@ -20,9 +20,10 @@
 
 typedef struct cmd_params_st {
 	unsigned json;
+	unsigned no_pager;
 } cmd_params_st;
 
-FILE* pager_start(void);
+FILE* pager_start(cmd_params_st *params);
 void pager_stop(FILE* fp);
 void print_time_ival7(char output[MAX_TMPSTR_SIZE], time_t t1, time_t t2);
 void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more);

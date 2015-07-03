@@ -40,6 +40,13 @@ flag = {
     doc   = "";
 };
 
+flag = {
+    name      = no-pager;
+    value     = n;
+    descrip   = "No pager will be used over output data";
+    doc   = "";
+};
+
 
 doc-section = {
   ds-type = 'SYNOPSIS';

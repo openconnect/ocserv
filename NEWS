@@ -1,3 +1,9 @@
+* Version 0.10.7 (unreleased)
+- occtl: added -n/--no-pager option. That allows to disable pager
+  explicitly.
+- occtl: fixed several cases of invalid JSON output.
+
+
 * Version 0.10.6 (released 2015-07-01)
 - Transmit packets to the last incoming source, allowing faster switch
   of the communication channel.

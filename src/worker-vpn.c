@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -727,14 +728,27 @@ void mtu_ok(worker_st * ws)
 	return;
 }
 
+#define FUZZ(x, diff, rnd) \
+		if (x > diff) { \
+			int16_t r = rnd; \
+			x += r % diff; \
+		}
+
 static
-int periodic_check(worker_st * ws, unsigned mtu_overhead, time_t now,
+int periodic_check(worker_st * ws, unsigned mtu_overhead, struct timespec *tnow,
 		   unsigned dpd)
 {
 	socklen_t sl;
 	int max, e, ret;
+	time_t now = tnow->tv_sec;
+	time_t periodic_check_time = PERIODIC_CHECK_TIME;
 
-	if (now - ws->last_periodic_check < PERIODIC_CHECK_TIME)
+	/* modify timers with a fuzzying factor, to prevent all worker processes
+	 * to act at exactly the same time (e.g., after a server restart on which
+	 * all clients reconnect at the same time). */
+	FUZZ(periodic_check_time, 5, tnow->tv_nsec);
+
+	if (now - ws->last_periodic_check < periodic_check_time)
 		return 0;
 
 	if (ws->config->idle_timeout > 0) {
@@ -1295,6 +1309,7 @@ static int connect_handler(worker_st * ws)
 	fd_set rfds;
 	int e, max, ret, t;
 	char *p;
+	unsigned rnd;
 #ifdef HAVE_PSELECT
 	struct timespec tv;
 #else
@@ -1309,6 +1324,8 @@ static int connect_handler(worker_st * ws)
 	sigemptyset(&blockset);
 	sigemptyset(&emptyset);
 	sigaddset(&blockset, SIGTERM);
+
+	gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
 
 	ws->buffer_size = sizeof(ws->buffer);
 
@@ -1365,6 +1382,9 @@ static int connect_handler(worker_st * ws)
 			 "X-Reason: Server configuration error\r\n\r\n");
 		return -1;
 	}
+
+	FUZZ(ws->config->stats_report_time, 5, rnd);
+	FUZZ(ws->config->rekey_time, 30, rnd);
 
 	/* Connected. Turn of the alarm */
 	if (ws->config->auth_timeout)
@@ -1892,7 +1912,7 @@ static int connect_handler(worker_st * ws)
 		gettime(&tnow);
 
 		if (periodic_check
-		    (ws, ws->proto_overhead + ws->crypto_overhead, tnow.tv_sec,
+		    (ws, ws->proto_overhead + ws->crypto_overhead, &tnow,
 		     ws->config->dpd) < 0) {
 			terminate_reason = REASON_ERROR;
 			goto exit;

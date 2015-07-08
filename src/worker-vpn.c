@@ -46,9 +46,8 @@
 #include <c-ctype.h>
 #include <worker-bandwidth.h>
 
-#ifdef __linux__
-/* for IPV6_PATHMTU */
-# include <linux/in6.h>
+#if defined(__linux__) &&!defined(IPV6_PATHMTU)
+# define IPV6_PATHMTU 61
 #endif
 
 #include <vpn.h>

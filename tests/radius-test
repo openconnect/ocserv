@@ -75,10 +75,10 @@ $ECHO_E "test" >pass-radius$TMP
 $OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP &
 PID=$!
 
-rm -f pass-radius$TMP
-
 #wait for openconnect
 sleep 5
+
+rm -f pass-radius$TMP
 
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.55.1

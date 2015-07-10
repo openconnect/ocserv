@@ -125,13 +125,6 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 		}
 	}
 
-	if (ai->id) {
-		i = ai->id;
-		if (rc_avpair_add(rh, send, PW_NAS_PORT, &i, -1, 0) == NULL) {
-			return;
-		}
-	}
-
 	if (ai->our_ip[0] != 0) {
 		struct in_addr in;
 		struct in6_addr in6;
@@ -213,7 +206,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	append_acct_standard(rh, ai, &send);
 	append_stats(rh, &send, stats);
 
-	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(rh, ai->id, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
@@ -250,7 +243,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 
 	append_acct_standard(rh, ai, &send);
 
-	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(rh, ai->id, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
@@ -300,7 +293,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	append_acct_standard(rh, ai, &send);
 	append_stats(rh, &send, stats);
 
-	ret = rc_aaa(rh, 0, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(rh, ai->id, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
 

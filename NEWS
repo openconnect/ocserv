@@ -1,4 +1,7 @@
 * Version 0.10.7 (unreleased)
+- Added a fuzzying factor to CPU consuming, or radius communication
+  tasks when initiated by worker process. That avoids a very high load
+  periodically, e.g., when multiple clients connect at the same time.
 - occtl: added -n/--no-pager option. That allows to disable pager
   explicitly.
 - occtl: fixed several cases of invalid JSON output.

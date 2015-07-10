@@ -123,7 +123,7 @@ fi
 fi
 
 echo "Waiting for accounting report"
-sleep 60
+sleep 70
 
 kill -INT $PID
 
@@ -189,7 +189,7 @@ fi
 sleep 4
 
 echo "Waiting for accounting report"
-sleep 60
+sleep 70
 
 kill -INT $PID
 

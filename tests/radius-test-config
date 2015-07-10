@@ -77,7 +77,7 @@ retrieve_route_info testtime '192.168.67.0/24'
 
 echo "Waiting for accounting report"
 
-sleep 60
+sleep 70
 
 FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/`
 
@@ -90,7 +90,7 @@ fi
 
 #wait until sec-mod has cleaned up its entries
 echo "Waiting for disconnection report"
-sleep 60
+sleep 70
 
 rm -f out$TMP
 $DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP

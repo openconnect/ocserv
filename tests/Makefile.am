@@ -18,7 +18,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
 	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \
-	test-cookie-invalidation radius-test-config test-enc-key
+	test-cookie-invalidation radius-test-config test-enc-key proxyproto-test
 
 
 AM_CPPFLAGS = \
@@ -47,7 +47,7 @@ TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip radius-test \
 	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix \
-	radius-test-config kkdcp-parsing json-escape test-enc-key
+	radius-test-config kkdcp-parsing json-escape test-enc-key proxyproto-test
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

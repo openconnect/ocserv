@@ -376,12 +376,13 @@ static void exit_worker_reason(worker_st * ws, unsigned reason)
 #define PROXY_HEADER_V2 "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
 #define PROXY_HEADER_V2_SIZE (sizeof(PROXY_HEADER_V2)-1)
 
-#define AVAIL_HEADER_SIZE(hsize, want) \
+#define AVAIL_HEADER_SIZE(hsize, want) { \
 	if (hsize < want) { \
-		oclog(ws, LOG_ERR, "invalid proxy header"); \
-		return -1; \
+		oclog(ws, LOG_ERR, "invalid TLV header"); \
+		return; \
 	} \
-	hsize -= want
+	hsize -= want; \
+	}
 
 typedef struct proxy_hdr_v2 {
 	uint8_t sig[PROXY_HEADER_V2_SIZE];
@@ -391,8 +392,79 @@ typedef struct proxy_hdr_v2 {
 	uint8_t data[520];
 } _ATTR_PACKED proxy_hdr_v2;
 
+#define PP2_TYPE_SSL           0x20
+#define PP2_TYPE_SSL_CN        0x22
+
+#define PP2_CLIENT_SSL           0x01
+#define PP2_CLIENT_CERT_CONN     0x02
+#define PP2_CLIENT_CERT_SESS     0x04
+
+typedef struct pp2_tlv {
+	uint8_t type;
+	uint16_t length;
+} _ATTR_PACKED pp2_tlv;
+
+typedef struct pp2_tlv_ssl {
+	uint8_t  client;
+	uint32_t verify;
+} _ATTR_PACKED pp2_tlv_ssl;
+
+static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, int data_size)
+{
+	pp2_tlv tlv;
+
+	while(data_size > 0) {
+		AVAIL_HEADER_SIZE(data_size, sizeof(pp2_tlv));
+		memcpy(&tlv, data, sizeof(pp2_tlv));
+
+		/* that seems to be in little endian */
+		tlv.length = htons(tlv.length);
+
+		data += sizeof(pp2_tlv);
+
+		oclog(ws, LOG_INFO, "proxy-hdr: TLV type %x", (unsigned)tlv.type);
+		if (tlv.type == PP2_TYPE_SSL) {
+			pp2_tlv_ssl tssl;
+			if (tlv.length < sizeof(pp2_tlv_ssl)) {
+				oclog(ws, LOG_ERR, "proxy-hdr: TLV SSL header size is invalid");
+				continue;
+			}
+			tlv.length = sizeof(pp2_tlv_ssl);
+			AVAIL_HEADER_SIZE(data_size, tlv.length);
+
+			memcpy(&tssl, data, sizeof(pp2_tlv_ssl));
+
+			if ((tssl.client & PP2_CLIENT_SSL) && 
+			    (tssl.client & PP2_CLIENT_CERT_SESS) &&
+			    (tssl.verify == 0)) {
+				oclog(ws, LOG_INFO, "proxy-hdr: user has presented valid certificate");
+			    	ws->cert_auth_ok = 1;
+			    	
+			}
+		} else if (tlv.type == PP2_TYPE_SSL_CN && ws->cert_auth_ok) {
+			if (tlv.length > sizeof(ws->cert_username)-1) {
+				oclog(ws, LOG_ERR, "proxy-hdr: TLV SSL CN header size is too long");
+				continue;
+			}
+
+			AVAIL_HEADER_SIZE(data_size, tlv.length);
+
+			memcpy(ws->cert_username, data, tlv.length);
+			ws->cert_username[tlv.length] = 0;
+
+			oclog(ws, LOG_INFO, "proxy-hdr: user's name is '%s'", ws->cert_username);
+		} else {
+			AVAIL_HEADER_SIZE(data_size, tlv.length);
+		}
+
+		data += tlv.length;
+	}
+
+}
+
 /* This parses a version 2 Proxy protocol header (from haproxy).
  */
+static
 int parse_proxy_proto_header(struct worker_st *ws, int fd)
 {
 	proxy_hdr_v2 hdr;
@@ -473,10 +545,11 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 
 		memset(&ws->remote_addr, 0, sizeof(ws->remote_addr));
 		sa->sin_family = AF_INET;
-		sa->sin_port = 0;
+		memcpy(&sa->sin_port, p+8, 2);
 		memcpy(&sa->sin_addr, p, 4);
 		ws->remote_addr_len = sizeof(struct sockaddr_in);
-		p += 4;
+		p += 12;
+		data_size -= 12;
 	} else if (family == 0x02) { /* AF_INET6 */
 		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
 
@@ -489,8 +562,15 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		sa->sin6_family = AF_INET6;
 		sa->sin6_port = 0;
 		memcpy(&sa->sin6_addr, p, 16);
+		memcpy(&sa->sin6_port, p+32, 2);
 		ws->remote_addr_len = sizeof(struct sockaddr_in6);
-		p += 16;
+		p += 36;
+		data_size -= 36;
+	}
+
+	/* Find CN if needed */
+	if (ws->conn_type == SOCK_TYPE_UNIX && data_size > 0) {
+		parse_ssl_tlvs(ws, p, data_size);
 	}
 
 	return 0;

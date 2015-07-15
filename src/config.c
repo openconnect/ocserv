@@ -977,8 +977,10 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 	}
 
 	if (perm_config->unix_conn_file != NULL && (perm_config->config->cert_req != 0)) {
-		fprintf(stderr, "The option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
-		exit(1);
+		if (perm_config->config->listen_proxy_proto == 0) {
+			fprintf(stderr, "The option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
+			exit(1);
+		}
 	}
 
 #ifdef ANYCONNECT_CLIENT_COMPAT

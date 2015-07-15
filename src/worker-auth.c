@@ -833,6 +833,14 @@ int get_cert_info(worker_st * ws)
 	unsigned int ncerts;
 	int ret;
 
+	if (ws->session == NULL) {
+		/* if info has been passed using proxy protocol */
+		if (ws->cert_username[0] != 0)
+			return 0;
+		else
+			return -1;
+	}
+
 	/* this is superflous. Verification has already been performed 
 	 * during handshake. */
 	cert = gnutls_certificate_get_peers(ws->session, &ncerts);

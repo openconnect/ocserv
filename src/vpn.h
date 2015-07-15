@@ -286,6 +286,7 @@ typedef struct kkdcp_st {
 
 struct cfg_st {
 	unsigned int is_dyndns;
+	unsigned int listen_proxy_proto;
 	unsigned int stats_report_time;
 
 	kkdcp_st *kkdcp;

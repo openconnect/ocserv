@@ -236,6 +236,12 @@ max-same-clients = 2
 # reconnects.
 #listen-host-is-dyndns = true
 
+# When the server receives connections from a proxy, like haproxy
+# which supports the proxy protocol, set this to obtain the correct
+# client addresses. The proxy protocol (v2) would then be expected in
+# the TCP or UNIX socket (not the UDP one).
+#listen-proxy-proto = true
+
 # Limit the number of client connections to one every X milliseconds 
 # (X is the provided value). Set to zero for no limit.
 #rate-limit-ms = 100

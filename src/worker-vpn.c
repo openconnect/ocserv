@@ -373,6 +373,129 @@ static void exit_worker_reason(worker_st * ws, unsigned reason)
 	exit(1);
 }
 
+#define PROXY_HEADER_V2 "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+#define PROXY_HEADER_V2_SIZE (sizeof(PROXY_HEADER_V2)-1)
+
+#define AVAIL_HEADER_SIZE(hsize, want) \
+	if (hsize < want) { \
+		oclog(ws, LOG_ERR, "invalid proxy header"); \
+		return -1; \
+	} \
+	hsize -= want
+
+typedef struct proxy_hdr_v2 {
+	uint8_t sig[PROXY_HEADER_V2_SIZE];
+	uint8_t ver_cmd;
+	uint8_t family;
+	uint16_t len;
+	uint8_t data[520];
+} _ATTR_PACKED proxy_hdr_v2;
+
+/* This parses a version 2 Proxy protocol header (from haproxy).
+ */
+int parse_proxy_proto_header(struct worker_st *ws, int fd)
+{
+	proxy_hdr_v2 hdr;
+	int data_size;
+	uint8_t cmd, family, proto;
+	uint8_t ver;
+	uint8_t *p;
+	int ret;
+
+	ret = recv_timeout(fd, &hdr, 16, 3);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR,
+		      "proxy-hdr: recv timed out");
+		return -1;
+	}
+
+	if (ret < 16) {
+		oclog(ws, LOG_ERR, "proxy-hdr: invalid v2 header size");
+		return -1;
+	}
+
+	if (memcmp(hdr.sig, PROXY_HEADER_V2, PROXY_HEADER_V2_SIZE) != 0) {
+		oclog(ws, LOG_ERR, "proxy-hdr: invalid v2 header");
+		return -1;
+	}
+
+	data_size = ntohs(hdr.len);
+
+	if (data_size >= sizeof(hdr.data)) {
+		oclog(ws, LOG_ERR, "proxy-hdr: too long v2 header size");
+		return -1;
+	}
+
+	ret = recv_timeout(fd, hdr.data, data_size, 3);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR,
+		      "proxy-hdr: recv data timed out");
+		return -1;
+	}
+
+	cmd = hdr.ver_cmd & 0x0f;
+	ver = (hdr.ver_cmd & 0xf0) >> 4;
+	if (ver != 0x02) {
+		oclog(ws, LOG_ERR, "proxy-hdr: unsupported version (%x), skipping message", (unsigned)ver);
+		return 0;
+	}
+
+	if (cmd != 0x01) {
+		if (hdr.family == 0)
+			oclog(ws, LOG_DEBUG, "proxy-hdr: received health check command");
+		else
+			oclog(ws, LOG_ERR, "proxy-hdr: received unsupported command %x", (unsigned)cmd);
+		return -1;
+	}
+
+	family = (hdr.family & 0xf0) >> 4;
+	proto = hdr.family & 0x0f;
+
+	if (family != 0x1 && family != 0x2) {
+		oclog(ws, LOG_ERR, "proxy-hdr: received unsupported family %x; skipping header", (unsigned)family);
+		return 0;
+	}
+
+	if ((proto != 0x1 && proto != 0x0)) {
+		oclog(ws, LOG_ERR, "proxy-hdr: received unsupported protocol %x; skipping header", (unsigned)proto);
+		return 0;
+	}
+
+	p = hdr.data;
+
+	if (family == 0x01) { /* AF_INET */
+		struct sockaddr_in *sa = (void*)&ws->remote_addr;
+
+		if (data_size < 4) {
+			oclog(ws, LOG_INFO, "proxy-hdr: received not enough IPv4 data");
+			return 0;
+		}
+
+		memset(&ws->remote_addr, 0, sizeof(ws->remote_addr));
+		sa->sin_family = AF_INET;
+		sa->sin_port = 0;
+		memcpy(&sa->sin_addr, p, 4);
+		ws->remote_addr_len = sizeof(struct sockaddr_in);
+		p += 4;
+	} else if (family == 0x02) { /* AF_INET6 */
+		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
+
+		if (data_size < 16) {
+			oclog(ws, LOG_INFO, "proxy-hdr: received not enough IPv6 data");
+			return 0;
+		}
+
+		memset(&ws->remote_addr, 0, sizeof(ws->remote_addr));
+		sa->sin6_family = AF_INET6;
+		sa->sin6_port = 0;
+		memcpy(&sa->sin6_addr, p, 16);
+		ws->remote_addr_len = sizeof(struct sockaddr_in6);
+		p += 16;
+	}
+
+	return 0;
+}
+
 /* vpn_server:
  * @ws: an initialized worker structure
  *
@@ -422,11 +545,22 @@ void vpn_server(struct worker_st *ws)
 	}
 	ws->session_start_time = ws->last_stats_msg = time(0);
 
-	oclog(ws, LOG_DEBUG, "accepted connection");
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
 		ws->proto = AF_INET;
 	else
 		ws->proto = AF_INET6;
+
+	if (ws->config->listen_proxy_proto) {
+		oclog(ws, LOG_DEBUG, "accepted proxy protocol connection");
+		ret = parse_proxy_proto_header(ws, ws->conn_fd);
+		if (ret < 0) {
+			oclog(ws, LOG_ERR,
+			      "could not parse proxy protocol header; discarding connection");
+			exit_worker(ws);
+		}
+	} else {
+		oclog(ws, LOG_DEBUG, "accepted connection");
+	}
 
 	if (ws->conn_type != SOCK_TYPE_UNIX) {
 		/* initialize the session */
@@ -476,6 +610,10 @@ void vpn_server(struct worker_st *ws)
 	http_req_init(ws);
 
 	human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
+
+	if (ws->config->listen_proxy_proto) {
+		oclog(ws, LOG_DEBUG, "proxy-hdr: peer is %s\n", ws->remote_ip_str);
+	}
 
 	ws->session = session;
 	ws->parser = &parser;

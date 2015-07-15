@@ -76,6 +76,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "acct", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "listen-proxy-proto", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "tcp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -677,6 +678,7 @@ size_t urlfw_size = 0;
 	 * reload_cfg_file();
 	 */
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
+	READ_TF("listen-proxy-proto", config->listen_proxy_proto, 0);
 
 #ifdef HAVE_GSSAPI
 	READ_MULTI_LINE("kkdcp", urlfw, urlfw_size);

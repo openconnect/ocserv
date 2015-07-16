@@ -3,7 +3,8 @@
   tasks when initiated by worker process. That avoids a very high load
   periodically, e.g., when multiple clients connect at the same time.
 - Added support for haproxy's protocol v2 format. That allows to
-  report the correct client IP even on proxied sessions.
+  report the correct client IP even on proxied sessions. It introduces
+  the configuration option listen-proxy-proto.
 - occtl: added -n/--no-pager option. That allows to disable pager
   explicitly.
 - occtl: fixed several cases of invalid JSON output.

@@ -124,6 +124,12 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, int data_size)
 }
 
 /* This parses a version 2 Proxy protocol header (from haproxy).
+ *
+ * When called from a UNIX socket (where we don't have any SSL
+ * info), we additionally read information about the SSL session.
+ * We expect to receive the peer's certificate verification status,
+ * and CN. That corresponds to send-proxy-v2-ssl-cn and send-proxy-v2-ssl
+ * haproxy config options.
  */
 int parse_proxy_proto_header(struct worker_st *ws, int fd)
 {

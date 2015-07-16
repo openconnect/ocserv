@@ -82,7 +82,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	sup-config/file.c sup-config/file.h main-sec-mod-cmd.c \
 	sup-config/radius.c sup-config/radius.h \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
-	vasprintf.c vasprintf.h \
+	vasprintf.c vasprintf.h worker-proxyproto.c \
 	proc-search.c proc-search.h http-heads.h \
 	main-ban.c main-ban.h common-config.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \

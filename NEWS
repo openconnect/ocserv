@@ -1,5 +1,5 @@
 * Version 0.10.7 (unreleased)
-- Added a fuzzying factor to CPU consuming, or radius communication
+- Added a fuzzying factor to CPU intensive, or radius communication
   tasks when initiated by worker process. That avoids a very high load
   periodically, e.g., when multiple clients connect at the same time.
 - Added support for haproxy's protocol v2 format. That allows to

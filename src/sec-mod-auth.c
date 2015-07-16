@@ -243,7 +243,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
 		if (tls_auth_ok == 0) {
-			seclog(sec, LOG_INFO, "user %s "SESSION_STR" presented no certificate",
+			seclog(sec, LOG_INFO, "user %s "SESSION_STR" presented no certificate; rejecting",
 			       e->auth_info.username, e->auth_info.psid);
 			return -1;
 		}
@@ -252,7 +252,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 		if (tls_auth_ok != 0) {
 			if (e->auth_info.username[0] == 0 && sec->config->cert_user_oid != NULL) {
 				if (cert_user == NULL) {
-					seclog(sec, LOG_INFO, "no username in the certificate!");
+					seclog(sec, LOG_INFO, "no username in the certificate; rejecting");
 					return -1;
 				}
 
@@ -262,7 +262,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 			} else {
 				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->auth_info.username, cert_user) != 0) {
 					seclog(sec, LOG_INFO,
-					       "user '%s' "SESSION_STR" presented a certificate from user '%s'",
+					       "user '%s' "SESSION_STR" presented a certificate which is for user '%s'; rejecting",
 					       e->auth_info.username, e->auth_info.psid, cert_user);
 					return -1;
 				}
@@ -277,7 +277,7 @@ static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
 					}
 					if (found == 0) {
 						seclog(sec, LOG_INFO,
-							"user '%s' "SESSION_STR" presented a certificate from group '%s' but he isn't a member of it",
+							"user '%s' "SESSION_STR" presented a certificate from group '%s' but he isn't a member of it; rejecting",
 							e->auth_info.username, e->auth_info.psid, e->auth_info.groupname);
 							return -1;
 					}

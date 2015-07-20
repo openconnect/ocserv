@@ -159,7 +159,7 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 
 	data_size = ntohs(hdr.len);
 
-	if (data_size >= sizeof(hdr.data)) {
+	if (data_size > sizeof(hdr.data)) {
 		oclog(ws, LOG_ERR, "proxy-hdr: too long v2 header size");
 		return -1;
 	}

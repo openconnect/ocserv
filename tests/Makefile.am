@@ -22,6 +22,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 
 
 AM_CPPFLAGS = \
+	$(LIBOPTS_CFLAGS) \
 	-I$(top_srcdir)/src/ \
 	-I$(top_builddir)/src/ \
 	-I$(top_srcdir)/gl/ \

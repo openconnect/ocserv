@@ -204,7 +204,7 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 	if (family == 0x01) { /* AF_INET */
 		struct sockaddr_in *sa = (void*)&ws->remote_addr;
 
-		if (data_size < 4) {
+		if (data_size < 12) {
 			oclog(ws, LOG_INFO, "proxy-hdr: received not enough IPv4 data");
 			return 0;
 		}
@@ -214,12 +214,19 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		memcpy(&sa->sin_port, p+8, 2);
 		memcpy(&sa->sin_addr, p, 4);
 		ws->remote_addr_len = sizeof(struct sockaddr_in);
+
+		memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+		sa = (void*)&ws->our_addr;
+		memcpy(&sa->sin_addr, p+4, 4);
+		memcpy(&sa->sin_port, p+10, 2);
+		ws->our_addr_len = sizeof(struct sockaddr_in);
+
 		p += 12;
 		data_size -= 12;
 	} else if (family == 0x02) { /* AF_INET6 */
 		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
 
-		if (data_size < 16) {
+		if (data_size < 36) {
 			oclog(ws, LOG_INFO, "proxy-hdr: received not enough IPv6 data");
 			return 0;
 		}
@@ -230,6 +237,13 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		memcpy(&sa->sin6_addr, p, 16);
 		memcpy(&sa->sin6_port, p+32, 2);
 		ws->remote_addr_len = sizeof(struct sockaddr_in6);
+
+		memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+		sa = (void*)&ws->our_addr;
+		memcpy(&sa->sin6_addr, p+16, 16);
+		memcpy(&sa->sin6_port, p+34, 2);
+		ws->our_addr_len = sizeof(struct sockaddr_in);
+
 		p += 36;
 		data_size -= 36;
 	}

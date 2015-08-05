@@ -1289,20 +1289,21 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	return ret;
 }
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-# define gsocklen int
-#else
-# define gsocklen socklen_t
-#endif
-
-static char *get_our_ip(int fd, char str[MAX_IP_STR])
+static char *get_our_ip(worker_st * ws, char str[MAX_IP_STR])
 {
 	int ret;
 	struct sockaddr_storage sockaddr;
 	gsocklen socklen;
 
+	if (ws->our_addr_len > 0) {
+		return human_addr2((struct sockaddr*)&ws->our_addr, ws->our_addr_len, str, MAX_IP_STR, 0);
+	}
+
+	if (ws->udp_state != UP_ACTIVE)
+		return NULL;
+
 	socklen = sizeof(sockaddr);
-	ret = getsockname(fd, (struct sockaddr*)&sockaddr, &socklen);
+	ret = getsockname(ws->dtls_tptr.fd, (struct sockaddr*)&sockaddr, &socklen);
 	if (ret == -1)
 		return NULL;
 
@@ -1427,13 +1428,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		ireq.hostname = req->hostname;
 		ireq.ip = ws->remote_ip_str;
-		if (ws->conn_type != SOCK_TYPE_UNIX) {
-			ireq.our_ip = get_our_ip(ws->conn_fd, our_ip_str);
-		} else if (ws->udp_state == UP_ACTIVE) {
-			/* if we use a UNIX socket then try to get our IP
-			 * from the UDP socket. */
-			ireq.our_ip = get_our_ip(ws->dtls_tptr.fd, our_ip_str);
-		}
+		ireq.our_ip = get_our_ip(ws, our_ip_str);
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {

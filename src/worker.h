@@ -152,6 +152,12 @@ typedef struct dtls_transport_ptr {
 	int consumed;
 } dtls_transport_ptr;
 
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+# define gsocklen int
+#else
+# define gsocklen socklen_t
+#endif
+
 typedef struct worker_st {
 	struct tls_st *creds;
 	gnutls_session_t session;
@@ -180,6 +186,8 @@ typedef struct worker_st {
 	struct sockaddr_un secmod_addr;	/* sec-mod unix address */
 	socklen_t secmod_addr_len;
 
+	struct sockaddr_storage our_addr;	/* our address */
+	gsocklen our_addr_len;
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
 	char remote_ip_str[MAX_IP_STR];

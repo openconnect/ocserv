@@ -468,6 +468,13 @@ void vpn_server(struct worker_st *ws)
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
 		GNUTLS_S_FATAL_ERR(session, ret);
 
+		if (!ws->config->listen_proxy_proto) {
+			memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+			ws->our_addr_len = sizeof(ws->our_addr);
+			if (getsockname(ws->conn_fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
+				ws->our_addr_len = 0;
+		}
+
 		oclog(ws, LOG_DEBUG, "TLS handshake completed");
 	} else {
 		oclog(ws, LOG_DEBUG, "Accepted unix connection");

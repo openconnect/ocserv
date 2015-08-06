@@ -1,4 +1,4 @@
-* Version 0.10.7 (unreleased)
+* Version 0.10.7 (released 2015-08-06)
 - Added a fuzzying factor to CPU intensive, or radius communication
   tasks when initiated by worker process. That avoids a very high load
   periodically, e.g., when multiple clients connect at the same time.

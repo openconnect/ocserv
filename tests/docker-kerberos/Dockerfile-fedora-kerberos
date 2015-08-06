@@ -14,8 +14,6 @@ RUN yum install -y openssh-server strace lsof && yum clean all
 RUN echo 'root:root' | chpasswd
 RUN echo set -o vi >> /etc/bashrc
 
-EXPOSE  80 443 443/udp 88 88/udp
-
 RUN mkdir -p /etc/ocserv
 RUN mkdir -p /tmp/disconnect/
 

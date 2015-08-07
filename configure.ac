@@ -16,11 +16,11 @@ AM_PROG_CC_C_O
 if [ test "$GCC" = "yes" ];then
 	CFLAGS="$CFLAGS -Wall"
 fi
-AC_PATH_PROG(CTAGS, ctags, /bin/true)
-AC_PATH_PROG(CSCOPE, cscope, /bin/true)
-AC_CHECK_PROG([AUTOGEN], [autogen], [autogen], [/bin/true])
+AC_PATH_PROG(CTAGS, ctags, [:])
+AC_PATH_PROG(CSCOPE, cscope, [:])
+AC_CHECK_PROG([AUTOGEN], [autogen], [autogen], [:])
 
-if test x"$AUTOGEN" = "x/bin/true"; then
+if test x"$AUTOGEN" = "x:"; then
 	AC_MSG_WARN([[
 ***
 *** autogen not found. Will not link against libopts.
@@ -441,7 +441,7 @@ if test "$NEED_LIBOPTS_DIR" = "true";then
 			cp -f $i $nam
 		fi
 	done
-	AC_SUBST([AUTOGEN], [/bin/true])
+	AC_SUBST([AUTOGEN], [:])
 	enable_local_libopts=yes
 else
 	enable_local_libopts=no

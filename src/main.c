@@ -130,10 +130,12 @@ int y;
 		       (const void *)&y, sizeof(y)) < 0)
 		perror("setsockopt(IP_PKTINFO) failed");
 #elif defined(IP_RECVDSTADDR) /* *BSD */
-	y = 1;
-	if (setsockopt(fd, IPPROTO_IP, IP_RECVDSTADDR,
-		       (const void *)&y, sizeof(y)) < 0)
-		perror("setsockopt(IP_RECVDSTADDR) failed");
+	if (family == AF_INET) {
+		y = 1;
+		if (setsockopt(fd, IPPROTO_IP, IP_RECVDSTADDR,
+			       (const void *)&y, sizeof(y)) < 0)
+			perror("setsockopt(IP_RECVDSTADDR) failed");
+	}
 #endif
 #if defined(IPV6_RECVPKTINFO)
 	if (family == AF_INET6) {

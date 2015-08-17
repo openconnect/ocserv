@@ -110,8 +110,10 @@ int ctl_handler_init(main_server_st * s)
 	struct sockaddr_un sa;
 	int sd, e;
 
-	if (s->config->use_occtl == 0 || s->perm_config->occtl_socket_file == NULL)
+	if (s->config->use_occtl == 0 || s->perm_config->occtl_socket_file == NULL) {
+		mslog(s, NULL, LOG_INFO, "not using control unix socket");
 		return 0;
+	}
 
 	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s", s->perm_config->occtl_socket_file);
 	memset(&sa, 0, sizeof(sa));

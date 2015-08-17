@@ -234,9 +234,12 @@ unsigned j;
 
 #define PREAD_STRING(pool, name, s_name) { \
 	val = get_option(name, &mand); \
-	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
-		s_name = talloc_strdup(pool, val->v.strVal); \
-	else if (mand != 0) { \
+	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
+		unsigned len = strlen(val->v.strVal); \
+		while(c_isspace(val->v.strVal[len-1])) \
+			len--; \
+		s_name = talloc_strndup(pool, val->v.strVal, len); \
+	} else if (mand != 0) { \
 		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}

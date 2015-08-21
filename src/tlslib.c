@@ -756,6 +756,7 @@ int ret;
 			}
 			exit(1);
 		}
+		mslog(s, NULL, LOG_INFO, "loaded CRL: %s", s->config->crl);
 	}
 }
 

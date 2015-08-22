@@ -33,6 +33,11 @@ dist-hook: ChangeLog
 	mv ChangeLog $(distdir)
 	touch ChangeLog
 	$(AUTOGEN) --version
+	@echo "*****************************************************************"
+	@echo "Checking whether included libopts matches the system's. If the"
+	@echo "check fails upgrade the included libopts."
+	@echo "*****************************************************************"
+	test "`autoopts-config libsrc|cut -d '-' -f 2|sed 's/.tar.gz//'`" = "`cat libopts/autoopts/options.h |grep OPTIONS_VERSION_STRING|cut -d '"' -f 2|sed 's/:/./g'`"
 	cd $(distdir)/src/ && for i in ocserv-args.def ocpasswd-args.def;do \
 		$(AUTOGEN) $$i; \
 	done

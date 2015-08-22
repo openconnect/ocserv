@@ -1190,6 +1190,13 @@ int main(int argc, char** argv)
 					break;
 				}
 
+				if (ws->conn_type != SOCK_TYPE_UNIX && !s->config->listen_proxy_proto) {
+					memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+					ws->our_addr_len = sizeof(ws->our_addr);
+					if (getsockname(fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
+						ws->our_addr_len = 0;
+				}
+
 				pid = fork();
 				if (pid == 0) {	/* child */
 					/* close any open descriptors, and erase
@@ -1245,6 +1252,7 @@ fork_failed:
 					/* add_proc */
 					ctmp = new_proc(s, pid, cmd_fd[0], 
 							&ws->remote_addr, ws->remote_addr_len,
+							&ws->our_addr, ws->our_addr_len,
 							ws->sid, sizeof(ws->sid));
 					if (ctmp == NULL) {
 						kill(pid, SIGTERM);

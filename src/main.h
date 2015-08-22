@@ -99,6 +99,8 @@ typedef struct proc_st {
 
 	struct sockaddr_storage remote_addr; /* peer address */
 	socklen_t remote_addr_len;
+	struct sockaddr_storage our_addr; /* our address */
+	socklen_t our_addr_len;
 
 	/* The SID present in the cookie. Used for session control only */
 	uint8_t sid[SID_SIZE];
@@ -265,6 +267,7 @@ int run_sec_mod(main_server_st * s, int *sync_fd);
 
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
+			struct sockaddr_storage *our_addr, socklen_t our_addr_len,
 			uint8_t *sid, size_t sid_size);
 
 /* kill the pid */

@@ -87,10 +87,9 @@ static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 void exit_worker(worker_st * ws);
-
 static void exit_worker_reason(worker_st * ws, unsigned reason);
-
 static int connect_handler(worker_st * ws);
+static void session_info_send(worker_st * ws);
 
 static void handle_alarm(int signo)
 {
@@ -468,17 +467,11 @@ void vpn_server(struct worker_st *ws)
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
 		GNUTLS_S_FATAL_ERR(session, ret);
 
-		if (!ws->config->listen_proxy_proto) {
-			memset(&ws->our_addr, 0, sizeof(ws->our_addr));
-			ws->our_addr_len = sizeof(ws->our_addr);
-			if (getsockname(ws->conn_fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
-				ws->our_addr_len = 0;
-		}
-
 		oclog(ws, LOG_DEBUG, "TLS handshake completed");
 	} else {
 		oclog(ws, LOG_DEBUG, "Accepted unix connection");
 	}
+	session_info_send(ws);
 
 	memset(&settings, 0, sizeof(settings));
 
@@ -627,6 +620,15 @@ void session_info_send(worker_st * ws)
 
 	if (ws->req.user_agent[0] != 0) {
 		msg.user_agent = ws->req.user_agent;
+	}
+
+	if (ws->config->listen_proxy_proto) {
+		msg.our_addr.data = (uint8_t*)&ws->our_addr;
+		msg.our_addr.len = ws->our_addr_len;
+		msg.has_our_addr = 1;
+		msg.remote_addr.data = (uint8_t*)&ws->remote_addr;
+		msg.remote_addr.len = ws->remote_addr_len;
+		msg.has_remote_addr = 1;
 	}
 
 	send_msg_to_main(ws, CMD_SESSION_INFO, &msg,
@@ -1863,7 +1865,6 @@ static int connect_handler(worker_st * ws)
 	bandwidth_init(&ws->b_rx, ws->config->rx_per_sec);
 	bandwidth_init(&ws->b_tx, ws->config->tx_per_sec);
 
-	session_info_send(ws);
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
 	/* worker main loop  */

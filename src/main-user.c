@@ -72,11 +72,19 @@ const char* script;
 		setenv("ID", real, 1);
 
 		if (proc->remote_addr_len > 0) {
-			if (getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST) != 0) {
-				mslog(s, proc, LOG_DEBUG, "cannot determine peer address; script failed");
+			if ((ret=getnameinfo((void*)&proc->remote_addr, proc->remote_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST)) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine peer address: %s; script failed", gai_strerror(ret));
 				exit(1);
 			}
 			setenv("IP_REAL", real, 1);
+		}
+
+		if (proc->our_addr_len > 0) {
+			if ((ret=getnameinfo((void*)&proc->our_addr, proc->our_addr_len, real, sizeof(real), NULL, 0, NI_NUMERICHOST)) != 0) {
+				mslog(s, proc, LOG_DEBUG, "cannot determine our address: %s", gai_strerror(ret));
+			} else {
+				setenv("IP_REAL_LOCAL", real, 1);
+			}
 		}
 
 		if (proc->ipv4 != NULL || proc->ipv6 != NULL) {

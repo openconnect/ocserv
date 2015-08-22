@@ -141,6 +141,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
+			struct sockaddr_storage *our_addr, socklen_t our_addr_len,
 			uint8_t *sid, size_t sid_size)
 {
 struct proc_st *ctmp;
@@ -157,6 +158,9 @@ struct proc_st *ctmp;
 
 	memcpy(&ctmp->remote_addr, remote_addr, remote_addr_len);
 	ctmp->remote_addr_len = remote_addr_len;
+
+	memcpy(&ctmp->our_addr, our_addr, our_addr_len);
+	ctmp->our_addr_len = our_addr_len;
 
 	list_add(&s->proc_list.head, &(ctmp->list));
 	put_into_cgroup(s, s->config->cgroup, pid);
@@ -441,6 +445,18 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 			if (tmsg->user_agent)
 				strlcpy(proc->user_agent, tmsg->user_agent,
 					 sizeof(proc->user_agent));
+
+			if (s->config->listen_proxy_proto) {
+				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {
+					memcpy(&proc->remote_addr, tmsg->remote_addr.data, tmsg->remote_addr.len);
+					proc->remote_addr_len = tmsg->remote_addr.len;
+				}
+
+				if (tmsg->has_our_addr && tmsg->our_addr.len <= sizeof(struct sockaddr_storage)) {
+					memcpy(&proc->our_addr, tmsg->our_addr.data, tmsg->our_addr.len);
+					proc->our_addr_len = tmsg->our_addr.len;
+				}
+			}
 
 			session_info_msg__free_unpacked(tmsg, &pa);
 		}

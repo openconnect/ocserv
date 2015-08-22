@@ -17,6 +17,8 @@
    |                      |                      |
    | -----------------AUTH_REP-----------------> |
    |                      |                      |
+   | <------------SESSION_INFO------------------ |
+   |                      |                      |
    |                      | <-- CLI_STATS ------ |
    |                      |            (disconnect)
    | ---SESSION_CLOSE---> |
@@ -140,6 +142,12 @@ message session_info_msg
 	required string user_agent = 3;
 	optional string cstp_compr = 4;
 	optional string dtls_compr = 5;
+	/* these two are of type sockaddr_storage,
+	 * and contain the addresses we got from proxy
+	 * protocol (if any).
+	 */
+	optional bytes our_addr = 6;
+	optional bytes remote_addr = 7;
 }
 
 /* WORKER_BAN_IP: sent from worker to main */

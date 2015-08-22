@@ -115,6 +115,13 @@ sleep 2
 
 kill $PID
 
+check_for_file /tmp/connect/ok
+if test $? != 0;then
+	echo "There was an issue in connect script"
+	stop
+fi
+$DOCKER exec $IMAGE_NAME cat /tmp/connect/ok
+
 sleep 4
 
 #check whether /tmp/disconnect/ok was created

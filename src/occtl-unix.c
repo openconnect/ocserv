@@ -779,7 +779,12 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 			groupname = NO_GROUP;
 
 		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
-		print_pair_value(out, params, "State", args->user[i]->status, "Remote IP", args->user[i]->ip, 1);
+		print_single_value(out, params, "State", args->user[i]->status, 1);
+		if (args->user[i]->has_mtu != 0)
+			print_pair_value(out, params, "Device", args->user[i]->tun, "MTU", int2str(tmpbuf, args->user[i]->mtu), 1);
+		else
+			print_single_value(out, params, "Device", args->user[i]->tun, 1);
+		print_pair_value(out, params, "Remote IP", args->user[i]->ip, "Local Device IP", args->user[i]->local_dev_ip, 1);
 
 		if (args->user[i]->local_ip != NULL && args->user[i]->local_ip[0] != 0 &&
 		    args->user[i]->remote_ip != NULL && args->user[i]->remote_ip[0] != 0) {
@@ -789,11 +794,6 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		    args->user[i]->remote_ip6 != NULL && args->user[i]->remote_ip6[0] != 0) {
 			print_pair_value(out, params, "IPv6", args->user[i]->local_ip6, "P-t-P IPv6", args->user[i]->remote_ip6, 1);
 		}
-
-		if (args->user[i]->has_mtu != 0)
-			print_pair_value(out, params, "Device", args->user[i]->tun, "MTU", int2str(tmpbuf, args->user[i]->mtu), 1);
-		else
-			print_single_value(out, params, "Device", args->user[i]->tun, 1);
 
 		print_single_value(out, params, "User-Agent", args->user[i]->user_agent, 1);
 

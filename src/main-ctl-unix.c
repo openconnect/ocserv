@@ -266,6 +266,17 @@ static int append_user_info(method_ctx *ctx,
 		strtmp = "";
 	rep->ip = strtmp;
 
+	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
+	if (ipbuf == NULL)
+		return -1;
+
+	strtmp =
+	    human_addr2((struct sockaddr *)&ctmp->our_addr,
+			ctmp->our_addr_len, ipbuf, IPBUF_SIZE, 0);
+	if (strtmp == NULL)
+		strtmp = "";
+	rep->local_dev_ip = strtmp;
+
 	rep->tun = ctmp->tun_lease.name;
 
 	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);

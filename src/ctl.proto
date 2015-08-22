@@ -45,6 +45,7 @@ message user_info_rep
 	optional string cstp_compr = 23;
 	optional string dtls_compr = 24;
 	repeated string no_routes = 25;
+	optional string local_dev_ip = 26;
 }
 
 message user_list_rep

@@ -40,6 +40,10 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 	if (!buf || !buflen)
 		return NULL;
 
+	if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6) {
+		return NULL;
+	}
+
 	if (full != 0 && salen == sizeof(struct sockaddr_in6) &&
 		((struct sockaddr_in6*)sa)->sin6_port != 0) {
 		*buf = '[';

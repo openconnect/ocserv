@@ -450,12 +450,19 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {
 					memcpy(&proc->remote_addr, tmsg->remote_addr.data, tmsg->remote_addr.len);
 					proc->remote_addr_len = tmsg->remote_addr.len;
+
+					/* If the address is in the BAN list, terminate it */
+					if (check_if_banned(s, &proc->remote_addr, proc->remote_addr_len) != 0) {
+						if (proc->pid != -1 && proc->pid != 0)
+							kill(proc->pid, SIGTERM);
+					}
 				}
 
 				if (tmsg->has_our_addr && tmsg->our_addr.len <= sizeof(struct sockaddr_storage)) {
 					memcpy(&proc->our_addr, tmsg->our_addr.data, tmsg->our_addr.len);
 					proc->our_addr_len = tmsg->our_addr.len;
 				}
+
 			}
 
 			session_info_msg__free_unpacked(tmsg, &pa);

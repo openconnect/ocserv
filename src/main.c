@@ -1177,9 +1177,16 @@ int main(int argc, char** argv)
 					break;
 				}
 
-				if (check_if_banned(s, &ws->remote_addr, ws->remote_addr_len) != 0) {
-					close(fd);
-					break;
+				if (ws->conn_type != SOCK_TYPE_UNIX && !s->config->listen_proxy_proto) {
+					memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+					ws->our_addr_len = sizeof(ws->our_addr);
+					if (getsockname(fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
+						ws->our_addr_len = 0;
+
+					if (check_if_banned(s, &ws->remote_addr, ws->remote_addr_len) != 0) {
+						close(fd);
+						break;
+					}
 				}
 
 				/* Create a command socket */
@@ -1188,13 +1195,6 @@ int main(int argc, char** argv)
 					mslog(s, NULL, LOG_ERR, "error creating command socket");
 					close(fd);
 					break;
-				}
-
-				if (ws->conn_type != SOCK_TYPE_UNIX && !s->config->listen_proxy_proto) {
-					memset(&ws->our_addr, 0, sizeof(ws->our_addr));
-					ws->our_addr_len = sizeof(ws->our_addr);
-					if (getsockname(fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
-						ws->our_addr_len = 0;
 				}
 
 				pid = fork();

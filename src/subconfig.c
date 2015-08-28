@@ -84,10 +84,14 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 		}
 		len2 = p3 - p2;
 
-		while (c_isspace(p[len-1]))
-			len--;
-		while (c_isspace(p2[len2-1]))
-			len2--;
+		if (len > 0) {
+			while (c_isspace(p[len-1]))
+				len--;
+		}
+		if (len2 > 0) {
+			while (c_isspace(p2[len2-1]))
+				len2--;
+		}
 
 		out[pos].name = talloc_strndup(pool, p, len);
 		out[pos].value = talloc_strndup(pool, p2, len2);

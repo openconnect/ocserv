@@ -373,6 +373,9 @@ static int append_user_info(method_ctx *ctx,
 	tmp *= 1000;
 	rep->tx_per_sec = tmp;
 
+	rep->domains = ctx->s->config->split_dns;
+	rep->n_domains = ctx->s->config->split_dns_size;
+
 	if (ctmp->config.dns_size > 0) {
 		rep->dns = ctmp->config.dns;
 		rep->n_dns = ctmp->config.dns_size;

@@ -835,6 +835,9 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		if (print_list_entries(out, params, "NBNS", args->user[i]->nbns, args->user[i]->n_nbns, 1) < 0)
 			goto error_parse;
 
+		if (print_list_entries(out, params, "Split-DNS-Domains", args->user[i]->domains, args->user[i]->n_domains, 1) < 0)
+			goto error_parse;
+
 		if ((r = print_list_entries(out, params, "Routes", args->user[i]->routes, args->user[i]->n_routes, 1)) < 0)
 			goto error_parse;
 		if (r == 0) {

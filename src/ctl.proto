@@ -46,6 +46,7 @@ message user_info_rep
 	optional string dtls_compr = 24;
 	repeated string no_routes = 25;
 	optional string local_dev_ip = 26;
+	repeated string domains = 27; /* split-dns domains */
 }
 
 message user_list_rep

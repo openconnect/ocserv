@@ -6,6 +6,7 @@
   the local IP the client connected to.
 - occtl: Print the local IP the client connected to, with the client
   information.
+- occtl: Print the configured for the client split-dns domains.
 
 
 * Version 0.10.7 (released 2015-08-06)

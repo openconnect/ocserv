@@ -466,6 +466,7 @@ static acct_types_st avail_acct_types[] =
 #ifdef HAVE_RADIUS
 	{NAME("radius"), &radius_acct_funcs, radius_get_brackets_string},
 #endif
+	{NAME("pam"), NULL, NULL}
 };
 
 static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
@@ -476,6 +477,9 @@ static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
 	/* Set the accounting method */
 	for (i=0;i<sizeof(avail_acct_types)/sizeof(avail_acct_types[0]);i++) {
 		if (c_strncasecmp(acct, avail_acct_types[i].name, avail_acct_types[i].name_size) == 0) {
+			if (avail_acct_types[i].mod == NULL)
+				continue;
+
 			if (avail_acct_types[i].get_brackets_string)
 				config->acct.additional = avail_acct_types[i].get_brackets_string(config, acct+avail_acct_types[i].name_size);
 

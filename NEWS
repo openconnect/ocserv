@@ -4,6 +4,8 @@
   and occtl. Reported by Niels Peen.
 - Added the IP_REAL_LOCAL environment variable to scripts. This passes
   the local IP the client connected to.
+- The PAM accounting method was dropped as there was no practical
+  usage of it, the way it was implemented.
 - occtl: Print the local IP the client connected to, with the client
   information.
 - occtl: Print the configured for the client split-dns domains.

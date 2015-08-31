@@ -69,6 +69,9 @@ extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
 ASN1_TYPE _kkdcp_pkix1_asn = ASN1_TYPE_EMPTY;
 #endif
 
+int saved_argc = 0;
+char **saved_argv = NULL;
+
 int syslog_open = 0;
 static unsigned int terminate = 0;
 static unsigned int reload_conf = 0;
@@ -936,6 +939,9 @@ int main(int argc, char** argv)
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
 #endif
+
+	saved_argc = argc;
+	saved_argv = argv;
 
 	memset(&creds, 0, sizeof(creds));
 

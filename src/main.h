@@ -39,6 +39,9 @@
 
 #define COOKIE_KEY_SIZE 16
 
+extern int saved_argc;
+extern char **saved_argv;
+
 extern sigset_t sig_default_set;
 int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config);
 void reload_cfg_file(void *pool, struct perm_cfg_st* config);

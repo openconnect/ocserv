@@ -60,7 +60,7 @@ PROTOBUF_SOURCES += protobuf/protobuf-c/protobuf-c.h protobuf/protobuf-c/protobu
 endif
 
 # Files common to ocserv and occtl.
-COMMON_SOURCES=common.c common.h system.c system.h setproctitle.c setproctitle.h
+COMMON_SOURCES=common.c common.h system.c system.h
 
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
@@ -86,7 +86,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	proc-search.c proc-search.h http-heads.h \
 	main-ban.c main-ban.h common-config.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	$(PROTOBUF_SOURCES) sec-mod-acct.h
+	$(PROTOBUF_SOURCES) sec-mod-acct.h setproctitle.c setproctitle.h
 
 if ENABLE_COMPRESSION
 ocserv_SOURCES += lzs.c lzs.h

@@ -20,6 +20,8 @@
 #include <config.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include "main.h"
+
 #if !defined(HAVE_SETPROCTITLE)
 
 # if defined(__linux__)
@@ -41,6 +43,18 @@ void setproctitle (const char *fmt, ...)
 
 	prctl (PR_SET_NAME, name);
 #  endif
+	/* Copied systemd's implementation under LGPL by Lennart Poettering */
+	if (saved_argc > 0) {
+		int i;
+
+		if (saved_argv[0])
+			strncpy(saved_argv[0], name, strlen(saved_argv[0]));
+		for (i = 1; i < saved_argc; i++) {
+			if (!saved_argv[i])
+				break;
+			memset(saved_argv[i], 0, strlen(saved_argv[i]));
+		}
+	}
 }
 # else /* not linux */
 

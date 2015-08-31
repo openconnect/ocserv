@@ -33,7 +33,6 @@
 #include <c-ctype.h>
 #include <auth/pam.h>
 #include <auth/radius.h>
-#include <acct/pam.h>
 #include <acct/radius.h>
 #include <auth/plain.h>
 #include <auth/gssapi.h>
@@ -464,9 +463,6 @@ typedef struct acct_types_st {
 
 static acct_types_st avail_acct_types[] =
 {
-#ifdef HAVE_PAM
-	{NAME("pam"), &pam_acct_funcs, NULL},
-#endif
 #ifdef HAVE_RADIUS
 	{NAME("radius"), &radius_acct_funcs, radius_get_brackets_string},
 #endif

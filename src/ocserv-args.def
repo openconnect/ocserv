@@ -130,9 +130,6 @@ An example configuration file follows.
 #enable-auth = "gssapi[keytab=/etc/key.tab,require-local-user-map=true,tgt-freshness-time=900]"
 
 # Accounting methods available:
-# pam: can only be combined with PAM authentication method, it provides
-#      a session opened using PAM.
-#
 # radius: can be combined with any authentication method, it provides
 #      radius accounting to available users (see also stats-report-time).
 #

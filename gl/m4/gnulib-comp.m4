@@ -1,5 +1,5 @@
 # DO NOT EDIT! GENERATED AUTOMATICALLY!
-# Copyright (C) 2002-2014 Free Software Foundation, Inc.
+# Copyright (C) 2002-2015 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,7 +39,6 @@ AC_DEFUN([gl_EARLY],
   m4_pattern_allow([^gl_LTLIBOBJS$])dnl a variable
   AC_REQUIRE([gl_PROG_AR_RANLIB])
   # Code from module absolute-header:
-  # Code from module base64:
   # Code from module c-ctype:
   # Code from module c-strcase:
   # Code from module cloexec:
@@ -114,7 +113,6 @@ AC_DEFUN([gl_INIT],
   m4_pushdef([gl_LIBSOURCES_DIR], [])
   gl_COMMON
   gl_source_base='gl'
-  gl_FUNC_BASE64
   gl_MODULE_INDICATOR_FOR_TESTS([cloexec])
   gl_FUNC_CLOSE
   if test $REPLACE_CLOSE = 1; then
@@ -409,8 +407,6 @@ AC_DEFUN([gl_FILE_LIST], [
   build-aux/snippet/arg-nonnull.h
   build-aux/snippet/c++defs.h
   build-aux/snippet/warn-on-use.h
-  lib/base64.c
-  lib/base64.h
   lib/c-ctype.c
   lib/c-ctype.h
   lib/c-strcase.h
@@ -466,7 +462,6 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/unistd.in.h
   m4/00gnulib.m4
   m4/absolute-header.m4
-  m4/base64.m4
   m4/close.m4
   m4/dup2.m4
   m4/errno_h.m4

@@ -6,6 +6,7 @@
   the local IP the client connected to.
 - The PAM accounting method was dropped as there was no practical
   usage of it, the way it was implemented.
+- When assigning IPv6 addresses use the whole available netmask.
 - occtl: Print the local IP the client connected to, with the client
   information.
 - occtl: Print the configured for the client split-dns domains.

@@ -37,6 +37,7 @@
 #include <common.h>
 #include <syslog.h>
 #include <vpn.h>
+#include <base64-helper.h>
 #include <tlslib.h>
 #include <sec-mod.h>
 #include <ccan/hash/hash.h>
@@ -115,7 +116,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip, unsigned pid)
 		goto fail;
 	}
 
-	base64_encode((char *)e->sid, SID_SIZE, (char *)e->auth_info.psid, sizeof(e->auth_info.psid));
+	oc_base64_encode((char *)e->sid, SID_SIZE, (char *)e->auth_info.psid, sizeof(e->auth_info.psid));
 	e->time = time(0);
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {

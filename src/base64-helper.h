@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Red Hat, Inc.
+ * Copyright (C) 2015 Red Hat
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -18,40 +18,21 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
-#ifndef RADIUS_H
-#define RADIUS_H
+#ifndef BASE64_HELPER_H
+# define BASE64_HELPER_H
 
-#include <sec-mod-auth.h>
+#include <nettle/base64.h>
 
-struct radius_ctx_st {
-	char username[MAX_USERNAME_SIZE*2];
-	char groupname[MAX_GROUPNAME_SIZE];
+/* Prototypes compatible with the gnulib's */
 
-	char remote_ip[MAX_IP_STR];
-	char our_ip[MAX_IP_STR];
-	unsigned interim_interval_secs;
-	unsigned session_timeout_secs;
+int
+oc_base64_decode(const uint8_t *src, unsigned src_length,
+	      uint8_t *dst, size_t *dst_length);
 
-	/* variables for configuration */
-	char ipv4[MAX_IP_STR];
-	char ipv4_mask[MAX_IP_STR];
-	char ipv4_dns1[MAX_IP_STR];
-	char ipv4_dns2[MAX_IP_STR];
+int oc_base64_decode_alloc(void *pool, const char *in, size_t inlen,
+                           char **out, size_t *outlen);
 
-	char ipv6[MAX_IP_STR];
-	char ipv6_net[MAX_IP_STR];
-	uint16_t ipv6_subnet_prefix;
-	char ipv6_dns1[MAX_IP_STR];
-	char ipv6_dns2[MAX_IP_STR];
-
-	char **routes;
-	unsigned routes_size;
-
-	const char *pass_msg;
-	unsigned retries;
-	unsigned id;
-};
-
-extern const struct auth_mod_st radius_auth_funcs;
+void oc_base64_encode (const char *restrict in, size_t inlen,
+                       char *restrict out, size_t outlen);
 
 #endif

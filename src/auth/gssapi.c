@@ -35,7 +35,7 @@
 #include <gssapi/gssapi.h>
 #include <gssapi/gssapi_ext.h>
 #include <gssapi/gssapi_krb5.h>
-#include <gl/base64.h>
+#include <base64-helper.h>
 #include "common-config.h"
 
 static gss_cred_id_t glob_creds;
@@ -229,7 +229,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
-	ret = base64_decode_alloc(spnego, strlen(spnego), &raw, &raw_len);
+	ret = oc_base64_decode_alloc(pctx, spnego, strlen(spnego), &raw, &raw_len);
 	if (ret == 0) {
 		syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
 		return ERR_AUTH_FAIL;
@@ -240,7 +240,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 	ret = gss_accept_sec_context(&minor, &pctx->gssctx, glob_creds, &buf,
 		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
 		&flags, &time, &pctx->delegated_creds);
-	free(raw);
+	talloc_free(raw);
 
 	if (ret == GSS_S_CONTINUE_NEEDED) {
 		gss_release_name(&minor, &client);
@@ -291,7 +291,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	int ret;
 
 	/* nothing to be done */
-	ret = base64_decode_alloc(spnego, spnego_len, &raw, &raw_len);
+	ret = oc_base64_decode_alloc(pctx, spnego, spnego_len, &raw, &raw_len);
 	if (ret == 0) {
 		syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
 		return ERR_AUTH_FAIL;
@@ -302,7 +302,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 	ret = gss_accept_sec_context(&minor, &pctx->gssctx, glob_creds, &buf,
 		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
 		&flags, &time, &pctx->delegated_creds);
-	free(raw);
+	talloc_free(raw);
 
 	if (ret == GSS_S_CONTINUE_NEEDED) {
 		gss_release_name(&minor, &client);
@@ -329,10 +329,12 @@ static int gssapi_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 
 	/* our msg is our SPNEGO reply */
 	if (pctx->msg.value != NULL) {
-		length = BASE64_LENGTH(pctx->msg.length)+1;
+		length = BASE64_ENCODE_RAW_LENGTH(pctx->msg.length)+1;
 		pst->msg_str = talloc_size(pool, length);
 
-		base64_encode((char *)pctx->msg.value, pctx->msg.length, pst->msg_str, length);
+		oc_base64_encode(pctx->msg.value, pctx->msg.length,
+			         pst->msg_str, length);
+
 		gss_release_buffer(&min, &pctx->msg);
 		pctx->msg.value = NULL;
 	}

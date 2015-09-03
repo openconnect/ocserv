@@ -24,7 +24,7 @@
 #include <cookies.h>
 #include <gnutls/abstract.h>
 #include <ccan/htable/htable.h>
-#include <base64.h>
+#include <nettle/base64.h>
 
 #define SESSION_STR "(session: %.5s)"
 
@@ -52,7 +52,7 @@ typedef struct stats_st {
 typedef struct common_auth_info_st {
 	char username[MAX_USERNAME_SIZE*2];
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
-	char psid[BASE64_LENGTH(SID_SIZE) + 1]; /* printable */
+	char psid[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1]; /* printable */
 	char remote_ip[MAX_IP_STR];
 	char our_ip[MAX_IP_STR];
 	char ipv4[MAX_IP_STR];

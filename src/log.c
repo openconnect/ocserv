@@ -23,7 +23,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <base64.h>
+#include <base64-helper.h>
 
 #include <vpn.h>
 #include <worker.h>
@@ -190,7 +190,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 		return;
 
 	if (b64) {
-		base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -215,7 +215,7 @@ void  oclog_hex(const worker_st* ws, int priority,
 		return;
 
 	if (b64) {
-		base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);
@@ -240,7 +240,7 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 		return;
 
 	if (b64) {
-		base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
+		oc_base64_encode((char*)bin, bin_size, (char*)buf, sizeof(buf));
 	} else {
 		buf_size = sizeof(buf);
 		ret = gnutls_hex_encode(&data, buf, &buf_size);

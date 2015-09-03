@@ -77,7 +77,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
 	vasprintf.c vasprintf.h worker-proxyproto.c \
 	proc-search.c proc-search.h http-heads.h ip-util.c ip-util.h \
-	main-ban.c main-ban.h common-config.h \
+	main-ban.c main-ban.h common-config.h base64-helper.c base64-helper.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	$(PROTOBUF_SOURCES) sec-mod-acct.h setproctitle.c setproctitle.h
 
@@ -96,7 +96,7 @@ ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
-	$(LIBTASN1_LIBS) $(LIBOATH_LIBS)
+	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS)
 
 
 if PCL

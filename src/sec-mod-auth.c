@@ -49,6 +49,7 @@
 #include <auth/pam.h>
 #include <sec-mod.h>
 #include <vpn.h>
+#include <base64-helper.h>
 #include <sec-mod-sup-config.h>
 #include <sec-mod-acct.h>
 
@@ -416,8 +417,8 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		char tmp[BASE64_LENGTH(SID_SIZE) + 1];
-		base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
+		char tmp[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+		oc_base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
 		seclog(sec, LOG_INFO, "session open but with non-existing SID: %s!", tmp);
 		return send_failed_session_open_reply(sec, fd);
 	}
@@ -503,8 +504,8 @@ int handle_sec_auth_session_close(sec_mod_st *sec, int fd, const SecAuthSessionM
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		char tmp[BASE64_LENGTH(SID_SIZE) + 1];
-		base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
+		char tmp[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+		oc_base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
 		seclog(sec, LOG_INFO, "session close but with non-existing SID: %s", tmp);
 		return send_msg(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
@@ -596,8 +597,8 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
-		char tmp[BASE64_LENGTH(SID_SIZE) + 1];
-		base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
+		char tmp[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+		oc_base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
 		seclog(sec, LOG_INFO, "session stats but with non-existing SID: %s", tmp);
 		return -1;
 	}

@@ -34,7 +34,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <ipc.pb-c.h>
-#include <base64.h>
+#include <base64-helper.h>
 
 #include <vpn.h>
 #include "html.h"
@@ -169,7 +169,7 @@ static int append_group_str(worker_st * ws, str_st *str, const char *group)
 int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsigned pcounter)
 {
 	int ret;
-	char context[BASE64_LENGTH(SID_SIZE) + 1];
+	char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
 	unsigned int i, j;
 	str_st str;
 	const char *login_msg_start;
@@ -200,7 +200,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 
 
 	if (ws->sid_set != 0) {
-		base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
+		oc_base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
 			      sizeof(context));
 
 		ret =
@@ -916,7 +916,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 {
 	int ret, size;
-	char str_cookie[BASE64_LENGTH(ws->cookie_size)+1];
+	char str_cookie[BASE64_ENCODE_RAW_LENGTH(ws->cookie_size)+1];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 	const char *success_msg_head;
@@ -936,7 +936,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		success_msg_foot_size = sizeof(oc_success_msg_foot)-1;
 	}
 
-	base64_encode((char *)ws->cookie, ws->cookie_size,
+	oc_base64_encode((char *)ws->cookie, ws->cookie_size,
 		      (char *)str_cookie, str_cookie_size);
 
 	/* reply */
@@ -985,10 +985,10 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		return -1;
 
 	if (ws->sid_set != 0) {
-		char context[BASE64_LENGTH(SID_SIZE) + 1];
+		char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
 
-		base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
-			      sizeof(context));
+		oc_base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
+			         sizeof(context));
 
 		ret =
 		    cstp_printf(ws,

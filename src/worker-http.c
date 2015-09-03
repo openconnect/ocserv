@@ -18,7 +18,6 @@
  */
 
 #include <config.h>
-
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -31,7 +30,8 @@
 # include "lzs.h"
 #endif
 
-#include <base64.h>
+#include <nettle/base64.h>
+#include <base64-helper.h>
 #include <c-strcase.h>
 #include <c-ctype.h>
 
@@ -165,6 +165,7 @@ struct compression_method_st comp_methods[] = {
 	}
 };
 #endif
+
 
 static
 void header_value_check(struct worker_st *ws, struct http_req_st *req)
@@ -356,14 +357,14 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
-				nlen = tmplen;
+				nlen = BASE64_DECODE_LENGTH(tmplen);
 				ws->cookie = talloc_size(ws, nlen);
 				if (ws->cookie == NULL)
 					return;
 
 				ret =
-				    base64_decode((char *)p, tmplen,
-						  (char *)ws->cookie, &nlen);
+				    oc_base64_decode((uint8_t*)p, tmplen,
+						  ws->cookie, &nlen);
 				if (ret == 0) {
 					oclog(ws, LOG_DEBUG,
 					      "could not decode cookie: %.*s",
@@ -382,10 +383,10 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
-				nlen = sizeof(ws->sid);
+				nlen = BASE64_DECODE_LENGTH(tmplen);
 				ret =
-				    base64_decode((char *)p, tmplen,
-						  (char *)ws->sid, &nlen);
+				    oc_base64_decode((uint8_t*)p, tmplen,
+						  ws->sid, &nlen);
 				if (ret == 0 || nlen != sizeof(ws->sid)) {
 					oclog(ws, LOG_DEBUG,
 					      "could not decode sid: %.*s",

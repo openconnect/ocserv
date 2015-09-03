@@ -255,7 +255,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 			memcpy(SA_IN_U8_P(&rnd), proc->ipv4_seed, 4);
 		} else {
 			ip_from_seed(SA_IN_U8_P(&rnd), sizeof(struct in_addr),
-					SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+				     SA_IN_U8_P(&rnd), sizeof(struct in_addr));
 		}
 		max_loops--;
 
@@ -417,11 +417,11 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		}
 		
 		if (max_loops == MAX_IP_TRIES) {
-			memset(SA_IN6_U8_P(&rnd), 0, sizeof(struct in6_addr));
-			memcpy(SA_IN6_U8_P(&rnd)+sizeof(struct in6_addr)-5, proc->ipv4_seed, 4);
+			ip_from_seed(proc->ipv4_seed, 4,
+				     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
 		} else {
 			ip_from_seed(SA_IN6_U8_P(&rnd), sizeof(struct in6_addr),
-					SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
+				     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
 		}
 		max_loops--;
 			

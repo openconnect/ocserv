@@ -134,7 +134,6 @@ An example configuration file follows.
 #      radius accounting to available users (see also stats-report-time).
 #
 # Only one accounting method can be specified.
-#acct = "pam"
 #acct = "radius[config=/etc/radiusclient/radiusclient.conf]"
 
 # Use listen-host to limit to specific IPs or to the IPs of a provided 

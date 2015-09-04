@@ -123,6 +123,8 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	const char *reason = "Unknown";
 	kkdcp_realm_st *kr;
 
+	oclog(ws, LOG_INFO, "Processing KKDCP request");
+
 	for (i=0;i<ws->config->kkdcp_size;i++) {
 		if (ws->config->kkdcp[i].url && strcmp(ws->config->kkdcp[i].url, req->url) == 0) {
 			kkdcp = &ws->config->kkdcp[i];

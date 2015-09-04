@@ -55,7 +55,7 @@
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
 
 static char pid_file[_POSIX_PATH_MAX] = "";
-static const char* cfg_file = DEFAULT_CFG_FILE;
+static char cfg_file[_POSIX_PATH_MAX] = DEFAULT_CFG_FILE;
 
 struct cfg_options {
 	const char* name;
@@ -1044,7 +1044,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 		(*config)->config->debug = OPT_VALUE_DEBUG;
 
 	if (HAVE_OPT(CONFIG)) {
-		cfg_file = OPT_ARG(CONFIG);
+		strlcpy(cfg_file, OPT_ARG(CONFIG), sizeof(cfg_file));
 	} else if (access(cfg_file, R_OK) != 0) {
 		fprintf(stderr, "%s -c [config]\nUse %s --help for more information.\n", argv[0], argv[0]);
 		exit(1);

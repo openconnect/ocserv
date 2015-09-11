@@ -630,7 +630,11 @@ struct key_cb_data * cdata;
 			}
 
 			ret = gnutls_pcert_list_import_x509_raw(pcert_list, &pcert_list_size,
-				&data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+				&data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|
+#ifdef GNUTLS_X509_CRT_LIST_SORT
+							    GNUTLS_X509_CRT_LIST_SORT|
+#endif
+							    GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
 			GNUTLS_FATAL_ERR(ret);
 
 			gnutls_free(data.data);

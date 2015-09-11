@@ -1,3 +1,8 @@
+* Version 0.10.9 (unreleased)
+- When compiled with GnuTLS 3.4 automatically sort the certificate list
+  to be imported.
+
+
 * Version 0.10.8 (released 2015-09-04)
 - Pass the proxy protocol information at earlier stage to main process,
   to allow the correct information to be passed at the connect script

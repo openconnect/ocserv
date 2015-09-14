@@ -720,7 +720,7 @@ const char* perr;
 			mslog(s, NULL, LOG_INFO, "processed %d CA certificate(s)", ret);
 		}
 
-		tls_reload_crl(s, creds);
+		tls_reload_crl(s, creds, 1);
 
 		gnutls_certificate_set_verify_function(creds->xcred,
 						       verify_certificate_cb);
@@ -740,27 +740,46 @@ const char* perr;
 	return;
 }
 
-void tls_reload_crl(main_server_st* s, tls_st *creds)
+void tls_reload_crl(main_server_st* s, tls_st *creds, unsigned force)
 {
-int ret;
+int ret, e;
+static time_t old_mtime = 0;
+struct stat st;
+
+	if (force)
+		old_mtime = 0;
 
 	if (s->config->cert_req != GNUTLS_CERT_IGNORE && s->config->crl != NULL) {
-		ret =
-		    gnutls_certificate_set_x509_crl_file(creds->xcred,
-							 s->config->crl,
-							 GNUTLS_X509_FMT_PEM);
-		if (ret < 0) {
-			/* ignore the CRL file when empty */
-			if (ret == GNUTLS_E_BASE64_DECODING_ERROR) {
-				mslog(s, NULL, LOG_ERR, "empty or unreadable CRL file (%s); check documentation to generate an empty CRL",
-					s->config->crl);
-			} else {
-				mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
-					s->config->crl, gnutls_strerror(ret));
-			}
-			exit(1);
+		ret = stat(s->config->crl, &st);
+		if (ret == -1) {
+			e = errno;
+			mslog(s, NULL, LOG_INFO, "CRL file (%s) not found: %s; check documentation to generate an empty CRL",
+				s->config->crl, strerror(e));
+			return;
 		}
-		mslog(s, NULL, LOG_INFO, "loaded CRL: %s", s->config->crl);
+
+		/* reload only if it is a newer file */
+		if (st.st_mtime > old_mtime) {
+			ret =
+			    gnutls_certificate_set_x509_crl_file(creds->xcred,
+								 s->config->crl,
+								 GNUTLS_X509_FMT_PEM);
+			if (ret < 0) {
+				/* ignore the CRL file when empty */
+				if (ret == GNUTLS_E_BASE64_DECODING_ERROR) {
+					mslog(s, NULL, LOG_ERR, "unreadable CRL file (%s)",
+						s->config->crl);
+				} else {
+					mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
+						s->config->crl, gnutls_strerror(ret));
+				}
+				exit(1);
+			}
+			mslog(s, NULL, LOG_INFO, "loaded CRL: %s", s->config->crl);
+			old_mtime = st.st_mtime;
+		} else {
+			mslog(s, NULL, LOG_DEBUG, "skipping already loaded CRL: %s", s->config->crl);
+		}
 	}
 }
 

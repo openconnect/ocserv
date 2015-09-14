@@ -848,7 +848,7 @@ unsigned total = 10;
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "reloading configuration");
 		reload_cfg_file(s->main_pool, s->perm_config);
-		tls_reload_crl(s, s->creds);
+		tls_reload_crl(s, s->creds, 1);
 		reload_conf = 0;
 		kill(s->sec_mod_pid, SIGHUP);
 	}
@@ -889,6 +889,9 @@ unsigned total = 10;
 	if (need_maintenance != 0) {
 		need_maintenance = 0;
 		mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
+
+		/* will make sure it only reloads when needed */
+		tls_reload_crl(s, s->creds, 0);
 		expire_tls_sessions(s);
 		cleanup_banned_entries(s);
 		alarm(MAINTAINANCE_TIME(s));

@@ -271,7 +271,9 @@ mobile-dpd = 1800
 try-mtu-discovery = false
 
 # The revocation list of the certificates issued by the 'ca-cert' above.
-# See the manual to generate an empty CRL initially.
+# See the manual to generate an empty CRL initially. The CRL will be reloaded
+# periodically when ocserv detects a change in the file. To force a reload use
+# SIGHUP.
 #crl = /path/to/crl.pem
 
 # If you have a certificate from a CA that provides an OCSP
@@ -819,7 +821,7 @@ $ certtool --generate-crl --load-ca-privkey ca-key.pem \
 	--template crl.tmpl --outfile crl.pem
 @end example
 After that you may want to notify ocserv of the new CRL by using
-the HUP signal.
+the HUP signal, or wait for it to reload it.
 
 When there are no revoked certificates an empty revocation list
 should be generated as follows.

@@ -3,6 +3,7 @@
   to be imported.
 - Reload the CRL on during periodic maintaince if its modification time
   changes.
+- Allow loading DER-encoded CRLs.
 
 
 * Version 0.10.8 (released 2015-09-04)

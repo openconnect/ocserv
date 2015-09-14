@@ -609,6 +609,7 @@ unsigned pcert_list_size, i;
 gnutls_privkey_t key;
 gnutls_datum_t data;
 struct key_cb_data * cdata;
+unsigned flags;
 
 	for (i=0;i<s->perm_config->key_size;i++) {
 		/* load the certificate */
@@ -629,12 +630,13 @@ struct key_cb_data * cdata;
 				return -1;
 			}
 
-			ret = gnutls_pcert_list_import_x509_raw(pcert_list, &pcert_list_size,
-				&data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|
-#ifdef GNUTLS_X509_CRT_LIST_SORT
-							    GNUTLS_X509_CRT_LIST_SORT|
+			flags = GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED;
+#if GNUTLS_VERSION_NUMBER >= 0x030400
+			flags |= GNUTLS_X509_CRT_LIST_SORT;
 #endif
-							    GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+
+			ret = gnutls_pcert_list_import_x509_raw(pcert_list, &pcert_list_size,
+								&data, GNUTLS_X509_FMT_PEM, flags);
 			GNUTLS_FATAL_ERR(ret);
 
 			gnutls_free(data.data);

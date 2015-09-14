@@ -744,8 +744,9 @@ const char* perr;
 
 void tls_reload_crl(main_server_st* s, tls_st *creds, unsigned force)
 {
-int ret, e;
+int ret, e, saved_ret;
 static time_t old_mtime = 0;
+static unsigned crl_type = GNUTLS_X509_FMT_PEM;
 struct stat st;
 
 	if (force)
@@ -765,12 +766,17 @@ struct stat st;
 			ret =
 			    gnutls_certificate_set_x509_crl_file(creds->xcred,
 								 s->config->crl,
-								 GNUTLS_X509_FMT_PEM);
-			if (ret == GNUTLS_E_BASE64_DECODING_ERROR)
+								 crl_type);
+			if (ret == GNUTLS_E_BASE64_DECODING_ERROR && crl_type == GNUTLS_X509_FMT_PEM) {
+				crl_type = GNUTLS_X509_FMT_DER;
+				saved_ret = ret;
 				ret =
 				    gnutls_certificate_set_x509_crl_file(creds->xcred,
 									 s->config->crl,
-									 GNUTLS_X509_FMT_DER);
+									 crl_type);
+				if (ret < 0)
+					ret = saved_ret;
+			}
 			if (ret < 0) {
 				/* ignore the CRL file when empty */
 				mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",

@@ -766,15 +766,15 @@ struct stat st;
 			    gnutls_certificate_set_x509_crl_file(creds->xcred,
 								 s->config->crl,
 								 GNUTLS_X509_FMT_PEM);
+			if (ret == GNUTLS_E_BASE64_DECODING_ERROR)
+				ret =
+				    gnutls_certificate_set_x509_crl_file(creds->xcred,
+									 s->config->crl,
+									 GNUTLS_X509_FMT_DER);
 			if (ret < 0) {
 				/* ignore the CRL file when empty */
-				if (ret == GNUTLS_E_BASE64_DECODING_ERROR) {
-					mslog(s, NULL, LOG_ERR, "unreadable CRL file (%s)",
-						s->config->crl);
-				} else {
-					mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
-						s->config->crl, gnutls_strerror(ret));
-				}
+				mslog(s, NULL, LOG_ERR, "error reading the CRL (%s) file: %s",
+					s->config->crl, gnutls_strerror(ret));
 				exit(1);
 			}
 			mslog(s, NULL, LOG_INFO, "loaded CRL: %s", s->config->crl);

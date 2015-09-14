@@ -54,6 +54,25 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 
 echo ok
 
+#Try DER encoded CRL
+
+certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
+	--outder --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
+if test $? != 0;then
+	kill $PID
+	exit 77
+fi
+
+echo "Reloading server"
+kill -HUP $PID
+sleep 5
+
+echo -n "Connecting to obtain cookie (with DER CRL)... "
+( $OPENCONNECT -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
 
 #revoke the certificate
 certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \

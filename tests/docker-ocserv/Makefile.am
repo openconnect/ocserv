@@ -6,7 +6,8 @@ EXTRA_DIST = passwd ocserv.conf Dockerfile-debian-tcp dev-tun.tgz myscript key.p
 	Dockerfile-fedora-radius-config radius-dictionary Dockerfile-debian-radius-config \
 	ocserv-proxyproto.conf Dockerfile-fedora-proxyproto haproxy-proxyproto.cfg \
 	haproxy-proxyproto-unix.cfg Dockerfile-fedora-proxyproto-unix ocserv-proxyproto-unix.conf \
-	proxy-connectscript
+	proxy-connectscript ocserv-pam-noauth.conf Dockerfile-fedora-pam-noauth \
+	pam-acct-ocserv
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

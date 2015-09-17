@@ -9,7 +9,8 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	user-config-explicit/test4 test-pass-opt-cert.config test-gssapi.config \
 	test-ban.config test-sighup.config test-gssapi-local-map.config \
 	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
-	server-key-ossl.pem server-key-p8.pem proxyproto-unix-test user-cn.pem
+	server-key-ossl.pem server-key-p8.pem proxyproto-unix-test user-cn.pem \
+	user-cert-testuser.pem
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -19,7 +20,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
 	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \
 	test-cookie-invalidation radius-test-config test-enc-key proxyproto-test \
-	proxyproto-unix-test
+	proxyproto-unix-test pam-noauth-test
 
 
 AM_CPPFLAGS = \
@@ -44,13 +45,7 @@ ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
 check_PROGRAMS = ipv4-prefix ipv6-prefix kkdcp-parsing json-escape
 
-TESTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
-	test-multi-cookie full-test test-group-pass test-pass-group-cert \
-	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
-	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip radius-test \
-	test-gssapi kerberos-test pam-test test-ban test-sighup ipv4-prefix \
-	radius-test-config kkdcp-parsing json-escape test-enc-key proxyproto-test \
-	proxyproto-unix-test
+TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

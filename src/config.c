@@ -32,6 +32,7 @@
 #include <c-strcase.h>
 #include <c-ctype.h>
 #include <auth/pam.h>
+#include <acct/pam.h>
 #include <auth/radius.h>
 #include <acct/radius.h>
 #include <auth/plain.h>
@@ -466,7 +467,9 @@ static acct_types_st avail_acct_types[] =
 #ifdef HAVE_RADIUS
 	{NAME("radius"), &radius_acct_funcs, radius_get_brackets_string},
 #endif
-	{NAME("pam"), NULL, NULL}
+#ifdef HAVE_PAM
+	{NAME("pam"), &pam_acct_funcs, NULL},
+#endif
 };
 
 static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)

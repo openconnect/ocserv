@@ -67,7 +67,7 @@ AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/
 	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c auth-unix.c \
 	auth-unix.h
 
-ACCT_SOURCES=acct/radius.c acct/radius.h
+ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \

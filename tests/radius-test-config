@@ -56,13 +56,22 @@ fi
 
 echo "Trying with correct password"
 echo "test" >pass-radius$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -u testtime --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 <pass-radius$TMP &
-PID=$!
+$OPENCONNECT $IP:$PORT_OCSERV -b -u testtime --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file ${srcdir}/pid1.$$ <pass-radius$TMP
+if test $? != 0;then
+	echo "Cannot connect to server"
+	stop
+fi
 
 #wait for openconnect
 sleep 5
 
 rm -f pass-radius$TMP
+
+if [ ! -f ${srcdir}/pid1.$$ ];then
+	echo "It was not possible to establish session!"
+	stop
+fi
+PID=`cat ${srcdir}/pid1.$$`
 
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.66.1

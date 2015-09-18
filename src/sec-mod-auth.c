@@ -446,7 +446,7 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 		strlcpy(e->auth_info.ipv6, req->ipv6, sizeof(e->auth_info.ipv6));
 
 	if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->open_session != NULL && e->session_is_open == 0) {
-		ret = sec->perm_config->acct.amod->open_session(e->auth_type, e->auth_ctx, &e->auth_info, req->sid.data, req->sid.len);
+		ret = sec->perm_config->acct.amod->open_session(e->auth_type, &e->auth_info, req->sid.data, req->sid.len);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_INFO, "denied session for user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
@@ -630,7 +630,7 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->ipv6)
 		strlcpy(e->auth_info.ipv6, req->ipv6, sizeof(e->auth_info.ipv6));
 
-	sec->perm_config->acct.amod->session_stats(e->auth_type, e->auth_ctx, &e->auth_info, &totals);
+	sec->perm_config->acct.amod->session_stats(e->auth_type, &e->auth_info, &totals);
 
 	return 0;
 }
@@ -813,7 +813,7 @@ void sec_auth_user_deinit(sec_mod_st *sec, client_entry_st *e)
 {
 	seclog(sec, LOG_DEBUG, "permamently closing session of user '%s' "SESSION_STR, e->auth_info.username, e->auth_info.psid);
 	if (sec->perm_config->acct.amod != NULL && sec->perm_config->acct.amod->close_session != NULL && e->session_is_open != 0) {
-		sec->perm_config->acct.amod->close_session(e->auth_type, e->auth_ctx, &e->auth_info, &e->saved_stats, e->discon_reason);
+		sec->perm_config->acct.amod->close_session(e->auth_type, &e->auth_info, &e->saved_stats, e->discon_reason);
 	}
 
 	if (e->auth_ctx != NULL) {

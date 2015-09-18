@@ -31,9 +31,9 @@ typedef struct acct_mod_st {
 	void (*global_deinit)(void);
 
 	/* The context provided below is of the authentication method */
-	int (*open_session)(unsigned auth_method, void *ctx, const common_auth_info_st *ai, const void *sid, unsigned sid_size); /* optional, may be null */
-	void (*session_stats)(unsigned auth_method, void *ctx, const common_auth_info_st *ai, struct stats_st *stats); /* optional, may be null */
-	void (*close_session)(unsigned auth_method, void *ctx, const common_auth_info_st *ai, struct stats_st *stats, unsigned discon_reason/*REASON_*/); /* optional may be null */
+	int (*open_session)(unsigned auth_method, const common_auth_info_st *ai, const void *sid, unsigned sid_size); /* optional, may be null */
+	void (*session_stats)(unsigned auth_method, const common_auth_info_st *ai, struct stats_st *stats); /* optional, may be null */
+	void (*close_session)(unsigned auth_method, const common_auth_info_st *ai, struct stats_st *stats, unsigned discon_reason/*REASON_*/); /* optional may be null */
 } acct_mod_st;
 
 /* The accounting messages exchanged with the worker thread are shown in ipc.proto.

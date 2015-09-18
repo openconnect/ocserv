@@ -306,9 +306,6 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 	CliStatsMsg msg = CLI_STATS_MSG__INIT;
 	int sd, ret, e;
 
-	if (now - ws->last_stats_msg < MIN_STATS_INTERVAL)
-		return;
-
 	ws->last_stats_msg = now;
 
 	sd = connect_to_secmod(ws);

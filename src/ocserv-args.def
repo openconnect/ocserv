@@ -134,7 +134,9 @@ An example configuration file follows.
 #      radius accounting to available users (see also stats-report-time).
 #
 # pam: can be combined with any authentication method, it provides
-#      a validation of the connecting user's name using PAM.
+#      a validation of the connecting user's name using PAM. It is
+#      superfluous to use this method when authentication is already
+#      PAM.
 #
 # Only one accounting method can be specified.
 #acct = "radius[config=/etc/radiusclient/radiusclient.conf]"

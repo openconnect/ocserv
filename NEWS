@@ -4,6 +4,9 @@
 - Reload the CRL on during periodic maintaince if its modification time
   changes.
 - Allow loading DER-encoded CRLs.
+- Re-added the PAM accounting method. That accounting method can be combined
+  with any authentication method, and can be used to check for a valid
+  system account.
 
 
 * Version 0.10.8 (released 2015-09-04)

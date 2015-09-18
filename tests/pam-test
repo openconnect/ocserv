@@ -110,13 +110,6 @@ if test $? != 0;then
 	stop
 fi
 
-ping6 -w 5 fd91:6d87:7341:dc6b:fbd8:827b:1f6b:8f79
-if test $? != 0;then
-	kill $PID
-	echo "Cannot ping the IPv6 of ocserv"
-	stop
-fi
-
 retrieve_user_info testuser
 
 # There is an issue in nuttcp that makes it crash under docker if

@@ -10,12 +10,12 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-ban.config test-sighup.config test-gssapi-local-map.config \
 	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
 	server-key-ossl.pem server-key-p8.pem proxyproto-unix-test user-cn.pem \
-	user-cert-testuser.pem
+	user-cert-testuser.pem test-stress
 
 SUBDIRS = docker-ocserv docker-kerberos
 
 dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
-	test-multi-cookie test-stress full-test test-group-pass test-pass-group-cert \
+	test-multi-cookie full-test test-group-pass test-pass-group-cert \
 	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
 	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \

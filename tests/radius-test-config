@@ -92,6 +92,7 @@ FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/`
 
 OCTETS=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
 if test -z "$OCTETS" || test "$OCTETS" = 0;then
+	kill $PID
 	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
 	echo "Interim update showed no data!"
 	stop
@@ -106,6 +107,7 @@ $DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP
 
 DISC=`cat out$TMP|grep "Acct-Status-Type = Start"|tail -1`
 if test -z "$DISC";then
+	kill $PID
 	cat out$TMP
 	echo "No connect status was detected!"
 	stop

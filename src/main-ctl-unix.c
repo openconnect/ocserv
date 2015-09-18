@@ -392,20 +392,22 @@ static int append_user_info(method_ctx *ctx,
 		rep->n_nbns = ctx->s->config->network.nbns_size;
 	}
 
-	if (ctmp->config.routes_size > 0) {
-		rep->routes = ctmp->config.routes;
-		rep->n_routes = ctmp->config.routes_size;
+	rep->n_routes = ctmp->config.routes_size + ctx->s->config->network.routes_size;
+	rep->routes = talloc_size(rep, sizeof(char*)*rep->n_routes);
+	if (rep->routes != NULL) {
+		memcpy(rep->routes, ctmp->config.routes, sizeof(char*)*ctmp->config.routes_size);
+		memcpy(&rep->routes[ctmp->config.routes_size], ctx->s->config->network.routes, sizeof(char*)*ctx->s->config->network.routes_size);
 	} else {
-		rep->routes = ctx->s->config->network.routes;
-		rep->n_routes = ctx->s->config->network.routes_size;
+		rep->n_routes = 0;
 	}
 
-	if (ctmp->config.no_routes_size > 0) {
-		rep->no_routes = ctmp->config.no_routes;
-		rep->n_no_routes = ctmp->config.no_routes_size;
+	rep->n_no_routes = ctmp->config.no_routes_size + ctx->s->config->network.no_routes_size;
+	rep->no_routes = talloc_size(rep, sizeof(char*)*rep->n_no_routes);
+	if (rep->no_routes != NULL) {
+		memcpy(rep->no_routes, ctmp->config.no_routes, sizeof(char*)*ctmp->config.no_routes_size);
+		memcpy(&rep->no_routes[ctmp->config.no_routes_size], ctx->s->config->network.no_routes, sizeof(char*)*ctx->s->config->network.no_routes_size);
 	} else {
-		rep->no_routes = ctx->s->config->network.no_routes;
-		rep->n_no_routes = ctx->s->config->network.no_routes_size;
+		rep->n_no_routes = 0;
 	}
 
 	if (ctmp->config.iroutes_size > 0) {

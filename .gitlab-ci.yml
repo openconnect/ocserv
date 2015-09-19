@@ -1,7 +1,6 @@
 Build with separate build dir:
   script:
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure && make -j4 && make check -j4
-  - cat tests/test-suite.log
+    ../configure && make -j4 && make check -j4 && make dist
   except:
   - tags

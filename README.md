@@ -1,3 +1,5 @@
+[![build status](https://ci.gitlab.com/projects/7712/status.png?ref=master)](https://ci.gitlab.com/projects/7712?ref=master)
+
 # About
 
 This program is openconnect VPN server (ocserv), a server for the

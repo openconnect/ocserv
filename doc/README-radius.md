@@ -1,9 +1,10 @@
 Using Radius with ocserv
 ========================
 
-For radius support the radcli library is required. The
-minimum requirement is version 1.2.0 as released at:
-http://radcli.github.io/radcli/
+For radius support the [radcli library](http://radcli.github.io/radcli/)
+is required. The minimum requirement is version 1.2.0. Alternatively
+the freeradius-client library can be used (1.1.7 is the minimum
+requirement), but not all radius features may be available.
 
 radcli uses a configuration file to setup the
 server configuration. That is typically found at:

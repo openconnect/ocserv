@@ -40,7 +40,7 @@ protobuf-c-compiler/ protobuf-c
 gperf              / gperf
 ```
 
-See doc/README.radius for more information on Radius
+See [README-radius](doc/README-radius.md) for more information on Radius
 dependencies and its configuration.
 
 # Build instructions
@@ -78,7 +78,7 @@ $ certtool --generate-self-signed --load-privkey test-key.pem --outfile test-cer
 ```
 (make sure you enable encryption or signing)
 
-To run the server on the foreground edit the doc/sample.config and then run:
+To run the server on the foreground edit the [sample.config](doc/sample.config) and then run:
 ```
 # cd doc && ../src/ocserv -f -c sample.config
 ```

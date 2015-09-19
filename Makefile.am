@@ -1,3 +1,4 @@
+AUTOMAKE_OPTIONS = foreign
 EXTRA_DIST = LICENSE
 
 SUBDIRS = gl
@@ -31,7 +32,6 @@ ChangeLog:
 
 dist-hook: ChangeLog
 	mv ChangeLog $(distdir)
-	touch ChangeLog
 	$(AUTOGEN) --version
 	@echo "*****************************************************************"
 	@echo "Checking whether included libopts matches the system's. If the"

@@ -1,7 +1,7 @@
 SUBDIRS =
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
-	-I$(srcdir)/ -I$(builddir)/../ $(LIBOPTS_CFLAGS) \
+	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBGNUTLS_CFLAGS) \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS) \

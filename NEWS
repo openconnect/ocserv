@@ -1,7 +1,7 @@
 * Version 0.10.9 (unreleased)
 - When compiled with GnuTLS 3.4 automatically sort the certificate list
   to be imported.
-- Reload the CRL on during periodic maintaince if its modification time
+- Reload the CRL during periodic maintaince if its modification time
   changes.
 - Allow loading DER-encoded CRLs.
 - Re-added the PAM accounting method. That accounting method can be combined

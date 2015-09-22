@@ -8,7 +8,7 @@ requirement), but not all radius features may be available.
 
 radcli uses a configuration file to setup the
 server configuration. That is typically found at:
-/etc/radcl/radiusclient.conf
+/etc/radcli/radiusclient.conf
 and is best to copy the default installed as radiusclient-ocserv.conf
 and edit it accordingly.
 
@@ -27,7 +27,7 @@ Ocserv configuration
 
 For authentication the following line should be enabled.
 ```
-auth = "radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true]"
+auth = "radius[config=/etc/radcli/radiusclient.conf,groupconfig=true]"
 ```
 
 Check the ocserv manpage for the meaning of the various options
@@ -35,7 +35,7 @@ such as groupconfig.
 
 To enable accounting, use
 ```
-acct = "radius[config=/etc/radiusclient/radiusclient.conf]"
+acct = "radius[config=/etc/radcli/radiusclient.conf]"
 ```
 
 and modify the following option to the time (in

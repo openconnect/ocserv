@@ -4,8 +4,8 @@
 
 This program is openconnect VPN server (ocserv), a server for the
 [openconnect VPN client](http://www.infradead.org/openconnect/).
-It is believed to be compatible with the protocol
-used by CISCO's AnyConnect SSL VPN. 
+It follows the [openconnect protocol](https://github.com/openconnect/protocol)
+and is believed to be compatible with CISCO's AnyConnect SSL VPN. 
 
 
 # Build dependencies
@@ -69,7 +69,7 @@ version on the development system, if the included libopts library is to
 be used.
 
 
-# Installation instructions
+# Basic installation instructions
 
 Now you need to generate a certificate. E.g.
 ```
@@ -82,6 +82,10 @@ To run the server on the foreground edit the [sample.config](doc/sample.config) 
 ```
 # cd doc && ../src/ocserv -f -c sample.config
 ```
+
+# Configuration
+
+Several configuration instruction are available in [the recipes repository](https://github.com/openconnect/recipes).
 
 
 # Profiling

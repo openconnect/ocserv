@@ -5,7 +5,7 @@ RUN yum install -y krb5-libs krb5-server krb5-workstation
 RUN yum install -y gnutls gnutls-utils protobuf-c iproute pcllib http-parser tcp_wrappers pam systemd libseccomp
 RUN yum install -y bash net-tools nuttcp iputils openssh-clients
 RUN yum install -y libnl3 libtalloc
-RUN yum install -y lz4
+RUN yum install -y lz4 liboauth oathtool procps-ng iputils
 RUN yum install -y freeradius-client
 RUN yum install -y pam_krb5
 

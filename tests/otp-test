@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# Copyright (C) 2014 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ocserv; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+srcdir=${srcdir:-.}
+
+#this test can only be run as root
+id|grep root >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+PORT_OCSERV=443
+CONFIG="otp"
+IMAGE=ocserv-otp
+IMAGE_NAME=otp_ocserv
+TMP=$IMAGE_NAME.tmp
+. ./docker-common.sh
+
+$DOCKER run -e OCCTL_PAGER=cat -P --privileged=true -p 22 --tty=false -d --name $IMAGE_NAME $IMAGE
+if test $? != 0;then
+	echo "Cannot run docker image"
+	exit 1
+fi
+
+echo "ocserv image was run"
+#wait for ocserv to server
+sleep 5
+
+IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+if test -z "$IP";then
+	echo "Detected IP is null!"
+	stop
+fi
+echo "Detected IP: $IP"
+
+if test ! -z "$QUIT_ON_INIT";then
+	exit 0
+fi
+
+echo ""
+echo "Trying with wrong username"
+echo -e "test\n328482\n" >pass-${TMP}.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -u falseuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-${TMP}.tmp
+if test $? = 0;then
+	echo "Authentication with wrong username succeeded!"
+	stop
+fi
+
+echo ""
+echo "Trying with wrong OTP"
+echo -e "test\n99999\n" >pass-${TMP}.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -q -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-${TMP}.tmp
+if test $? = 0;then
+	echo "Authentication with wrong OTP succeeded!"
+	stop
+fi
+
+echo ""
+echo "Trying with correct password"
+#oathtool -w 0 00
+echo -e "test\n328482\n" >pass-${TMP}.tmp
+cat pass-${TMP}.tmp
+$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-${TMP}.tmp &
+PID=$!
+
+#wait for openconnect
+sleep 5
+
+rm -f pass-${TMP}.tmp
+
+# The client IP depends on the username so it shouldn't change.
+ping -w 5 192.168.237.1
+if test $? != 0;then
+	kill $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+retrieve_user_info test
+kill $PID
+
+$DOCKER stop $IMAGE_NAME
+$DOCKER rm $IMAGE_NAME
+
+exit $ret

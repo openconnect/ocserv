@@ -39,6 +39,7 @@
 #endif
 
 #define MAX_CPASS_SIZE 128
+#define HOTP_WINDOW 20
 
 struct plain_ctx_st {
 	char username[MAX_USERNAME_SIZE];
@@ -344,7 +345,7 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		/* no primary password -> check OTP */
 		ret = oath_authenticate_usersfile(otp_file, pctx->username,
-			pass, 10, NULL, &last);
+			pass, HOTP_WINDOW, NULL, &last);
 		if (ret != OATH_OK) {
 			syslog(LOG_AUTH,
 			       "plain-auth: OTP auth failed for '%s': %s",

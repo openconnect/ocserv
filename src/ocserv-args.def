@@ -87,12 +87,14 @@ An example configuration file follows.
 #  This enabled PAM authentication of the user. The gid-min option is used 
 # by auto-select-group option, in order to select the minimum valid group ID.
 #
-# plain[passwd=/etc/ocserv/ocpasswd]
+# plain[passwd=/etc/ocserv/ocpasswd,otp=/etc/ocserv/users.otp]
 #  The plain option requires specifying a password file which contains
 # entries of the following format.
 # "username:groupname1,groupname2:encoded-password"
 # One entry must be listed per line, and 'ocpasswd' should be used
-# to generate password entries.
+# to generate password entries. The 'otp' suboption allows to specify
+# an oath password file to be used for one time passwords; the format of
+# the file is described in https://code.google.com/p/mod-authn-otp/wiki/UsersFile
 #
 # radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name]:
 #  The radius option requires specifying freeradius-client configuration

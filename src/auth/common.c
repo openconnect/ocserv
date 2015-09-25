@@ -22,4 +22,5 @@
 
 const char* pass_msg_second = "Please enter your challenge password.";
 const char* pass_msg_failed = "Login failed.\nPlease enter your password.";
+const char* pass_msg_otp = "Please enter your OTP password.";
 

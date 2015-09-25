@@ -143,6 +143,21 @@ AC_LIB_HAVE_LINKFLAGS(readline,, [
     fi
   fi
 
+have_liboath=no
+AC_ARG_WITH(liboath,
+  AS_HELP_STRING([--without-liboath], [do not include OTP support]),
+  test_for_liboath=$withval,
+  test_for_liboath=yes)
+
+echo xxx x$test_for_liboath
+
+if test x$test_for_liboath = xyes;then
+  PKG_CHECK_MODULES([LIBOATH], [liboath], [
+AC_DEFINE([HAVE_LIBOATH], 1, [Enable the liboath library])
+have_liboath=yes],
+[have_liboath=no])
+fi
+
 have_glibc=no
 AC_LIB_HAVE_LINKFLAGS(c,, [
 #include <stdio.h>
@@ -482,6 +497,7 @@ Summary of build options:
   LZ4 compression:      ${enable_lz4}
   readline:             ${have_readline}
   libnl3:               ${have_libnl3}
+  liboath:              ${have_liboath}
   glibc (sha2crypt):    ${have_glibc}
   local talloc:         ${with_local_talloc}
   local protobuf-c:     ${with_local_protobuf_c}

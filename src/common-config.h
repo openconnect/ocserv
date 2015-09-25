@@ -50,6 +50,7 @@ typedef struct radius_cfg_st {
 
 typedef struct plain_cfg_st {
 	char *passwd;
+	char *otp_file;
 } plain_cfg_st;
 
 typedef struct pam_cfg_st {

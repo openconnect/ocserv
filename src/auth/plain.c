@@ -34,6 +34,9 @@
 #include "auth/common.h"
 #include <ccan/htable/htable.h>
 #include <ccan/hash/hash.h>
+#ifdef HAVE_LIBOATH
+# include <liboath/oath.h>
+#endif
 
 #define MAX_CPASS_SIZE 128
 
@@ -46,9 +49,11 @@ struct plain_ctx_st {
 
 	const char *pass_msg;
 	unsigned retries;
+	unsigned failed; /* non-zero if the username is wrong */
 };
 
 static char *password_file = NULL;
+static char *otp_file = NULL;
 
 static void plain_global_init(void *pool, void *additional)
 {
@@ -59,10 +64,24 @@ static void plain_global_init(void *pool, void *additional)
 		exit(1);
 	}
 
-	password_file = talloc_strdup(pool, config->passwd);
-	if (password_file == NULL) {
-		fprintf(stderr, "plain: memory error\n");
-		exit(1);
+#ifdef HAVE_LIBOATH
+	oath_init();
+#endif
+
+	if (config->passwd) {
+		password_file = talloc_strdup(pool, config->passwd);
+		if (password_file == NULL) {
+			fprintf(stderr, "plain: memory error\n");
+			exit(1);
+		}
+	}
+
+	if (config->otp_file) {
+		otp_file = talloc_strdup(pool, config->otp_file);
+		if (otp_file == NULL) {
+			fprintf(stderr, "plain: memory error\n");
+			exit(1);
+		}
 	}
 
 	return;
@@ -133,6 +152,13 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 	char *p, *sp;
 	int ret;
 
+	if (password_file == NULL) {
+		/* no password file is set */
+		return 0;
+	}
+
+	pctx->failed = 1;
+
 	fp = fopen(password_file, "r");
 	if (fp == NULL) {
 		syslog(LOG_AUTH,
@@ -168,6 +194,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 				p = strsep(&sp, ":");
 				if (p != NULL) {
 					strlcpy(pctx->cpass, p, sizeof(pctx->cpass));
+					pctx->failed = 0;
 					ret = 0;
 					goto exit;
 				}
@@ -185,6 +212,7 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 				p = strtok_r(NULL, ":", &sp);
 				if (p != NULL) {
 					strlcpy(pctx->cpass, p, sizeof(pctx->cpass));
+					pctx->failed = 0;
 					ret = 0;
 					goto exit;
 				}
@@ -219,6 +247,7 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 	strlcpy(pctx->username, username, sizeof(pctx->username));
 	pctx->pass_msg = NULL; /* use default */
 
+	/* this doesn't fail on password mismatch but sets p->failed */
 	ret = read_auth_pass(pctx);
 	if (ret < 0) {
 		talloc_free(pctx);
@@ -226,6 +255,15 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 	}
 
 	*ctx = pctx;
+
+	if (pctx->cpass[0] == 0 && pctx->failed == 0) {
+		/* if there is no password set, nor an OTP file; don't ask for password */
+		if (otp_file == NULL)
+			return 0;
+
+		/* only OTP is present */
+		pctx->pass_msg = pass_msg_otp;
+	}
 
 	return ERR_AUTH_CONTINUE;
 }
@@ -272,10 +310,9 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 {
 	struct plain_ctx_st *pctx = ctx;
 
-	if (pctx->cpass[0] != 0
-	    && strcmp(crypt(pass, pctx->cpass), pctx->cpass) == 0)
-		return 0;
-	else {
+	if (pctx->failed || (pctx->cpass[0] != 0
+	    && strcmp(crypt(pass, pctx->cpass), pctx->cpass) != 0)) {
+
 		if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
 			pctx->pass_msg = pass_msg_failed;
 			return ERR_AUTH_CONTINUE;
@@ -286,6 +323,41 @@ static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			return ERR_AUTH_FAIL;
 		}
 	}
+
+	if (pctx->cpass[0] == 0 && otp_file == NULL) {
+		syslog(LOG_AUTH,
+		       "plain-auth: user '%s' has empty password and no OTP file configured",
+		       pctx->username);
+		return ERR_AUTH_FAIL;
+	}
+
+#ifdef HAVE_LIBOATH
+	if (otp_file != NULL) {
+		int ret;
+		time_t last;
+
+		if (pctx->cpass[0] != 0) { /* we just checked the password */
+			pctx->cpass[0] = 0;
+			pctx->pass_msg = pass_msg_otp;
+			return ERR_AUTH_CONTINUE;
+		}
+
+		/* no primary password -> check OTP */
+		ret = oath_authenticate_usersfile(otp_file, pctx->username,
+			pass, 10, NULL, &last);
+		if (ret != OATH_OK) {
+			syslog(LOG_AUTH,
+			       "plain-auth: OTP auth failed for '%s': %s",
+			       pctx->username, oath_strerror(ret));
+			return ERR_AUTH_FAIL;
+		}
+	}
+#endif
+
+	if (pctx->failed)
+		return ERR_AUTH_FAIL;
+
+	return 0;
 }
 
 static int plain_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)

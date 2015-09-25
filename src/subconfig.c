@@ -314,6 +314,11 @@ void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str)
 			if (c_strcasecmp(vals[i].name, "passwd") == 0) {
 				additional->passwd = vals[i].value;
 				vals[i].value = NULL;
+#ifdef HAVE_LIBOATH
+			} else if (c_strcasecmp(vals[i].name, "otp") == 0) {
+				additional->otp_file = vals[i].value;
+				vals[i].value = NULL;
+#endif
 			} else {
 				fprintf(stderr, "unknown option '%s'\n", vals[i].name);
 				exit(1);
@@ -322,8 +327,8 @@ void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str)
 		free_expanded_brackets_string(vals, vals_size);
 	}
 
-	if (additional->passwd == NULL) {
-		fprintf(stderr, "plain: no password file specified\n");
+	if (additional->passwd == NULL && additional->otp_file == NULL) {
+		fprintf(stderr, "plain: no password or OTP file specified\n");
 		exit(1);
 	}
 

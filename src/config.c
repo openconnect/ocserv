@@ -1141,6 +1141,9 @@ void print_version(tOptions *opts, tOptDesc *desc)
 #ifdef HAVE_LIBWRAP
 	fprintf(stderr, "tcp-wrappers, ");
 #endif
+#ifdef HAVE_LIBOATH
+	fprintf(stderr, "oath, ");
+#endif
 #ifdef HAVE_RADIUS
 	fprintf(stderr, "radius, ");
 #endif

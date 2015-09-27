@@ -432,7 +432,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		/* Now add the network to the masked random number */
        		for (i=0;i<sizeof(struct in6_addr);i++)
        			SA_IN6_U8_P(&rnd)[i] |= (SA_IN6_U8_P(&network)[i]);
-        			
+
+		/* use only even numbers */
+		SA_IN6_U8_P(&rnd)[15] &= 0xfe;
+
 		/* check if it exists in the hash table */
 		if (is_ipv6_ok(s, &rnd, &network, &mask) == 0) {
 			mslog(s, proc, LOG_DEBUG, "cannot assign local IP %s; it is in use or invalid", 
@@ -442,7 +445,6 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
        		memcpy(&proc->ipv6->rip, &rnd, proc->ipv6->rip_len);
-		SA_IN6_U8_P(&proc->ipv6->rip)[15] &= 0xfe;
 
 		proc->ipv6->prefix = 127;
 

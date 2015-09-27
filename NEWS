@@ -3,6 +3,7 @@
   to be imported.
 - Reload the CRL during periodic maintaince if its modification time
   changes.
+- Address issue with duplicate check failing on IPv6 addresses (issue #5).
 - Added the ability to specify a UsersFile in plain auth for using an OTP.
   This allows to use an OTP 2nd factor authentication without having
   to rely on PAM. This change, also enables the usage of an empty password

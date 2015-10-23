@@ -1,3 +1,9 @@
+* Version 0.10.10 (unreleased 2015-10-07)
+- Increase the number of log messages logged in the default level. That
+  is added any messages that could be of use to administrators on the
+  default log level.
+
+
 * Version 0.10.9 (released 2015-10-07)
 - When compiled with GnuTLS 3.4 automatically sort the certificate list
   to be imported.

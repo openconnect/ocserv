@@ -1563,6 +1563,7 @@ static int connect_handler(worker_st * ws)
 		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 
+		oclog(ws, LOG_DEBUG, "adding DNS %s", ws->vinfo.dns[i]);
 		ret =
 		    cstp_printf(ws, "X-CSTP-DNS: %s\r\n",
 			       ws->vinfo.dns[i]);
@@ -1580,6 +1581,7 @@ static int connect_handler(worker_st * ws)
 		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 
+		oclog(ws, LOG_DEBUG, "adding NBNS %s", ws->vinfo.nbns[i]);
 		ret =
 		    cstp_printf(ws, "X-CSTP-NBNS: %s\r\n",
 			       ws->vinfo.nbns[i]);

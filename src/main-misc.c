@@ -173,7 +173,7 @@ struct proc_st *ctmp;
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 {
-	mslog(s, proc, LOG_INFO, "user disconnected");
+	mslog(s, proc, LOG_INFO, "user disconnected (rx: %lu, tx: %lu)", proc->bytes_in, proc->bytes_out);
 
 	list_del(&proc->list);
 	s->active_clients--;

@@ -1,7 +1,11 @@
-* Version 0.10.10 (unreleased 2015-10-07)
+* Version 0.10.10 (unreleased)
 - Increase the number of log messages logged in the default level. That
   is added any messages that could be of use to administrators on the
   default log level.
+- Introduced ipv6-subnet-prefix config option. That option allows to specify
+  the IPv6 subnet prefix to be given to client. That is, allow providing the
+  clients networks larger than /128. Set the option to 128 to simulate the
+  previous behavior of ocserv.
 
 
 * Version 0.10.9 (released 2015-10-07)

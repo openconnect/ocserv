@@ -107,9 +107,9 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		msg->ipv6_net = talloc_strdup(pool, pctx->ipv6_net);
 	}
 
-	if (pctx->ipv6_prefix != 0) {
-		msg->ipv6_prefix = pctx->ipv6_prefix;
-		msg->has_ipv6_prefix = 1;
+	if (pctx->ipv6_subnet_prefix != 0) {
+		msg->ipv6_subnet_prefix = pctx->ipv6_subnet_prefix;
+		msg->has_ipv6_subnet_prefix = 1;
 	}
 
 	return 0;

@@ -82,6 +82,7 @@ message auth_reply_msg
 	required bytes sid = 30;
 	optional uint32 interim_update_secs = 31;
 	optional uint32 session_timeout_secs = 32;
+	optional uint32 ipv6_subnet_prefix = 33;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */
@@ -287,6 +288,7 @@ message sec_auth_session_reply_msg
 	optional string explicit_ipv4 = 26;
 	optional string explicit_ipv6 = 27;
 	repeated string no_routes = 28;
+	optional uint32 ipv6_subnet_prefix = 29;
 }
 
 /* SEC_BAN_IP: sent from sec-mod to main */

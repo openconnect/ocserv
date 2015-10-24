@@ -202,6 +202,7 @@ struct group_cfg_st {
 	char *ipv4_network;
 	char *ipv6_network;
 	unsigned ipv6_prefix;
+	unsigned ipv6_subnet_prefix;
 	char *ipv4_netmask;
 
 	char *explicit_ipv4;
@@ -236,6 +237,7 @@ struct vpn_st {
 	char *ipv6;
 	char *ipv6_local; /* local IPv6 address */
 	unsigned int mtu;
+	unsigned int ipv6_subnet_prefix; /* ipv6 subnet prefix to assign */
 
 	char **routes;
 	size_t routes_size;

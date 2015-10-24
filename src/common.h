@@ -23,6 +23,7 @@
 # define COMMON_H
 
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <ipc.pb-c.h>
 #include <talloc.h>
 #include <time.h>
@@ -47,7 +48,7 @@ ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2);
 char* ipv4_prefix_to_mask(void *pool, unsigned prefix);
-char* ipv6_prefix_to_mask(char buf[MAX_IP_STR], unsigned prefix);
+unsigned ipv6_prefix_to_mask(struct in6_addr *in6, unsigned prefix);
 inline static int valid_ipv6_prefix(unsigned prefix)
 {
 	if (prefix > 10 && prefix <= 128)

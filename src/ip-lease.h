@@ -28,6 +28,11 @@
 #include <main.h>
 
 struct ip_lease_st {
+        /* In IPv4 this is the same as rip, in IPv6
+         * that's the network address */
+        struct sockaddr_storage sig;
+#define sig_len rip_len
+
         struct sockaddr_storage rip;
         socklen_t rip_len;
 

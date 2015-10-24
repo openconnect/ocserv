@@ -265,6 +265,15 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		proc->config.ipv6_network = talloc_strdup(proc, msg->ipv6_net);
 	}
 
+	if (msg->has_ipv6_subnet_prefix) {
+		if (msg->ipv6_subnet_prefix != proc->config.ipv6_subnet_prefix) {
+			mslog(s, proc, LOG_WARNING, "currently a subnet prefix (%u) cannot be different than the default (%u)",
+			      msg->ipv6_subnet_prefix, proc->config.ipv6_prefix);
+		} else {
+			proc->config.ipv6_subnet_prefix = msg->ipv6_subnet_prefix;
+		}
+	}
+
 	if (msg->cgroup) {
 		proc->config.cgroup = talloc_strdup(proc, msg->cgroup);
 	}

@@ -91,6 +91,7 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 
 		msg.ipv4_network = proc->config.ipv4_network;
 		msg.ipv6_network = proc->config.ipv6_network;
+		msg.ipv6_subnet_prefix = proc->config.ipv6_subnet_prefix;
 
 		if (proc->ipv6) {
 			msg.ipv6_prefix = proc->ipv6->prefix;

@@ -102,10 +102,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memcpy(&ifr6.ifr6_addr, SA_IN6_P(&proc->ipv6->lip),
 	       SA_IN_SIZE(proc->ipv6->lip_len));
 	ifr6.ifr6_ifindex = idx;
-	if (proc->ipv6->prefix)
-		ifr6.ifr6_prefixlen = proc->ipv6->prefix;
-	else
-		ifr6.ifr6_prefixlen = 64;
+	ifr6.ifr6_prefixlen = 128;
 
 	ret = ioctl(fd, SIOCSIFADDR, &ifr6);
 	if (ret != 0) {
@@ -121,7 +118,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	memcpy(&rt6.rtmsg_dst, SA_IN6_P(&proc->ipv6->rip),
 	       SA_IN_SIZE(proc->ipv6->rip_len));
 	rt6.rtmsg_ifindex = idx;
-	rt6.rtmsg_dst_len = 128;
+	rt6.rtmsg_dst_len = proc->ipv6->prefix;
 	rt6.rtmsg_metric = 1;
 
 	/* the ioctl() parameters in linux for ipv6 are
@@ -246,10 +243,8 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	ifr6.ifra_dstaddr.sin6_len = sizeof(struct sockaddr_in6);
 	ifr6.ifra_dstaddr.sin6_family = AF_INET6;
 
-	p = ipv6_prefix_to_mask(c_netmask_buf, proc->config.ipv6_prefix);
-	if (p) {
-		inet_pton(AF_INET6, p, &ifr6.ifra_prefixmask.sin6_addr);
-	} else {
+	ret = ipv6_prefix_to_mask(&ifr6.ifra_prefixmask.sin6_addr, proc->config.ipv6_prefix);
+	if (ret == 0) {
 		memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff, sizeof(struct in6_addr));
 	}
 	ifr6.ifra_prefixmask.sin6_len = sizeof(struct sockaddr_in6);

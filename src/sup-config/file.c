@@ -58,6 +58,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-network", .type = OPTION_STRING },
 	{ .name = "ipv4-netmask", .type = OPTION_STRING },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC },
+	{ .name = "ipv6-subnet-prefix", .type = OPTION_NUMERIC },
 	{ .name = "explicit-ipv4", .type = OPTION_STRING },
 	{ .name = "explicit-ipv6", .type = OPTION_STRING },
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC },
@@ -198,6 +199,8 @@ unsigned prefix = 0;
 	READ_RAW_STRING("ipv4-netmask", msg->ipv4_netmask);
 	READ_RAW_STRING("explicit-ipv4", msg->explicit_ipv4);
 	READ_RAW_STRING("explicit-ipv6", msg->explicit_ipv6);
+
+	READ_RAW_NUMERIC("ipv6-subnet-prefix", msg->ipv6_subnet_prefix, msg->has_ipv6_subnet_prefix);
 
 	msg->ipv6_prefix = extract_prefix(msg->ipv6_net);
 	if (msg->ipv6_prefix == 0) {

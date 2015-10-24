@@ -281,7 +281,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
 				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
-					pctx->ipv6_prefix = 64;
+					pctx->ipv6_subnet_prefix = 64;
 					strlcpy(pctx->ipv6_net, pctx->ipv6, sizeof(pctx->ipv6_net));
 				}
 			} else if (vp->attribute == PW_DELEGATED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {
@@ -290,7 +290,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 					memset(ipv6, 0, sizeof(ipv6)); 
 					memcpy(ipv6, vp->strvalue+2, vp->lvalue-2); 
 					if (inet_ntop(AF_INET6, ipv6, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {
-						pctx->ipv6_prefix = (unsigned)(unsigned char)vp->strvalue[1];
+						pctx->ipv6_subnet_prefix = (unsigned)(unsigned char)vp->strvalue[1];
 					}
 				}
 			} else if (vp->attribute == PW_FRAMED_IPV6_PREFIX && vp->type == PW_TYPE_IPV6PREFIX) {

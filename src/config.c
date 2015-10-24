@@ -167,6 +167,7 @@ static struct cfg_options available_options[] = {
 
 	{ .name = "ipv6-network", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ipv6-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "ipv6-subnet-prefix", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "route-add-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "route-del-cmd", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "config-per-user", .type = OPTION_STRING, .mandatory = 0 },
@@ -857,7 +858,18 @@ size_t urlfw_size = 0;
 	}
 
 	READ_STRING("ipv6-network", config->network.ipv6);
+	/* read subnet prefix */
+	READ_NUMERIC("ipv6-subnet-prefix", prefix);
+	if (prefix > 0) {
+		config->network.ipv6_subnet_prefix = prefix;
 
+		if (valid_ipv6_prefix(prefix) == 0) {
+			fprintf(stderr, "invalid IPv6 subnet prefix: %u\n", prefix);
+			exit(1);
+		}
+	}
+
+	/* read net prefix */
 	prefix = extract_prefix(config->network.ipv6);
 	if (prefix == 0) {
 		READ_NUMERIC("ipv6-prefix", prefix);
@@ -870,6 +882,20 @@ size_t urlfw_size = 0;
 			fprintf(stderr, "invalid IPv6 prefix: %u\n", prefix);
 			exit(1);
 		}
+	}
+
+	if (config->network.ipv6_subnet_prefix == 0) {
+		config->network.ipv6_subnet_prefix = config->network.ipv6_prefix+16;
+		if (config->network.ipv6_subnet_prefix > 128) {
+			fprintf(stderr, "Cannot figure a valid IPv6 subnet prefix\n");
+			exit(1);
+		}
+		if (config->network.ipv6_subnet_prefix < 64)
+			config->network.ipv6_subnet_prefix = 64;
+	} else if (config->network.ipv6_prefix >= config->network.ipv6_subnet_prefix) {
+		fprintf(stderr, "The subnet prefix (%u) cannot be smaller or equal to network's (%u)\n", 
+				config->network.ipv6_subnet_prefix, config->network.ipv6_prefix);
+		exit(1);
 	}
 
 	READ_MULTI_LINE("custom-header", config->custom_header, config->custom_header_size);

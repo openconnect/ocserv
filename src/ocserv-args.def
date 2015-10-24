@@ -479,7 +479,14 @@ ipv4-netmask = 255.255.255.0
 #ipv4-network = 192.168.1.0/24
 
 # The IPv6 subnet that leases will be given from.
-#ipv6-network = fda9:4efe:7e3b:03ea::/64
+ipv6-network = fda9:4efe:7e3b:03ea::/48
+
+# Specify the size of the network to provide to clients. It is
+# generally recommended to provide clients with a /64 network in
+# IPv6, but any subnet may be specified. To provide clients only
+# with a single IP use the prefix 128.
+#ipv6-subnet-prefix = 128
+#ipv6-subnet-prefix = 64
 
 # The advertized DNS server. Use multiple lines for
 # multiple servers.

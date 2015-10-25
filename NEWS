@@ -6,6 +6,9 @@
   the IPv6 subnet prefix to be given to client. That is, allow providing the
   clients networks larger than /128. Set the option to 128 to simulate the
   previous behavior of ocserv.
+- Introduced the expose-iroutes config option. That option allows the server
+  to advertise routes offered by some clients to all of them. This requires
+  the config-per-user option.
 
 
 * Version 0.10.9 (released 2015-10-07)

@@ -392,6 +392,11 @@ struct cfg_st {
 
 	bool gssapi_no_local_user_map;
 
+	/* known iroutes - only sent to the users who are not registering them 
+	 */
+	char **known_iroutes;
+	size_t known_iroutes_size;
+
 	/* the tun network */
 	struct vpn_st network;
 };

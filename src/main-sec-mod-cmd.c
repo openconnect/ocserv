@@ -175,7 +175,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	int ret, e;
 	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
 	SecAuthSessionReplyMsg *msg = NULL;
-	unsigned i;
+	unsigned i, j, append;
 	PROTOBUF_ALLOCATOR(pa, proc);
 	char str_ipv4[MAX_IP_STR];
 	char str_ipv6[MAX_IP_STR];
@@ -290,12 +290,29 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		proc->config.explicit_ipv6 = talloc_strdup(proc, msg->explicit_ipv6);
 	}
 
-	if (msg->n_routes > 0) {
-		proc->config.routes = talloc_size(proc, sizeof(char*)*msg->n_routes);
+	/* Append any custom routes for this user */
+	if (msg->n_routes > 0 || s->config->known_iroutes_size > 0) {
+		proc->config.routes = talloc_size(proc, sizeof(char*)*(msg->n_routes+s->config->known_iroutes_size));
 		for (i=0;i<msg->n_routes;i++) {
 			proc->config.routes[i] = talloc_strdup(proc, msg->routes[i]);
 		}
 		proc->config.routes_size = msg->n_routes;
+	}
+
+	/* Append any iroutes that are known and don't match the client's */
+	for (i=0;i<s->config->known_iroutes_size;i++) {
+		append = 1;
+		for (j=0;j<msg->n_iroutes;j++) {
+			if (strcmp(msg->iroutes[j], s->config->known_iroutes[i]) == 0) {
+				append = 0;
+				break;
+			}
+		}
+
+		if (append) {
+			proc->config.routes[proc->config.routes_size] = talloc_strdup(proc, s->config->known_iroutes[i]);
+			proc->config.routes_size++;
+		}
 	}
 
 	if (msg->n_no_routes > 0) {

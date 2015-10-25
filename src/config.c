@@ -43,6 +43,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <dirent.h>
 #include <netdb.h>
 
 #include <vpn.h>
@@ -68,6 +69,7 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "enable-auth", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "expose-iroutes", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "no-route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "select-group", .type = OPTION_MULTI_LINE, .mandatory = 0 },
@@ -572,6 +574,55 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 }
 #endif
 
+static void append_iroutes_from_file(struct cfg_st *config, const char *file)
+{
+	tOptionValue const * pov;
+	const tOptionValue* val;
+	int ret;
+
+	pov = configFileLoad(file);
+	if (pov == NULL)
+		return;
+
+	val = optionGetValue(pov, NULL);
+	if (val == NULL)
+		goto exit;
+
+	ret = add_multi_line_val(config, "iroute", &config->known_iroutes,
+				 &config->known_iroutes_size, pov, val);
+	if (ret < 0) {
+		fprintf(stderr, "Error loading iroute from %s\n", file);
+	}
+
+ exit:
+	optionUnloadNested(pov);
+	return;
+}
+
+static void load_iroutes(struct cfg_st *config)
+{
+	DIR *dir;
+	struct dirent *r;
+	char path[_POSIX_PATH_MAX];
+
+	dir = opendir(config->per_user_dir);
+	if (dir != NULL) {
+		do {
+			r = readdir(dir);
+			if (r != NULL && r->d_type == DT_REG) {
+				snprintf(path, sizeof(path), "%s/%s", config->per_user_dir, r->d_name);
+				append_iroutes_from_file(config, path);
+			}
+		} while(r != NULL);
+	}
+	closedir(dir);
+unsigned i;
+	for (i=0;i<config->known_iroutes_size;i++){
+		fprintf(stderr, "iroute: %s\n", config->known_iroutes[i]);
+	}
+
+}
+
 static void parse_cfg_file(void *pool, const char* file, struct perm_cfg_st *perm_config, unsigned reload)
 {
 tOptionValue const * pov;
@@ -952,6 +1003,13 @@ size_t urlfw_size = 0;
 	READ_STRING("route-del-cmd", config->route_del_cmd);
 	READ_STRING("config-per-user", config->per_user_dir);
 	READ_STRING("config-per-group", config->per_group_dir);
+
+	if (config->per_user_dir) {
+		READ_TF("expose-iroutes", i, 0);
+		if (i != 0) {
+			load_iroutes(config);
+		}
+	}
 
 	READ_STRING("default-user-config", config->default_user_conf);
 	READ_STRING("default-group-config", config->default_group_conf);

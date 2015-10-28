@@ -1,18 +1,23 @@
-SUBDIRS =
+SUBDIRS = occtl ocpasswd
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBGNUTLS_CFLAGS) \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
-	$(LIBNL3_CFLAGS) $(LIBREADLINE_CFLAGS) \
+	$(LIBREADLINE_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
 	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS)
 
-BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h \
-	ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
+BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 	ctl.pb-c.c ctl.pb-c.h http-heads.h kkdcp_asn1_tab.c
 
 #AM_CPPFLAGS += -DDEBUG_LEAKS
+
+include common.mk
+
+EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
+	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
+	ipc.proto ctl.proto http-heads.gperf common.mk
 
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/
@@ -21,18 +26,6 @@ NEEDED_HTTP_PARSER_LIBS =
 else
 NEEDED_HTTP_PARSER_LIBS = $(HTTP_PARSER_LIBS)
 endif
-
-if NEED_LIBOPTS
-NEEDED_LIBOPTS = ../libopts/libopts.a
-else
-NEEDED_LIBOPTS = $(LIBOPTS_LDADD)
-endif
-
-EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
-	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
-	occtl-args.def ipc.proto ctl.proto http-heads.gperf
-
-bin_PROGRAMS = ocpasswd occtl
 
 sbin_PROGRAMS = ocserv
 
@@ -114,26 +107,7 @@ SUBDIRS += pcl
 AM_CPPFLAGS += -I$(srcdir)/pcl/
 endif
 
-noinst_LIBRARIES += libcmd-ocpasswd.a
-libcmd_ocpasswd_a_SOURCES = ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
-
-
-ocpasswd_SOURCES = ocpasswd.c
-ocpasswd_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
-ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT)
-
-ocpasswd-args.c: $(srcdir)/ocpasswd-args.def $(builddir)/version.inc
-	$(AUTOGEN) $<
-ocpasswd-args.h: ocpasswd-args.c
-
-occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c occtl-ip-cache.c \
-	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES) \
-	occtl-print.c common-json.c common-json.h $(PROTOBUF_SOURCES)
-occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
-	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
-
 ocserv_SOURCES += main-ctl-unix.c
-occtl_SOURCES += occtl-unix.c
 
 ipc.pb-c.c: ipc.proto
 	protoc-c --c_out=. --proto_path=$(srcdir) $<

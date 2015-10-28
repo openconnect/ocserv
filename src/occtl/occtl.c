@@ -26,7 +26,7 @@
 #include <time.h>
 #include <signal.h>
 #include <c-ctype.h>
-#include <occtl.h>
+#include <occtl/occtl.h>
 #include <c-strcase.h>
 
 static int handle_reset_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);

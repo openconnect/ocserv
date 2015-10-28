@@ -12,7 +12,7 @@ short-usage   = "Usage: ocpasswd -c [passwd] [options] username\nocpasswd --help
 explain       = "";
 reorder-args;
 argument      = "[username]";
-#include version.inc
+#include ../version.inc
 
 detail  = "This program is openconnect password (ocpasswd) utility. It allows the generation
 and handling of a 'plain' password file used by ocserv.";

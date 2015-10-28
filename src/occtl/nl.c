@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <occtl.h>
+#include <occtl/occtl.h>
 
 #if defined(HAVE_LIBNL) && defined(__linux__)
 

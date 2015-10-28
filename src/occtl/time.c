@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <occtl.h>
+#include <occtl/occtl.h>
 
 #define _(x) x
 

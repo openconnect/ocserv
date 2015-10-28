@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <occtl.h>
+#include <occtl/occtl.h>
 #include <c-strcase.h>
 #include <minmax.h>
 

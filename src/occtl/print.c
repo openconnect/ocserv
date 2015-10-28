@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <c-ctype.h>
-#include <occtl.h>
+#include <occtl/occtl.h>
 #include <common.h>
 #include <common-json.h>
 #include <c-strcase.h>

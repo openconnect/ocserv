@@ -29,7 +29,7 @@
 #include <c-ctype.h>
 #include <ctl.h>
 #include <ctl.pb-c.h>
-#include <occtl.h>
+#include <occtl/occtl.h>
 #include <common.h>
 #include <c-strcase.h>
 #include <arpa/inet.h>

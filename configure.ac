@@ -316,10 +316,14 @@ if [ test "$anyconnect_enabled" = "yes" ];then
 	AC_DEFINE([ANYCONNECT_CLIENT_COMPAT], [], [Enable Anyconnect compatibility])
 fi
 
+pager_set=0
 AC_ARG_WITH(pager,
-  AS_HELP_STRING([--with-pager=PAGER], [set a specific pager for occtl]),
-    occtl_pager=$withval)
-if [ test -z "$occtl_pager" ];then
+  AS_HELP_STRING([--with-pager=PAGER], [set a specific pager for occtl; use "" for no pager]),
+    occtl_pager=$withval
+    pager_set=1
+)
+
+if [ test $pager_set = 0 ];then
 	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["less"], [The default pager for occtl])
 else
 	AC_DEFINE_UNQUOTED([OCCTL_PAGER], ["$occtl_pager"], [The default pager for occtl])

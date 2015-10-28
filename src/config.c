@@ -574,11 +574,13 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 }
 #endif
 
+
 static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 {
 	tOptionValue const * pov;
 	const tOptionValue* val;
 	int ret;
+	unsigned j;
 
 	pov = configFileLoad(file);
 	if (pov == NULL)
@@ -593,6 +595,12 @@ static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 	if (ret < 0) {
 		fprintf(stderr, "Error loading iroute from %s\n", file);
 	}
+
+	for (j=0;j<config->known_iroutes_size;j++) {
+		if (ip_route_sanity_check(config->known_iroutes, &config->known_iroutes[j]) != 0)
+			exit(1);
+	}
+
 
  exit:
 	optionUnloadNested(pov);
@@ -616,11 +624,6 @@ static void load_iroutes(struct cfg_st *config)
 		} while(r != NULL);
 	}
 	closedir(dir);
-unsigned i;
-	for (i=0;i<config->known_iroutes_size;i++){
-		fprintf(stderr, "iroute: %s\n", config->known_iroutes[i]);
-	}
-
 }
 
 static void parse_cfg_file(void *pool, const char* file, struct perm_cfg_st *perm_config, unsigned reload)
@@ -954,6 +957,9 @@ size_t urlfw_size = 0;
 
 	READ_MULTI_LINE("route", config->network.routes, config->network.routes_size);
 	for (j=0;j<config->network.routes_size;j++) {
+		if (ip_route_sanity_check(config->network.routes, &config->network.routes[j]) != 0)
+			exit(1);
+
 		if (strcmp(config->network.routes[j], "0.0.0.0/0") == 0 ||
 		    strcmp(config->network.routes[j], "default") == 0) {
 		    	/* set default route */
@@ -965,6 +971,10 @@ size_t urlfw_size = 0;
 	}
 
 	READ_MULTI_LINE("no-route", config->network.no_routes, config->network.no_routes_size);
+	for (j=0;j<config->network.no_routes_size;j++) {
+		if (ip_route_sanity_check(config->network.no_routes, &config->network.no_routes[j]) != 0)
+			exit(1);
+	}
 
 	READ_STRING("default-select-group", config->default_select_group);
 	READ_TF("auto-select-group", auto_select_group, 0);

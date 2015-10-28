@@ -151,6 +151,8 @@ int parse_group_cfg_file(struct cfg_st *global_config,
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
 unsigned prefix = 0;
+int ret;
+unsigned j;
 
 	pov = configFileLoad(file);
 	if (pov == NULL) {
@@ -178,6 +180,27 @@ unsigned prefix = 0;
 	READ_RAW_MULTI_LINE("route", msg->routes, msg->n_routes);
 	READ_RAW_MULTI_LINE("no-route", msg->no_routes, msg->n_no_routes);
 	READ_RAW_MULTI_LINE("iroute", msg->iroutes, msg->n_iroutes);
+
+	for (j=0;j<msg->n_routes;j++) {
+		if (ip_route_sanity_check(msg->routes, &msg->routes[j]) != 0) {
+			ret = ERR_READ_CONFIG;
+			goto fail;
+		}
+	}
+
+	for (j=0;j<msg->n_iroutes;j++) {
+		if (ip_route_sanity_check(msg->iroutes, &msg->iroutes[j]) != 0) {
+			ret = ERR_READ_CONFIG;
+			goto fail;
+		}
+	}
+
+	for (j=0;j<msg->n_no_routes;j++) {
+		if (ip_route_sanity_check(msg->no_routes, &msg->no_routes[j]) != 0) {
+			ret = ERR_READ_CONFIG;
+			goto fail;
+		}
+	}
 
 	READ_RAW_MULTI_LINE("dns", msg->dns, msg->n_dns);
 	if (msg->n_dns == 0) {
@@ -229,9 +252,11 @@ unsigned prefix = 0;
 
 	READ_RAW_STRING("user-profile", msg->xml_config_file);
 
+	ret = 0;
+ fail:
 	optionUnloadNested(pov);
 	
-	return 0;
+	return ret;
 }
 
 static int read_sup_config_file(struct cfg_st *global_config,

@@ -571,6 +571,59 @@ struct msghdr mh = {
 	return ret;
 }
 
+/* check whether a route is on the expected format, and if it cannot be
+ * fixed, then returns a negative code.
+ *
+ * The expected format by clients for IPv4 is xxx.xxx.xxx.xxx/xxx.xxx.xxx.xxx, i.e.,
+ * this function converts xxx.xxx.xxx.xxx/prefix to the above for IPv4.
+ */
+int ip_route_sanity_check(void *pool, char **_route)
+{
+	char *p;
+	unsigned prefix;
+	char *route = *_route, *n;
+	char *slash_ptr, *pstr;
+
+	/* this check is valid for IPv4 only */
+	p = strchr(route, '.');
+	if (p == NULL)
+		return 0;
+
+	p = strchr(p, '/');
+	if (p == NULL) {
+		fprintf(stderr, "route '%s' in wrong format, use xxx.xxx.xxx.xxx/xxx.xxx.xxx.xxx\n", route);
+		return -1;
+	}
+	slash_ptr = p;
+	p++;
+
+	/* if we are in dotted notation exit */
+	if (strchr(p, '.') != 0)
+		return 0;
+
+	/* we are most likely in the xxx.xxx.xxx.xxx/prefix format */
+	prefix = atoi(p);
+
+	pstr = ipv4_prefix_to_mask(pool, prefix);
+	if (pstr == NULL) {
+		fprintf(stderr, "cannot figure format of route '%s'\n", route);
+		return -1;
+	}
+
+	*slash_ptr = 0;
+
+	n = talloc_asprintf(pool, "%s/%s", route, pstr);
+	if (n == NULL) {
+		fprintf(stderr, "memory error\n");
+		return -1;
+	}
+	*_route = n;
+
+	talloc_free(pstr);
+	talloc_free(route);
+	return 0;
+}
+
 #ifndef HAVE_STRLCPY
 
 /*

@@ -42,6 +42,8 @@ void *_talloc_size2(void *ctx, size_t size);
 void set_non_block(int fd);
 void set_block(int fd);
 
+int ip_route_sanity_check(void *pool, char **_route);
+
 ssize_t force_write(int sockfd, const void *buf, size_t len);
 ssize_t force_read(int sockfd, void *buf, size_t len);
 ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec);

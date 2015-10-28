@@ -73,6 +73,10 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		}
 	}
 
+	for (i=0;i<msg->n_routes;i++) {
+		ip_route_sanity_check(msg->routes, &msg->routes[i]);
+	}
+
 	if (pctx->ipv4_dns1[0] != 0)
 		dns++;
 	if (pctx->ipv4_dns2[0] != 0)

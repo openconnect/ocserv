@@ -266,7 +266,7 @@ int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
 
 /* returns an allocated string with the mask to apply for the prefix
  */
-char* ipv4_prefix_to_mask(void *pool, unsigned prefix)
+char* ipv4_prefix_to_strmask(void *pool, unsigned prefix)
 {
 	struct in_addr in;
 	char str[MAX_IP_STR];
@@ -604,7 +604,7 @@ int ip_route_sanity_check(void *pool, char **_route)
 	/* we are most likely in the xxx.xxx.xxx.xxx/prefix format */
 	prefix = atoi(p);
 
-	pstr = ipv4_prefix_to_mask(pool, prefix);
+	pstr = ipv4_prefix_to_strmask(pool, prefix);
 	if (pstr == NULL) {
 		fprintf(stderr, "cannot figure format of route '%s'\n", route);
 		return -1;

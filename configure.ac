@@ -149,8 +149,6 @@ AC_ARG_WITH(liboath,
   test_for_liboath=$withval,
   test_for_liboath=yes)
 
-echo xxx x$test_for_liboath
-
 if test x$test_for_liboath = xyes;then
   PKG_CHECK_MODULES([LIBOATH], [liboath], [
 AC_DEFINE([HAVE_LIBOATH], 1, [Enable the liboath library])

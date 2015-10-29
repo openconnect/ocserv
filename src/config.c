@@ -908,7 +908,7 @@ size_t urlfw_size = 0;
 	if (prefix4 == 0) {
 		READ_STRING("ipv4-netmask", config->network.ipv4_netmask);
 	} else {
-		config->network.ipv4_netmask = ipv4_prefix_to_mask(config, prefix4);
+		config->network.ipv4_netmask = ipv4_prefix_to_strmask(config, prefix4);
 	}
 
 	READ_STRING("ipv6-network", config->network.ipv6);

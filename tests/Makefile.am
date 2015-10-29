@@ -40,10 +40,13 @@ json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 ipv4_prefix_SOURCES = ../src/common.c ../src/common.h ipv4-prefix.c
 ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
+str_test_SOURCES = ../src/str.c ../src/str.h str-test.c
+str_test_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+
 ipv6_prefix_SOURCES = ../src/common.c ../src/common.h ipv6-prefix.c
 ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
-check_PROGRAMS = ipv4-prefix ipv6-prefix kkdcp-parsing json-escape
+check_PROGRAMS = str-test ipv4-prefix ipv6-prefix kkdcp-parsing json-escape
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
 

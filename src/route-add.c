@@ -31,6 +31,7 @@
 #include <str.h>
 #include <common.h>
 
+
 static
 int replace_cmd(struct main_server_st* s, proc_st *proc, 
 		char **cmd, const char* pattern, 
@@ -38,6 +39,13 @@ int replace_cmd(struct main_server_st* s, proc_st *proc,
 {
 	str_st str;
 	int ret;
+	str_rep_tab tab[5];
+
+	STR_TAB_SET(0, "%{R}", route);
+	STR_TAB_SET(1, "%R", route);
+	STR_TAB_SET(2, "%{D}", dev);
+	STR_TAB_SET(3, "%D", dev);
+	STR_TAB_TERM(4);
 
 	str_init(&str, proc);
 
@@ -45,20 +53,7 @@ int replace_cmd(struct main_server_st* s, proc_st *proc,
 	if (ret < 0)
 		return ERR_MEM;
 
-	ret = str_replace_str(&str, "%{R}", route);
-	if (ret < 0)
-		goto fail;
-
-	ret = str_replace_str(&str, "%{D}", dev);
-	if (ret < 0)
-		goto fail;
-
-	/* The old compatibility strings */
-	ret = str_replace_str(&str, "%R", route);
-	if (ret < 0)
-		goto fail;
-
-	ret = str_replace_str(&str, "%D", dev);
+	ret = str_replace_str(&str, tab);
 	if (ret < 0)
 		goto fail;
 

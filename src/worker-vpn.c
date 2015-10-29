@@ -1250,6 +1250,11 @@ char *replace_vals(worker_st *ws, const char *txt)
 {
 	str_st str;
 	int ret;
+	str_rep_tab tab[3];
+
+	STR_TAB_SET(0, "%{U}", ws->username);
+	STR_TAB_SET(1, "%{G}", ws->groupname);
+	STR_TAB_TERM(2);
 
 	str_init(&str, ws);
 
@@ -1257,13 +1262,7 @@ char *replace_vals(worker_st *ws, const char *txt)
 	if (ret < 0)
 		return NULL;
 
-	ret = str_replace_str(&str, "%{U}", ws->username);
-	if (ret < 0) {
-		str_clear(&str);
-		return NULL;
-	}
-
-	ret = str_replace_str(&str, "%{G}", ws->groupname);
+	ret = str_replace_str(&str, tab);
 	if (ret < 0) {
 		str_clear(&str);
 		return NULL;

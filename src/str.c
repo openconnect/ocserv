@@ -149,41 +149,61 @@ str_append_printf(str_st *dest, const char *fmt, ...)
 	return len;
 }
 
-int str_replace_str(str_st *str, const char *what, const char *with)
+int str_replace_str(str_st *str, const str_rep_tab *tab)
 {
-	uint8_t *p, *final;
-	unsigned what_len, final_len;
-	int ret;
+	uint8_t *p;
+	const str_rep_tab *ptab;
+	unsigned length;
+	char *final;
+	unsigned final_len;
+	int ret, pos;
 
-	what_len = strlen(what);
+	p = str->data;
+	pos = 0;
+	do {
+		p = memchr(p, '%', str->length - pos);
+		if (p == NULL)
+			break;
 
-	p = memmem(str->data, str->length, what, what_len);
-	if (p == NULL)
-		return 0;
+		pos = (ptrdiff_t)(p-str->data);
 
-	p += what_len;
-	final_len = str->length - (ptrdiff_t)(p-str->data);
+		length = str->length - pos;
 
-	final = talloc_memdup(str->allocd, p, final_len);
-	if (final == NULL)
-		return -1;
+		ptab = tab;
+		do {
+			if (length >= ptab->pattern_length &&
+			    memcmp(ptab->pattern, p, ptab->pattern_length) == 0) {
+			    /* replace */
+			    	final_len = length - ptab->pattern_length;
+			    	final = talloc_memdup(str->allocd, p+ptab->pattern_length, final_len);
+			    	if (final == NULL)
+					return -1;
 
-	str->length -= final_len + what_len;
+				str->length -= final_len + ptab->pattern_length;
+				ret = str_append_str(str, ptab->rep_val);
+				if (ret < 0) {
+					talloc_free(final);
+					return ret;
+				}
 
-	ret = str_append_str(str, with);
-	if (ret < 0) {
-		talloc_free(final);
-		return ret;
-	}
+				ret = str_append_data(str, final, final_len);
+				talloc_free(final);
+				if (ret < 0) {
+					return ret;
+				}
+				break;
+			}
+			ptab++;
 
-	ret = str_append_data(str, final, final_len);
-	talloc_free(final);
+			if (ptab->pattern == NULL) {
+				/* not found */
+				return -1;
+			}
+		} while(1);
 
-	if (ret < 0) {
-		return ret;
-	}
+		p = &str->data[pos];
+	} while(pos < str->length);
 
-	/* allow multiple replacements */
-	return str_replace_str(str, what, with);
+	return 0;
 }
 

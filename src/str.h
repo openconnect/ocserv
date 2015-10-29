@@ -26,6 +26,19 @@
 #include <config.h>
 #include <stdint.h>
 
+#define STR_TAB_SET(i,pat,val) { \
+	tab[i].pattern = pat; \
+	tab[i].pattern_length = sizeof(pat)-1; \
+	tab[i].rep_val = val; \
+	}
+#define STR_TAB_TERM(i) tab[i].pattern = NULL
+
+typedef struct {
+	const char *pattern;
+	unsigned pattern_length;
+	const char *rep_val;
+} str_rep_tab;
+
 typedef struct {
 	uint8_t *allocd;	/* pointer to allocated data */
 	uint8_t *data;		/* API: pointer to data to copy from */
@@ -55,7 +68,7 @@ inline static void str_reset(str_st * buf)
 
 int str_append_printf(str_st *dest, const char *fmt, ...);
 int str_append_str(str_st *, const char *str);
-int str_replace_str(str_st *, const char *what, const char *with);
+int str_replace_str(str_st *, const str_rep_tab *tab);
 int str_append_data(str_st *, const void *data, size_t data_size);
 int str_append_size(str_st *, size_t data_size);
 int str_append_data_prefix1(str_st *, const void *data, size_t data_size);

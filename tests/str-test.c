@@ -54,10 +54,18 @@ int main()
 	STR_TAB_SET(5, "%U", "u1");
 	STR_TAB_TERM(6);
 
+	/* check proper operation */
 #define STR2 "This is one route1, and one route2, while a route3 was replaced by dev1 and dev2 and dev1. That's all u1."
 	str_reset(&str);
-	str_append_str(&str, "This is one %R, and one %{R}, while a %{R2} was replaced by %{D} and %D and %{D}. That's all %U.");
-	str_replace_str(&str, tab);
+	if (str_append_str(&str, "This is one %R, and one %{R}, while a %{R2} was replaced by %{D} and %D and %{D}. That's all %U.") != 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
+	if (str_replace_str(&str, tab) != 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
 
 	if (str.length != sizeof(STR2)-1) {
 		fprintf(stderr, "error in %d\n", __LINE__);
@@ -65,6 +73,14 @@ int main()
 	}
 
 	if (strncmp((char*)str.data, STR2, sizeof(STR2)-1) != 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
+	/* check failure on unknown pattern */
+	str_reset(&str);
+	str_append_str(&str, "This is one %A.");
+	if (str_replace_str(&str, tab) == 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}

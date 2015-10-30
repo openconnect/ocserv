@@ -459,9 +459,9 @@ AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 LIBOPTS_CHECK([libopts])
 if test "$NEED_LIBOPTS_DIR" = "true";then
 	dnl create libopts-generated files
-	for i in ${srcdir}/src/*-args.c.bak ${srcdir}/src/*-args.h.bak; do
+	for i in ${srcdir}/src/*args.c.bak ${srcdir}/src/*args.h.bak ${srcdir}/src/occtl/*args.c.bak ${srcdir}/src/occtl/*args.h.bak; do
 		nam=`echo $i|sed 's/.bak//g'`
-		if [ test -f $i ];then
+		if test -f "$i";then
 			cp -f $i $nam
 		fi
 	done

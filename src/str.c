@@ -186,8 +186,11 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 				str->length -= final_len + ptab->pattern_length;
 				if (ptab->rep_val)
 					ret = str_append_str(str, ptab->rep_val);
-				else
-					ret = str_append_str(str, ptab->rep_func(str->pool, ptab->rep_func_input));
+				else {
+					char *t = ptab->rep_func(str->pool, ptab->rep_func_input);
+					ret = str_append_str(str, t);
+					talloc_free(t);
+				}
 				if (ret < 0) {
 					talloc_free(final);
 					return ret;

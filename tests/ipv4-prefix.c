@@ -18,8 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <talloc.h>
 
-#include "../src/common.h"
+#include "../src/ip-util.h"
 
 int main()
 {
@@ -97,6 +98,21 @@ int main()
 
 	p = ipv4_prefix_to_strmask(NULL, 3);
 	if (p == NULL || strcmp(p, "224.0.0.0") != 0) {
+		fprintf(stderr, "error in %d: %s\n", __LINE__, p);
+		exit(1);
+	}
+	talloc_free(p);
+
+	/* Check ipv4_route_to_cidr */
+	p = ipv4_route_to_cidr(NULL, "192.168.5.0/255.255.255.0");
+	if (p == NULL || strcmp(p, "192.168.5.0/24") != 0) {
+		fprintf(stderr, "error in %d: %s\n", __LINE__, p);
+		exit(1);
+	}
+	talloc_free(p);
+
+	p = ipv4_route_to_cidr(NULL, "192.168.4.0/255.255.0.0");
+	if (p == NULL || strcmp(p, "192.168.4.0/16") != 0) {
 		fprintf(stderr, "error in %d: %s\n", __LINE__, p);
 		exit(1);
 	}

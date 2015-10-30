@@ -42,22 +42,10 @@ void *_talloc_size2(void *ctx, size_t size);
 void set_non_block(int fd);
 void set_block(int fd);
 
-int ip_route_sanity_check(void *pool, char **_route);
-
 ssize_t force_write(int sockfd, const void *buf, size_t len);
 ssize_t force_read(int sockfd, void *buf, size_t len);
 ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec);
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec);
-int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2);
-char* ipv4_prefix_to_strmask(void *pool, unsigned prefix);
-unsigned ipv6_prefix_to_mask(struct in6_addr *in6, unsigned prefix);
-inline static int valid_ipv6_prefix(unsigned prefix)
-{
-	if (prefix > 10 && prefix <= 128)
-		return 1;
-	else
-		return 0;
-}
 
 typedef size_t (*pack_func)(const void*, uint8_t *);
 typedef size_t (*pack_size_func)(const void*);

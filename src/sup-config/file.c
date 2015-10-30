@@ -30,6 +30,7 @@
 #include <autoopts/options.h>
 #include <limits.h>
 #include <common.h>
+#include <ip-util.h>
 #include <c-strcase.h>
 
 #include <vpn.h>

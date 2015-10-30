@@ -36,6 +36,7 @@
 #include <vpn.h>
 #include <main.h>
 #include <common.h>
+#include <ip-util.h>
 #include <tlslib.h>
 
 int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,

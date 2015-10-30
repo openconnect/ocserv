@@ -463,19 +463,6 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 
 #define human_addr(x, y, z, w) human_addr2(x, y, z, w, 1)
 
-/* Helper casts */
-#define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)
-#define SA_IN_U8_P(p) ((uint8_t*)(&((struct sockaddr_in *)(p))->sin_addr))
-#define SA_IN6_P(p) (&((struct sockaddr_in6 *)(p))->sin6_addr)
-#define SA_IN6_U8_P(p) ((uint8_t*)(&((struct sockaddr_in6 *)(p))->sin6_addr))
-
-#define SA_IN_PORT(p) (((struct sockaddr_in *)(p))->sin_port)
-#define SA_IN6_PORT(p) (((struct sockaddr_in6 *)(p))->sin6_port)
-
-#define SA_IN_P_GENERIC(addr, size) ((size==sizeof(struct sockaddr_in))?SA_IN_U8_P(addr):SA_IN6_U8_P(addr))
-#define SA_IN_P_TYPE(addr, type) ((type==AF_INET)?SA_IN_U8_P(addr):SA_IN6_U8_P(addr))
-#define SA_IN_SIZE(size) ((size==sizeof(struct sockaddr_in))?sizeof(struct in_addr):sizeof(struct in6_addr))
-
 /* macros */
 #define TOS_PACK(x) (x<<4)
 #define TOS_UNPACK(x) (x>>4)
@@ -483,5 +470,7 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 
 /* Helper structures */
 enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
+
+#include <ip-util.h>
 
 #endif

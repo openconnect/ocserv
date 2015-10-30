@@ -29,6 +29,7 @@
 #include <autoopts/options.h>
 #include <limits.h>
 #include <common.h>
+#include <ip-util.h>
 #include <c-strcase.h>
 #include <c-ctype.h>
 #include <auth/pam.h>

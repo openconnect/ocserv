@@ -1,7 +1,6 @@
 AM_CPPFLAGS = -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
-	-I$(srcdir)/ -I$(srcdir)/../ -I$(builddir)/../../ \
-	$(LIBNL3_CFLAGS) $(LIBPROTOBUF_C_CFLAGS) \
-	$(LIBTALLOC_CFLAGS)
+	-I$(srcdir)/ -I$(srcdir)/../ -I$(builddir)/../../ -I$(builddir)/../ \
+	$(LIBNL3_CFLAGS) $(LIBPROTOBUF_C_CFLAGS) $(LIBTALLOC_CFLAGS)
 
 EXTRA_DIST = args.def
 

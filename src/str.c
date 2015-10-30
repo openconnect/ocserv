@@ -180,7 +180,10 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 					return -1;
 
 				str->length -= final_len + ptab->pattern_length;
-				ret = str_append_str(str, ptab->rep_val);
+				if (ptab->rep_val)
+					ret = str_append_str(str, ptab->rep_val);
+				else
+					ret = str_append_str(str, ptab->rep_func(str->pool, ptab->rep_func_input));
 				if (ret < 0) {
 					talloc_free(final);
 					return ret;

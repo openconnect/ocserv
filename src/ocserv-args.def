@@ -585,10 +585,10 @@ no-route = 192.168.5.0/255.255.255.0
 #default-group-config = /etc/ocserv/defaults/group.conf
 
 # The system command to use to setup a route. %{R} will be replaced with the
-# route/mask and %{D} with the (tun) device.
+# route/mask, %{RI} with the route in CIDR format, and %{D} with the (tun) device.
 #
-# The following example is from linux systems. %R should be something
-# like 192.168.2.0/24 (the argument of iroute).
+# The following example is from linux systems. %{R} should be something
+# like 192.168.2.0/255.255.255.0 and %{RI} 192.168.2.0/24 (the argument of iroute).
 
 #route-add-cmd = "ip route add %{R} dev %{D}"
 #route-del-cmd = "ip route delete %{R} dev %{D}"

@@ -22,7 +22,7 @@
 
 #include <ip-lease.h>
 #include <main.h>
-#include <common.h>
+#include <ip-util.h>
 #include <gnutls/crypto.h>
 #include <icmp-ping.h>
 #include <arpa/inet.h>

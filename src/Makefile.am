@@ -83,7 +83,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	sup-config/radius.c sup-config/radius.h \
 	worker-bandwidth.c worker-bandwidth.h ctl.h main-ctl.h \
 	vasprintf.c vasprintf.h worker-proxyproto.c \
-	proc-search.c proc-search.h http-heads.h \
+	proc-search.c proc-search.h http-heads.h ip-util.c ip-util.h \
 	main-ban.c main-ban.h common-config.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	$(PROTOBUF_SOURCES) sec-mod-acct.h setproctitle.c setproctitle.h

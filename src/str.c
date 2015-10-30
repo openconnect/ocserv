@@ -121,6 +121,10 @@ int str_append_data_prefix1(str_st * dest, const void *data, size_t data_size)
 int str_append_str(str_st * dest, const char *src)
 {
 	int ret;
+
+	if (src == NULL)
+		return -1;
+
 	ret = str_append_data(dest, src, strlen(src) + 1);
 	if (ret >= 0)
 		dest->length--;

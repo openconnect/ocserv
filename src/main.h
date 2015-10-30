@@ -281,6 +281,16 @@ struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned flags);
 void proc_to_zombie(main_server_st* s, struct proc_st *proc);
 
+inline static void terminate_proc(main_server_st *s, proc_st *proc)
+{
+	/* if it has an IP, send a signal so that we cleanup
+	 * and get stats properly */
+	if (proc->pid != -1 && proc->pid != 0)
+                kill(proc->pid, SIGTERM);
+	else
+		remove_proc(s, proc, RPROC_KILL);
+}
+
 void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);
 
 inline static

@@ -10,7 +10,7 @@ long-opts;
 no-misuse-usage;
 short-usage   = "Usage: occtl [options] [command]\nocctl --help for usage instructions.\n";
 explain       = "";
-#include version.inc
+#include ../version.inc
 
 detail  = "Openconnect VPN server control (occtl) is a tool to control
 the ocserv VPN server.";

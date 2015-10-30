@@ -50,8 +50,8 @@
 #include <vpn.h>
 #include <cookies.h>
 #include <main.h>
-#include <ctl.h>
 #include <tlslib.h>
+#include <occtl/ctl.h>
 #include "common-config.h"
 
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"

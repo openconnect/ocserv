@@ -50,6 +50,11 @@ AC_CHECK_LIB(gnutls, gnutls_pkcs11_reinit, [
 AC_DEFINE([HAVE_PKCS11], [], [PKCS11 detected in gnutls])
 ])
 
+if ! $PKG_CONFIG --atleast-version=3.0 nettle; then
+	AC_DEFINE([NETTLE_OLD_BASE64_API], [1],
+		  [nettle uses the pre-3.x base64 API])
+fi
+
 AC_ARG_WITH(protobuf,
   AS_HELP_STRING([--without-protobuf], [use the included protobuf library]),
   test_for_protobuf=$withval,

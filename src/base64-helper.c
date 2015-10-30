@@ -44,7 +44,17 @@ oc_base64_decode(const uint8_t *src, unsigned src_length,
 
 	base64_decode_init(&ctx);
 
+#ifdef NETTLE_OLD_BASE64_API
+	{
+		unsigned int len = *dst_length;
+		ret = base64_decode_update(&ctx, &len, dst, src_length, src);
+		if (ret != 0)
+			*dst_length = len;
+	}
+#else
 	ret = base64_decode_update(&ctx, dst_length, dst, src_length, src);
+#endif
+
 	if (ret == 0)
 		return 0;
 

@@ -132,7 +132,7 @@ if test ! -f $DOCKER_DIR/Dockerfile;then
 fi
 
 rm -f $DOCKER_DIR/ocserv $DOCKER_DIR/ocpasswd $DOCKER_DIR/occtl
-cp ../src/ocserv ../src/ocpasswd ../src/occtl $DOCKER_DIR/
+cp ../src/ocserv ../src/ocpasswd/ocpasswd ../src/occtl/occtl $DOCKER_DIR/
 
 echo "Creating image $IMAGE"
 $DOCKER build -t $IMAGE $DOCKER_DIR/

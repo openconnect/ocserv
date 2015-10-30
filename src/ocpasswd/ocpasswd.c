@@ -31,7 +31,7 @@
 #include <gnutls/crypto.h>	/* for random */
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <ocpasswd-args.h>
+#include "args.h"
 
 /* Gnulib portability files. */
 #include <getpass.h>

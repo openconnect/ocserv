@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
 	-I$(srcdir)/ -I$(srcdir)/../ -I$(builddir)/../../ \
-	$(LIBTALLOC_CFLAGS) $(LIBOPTS_CFLAGS) 
+	-I$(builddir) $(LIBTALLOC_CFLAGS) $(LIBOPTS_CFLAGS) 
 
 include ../common.mk
 

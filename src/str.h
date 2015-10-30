@@ -31,12 +31,23 @@
 	tab[i].pattern_length = sizeof(pat)-1; \
 	tab[i].rep_val = val; \
 	}
+#define STR_TAB_SET_FUNC(i,pat,func,funcinput) { \
+	tab[i].pattern = pat; \
+	tab[i].pattern_length = sizeof(pat)-1; \
+	tab[i].rep_val = NULL; \
+	tab[i].rep_func = func; \
+	tab[i].rep_func_input = funcinput; \
+	}
 #define STR_TAB_TERM(i) tab[i].pattern = NULL
+
+typedef char *(*str_get_func)(void *pool, const char *input);
 
 typedef struct {
 	const char *pattern;
 	unsigned pattern_length;
 	const char *rep_val;
+	str_get_func rep_func;
+	const void *rep_func_input;
 } str_rep_tab;
 
 typedef struct {

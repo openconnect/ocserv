@@ -121,3 +121,74 @@ int ip_route_sanity_check(void *pool, char **_route)
 	talloc_free(route);
 	return 0;
 }
+
+static
+int bit_count(uint32_t i)
+{
+	int c = 0;
+	unsigned int seen_one = 0;
+
+	while (i > 0) {
+		if (i & 1) {
+			seen_one = 1;
+			c++;
+		} else {
+			if (seen_one) {
+				return -1;
+			}
+		}
+		i >>= 1;
+	}
+
+	return c;
+}
+
+static int mask2prefix(struct in_addr mask)
+{
+	return bit_count(ntohl(mask.s_addr));
+}
+
+static
+int ipv4_mask_to_int(const char *prefix)
+{
+	int ret;
+	struct in_addr in;
+
+	ret = inet_pton(AF_INET, prefix, &in);
+	if (ret == 0)
+		return -1;
+
+	return mask2prefix(in);
+}
+
+/* Converts a route from xxx.xxx.xxx.xxx/xxx.xxx.xxx.xxx format, to
+ * xxx.xxx.xxx.xxx/prefix format.
+ */
+char *ipv4_route_to_cidr(void *pool, const char *route)
+{
+	int prefix;
+	int len;
+	const char *p;
+
+	/* this check is valid for IPv4 only */
+	p = strchr(route, '.');
+	if (p == NULL)
+		return talloc_strdup(pool, route);
+
+	p = strchr(p, '/');
+	if (p == NULL) {
+		return NULL;
+	}
+	len = (ptrdiff_t)(p-route);
+	p++;
+
+	/* if we are in CIDR format exit */
+	if (strchr(p, '.') == 0)
+		return talloc_strdup(pool, route);
+
+	prefix = ipv4_mask_to_int(p);
+	if (prefix <= 0 || prefix > 32)
+		return NULL;
+
+	return talloc_asprintf(pool, "%.*s/%d", len, route, prefix);
+}

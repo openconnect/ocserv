@@ -31,7 +31,6 @@
 #include <str.h>
 #include <common.h>
 
-
 static
 int replace_cmd(struct main_server_st* s, proc_st *proc, 
 		char **cmd, const char* pattern, 
@@ -39,13 +38,14 @@ int replace_cmd(struct main_server_st* s, proc_st *proc,
 {
 	str_st str;
 	int ret;
-	str_rep_tab tab[5];
+	str_rep_tab tab[6];
 
 	STR_TAB_SET(0, "%{R}", route);
 	STR_TAB_SET(1, "%R", route);
 	STR_TAB_SET(2, "%{D}", dev);
 	STR_TAB_SET(3, "%D", dev);
-	STR_TAB_TERM(4);
+	STR_TAB_SET_FUNC(4, "%{RC}", ipv4_route_to_cidr, route);
+	STR_TAB_TERM(5);
 
 	str_init(&str, proc);
 

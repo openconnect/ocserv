@@ -40,6 +40,8 @@ inline static int valid_ipv6_prefix(unsigned prefix)
 		return 0;
 }
 
+char *ipv4_route_to_cidr(void *pool, const char *route);
+
 /* Helper casts */
 #define SA_IN_P(p) (&((struct sockaddr_in *)(p))->sin_addr)
 #define SA_IN_U8_P(p) ((uint8_t*)(&((struct sockaddr_in *)(p))->sin_addr))

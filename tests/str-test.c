@@ -18,8 +18,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <talloc.h>
 
 #include "../src/str.h"
+
+static char *myfunc(void *pool, const char *str)
+{
+	return talloc_strdup(pool, str);
+}
 
 #define STR1 "hi there people. How are you?"
 int main()
@@ -52,7 +58,8 @@ int main()
 	STR_TAB_SET(3, "%{D}", "dev1");
 	STR_TAB_SET(4, "%D", "dev2");
 	STR_TAB_SET(5, "%U", "u1");
-	STR_TAB_TERM(6);
+	STR_TAB_SET_FUNC(6, "%{FUNC}", myfunc, "function-output");
+	STR_TAB_TERM(7);
 
 	/* check proper operation */
 #define STR2 "This is one route1, and one route2, while a route3 was replaced by dev1 and dev2 and dev1. That's all u1."
@@ -84,6 +91,28 @@ int main()
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
+
+#define STR3 "%U: Testing %{FUNC}."
+#define STR3_OUT "u1: Testing function-output."
+	str_reset(&str);
+	str_append_str(&str, STR3);
+
+	if (str_replace_str(&str, tab) != 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
+	if (str.length != sizeof(STR3_OUT)-1) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
+	if (strncmp((char*)str.data, STR3_OUT, sizeof(STR3_OUT)-1) != 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
+	str_clear(&str);
 
 	return 0;
 }

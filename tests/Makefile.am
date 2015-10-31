@@ -34,7 +34,7 @@ AM_CPPFLAGS = \
 kkdcp_parsing_SOURCES = ../src/config-kkdcp.c kkdcp-parsing.c
 kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
-json_escape_SOURCES = ../src/common-json.c json-escape.c
+json_escape_SOURCES = ../src/occtl/json.c json-escape.c
 json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
 
 ipv4_prefix_SOURCES = ../src/ip-util.c ../src/ip-util.h ipv4-prefix.c

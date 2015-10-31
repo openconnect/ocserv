@@ -10,7 +10,7 @@ COMMON_SOURCES=../common.c ../common.h ../system.c ../system.h
 
 occtl_SOURCES = occtl.c pager.c occtl.h time.c cache.c ip-cache.c \
 	nl.c ctl.h ../ctl.pb-c.c ../ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES) \
-	print.c ../common-json.c ../common-json.h $(PROTOBUF_SOURCES)
+	print.c json.c json.h $(PROTOBUF_SOURCES)
 occtl_LDADD = ../../gl/libgnu.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 

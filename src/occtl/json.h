@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef COMMON_JSON_H
-# define COMMON_JSON_H
+#ifndef JSON_H
+# define JSON_H
 char *json_escape_val(char *tmp, unsigned tmp_size, const char *val);
 
 #endif

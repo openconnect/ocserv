@@ -29,7 +29,7 @@
 #include <c-ctype.h>
 #include <occtl/occtl.h>
 #include <common.h>
-#include <common-json.h>
+#include <json.h>
 #include <c-strcase.h>
 
 #define MAX_STR_SIZE 512

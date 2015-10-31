@@ -44,7 +44,7 @@ int replace_cmd(struct main_server_st* s, proc_st *proc,
 	STR_TAB_SET(1, "%R", route);
 	STR_TAB_SET(2, "%{D}", dev);
 	STR_TAB_SET(3, "%D", dev);
-	STR_TAB_SET_FUNC(4, "%{RC}", ipv4_route_to_cidr, route);
+	STR_TAB_SET_FUNC(4, "%{RI}", ipv4_route_to_cidr, route);
 	STR_TAB_TERM(5);
 
 	str_init(&str, proc);

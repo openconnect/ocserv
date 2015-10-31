@@ -6,7 +6,7 @@ EXTRA_DIST = args.def
 
 bin_PROGRAMS = occtl
 
-COMMON_SOURCES=../common.c ../common.h ../system.c ../system.h
+COMMON_SOURCES=../common.c ../common.h
 
 occtl_SOURCES = occtl.c pager.c occtl.h time.c cache.c ip-cache.c \
 	nl.c ctl.h ../ctl.pb-c.c ../ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES) \

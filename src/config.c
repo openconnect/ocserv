@@ -940,13 +940,7 @@ size_t urlfw_size = 0;
 	}
 
 	if (config->network.ipv6_subnet_prefix == 0) {
-		config->network.ipv6_subnet_prefix = config->network.ipv6_prefix+16;
-		if (config->network.ipv6_subnet_prefix > 128) {
-			fprintf(stderr, "Cannot figure a valid IPv6 subnet prefix\n");
-			exit(1);
-		}
-		if (config->network.ipv6_subnet_prefix < 64)
-			config->network.ipv6_subnet_prefix = 64;
+		config->network.ipv6_subnet_prefix = 128;
 	} else if (config->network.ipv6_prefix >= config->network.ipv6_subnet_prefix) {
 		fprintf(stderr, "The subnet prefix (%u) cannot be smaller or equal to network's (%u)\n", 
 				config->network.ipv6_subnet_prefix, config->network.ipv6_prefix);

@@ -100,11 +100,7 @@ In a Linux system you can profile ocserv using the following command.
 # perf record -g ocserv
 ```
 
-After the server is terminated, the output is placed in perf.data. It does 
-not contain any sensitive information. If you run a server for long time,
-and under usage (i.e., clients connecting and transferring data), please
-send that information to nmav@gnutls.org.
-
+After the server is terminated, the output is placed in perf.data.
 You may examine the output using:
 ```
 # perf report

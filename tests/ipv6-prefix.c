@@ -20,7 +20,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#include "../src/common.h"
+#include "../src/ip-util.h"
 
 static char* my_ipv6_prefix_to_mask(const char *str, unsigned prefix)
 {

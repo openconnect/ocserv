@@ -242,7 +242,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 
 	in_size = SA_IN_SIZE(addr_size);
 	if (in_size != 4 && in_size != 16) {
-	    	mslog(s, NULL, LOG_ERR, "unknown address type for %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), NULL));
+	    	mslog(s, NULL, LOG_ERR, "unknown address type for %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), 0));
 		return 0;
 	}
 
@@ -262,7 +262,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 			return 0;
 
 		if (e->score >= s->config->max_ban_score) {
-		    	mslog(s, NULL, LOG_INFO, "rejected connection from banned IP: %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), NULL));
+		    	mslog(s, NULL, LOG_INFO, "rejected connection from banned IP: %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), 0));
 			return 1;
 		}
 	}

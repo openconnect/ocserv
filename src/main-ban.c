@@ -40,14 +40,14 @@
 #include <tlslib.h>
 #include <main.h>
 #include <main-ban.h>
+#include <arpa/inet.h>
 #include <ccan/hash/hash.h>
 #include <ccan/htable/htable.h>
 
 static size_t rehash(const void *_e, void *unused)
 {
 	ban_entry_st *e = (void*)_e;
-	return hash_any(e->ip, strlen(e->ip), 0);
-
+	return hash_any(e->ip.ip, e->ip.size, 0);
 }
 
 /* The first argument is the entry from the hash, and
@@ -58,7 +58,7 @@ static bool ban_entry_cmp(const void *_c1, void *_c2)
 	const struct ban_entry_st *c1 = _c1;
 	struct ban_entry_st *c2 = _c2;
 
-	if (strcmp(c1->ip, c2->ip) == 0)
+	if (c1->ip.size == c2->ip.size && memcmp(c1->ip.ip, c2->ip.ip, c1->ip.size) == 0)
 		return 1;
 	return 0;
 }
@@ -99,7 +99,7 @@ struct htable *db = s->ban_db;
 }
 
 /* returns -1 if the user is already banned, and zero otherwise */
-int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
+int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_size, unsigned score)
 {
 	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
@@ -109,12 +109,11 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	int ret = 0;
 	unsigned print_msg;
 
-	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || ip[0] == 0)
+	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || (ip_size != 4 && ip_size != 16))
 		return 0;
 
-	/* check if the IP is already there */
-	/* pass the current time somehow */
-	strlcpy(t.ip, ip, sizeof(t.ip));
+	memcpy(t.ip.ip, ip, ip_size);
+	t.ip.size = ip_size;
 
 	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
 	if (e == NULL) { /* new entry */
@@ -123,7 +122,7 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 			return 0;
 		}
 
-		strlcpy(e->ip, ip, sizeof(e->ip));
+		memcpy(&e->ip, &t.ip, sizeof(e->ip));
 		e->last_reset = now;
 
 		if (htable_add(db, rehash(e, NULL), e) == 0) {
@@ -163,25 +162,55 @@ int add_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	return ret;
 }
 
+int add_str_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
+{
+	struct htable *db = s->ban_db;
+	ban_entry_st t;
+	int ret = 0;
+
+	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || ip[0] == 0)
+		return 0;
+
+	if (strchr(ip, ':') != 0) {
+		ret = inet_pton(AF_INET6, ip, t.ip.ip);
+		t.ip.size = 16;
+	} else {
+		ret = inet_pton(AF_INET, ip, t.ip.ip);
+		t.ip.size = 4;
+	}
+	if (ret != 1) {
+		mslog(s, NULL, LOG_INFO,
+		       "could not read IP: %s", ip);
+		return 0;
+	}
+
+	return add_ip_to_ban_list(s, t.ip.ip, t.ip.size, score);
+}
+
 /* returns non-zero if there is an IP removed */
-int remove_ip_from_ban_list(main_server_st *s, const char *ip)
+int remove_ip_from_ban_list(main_server_st *s, const uint8_t *ip, unsigned size)
 {
 	struct htable *db = s->ban_db;
 	struct ban_entry_st *e;
 	ban_entry_st t;
+	char txt_ip[MAX_IP_STR];
 
-	if (db == NULL || ip == NULL || ip[0] == 0)
+	if (db == NULL || ip == NULL || size == 0)
 		return 0;
 
-	/* check if the IP is already there */
-	/* pass the current time somehow */
-	strlcpy(t.ip, ip, sizeof(t.ip));
+	if (size == 4 || size == 16) {
+		if (inet_ntop(size==16?AF_INET6:AF_INET, ip, txt_ip, sizeof(txt_ip)) != NULL)
+			mslog(s, NULL, LOG_INFO,
+				      "unbanning IP '%s'", txt_ip);
 
-	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
-	if (e != NULL) { /* new entry */
-		e->score = 0;
-		e->expires = 0;
-		return 1;
+		memcpy(&t.ip.ip, ip, size);
+
+		e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
+		if (e != NULL) { /* new entry */
+			e->score = 0;
+			e->expires = 0;
+			return 1;
+		}
 	}
 
 	return 0;
@@ -192,24 +221,33 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 	struct htable *db = s->ban_db;
 	time_t now;
 	ban_entry_st t, *e;
+	unsigned in_size;
+	char txt[MAX_IP_STR];
 
 	if (db == NULL || s->config->max_ban_score == 0)
 		return 0;
 
-	if (human_addr2((struct sockaddr*)addr, addr_size, t.ip, sizeof(t.ip), 0) != NULL) {
-		/* add its current connection points */
-		add_ip_to_ban_list(s, t.ip, s->config->ban_points_connect);
+	in_size = SA_IN_SIZE(addr_size);
+	if (in_size != 4 && in_size != 16) {
+	    	mslog(s, NULL, LOG_ERR, "unknown address type for %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), NULL));
+		return 0;
+	}
 
-		now = time(0);
-		e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
-		if (e != NULL) {
-			if (now > e->expires)
-				return 0;
+	memcpy(t.ip.ip, SA_IN_P_GENERIC(addr, addr_size), SA_IN_SIZE(addr_size));
+	t.ip.size = SA_IN_SIZE(addr_size);
 
-			if (e->score >= s->config->max_ban_score) {
-			    	mslog(s, NULL, LOG_INFO, "rejected connection from banned IP: %s", t.ip);
-				return 1;
-			}
+	/* add its current connection points */
+	add_ip_to_ban_list(s, t.ip.ip, t.ip.size, s->config->ban_points_connect);
+
+	now = time(0);
+	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
+	if (e != NULL) {
+		if (now > e->expires)
+			return 0;
+
+		if (e->score >= s->config->max_ban_score) {
+		    	mslog(s, NULL, LOG_INFO, "rejected connection from banned IP: %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), NULL));
+			return 1;
 		}
 	}
 	return 0;

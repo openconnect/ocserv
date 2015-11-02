@@ -359,9 +359,8 @@ int handle_unban_ip_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *pa
 	BoolMsg *rep;
 	unsigned status;
 	UnbanReq req = UNBAN_REQ__INIT;
-	char txt[MAX_IP_STR];
 	int af;
-	struct sockaddr_storage st;
+	unsigned char tmp[16];
 	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	if (arg == NULL || need_help(arg)) {
@@ -378,12 +377,16 @@ int handle_unban_ip_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *pa
 		af = AF_INET;
 	}
 
-	ret = inet_pton(af, arg, &st);
+	ret = inet_pton(af, arg, tmp);
 	if (ret == 1) {
-		inet_ntop(af, &st, txt, sizeof(txt));
-		req.ip = txt;
+		req.ip.data = tmp;
+		if (af == AF_INET)
+			req.ip.len = 4;
+		else
+			req.ip.len = 16;
 	} else {
-		req.ip = (char*)arg;
+		fprintf(stderr, "Cannot parse IP: %s", arg);
+		return 1;
 	}
 
 	ret = send_cmd(ctx, CTL_CMD_UNBAN_IP, &req, 
@@ -628,6 +631,8 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 	struct tm *tm;
 	time_t t;
 	PROTOBUF_ALLOCATOR(pa, ctx);
+	char txt_ip[MAX_IP_STR];
+	const char *tmp_str;
 
 	init_reply(&raw);
 
@@ -647,9 +652,15 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 	print_array_block(out, params);
 
 	for (i=0;i<rep->n_info;i++) {
-		if (rep->info[i]->ip == NULL)
+		if (rep->info[i]->ip.len <= 4)
 			continue;
 
+		if (rep->info[i]->ip.len == 16)
+			tmp_str = inet_ntop(AF_INET6, rep->info[i]->ip.data, txt_ip, sizeof(txt_ip));
+		else
+			tmp_str = inet_ntop(AF_INET, rep->info[i]->ip.data, txt_ip, sizeof(txt_ip));
+		if (tmp_str == NULL)
+			strlcpy(txt_ip, "(unknown)", sizeof(txt_ip));
 
 		/* add header */
 		if (points == 0) {
@@ -670,12 +681,12 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 			print_time_ival7(tmpbuf, t, time(0));
 
 			if (HAVE_JSON(params)) {
-				print_single_value(out, params, "IP", rep->info[i]->ip, 1);
+				print_single_value(out, params, "IP", txt_ip, 1);
 				print_single_value_ex(out, params, "Since", str_since, tmpbuf, 1);
 				print_single_value_int(out, params, "Score", rep->info[i]->score, 0);
 			} else {
 				fprintf(out, "%14s %14u %30s (%s)\n",
-					rep->info[i]->ip, (unsigned)rep->info[i]->score, str_since, tmpbuf);
+					txt_ip, (unsigned)rep->info[i]->score, str_since, tmpbuf);
 			}
 		} else {
 			if (i == 0 && NO_JSON(params)) {
@@ -685,17 +696,17 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 			print_start_block(out, params);
 
 			if (HAVE_JSON(params)) {
-				print_single_value(out, params, "IP", rep->info[i]->ip, 1);
+				print_single_value(out, params, "IP", txt_ip, 1);
 				print_single_value_int(out, params, "Score", rep->info[i]->score, 0);
 			} else {
 				fprintf(out, "%14s %14u\n",
-					rep->info[i]->ip, (unsigned)rep->info[i]->score);
+					txt_ip, (unsigned)rep->info[i]->score);
 			}
 		}
 
 		print_end_block(out, params, i<(rep->n_info-1)?1:0);
 
-		ip_entries_add(ctx, rep->info[i]->ip, strlen(rep->info[i]->ip));
+		ip_entries_add(ctx, txt_ip, strlen(txt_ip));
 	}
 
 	print_end_array_block(out, params);

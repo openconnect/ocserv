@@ -370,7 +370,7 @@ int handle_commands(main_server_st * s, struct proc_st *proc)
 				goto cleanup;
 			}
 
-			ret = add_ip_to_ban_list(s, tmsg->ip, tmsg->score);
+			ret = add_str_ip_to_ban_list(s, tmsg->ip, tmsg->score);
 
 			ban_ip_msg__free_unpacked(tmsg, &pa);
 

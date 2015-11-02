@@ -466,7 +466,8 @@ static int append_ban_info(method_ctx *ctx,
 
 	ban_info_rep__init(rep);
 
-	rep->ip = e->ip;
+	rep->ip.data = e->ip.ip;
+	rep->ip.len = e->ip.size;
 	rep->score = e->score;
 
 	if (ctx->s->config->max_ban_score > 0 && e->score >= ctx->s->config->max_ban_score) {
@@ -621,10 +622,7 @@ static void method_unban_ip(method_ctx *ctx,
 		return;
 	}
 
-	if (remove_ip_from_ban_list(ctx->s, req->ip) != 0) {
-		if (req->ip)
-			mslog(ctx->s, NULL, LOG_INFO,
-				      "unbanning IP '%s' due to ctl request", req->ip);
+	if (remove_ip_from_ban_list(ctx->s, req->ip.data, req->ip.len) != 0) {
 		rep.status = 1;
 	}
 

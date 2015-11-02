@@ -98,6 +98,13 @@ struct htable *db = s->ban_db;
 		return 0;
 }
 
+static void massage_ipv6_address(ban_entry_st *t)
+{
+	if (t->ip.size == 16) {
+		memset(&t->ip.ip[8], 0, 8);
+	}
+}
+
 /* returns -1 if the user is already banned, and zero otherwise */
 int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_size, unsigned score)
 {
@@ -114,6 +121,9 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 
 	memcpy(t.ip.ip, ip, ip_size);
 	t.ip.size = ip_size;
+
+	/* In IPv6 treat a /64 as a single address */
+	massage_ipv6_address(&t);
 
 	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
 	if (e == NULL) { /* new entry */
@@ -205,6 +215,9 @@ int remove_ip_from_ban_list(main_server_st *s, const uint8_t *ip, unsigned size)
 
 		memcpy(&t.ip.ip, ip, size);
 
+		/* In IPv6 treat a /64 as a single address */
+		massage_ipv6_address(&t);
+
 		e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
 		if (e != NULL) { /* new entry */
 			e->score = 0;
@@ -235,6 +248,9 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 
 	memcpy(t.ip.ip, SA_IN_P_GENERIC(addr, addr_size), SA_IN_SIZE(addr_size));
 	t.ip.size = SA_IN_SIZE(addr_size);
+
+	/* In IPv6 treat a /64 as a single address */
+	massage_ipv6_address(&t);
 
 	/* add its current connection points */
 	add_ip_to_ban_list(s, t.ip.ip, t.ip.size, s->config->ban_points_connect);

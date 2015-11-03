@@ -108,6 +108,21 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.session_timeout_secs = proc->config.session_timeout_secs;
 		}
 
+		if (proc->config.dpd != 0) {
+			msg.has_dpd = 1;
+			msg.dpd = proc->config.dpd;
+		}
+
+		if (proc->config.keepalive != 0) {
+			msg.has_keepalive = 1;
+			msg.keepalive = proc->config.keepalive;
+		}
+
+		if (proc->config.mobile_dpd != 0) {
+			msg.has_mobile_dpd = 1;
+			msg.mobile_dpd = proc->config.mobile_dpd;
+		}
+
 		if (proc->config.rx_per_sec != 0) {
 			msg.has_rx_per_sec = 1;
 			msg.rx_per_sec = proc->config.rx_per_sec;
@@ -311,8 +326,9 @@ int check_multiple_users(main_server_st *s, struct proc_st* proc)
 {
 struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
+unsigned max;
 
-	if (s->config->max_same_clients == 0)
+	if (s->config->max_same_clients == 0 && proc->config.max_same_clients == 0)
 		return 0;
 
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
@@ -323,7 +339,12 @@ unsigned int entries = 1; /* that one */
 		}
 	}
 
-	if (s->config->max_same_clients && entries > s->config->max_same_clients)
+	if (proc->config.max_same_clients > 0)
+		max = proc->config.max_same_clients;
+	else
+		max = s->config->max_same_clients;
+
+	if (max && entries > max)
 		return -1;
 
 	return 0;

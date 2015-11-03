@@ -215,6 +215,11 @@ struct group_cfg_st {
 	size_t rx_per_sec;
 	size_t tx_per_sec;
 
+	unsigned max_same_clients;
+	unsigned dpd;
+	unsigned keepalive;
+	unsigned mobile_dpd;
+
 	/* the number of secs to send interim updates. If set, it overrides
 	 * stats-report-time. */
 	unsigned interim_update_secs;

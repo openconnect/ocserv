@@ -241,6 +241,18 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	if (msg->has_no_udp)
 		proc->config.no_udp = msg->no_udp;
 
+	if (msg->has_max_same_clients)
+		proc->config.max_same_clients = msg->max_same_clients;
+
+	if (msg->has_dpd)
+		proc->config.dpd = msg->dpd;
+
+	if (msg->has_keepalive)
+		proc->config.keepalive = msg->keepalive;
+
+	if (msg->has_mobile_dpd)
+		proc->config.mobile_dpd = msg->mobile_dpd;
+
 	if (msg->has_deny_roaming)
 		proc->config.deny_roaming = msg->deny_roaming;
 

@@ -629,6 +629,15 @@ static int recv_cookie_auth_reply(worker_st * ws)
 				ws->config->network.ipv6_subnet_prefix = msg->ipv6_subnet_prefix;
 			}
 
+			if (msg->has_dpd)
+				ws->config->dpd = msg->dpd;
+
+			if (msg->has_keepalive)
+				ws->config->keepalive = msg->keepalive;
+
+			if (msg->has_mobile_dpd)
+				ws->config->mobile_dpd = msg->mobile_dpd;
+
 			if (msg->has_rx_per_sec)
 				ws->config->rx_per_sec = msg->rx_per_sec;
 

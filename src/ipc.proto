@@ -13,9 +13,9 @@
    | <----------AUTH_COOKIE_REQ----------------- |
    |                      |                      |
    | ---SESSION_OPEN----> |                      |
-   | <--SESSION_REPLY---- |                      |
+   | <--SESSION_REPLY---- |                      |   #contains additional config for client
    |                      |                      |
-   | -----------------AUTH_REP-----------------> |
+   | -----------------AUTH_REP-----------------> |   #forwards the additional config for client
    |                      |                      |
    | <------------SESSION_INFO------------------ |
    |                      |                      |
@@ -83,6 +83,9 @@ message auth_reply_msg
 	optional uint32 interim_update_secs = 31;
 	optional uint32 session_timeout_secs = 32;
 	optional uint32 ipv6_subnet_prefix = 33;
+	optional uint32 dpd = 34;
+	optional uint32 mobile_dpd = 35;
+	optional uint32 keepalive = 36;
 }
 
 /* RESUME_FETCH_REQ + RESUME_DELETE_REQ */
@@ -289,6 +292,10 @@ message sec_auth_session_reply_msg
 	optional string explicit_ipv6 = 27;
 	repeated string no_routes = 28;
 	optional uint32 ipv6_subnet_prefix = 29;
+	optional uint32 dpd = 30;
+	optional uint32 mobile_dpd = 31;
+	optional uint32 keepalive = 32;
+	optional uint32 max_same_clients = 33;
 }
 
 /* SEC_BAN_IP: sent from sec-mod to main */

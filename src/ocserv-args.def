@@ -565,6 +565,7 @@ no-route = 192.168.5.0/255.255.255.0
 # The options allowed in the configuration files are dns, nbns,
 #  ipv?-network, ipv4-netmask, rx/tx-per-sec, iroute, route, no-route,
 #  explicit-ipv4, explicit-ipv6, net-priority, deny-roaming, no-udp, 
+#  keepalive, dpd, mobile-dpd, max-same-clients,
 #  user-profile, cgroup, stats-report-time, and session-timeout.
 #
 # Note that the 'iroute' option allows to add routes on the server

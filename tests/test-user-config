@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# Copyright (C) 2015 Red Hat, Inc.
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4512
+
+# Test whether DPD, keepalive per user are actually set, and whether
+# the expose-iroutes option has an effect to other users.
+
+. `dirname $0`/common.sh
+
+echo "Testing ocserv and user route application... "
+
+TMPFILE1=${srcdir}/test-user-config.tmp
+
+rm -f ${TMPFILE1}
+
+launch_server -d 1 -f -c ${srcdir}/test-user-config.config & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( $OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null ) ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+echo -n "Re-connecting to force script run... "
+$OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >/dev/null &
+kpid1=$!
+echo ok
+
+sleep 2
+
+echo -n "Re-connecting to check the iroutes"
+$OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 &
+kpid2=$!
+
+sleep 4
+
+kill $kpid1
+kill $kpid2
+
+echo -n "Checking if routes have been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Split-Include|grep 192.168.1.0`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Split-Include
+	fail $PID "Temporary file contents are not correct; iroute was not found"
+fi
+
+echo ok
+
+echo -n "Checking if user-specific DPD has been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-DTLS-DPD|grep 880`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-DTLS-DPD
+	fail $PID "Temporary file contents are not correct; dpd was not the expected (880)"
+fi
+
+echo ok
+
+echo -n "Checking if user-specific Keep alive has been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Keep|grep 14400`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Keep
+	fail $PID "Temporary file contents are not correct; keepalive was not the expected (14400)"
+fi
+
+echo ok
+
+rm -f ${TMPFILE1}
+
+kill $PID
+wait
+
+exit 0

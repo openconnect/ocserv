@@ -1,0 +1,3 @@
+dpd = 880
+mobile-dpd = 880
+keepalive = 14400

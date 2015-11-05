@@ -10,7 +10,7 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-ban.config test-sighup.config test-gssapi-local-map.config \
 	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
 	server-key-ossl.pem server-key-p8.pem proxyproto-unix-test user-cn.pem \
-	user-cert-testuser.pem test-stress
+	user-cert-testuser.pem test-stress test-user-config.config user-config/testuser
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -20,7 +20,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
 	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \
 	test-cookie-invalidation radius-test-config test-enc-key proxyproto-test \
-	proxyproto-unix-test pam-noauth-test otp-test
+	proxyproto-unix-test pam-noauth-test otp-test test-user-config
 
 
 AM_CPPFLAGS = \

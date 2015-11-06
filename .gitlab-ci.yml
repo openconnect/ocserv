@@ -4,3 +4,9 @@ Build with separate build dir:
     ../configure && make -j4 && make check -j4 && make SKIP_LIBOPTS_CHECK=1 dist
   except:
   - tags
+Build and Check with asan:
+  script:
+  - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
+    ./configure && make -j4 && make check -j4
+  except:
+  - tags

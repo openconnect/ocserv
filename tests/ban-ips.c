@@ -162,7 +162,7 @@ int main()
 		exit(1);
 	}
 
-
+	main_ban_db_deinit(s);
 	talloc_free(s);
 	return 0;
 }

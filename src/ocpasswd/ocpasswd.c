@@ -355,6 +355,7 @@ int main(int argc, char **argv)
 	int ret, optct;
 	const char *username, *groupname, *fpasswd;
 	char* passwd;
+	unsigned free_passwd = 0;
 	size_t l, i;
 
 	if ((ret = gnutls_global_init()) < 0) {
@@ -425,11 +426,14 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 
+			free_passwd = 1;
 			if (passwd[l-1] == '\n')
 				passwd[l-1] = 0;
 		}
 
 		crypt_int(fpasswd, username, groupname, passwd);
+		if (free_passwd)
+			free(passwd);
 	}
 
 	gnutls_global_deinit();

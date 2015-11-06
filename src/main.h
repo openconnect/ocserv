@@ -236,18 +236,27 @@ int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
 int session_close(main_server_st * s, struct proc_st *proc);
 
+#ifdef DISABLE_LOGS
+/* for testing */
+# define mslog(...)
+
+#else
+
 void 
 __attribute__ ((format(printf, 4, 5)))
     _mslog(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *fmt, ...);
 
-#ifdef __GNUC__
-# define mslog(s, proc, prio, fmt, ...) \
+# ifdef __GNUC__
+#  define mslog(s, proc, prio, fmt, ...) \
 	(prio==LOG_ERR)?_mslog(s, proc, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
 	_mslog(s, proc, prio, fmt, ##__VA_ARGS__)
-#else
-# define mslog _mslog
+# else
+#  define mslog _mslog
+# endif
+
 #endif
+
 
 void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
     	int priority, const char *prefix, uint8_t* bin, unsigned bin_size, unsigned b64);

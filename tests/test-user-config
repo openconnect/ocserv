@@ -30,6 +30,7 @@ PORT=4512
 echo "Testing ocserv and user route application... "
 
 TMPFILE1=${srcdir}/test-user-config.tmp
+TMPFILE2=${srcdir}/test-user-config-2.tmp
 
 rm -f ${TMPFILE1}
 
@@ -49,11 +50,29 @@ echo ok
 
 sleep 2
 
-echo -n "Re-connecting to check the iroutes"
+echo -n "Re-connecting to check the iroutes... "
 $OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 &
 kpid2=$!
 
-sleep 4
+echo ok
+sleep 3
+
+echo -n "Checking if max-same-clients is considered... "
+
+timeout 15s $OPENCONNECT localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE2} 2>&1
+if test $? = 124;then
+	fail $PID "Max-same-clients directive was ignored"
+fi
+
+CONTENTS=`cat ${TMPFILE2}|grep "HTTP/1.1 401 Unauthorized"`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE2}
+	fail $PID "Max-same-clients directive was ignored"
+fi
+
+echo ok
+
+sleep 2
 
 kill $kpid1
 kill $kpid2
@@ -89,6 +108,7 @@ fi
 echo ok
 
 rm -f ${TMPFILE1}
+rm -f ${TMPFILE2}
 
 kill $PID
 wait

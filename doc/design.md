@@ -1,0 +1,141 @@
+Intro
+=====
+
+To enforce isolation between clients and with the authenticating process, 
+ocserv consists of 3 components; the main process, the security module and
+the worker processes. The following sections describe the purpose and tasks
+assigned to each component, and the last section describes the communication
+protocol between them.
+
+
+VPN overview
+============
+
+See http://www.infradead.org/ocserv/technical.html
+
+
+The main process
+================
+
+The main component consists of the process which is tasked to:
+ 
+ * Listen for incoming TCP connections and fork a new worker process
+   to handle it. - See main.c
+
+ * Listen for incomping UDP "connections" and forward the packet stream
+   to the appropriate worker process. - See main.c
+
+ * Create and forward to workers with an authenticated user a dedicated
+   tun device. - See AUTH_COOKIE_REQ message handling.
+
+ * Keep track of all connected users. - See the proc_st list in main.h
+
+ * Execute any privileged operations that cannot be handled by worker
+    processes (e.g., change the MTU in a tun device) - See main-misc.c
+
+ * Execute any operations that require state for the worker processes,
+    e.g., store TLS session data for resumption - See main-misc.c
+
+
+The security module process
+===========================
+
+The security module component consists of a process which keeps all
+sensitive data (e.g., private keys, PAM state), that should not be leaked to
+a worker process. It is separate from main to ensure that no such data are
+leaked during a fork(). It handles:
+
+ * TLS authentication (i.e., private key decryption and signing). That is
+   it operates as a 'software security module' for the worker processes to
+   use the private key used for TLS without accessing it. - See
+   SM_CMD_SIGN/DECRYPT message handling in sec-mod.c.
+
+ * Username/password authentication. That is a worker process needs to
+   communicate with the security module the client username/password and
+   get a cookie (ticket) to be considered as logged in by the main process.
+   The username/password authentication includes GSSAPI authentication.
+   For this exchange see the SM_CMD_AUTH_* message handling.
+
+ * Partial certificate authentication. A user certificate received by the
+   worker process, is verified by it, and on its SM_CMD_AUTH_INIT message
+   it indicates the verification status. The security module approves, 
+   and performs any other authentication method necessary.
+
+ * Gatekeeper for accounting information keeping and reporting. That is
+   currently closely related to radius accounting. The security module
+   receives periodically accounting data from the workers and forwards the
+   data to the radius accounting server. See the SM_CMD_CLI_STATS message
+   handling.
+
+ * Gatekeeper for new user sessions. When the main process receives a valid cookie
+   from a worker process, it will notify the security module which keeps the
+   authentication state. The security module will return any additional user
+   configuration settings (received via radius or per-user config file) -
+   See SM_CMD_AUTH_SESSION_OPEN and SM_CMD_AUTH_SESSION_CLOSE message
+   handling.
+
+
+The worker processes
+====================
+
+The worker processes perform the TLS handshake, and HTTP exchange for
+authentication. After that they simply act as bridge between the tun
+device and the client. The tasks handled are:
+
+ * TLS authentication. Perform the TLS key exchange, and when needed verify
+   the client certificate.
+
+ * Bridge user authentication with the security module.
+
+ * Forward the cookie received by the security module to main to obtain a
+   tun device.
+
+ * Establish a DTLS channel. When a client initiates a UDP session with
+   main, that session is connected and forwarded to the worker. The worker
+   establishes a DTLS channel over that.
+
+ * Bridge the tun device with the TLS and DTLS channels.
+
+
+IPC Communication
+=================
+
+* Authentication
+
+``` 
+  main                 sec-mod                 worker
+   |                      |                      |
+   |                      |  <--SEC_AUTH_INIT--- |
+   |                      |  ---SEC_AUTH_REP---> |
+   |                      |  <--SEC_AUTH_CONT--- |
+   |                      |         .            |
+   |                      |         .            |
+   |                      |         .            |
+   |                      |  ----SEC_AUTH_REP--> |
+   |                      |                      |
+   | <----------AUTH_COOKIE_REQ----------------- |
+   |                      |                      |
+   | ---SESSION_OPEN----> |                      |
+   | <--SESSION_REPLY---- |                      |   #contains additional config for client
+   |                      |                      |
+   | -----------------AUTH_REP-----------------> |   #forwards the additional config for client
+   |                      |                      |
+   | <------------SESSION_INFO------------------ |
+   |                      |                      |
+   |                      | <-- CLI_STATS ------ |
+   |                      |            (disconnect)
+   | ---SESSION_CLOSE---> |
+   | <-- CLI_STATS ------ |
+
+```
+
+
+* Auth in main process (cookie auth only)
+
+```
+   main                              worker
+                      <------     AUTH_COOKIE_REQ
+ AUTH_REP(OK/FAILED)  ------>
+  +user config
+
+```

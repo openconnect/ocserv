@@ -1,40 +1,4 @@
-/* === Authentication ===
- 
-  main                 sec-mod                 worker
-   |                      |                      |
-   |                      |  <--SEC_AUTH_INIT--- |
-   |                      |  ---SEC_AUTH_REP---> |
-   |                      |  <--SEC_AUTH_CONT--- |
-   |                      |         .            |
-   |                      |         .            |
-   |                      |         .            |
-   |                      |  ----SEC_AUTH_REP--> |
-   |                      |                      |
-   | <----------AUTH_COOKIE_REQ----------------- |
-   |                      |                      |
-   | ---SESSION_OPEN----> |                      |
-   | <--SESSION_REPLY---- |                      |   #contains additional config for client
-   |                      |                      |
-   | -----------------AUTH_REP-----------------> |   #forwards the additional config for client
-   |                      |                      |
-   | <------------SESSION_INFO------------------ |
-   |                      |                      |
-   |                      | <-- CLI_STATS ------ |
-   |                      |            (disconnect)
-   | ---SESSION_CLOSE---> |
-   | <-- CLI_STATS ------ |
-
- */
-
-
-/*
- * == Auth in main process (cookie auth only) ==
- *
- *   main                              worker
- *                      <------     AUTH_COOKIE_REQ
- * AUTH_REP(OK/FAILED)  ------>
- *  +user config
- *
+/* See doc/design.md for the IPC communication sequences.
  */
 
 enum AUTH_REP {

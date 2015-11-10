@@ -1611,7 +1611,18 @@ static int connect_handler(worker_st * ws)
 
 		ret = send_routes(ws, req, ws->routes, ws->routes_size, 1);
 		SEND_ERR(ret);
+
+	} else {
+		/* default route */
+		ws->config->tunnel_all_dns = 1;
 	}
+
+	if (ws->config->tunnel_all_dns) {
+		ret = cstp_puts(ws, "X-CSTP-Tunnel-All-DNS: true\r\n");
+	} else {
+		ret = cstp_puts(ws, "X-CSTP-Tunnel-All-DNS: false\r\n");
+	}
+	SEND_ERR(ret);
 
 	ret = send_routes(ws, req, ws->vinfo.no_routes, ws->vinfo.no_routes_size, 0);
 	SEND_ERR(ret);
@@ -1685,7 +1696,6 @@ static int connect_handler(worker_st * ws)
 		       "X-CSTP-Disconnected-Timeout: none\r\n"
 		       "X-CSTP-Keep: true\r\n"
 		       "X-CSTP-TCP-Keepalive: true\r\n"
-		       "X-CSTP-Tunnel-All-DNS: false\r\n"
 		       "X-CSTP-License: accept\r\n");
 	SEND_ERR(ret);
 

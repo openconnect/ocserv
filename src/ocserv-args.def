@@ -500,6 +500,10 @@ ipv6-network = fda9:4efe:7e3b:03ea::/48
 #ipv6-subnet-prefix = 128
 #ipv6-subnet-prefix = 64
 
+# Whether to tunnel all DNS queries via the VPN. This is the default
+# when a default route is set.
+#tunnel-all-dns = true
+
 # The advertized DNS server. Use multiple lines for
 # multiple servers.
 # dns = fc00::4be0
@@ -577,7 +581,7 @@ no-route = 192.168.5.0/255.255.255.0
 # The options allowed in the configuration files are dns, nbns,
 #  ipv?-network, ipv4-netmask, rx/tx-per-sec, iroute, route, no-route,
 #  explicit-ipv4, explicit-ipv6, net-priority, deny-roaming, no-udp, 
-#  keepalive, dpd, mobile-dpd, max-same-clients,
+#  keepalive, dpd, mobile-dpd, max-same-clients, tunnel-all-dns,
 #  user-profile, cgroup, stats-report-time, and session-timeout.
 #
 # Note that the 'iroute' option allows to add routes on the server

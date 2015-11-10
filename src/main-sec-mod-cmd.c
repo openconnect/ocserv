@@ -247,6 +247,9 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	if (msg->has_dpd)
 		proc->config.dpd = msg->dpd;
 
+	if (msg->has_tunnel_all_dns)
+		proc->config.tunnel_all_dns = msg->tunnel_all_dns;
+
 	if (msg->has_keepalive)
 		proc->config.keepalive = msg->keepalive;
 

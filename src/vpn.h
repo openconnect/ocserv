@@ -216,6 +216,7 @@ struct group_cfg_st {
 	size_t tx_per_sec;
 
 	unsigned max_same_clients;
+	unsigned tunnel_all_dns;
 	unsigned dpd;
 	unsigned keepalive;
 	unsigned mobile_dpd;
@@ -355,6 +356,7 @@ struct cfg_st {
 	unsigned max_clients;
 	unsigned max_same_clients;
 	unsigned use_utmp;
+	unsigned tunnel_all_dns;
 	unsigned use_dbus; /* whether the D-BUS service is registered */
 	unsigned use_occtl; /* whether support for the occtl tool will be enabled */
 

@@ -117,6 +117,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "occtl-socket-file", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "banner", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "use-seccomp", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "tunnel-all-dns", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "isolate-workers", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "predictable-ips", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "session-control", .type = OPTION_BOOLEAN, .mandatory = 0 },
@@ -749,6 +750,8 @@ size_t urlfw_size = 0;
 		talloc_free(urlfw);
 	}
 #endif
+
+	READ_TF("tunnel-all-dns", config->tunnel_all_dns, 0);
 
 	READ_NUMERIC("keepalive", config->keepalive);
 	READ_NUMERIC("dpd", config->dpd);

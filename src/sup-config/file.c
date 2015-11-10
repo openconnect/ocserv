@@ -45,6 +45,7 @@ struct cfg_options {
 
 static struct cfg_options available_options[] = {
 	{ .name = "no-udp", .type = OPTION_BOOLEAN },
+	{ .name = "tunnel-all-dns", .type = OPTION_BOOLEAN },
 	{ .name = "deny-roaming", .type = OPTION_BOOLEAN },
 	{ .name = "route", .type = OPTION_MULTI_LINE },
 	{ .name = "no-route", .type = OPTION_MULTI_LINE },
@@ -180,6 +181,7 @@ unsigned j;
 	} while((val = optionNextValue(pov, prev)) != NULL);
 
 	READ_TF("no-udp", msg->no_udp, msg->has_no_udp);
+	READ_TF("tunnel_all_dns", msg->tunnel_all_dns, msg->has_tunnel_all_dns);
 	READ_TF("deny-roaming", msg->deny_roaming, msg->has_deny_roaming);
 
 	READ_RAW_MULTI_LINE("route", msg->routes, msg->n_routes);

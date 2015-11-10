@@ -143,6 +143,11 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			msg.no_udp = proc->config.no_udp;
 		}
 
+		if (proc->config.tunnel_all_dns != 0) {
+			msg.has_tunnel_all_dns = 1;
+			msg.tunnel_all_dns = proc->config.tunnel_all_dns;
+		}
+
 		if (proc->config.xml_config_file != NULL) {
 			msg.xml_config_file = proc->config.xml_config_file;
 		}

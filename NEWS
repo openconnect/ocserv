@@ -5,6 +5,7 @@
 - Added config option 'append-routes'. If set to true it will restore
   the old configuration semantics of appending the global routes to per
   user/group config.
+- Switched to an event-driven design in main; using libev
 
 
 * Version 0.10.9 (released 2015-10-07)

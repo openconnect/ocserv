@@ -132,7 +132,6 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 		mslog(s, NULL, LOG_INFO,
 		      "maximum number of stored TLS sessions reached (%u)",
 		      max);
-		need_maintenance = 1;
 		return -1;
 	}
 

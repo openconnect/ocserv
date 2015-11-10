@@ -1,7 +1,7 @@
 # Clone from the Fedora 22 image
 FROM fedora:23
 
-RUN yum install -y krb5-libs krb5-workstation 
+RUN yum install -y krb5-libs krb5-workstation libev
 RUN yum install -y gnutls gnutls-utils iproute systemd
 RUN yum install -y bash net-tools nuttcp iputils openssh-clients passwd
 RUN yum install -y lz4 radcli liboauth oathtool procps-ng iputils

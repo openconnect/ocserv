@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +47,7 @@
 #ifdef HAVE_LIBWRAP
 # include <tcpd.h>
 #endif
+#include <ev.h>
 
 #ifdef HAVE_LIBSYSTEMD
 # include <systemd/sd-daemon.h>
@@ -72,12 +74,20 @@ ASN1_TYPE _kkdcp_pkix1_asn = ASN1_TYPE_EMPTY;
 int saved_argc = 0;
 char **saved_argv = NULL;
 
+static void listen_watcher_cb (EV_P_ ev_io *w, int revents);
+
 int syslog_open = 0;
-static unsigned int terminate = 0;
-static unsigned int reload_conf = 0;
-unsigned int need_maintenance = 0;
-static unsigned int need_children_cleanup = 0;
 sigset_t sig_default_set;
+struct ev_loop *loop;
+
+/* EV watchers */
+ev_io ctl_watcher;
+ev_io sec_mod_watcher;
+ev_timer maintainance_watcher;
+ev_signal term_sig_watcher;
+ev_signal int_sig_watcher;
+ev_signal reload_sig_watcher;
+ev_child child_watcher;
 
 static void add_listener(void *pool, struct listen_list_st *list,
 	int fd, int family, int socktype, int protocol,
@@ -93,6 +103,9 @@ static void add_listener(void *pool, struct listen_list_st *list,
 
 	tmp->addr_len = addr_len;
 	memcpy(&tmp->addr, addr, addr_len);
+
+	ev_init(&tmp->io, listen_watcher_cb);
+	ev_io_set(&tmp->io, fd, EV_READ);
 
 	list_add(&list->head, &(tmp->list));
 	list->total++;
@@ -370,7 +383,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 			exit(1);
 		}
 
-		if (config->config->foreground != 0)
+		if (config->foreground != 0)
 			fprintf(stderr, "listening on %d systemd sockets...\n", list->total);
 
 		return 0;
@@ -481,61 +494,6 @@ int y;
 	set_cloexec_flag (fd, 1);
 
 	return;
-}
-
-
-static void cleanup_children(main_server_st *s)
-{
-int status, estatus, ret;
-pid_t pid;
-struct script_wait_st *stmp = NULL, *spos;
-
-	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-		estatus = WEXITSTATUS(status);
-
-		if (WIFSIGNALED(status))
-			estatus = 1;
-
-		if (pid == s->sec_mod_pid) {
-			mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
-			terminate = 1;
-		}
-
-		/* check if someone was waiting for that pid */
-		list_for_each_safe(&s->script_list.head, stmp, spos, list) {
-			if (stmp->pid == pid) {
-				mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
-				list_del(&stmp->list);
-				ret = handle_script_exit(s, stmp->proc, estatus);
-				if (ret < 0) {
-					remove_proc(s, stmp->proc, RPROC_KILL);
-				} else {
-					talloc_free(stmp);
-				}
-				break;
-			}
-		}
-
-		if (WIFSIGNALED(status)) {
-			if (WTERMSIG(status) == SIGSEGV)
-				mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n", (unsigned)pid);
-			else if (WTERMSIG(status) == SIGSYS)
-				mslog(s, NULL, LOG_ERR, "Child %u died with sigsys\n", (unsigned)pid);
-			else
-				mslog(s, NULL, LOG_ERR, "Child %u died with signal %d\n", (unsigned)pid, (int)WTERMSIG(status));
-		}
-	}
-	need_children_cleanup = 0;
-}
-
-static void handle_children(int signo)
-{
-	need_children_cleanup = 1;
-}
-
-static void handle_alarm(int signo)
-{
-	need_maintenance = 1;
 }
 
 static void drop_privileges(main_server_st* s)
@@ -659,31 +617,6 @@ void clear_lists(main_server_st *s)
 	ctl_handler_deinit(s);
 	main_ban_db_deinit(s);
 }
-
-static void kill_children(main_server_st* s)
-{
-	struct proc_st *ctmp = NULL, *cpos;
-
-	/* kill the security module server */
-	kill(s->sec_mod_pid, SIGTERM);
-	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
-		if (ctmp->pid != -1) {
-			remove_proc(s, ctmp, RPROC_KILL|RPROC_QUIT);
-		}
-	}
-}
-
-void request_stop(int signo)
-{
-	/* kill all children */
-	terminate = 1;
-}
-
-void request_reload(int signo)
-{
-	reload_conf = 1;
-}
-
 
 /* A UDP fd will not be forwarded to worker process before this number of
  * seconds has passed. That is to prevent a duplicate message messing the worker.
@@ -842,67 +775,6 @@ fail:
 
 }
 
-#define MAINTAINANCE_TIME(s) (900)
-
-static void check_other_work(main_server_st *s)
-{
-unsigned total = 10;
-
-	if (reload_conf != 0) {
-		mslog(s, NULL, LOG_INFO, "reloading configuration");
-		reload_cfg_file(s->main_pool, s->perm_config, 1);
-		s->config = s->perm_config->config;
-		tls_reload_crl(s, s->creds, 1);
-		reload_conf = 0;
-		kill(s->sec_mod_pid, SIGHUP);
-	}
-
-	if (need_children_cleanup != 0) {
-		cleanup_children(s);
-	}
-
-	if (terminate != 0) {
-		mslog(s, NULL, LOG_INFO, "termination request received; waiting for children to die");
-		kill_children(s);
-		remove(s->full_socket_file);
-		remove(s->perm_config->occtl_socket_file);
-		remove_pid_file();
-
-		while (waitpid(-1, NULL, WNOHANG) >= 0) {
-			if (total == 0) {
-				mslog(s, NULL, LOG_INFO, "not everyone died; forcing kill");
-				kill(0, SIGKILL);
-			}
-			ms_sleep(500);
-			total--;
-		}
-
-		/* try to clean-up everything allocated to ease checks 
-		 * for memory leaks.
-		 */
-		clear_lists(s);
-		tls_global_deinit(s->creds);
-		clear_cfg(s->perm_config);
-		talloc_free(s->perm_config);
-		talloc_free(s->main_pool);
-		closelog();
-		exit(0);
-	}
-
-	/* Check if we need to expire any data */
-	if (need_maintenance != 0) {
-		need_maintenance = 0;
-		mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
-
-		/* will make sure it only reloads when needed */
-		tls_reload_crl(s, s->creds, 0);
-		expire_tls_sessions(s);
-		cleanup_banned_entries(s);
-		clear_old_configs(s->perm_config);
-		alarm(MAINTAINANCE_TIME(s));
-	}
-}
-
 #ifdef HAVE_LIBWRAP
 static int check_tcp_wrapper(int fd)
 {
@@ -921,37 +793,325 @@ static int check_tcp_wrapper(int fd)
 # define check_tcp_wrapper(x) 0
 #endif
 
+static void child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	if (w->pid == s->sec_mod_pid) {
+		mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
+		ev_feed_signal_event (loop, SIGTERM);
+		return;
+	}
+
+	if (WIFSIGNALED(w->rstatus)) {
+		if (WTERMSIG(w->rstatus) == SIGSEGV)
+			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with sigsegv\n", (unsigned)w->pid);
+		else if (WTERMSIG(w->rstatus) == SIGSYS)
+			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with sigsys\n", (unsigned)w->pid);
+		else
+			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with signal %d\n", (unsigned)w->pid, (int)WTERMSIG(w->rstatus));
+	}
+}
+
+void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	int ret;
+	struct script_wait_st *stmp = (struct script_wait_st*)w;
+	unsigned estatus;
+
+	estatus = WEXITSTATUS(w->rstatus);
+	if (WIFSIGNALED(w->rstatus))
+		estatus = 1;
+
+	/* check if someone was waiting for that pid */
+	mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
+	list_del(&stmp->list);
+
+	ret = handle_script_exit(s, stmp->proc, estatus);
+	if (ret < 0) {
+		/* takes care of free */
+		remove_proc(s, stmp->proc, RPROC_KILL);
+	} else {
+		talloc_free(stmp);
+	}
+}
+
+static void worker_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	if (WIFSIGNALED(w->rstatus)) {
+		if (WTERMSIG(w->rstatus) == SIGSEGV)
+			mslog(s, NULL, LOG_ERR, "Child %u died with sigsegv\n", (unsigned)w->pid);
+		else if (WTERMSIG(w->rstatus) == SIGSYS)
+			mslog(s, NULL, LOG_ERR, "Child %u died with sigsys\n", (unsigned)w->pid);
+		else
+			mslog(s, NULL, LOG_ERR, "Child %u died with signal %d\n", (unsigned)w->pid, (int)WTERMSIG(w->rstatus));
+	}
+}
+
+static void kill_children(main_server_st* s)
+{
+	struct proc_st *ctmp = NULL, *cpos;
+
+	/* kill the security module server */
+	kill(s->sec_mod_pid, SIGTERM);
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
+		if (ctmp->pid != -1) {
+			remove_proc(s, ctmp, RPROC_KILL|RPROC_QUIT);
+		}
+	}
+}
+
+static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	unsigned total = 10;
+
+	mslog(s, NULL, LOG_INFO, "termination request received; waiting for children to die");
+	kill_children(s);
+
+	while (waitpid(-1, NULL, WNOHANG) >= 0) {
+		if (total == 0) {
+			mslog(s, NULL, LOG_INFO, "not everyone died; forcing kill");
+			kill(0, SIGKILL);
+		}
+		ms_sleep(500);
+		total--;
+	}
+
+	ev_break (loop, EVBREAK_ALL);
+}
+
+static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	mslog(s, NULL, LOG_INFO, "reloading configuration");
+	reload_cfg_file(s->main_pool, s->perm_config, 1);
+	s->config = s->perm_config->config;
+	tls_reload_crl(s, s->creds, 1);
+	kill(s->sec_mod_pid, SIGHUP);
+}
+
+static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	struct proc_st *ctmp = (struct proc_st*)w;
+	int ret;
+
+	/* Check for any pending commands */
+	ret = handle_commands(s, ctmp);
+	if (ret < 0) {
+		remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?RPROC_KILL:0);
+	}
+}
+
+static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	struct listener_st *ltmp = (struct listener_st *)w;
+	struct proc_st *ctmp = NULL;
+	struct worker_st *ws = s->ws;
+	int fd, ret;
+	int cmd_fd[2];
+	pid_t pid;
+
+	if (ltmp->sock_type == SOCK_TYPE_TCP || ltmp->sock_type == SOCK_TYPE_UNIX) {
+		/* connection on TCP port */
+		int stype = ltmp->sock_type;
+
+		ws->remote_addr_len = sizeof(ws->remote_addr);
+		fd = accept(ltmp->fd, (void*)&ws->remote_addr, &ws->remote_addr_len);
+		if (fd < 0) {
+			mslog(s, NULL, LOG_ERR,
+			       "error in accept(): %s", strerror(errno));
+			return;
+		}
+		set_cloexec_flag (fd, 1);
+#ifndef __linux__
+		/* OpenBSD sets the non-blocking flag if accept's fd is non-blocking */
+		set_block(fd);
+#endif
+
+		if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
+			close(fd);
+			mslog(s, NULL, LOG_INFO, "reached maximum client limit (active: %u)", s->active_clients);
+			return;
+		}
+
+		if (check_tcp_wrapper(fd) < 0) {
+			close(fd);
+			mslog(s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts->[allow|deny])");
+			return;
+		}
+
+		if (ws->conn_type != SOCK_TYPE_UNIX && !s->config->listen_proxy_proto) {
+			memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+			ws->our_addr_len = sizeof(ws->our_addr);
+			if (getsockname(fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
+				ws->our_addr_len = 0;
+
+			if (check_if_banned(s, &ws->remote_addr, ws->remote_addr_len) != 0) {
+				close(fd);
+				return;
+			}
+		}
+
+		/* Create a command socket */
+		ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
+		if (ret < 0) {
+			mslog(s, NULL, LOG_ERR, "error creating command socket");
+			close(fd);
+			return;
+		}
+
+		pid = fork();
+		if (pid == 0) {	/* child */
+			/* close any open descriptors, and erase
+			 * sensitive data before running the worker
+			 */
+			sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
+			close(cmd_fd[0]);
+			clear_lists(s);
+			close(s->sec_mod_fd);
+			close(s->sec_mod_fd_sync);
+
+			/* clear the cookie key */
+			safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));
+			safe_memset(s->prev_cookie_key, 0, sizeof(s->prev_cookie_key));
+
+			setproctitle(PACKAGE_NAME"-worker");
+			kill_on_parent_kill(SIGTERM);
+
+			/* write sec-mod's address */
+			memcpy(&ws->secmod_addr, &s->secmod_addr, s->secmod_addr_len);
+			ws->secmod_addr_len = s->secmod_addr_len;
+
+			ws->main_pool = s->main_pool;
+			ws->config = s->config;
+			ws->perm_config = s->perm_config;
+			ws->cmd_fd = cmd_fd[1];
+			ws->tun_fd = -1;
+			ws->dtls_tptr.fd = -1;
+			ws->conn_fd = fd;
+			ws->conn_type = stype;
+			ws->creds = s->creds;
+
+			/* Drop privileges after this point */
+			drop_privileges(s);
+
+			/* creds and config are not allocated
+			 * under s.
+			 */
+			talloc_free(s);
+#ifdef HAVE_MALLOC_TRIM
+			/* try to return all the pages we've freed to
+			 * the operating system, to prevent the child from
+			 * accessing them. That's totally unreliable, so
+			 * sensitive data have to be overwritten anyway. */
+			malloc_trim(0);
+#endif
+			vpn_server(ws);
+			exit(0);
+		} else if (pid == -1) {
+fork_failed:
+			mslog(s, NULL, LOG_ERR, "fork failed");
+			close(cmd_fd[0]);
+		} else { /* parent */
+			/* add_proc */
+			ctmp = new_proc(s, pid, cmd_fd[0], 
+					&ws->remote_addr, ws->remote_addr_len,
+					&ws->our_addr, ws->our_addr_len,
+					ws->sid, sizeof(ws->sid));
+			if (ctmp == NULL) {
+				kill(pid, SIGTERM);
+				goto fork_failed;
+			}
+
+			ev_io_init(&ctmp->io, cmd_watcher_cb, cmd_fd[0], EV_READ);
+			ev_io_start(loop, &ctmp->io);
+
+			ev_child_init(&ctmp->ev_child, worker_child_watcher_cb, pid, 0);
+			ev_child_start(loop, &ctmp->ev_child);
+		}
+		close(cmd_fd[1]);
+		close(fd);
+	} else if (ltmp->sock_type == SOCK_TYPE_UDP) {
+		/* connection on UDP port */
+		forward_udp_to_owner(s, ltmp);
+	}
+
+	if (s->config->rate_limit_ms > 0)
+		ms_sleep(s->config->rate_limit_ms);
+}
+
+static void sec_mod_watcher_cb (EV_P_ ev_io *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	int ret;
+
+	ret = handle_sec_mod_commands(s);
+	if (ret < 0) { /* bad commands from sec-mod are unacceptable */
+		mslog(s, NULL, LOG_ERR,
+		       "error in command from sec-mod");
+		ev_feed_signal_event (loop, SIGTERM);
+	}
+}
+
+static void ctl_watcher_cb (EV_P_ ev_io *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	ctl_handler_run_pending(s, w);
+}
+
+static void maintainance_watcher_cb(EV_P_ ev_timer *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	/* Check if we need to expire any data */
+	mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
+	tls_reload_crl(s, s->creds, 0);
+	expire_tls_sessions(s);
+	cleanup_banned_entries(s);
+	clear_old_configs(s->perm_config);
+}
+
+static void syserr_cb (const char *msg)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	mslog(s, NULL, LOG_ERR, "libev fatal error: %s", msg);
+	abort();
+}
+
 int main(int argc, char** argv)
 {
-	int fd, pid, e;
+	int e;
 	struct listener_st *ltmp = NULL;
-	struct proc_st *ctmp = NULL, *cpos;
-	fd_set rd_set, wr_set;
-	int n = 0, ret, flags;
+	int ret, flags;
 	char *p;
-#ifdef HAVE_PSELECT
-	struct timespec ts;
-#else
-	struct timeval ts;
-#endif
-	int cmd_fd[2];
-	struct worker_st *ws;
 	void *worker_pool;
 	void *main_pool;
-	unsigned set;
 	main_server_st *s;
-	sigset_t emptyset, blockset;
 	/* tls credentials */
 	struct tls_st creds;
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
 #endif
-
 	saved_argc = argc;
 	saved_argv = argv;
 
 	memset(&creds, 0, sizeof(creds));
+
+	loop = EV_DEFAULT;
+	if (loop == NULL) {
+		fprintf(stderr, "could not initialise libev\n");
+		exit(1);
+	}
 
 	/* main pool */
 	main_pool = talloc_init("main");
@@ -976,20 +1136,9 @@ int main(int argc, char** argv)
 	proc_table_init(s);
 	main_ban_db_init(s);
 
-	sigemptyset(&blockset);
-	sigemptyset(&emptyset);
-	sigaddset(&blockset, SIGALRM);
-	sigaddset(&blockset, SIGTERM);
-	sigaddset(&blockset, SIGINT);
-	sigaddset(&blockset, SIGCHLD);
-	sigaddset(&blockset, SIGHUP);
+	sigemptyset(&sig_default_set);
 
-	ocsignal(SIGINT, request_stop);
-	ocsignal(SIGTERM, request_stop);
 	ocsignal(SIGPIPE, SIG_IGN);
-	ocsignal(SIGHUP, request_reload);
-	ocsignal(SIGCHLD, handle_children);
-	ocsignal(SIGALRM, handle_alarm);
 
 	/* Initialize GnuTLS */
 	tls_global_init(&creds);
@@ -1047,7 +1196,6 @@ int main(int argc, char** argv)
 	write_pid_file();
 
 	s->sec_mod_fd = run_sec_mod(s, &s->sec_mod_fd_sync);
-
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot create command handler\n");
@@ -1084,8 +1232,8 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	ws = talloc_zero(worker_pool, struct worker_st);
-	if (ws == NULL) {
+	s->ws = talloc_zero(worker_pool, struct worker_st);
+	if (s->ws == NULL) {
 		fprintf(stderr, "memory error\n");
 		exit(1);
 	}
@@ -1105,217 +1253,60 @@ int main(int argc, char** argv)
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 
-	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);
-	alarm(MAINTAINANCE_TIME(s));
+	ev_set_userdata (loop, s);
+	ev_set_syserr_cb(syserr_cb);
 
-	for (;;) {
-		check_other_work(s);
+	ev_init(&ctl_watcher, ctl_watcher_cb);
+	ev_init(&sec_mod_watcher, sec_mod_watcher_cb);
 
-		/* initialize select */
-		n = 0;
-		FD_ZERO(&rd_set);
-		FD_ZERO(&wr_set);
+	ev_init (&int_sig_watcher, term_sig_watcher_cb);
+	ev_signal_set (&int_sig_watcher, SIGINT);
+	ev_signal_start (loop, &int_sig_watcher);
 
-		list_for_each(&s->listen_list.head, ltmp, list) {
-			if (ltmp->fd == -1) continue;
+	ev_init (&term_sig_watcher, term_sig_watcher_cb);
+	ev_signal_set (&term_sig_watcher, SIGTERM);
+	ev_signal_start (loop, &term_sig_watcher);
 
-			FD_SET(ltmp->fd, &rd_set);
-			n = MAX(n, ltmp->fd);
-		}
+	ev_init (&reload_sig_watcher, reload_sig_watcher_cb);
+	ev_signal_set (&reload_sig_watcher, SIGHUP);
+	ev_signal_start (loop, &reload_sig_watcher);
 
-		list_for_each(&s->proc_list.head, ctmp, list) {
-			if (ctmp->fd > 0) {
-				FD_SET(ctmp->fd, &rd_set);
-				n = MAX(n, ctmp->fd);
-			}
-		}
+	/* set the standard fds we watch */
+	list_for_each(&s->listen_list.head, ltmp, list) {
+		if (ltmp->fd == -1) continue;
 
-		FD_SET(s->sec_mod_fd, &rd_set);
-		n = MAX(n, s->sec_mod_fd);
-
-		ret = ctl_handler_set_fds(s, &rd_set, &wr_set);
-		n = MAX(n, ret);
-
-#ifdef HAVE_PSELECT
-		ts.tv_nsec = 0;
-		ts.tv_sec = 30;
-		ret = pselect(n + 1, &rd_set, NULL/*&wr_set*/, NULL, &ts, &emptyset);
-#else
-		ts.tv_usec = 0;
-		ts.tv_sec = 30;
-		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-		ret = select(n + 1, &rd_set, NULL/*&wr_set*/, NULL, &ts);
-		sigprocmask(SIG_BLOCK, &blockset, NULL);
-#endif
-
-		if (ret == -1 && errno == EINTR)
-			continue;
-
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "Error in pselect(): %s",
-			       strerror(e));
-			terminate = 1;
-			continue;
-		}
-
-		/* Check for new connections to accept */
-		list_for_each(&s->listen_list.head, ltmp, list) {
-			set = FD_ISSET(ltmp->fd, &rd_set);
-			if (set && (ltmp->sock_type == SOCK_TYPE_TCP || ltmp->sock_type == SOCK_TYPE_UNIX)) {
-				/* connection on TCP port */
-				int stype = ltmp->sock_type;
-
-				ws->remote_addr_len = sizeof(ws->remote_addr);
-				fd = accept(ltmp->fd, (void*)&ws->remote_addr, &ws->remote_addr_len);
-				if (fd < 0) {
-					mslog(s, NULL, LOG_ERR,
-					       "error in accept(): %s", strerror(errno));
-					continue;
-				}
-				set_cloexec_flag (fd, 1);
-#ifndef __linux__
-				/* OpenBSD sets the non-blocking flag if accept's fd is non-blocking */
-				set_block(fd);
-#endif
-
-				if (s->config->max_clients > 0 && s->active_clients >= s->config->max_clients) {
-					close(fd);
-					mslog(s, NULL, LOG_INFO, "reached maximum client limit (active: %u)", s->active_clients);
-					break;
-				}
-
-				if (check_tcp_wrapper(fd) < 0) {
-					close(fd);
-					mslog(s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts->[allow|deny])");
-					break;
-				}
-
-				if (ws->conn_type != SOCK_TYPE_UNIX && !s->config->listen_proxy_proto) {
-					memset(&ws->our_addr, 0, sizeof(ws->our_addr));
-					ws->our_addr_len = sizeof(ws->our_addr);
-					if (getsockname(fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
-						ws->our_addr_len = 0;
-
-					if (check_if_banned(s, &ws->remote_addr, ws->remote_addr_len) != 0) {
-						close(fd);
-						break;
-					}
-				}
-
-				/* Create a command socket */
-				ret = socketpair(AF_UNIX, SOCK_STREAM, 0, cmd_fd);
-				if (ret < 0) {
-					mslog(s, NULL, LOG_ERR, "error creating command socket");
-					close(fd);
-					break;
-				}
-
-				pid = fork();
-				if (pid == 0) {	/* child */
-					/* close any open descriptors, and erase
-					 * sensitive data before running the worker
-					 */
-					sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
-					close(cmd_fd[0]);
-					clear_lists(s);
-					close(s->sec_mod_fd);
-					close(s->sec_mod_fd_sync);
-
-					/* clear the cookie key */
-					safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));
-					safe_memset(s->prev_cookie_key, 0, sizeof(s->prev_cookie_key));
-
-					setproctitle(PACKAGE_NAME"-worker");
-					kill_on_parent_kill(SIGTERM);
-
-					/* write sec-mod's address */
-					memcpy(&ws->secmod_addr, &s->secmod_addr, s->secmod_addr_len);
-					ws->secmod_addr_len = s->secmod_addr_len;
-
-					ws->main_pool = main_pool;
-					ws->config = s->config;
-					ws->perm_config = s->perm_config;
-					ws->cmd_fd = cmd_fd[1];
-					ws->tun_fd = -1;
-					ws->dtls_tptr.fd = -1;
-					ws->conn_fd = fd;
-					ws->conn_type = stype;
-					ws->creds = &creds;
-
-					/* Drop privileges after this point */
-					drop_privileges(s);
-
-					/* creds and config are not allocated
-					 * under s.
-					 */
-					talloc_free(s);
-#ifdef HAVE_MALLOC_TRIM
-					/* try to return all the pages we've freed to
-					 * the operating system, to prevent the child from
-					 * accessing them. That's totally unreliable, so
-					 * sensitive data have to be overwritten anyway. */
-					malloc_trim(0);
-#endif
-					vpn_server(ws);
-					exit(0);
-				} else if (pid == -1) {
-fork_failed:
-					mslog(s, NULL, LOG_ERR, "fork failed");
-					close(cmd_fd[0]);
-				} else { /* parent */
-					/* add_proc */
-					ctmp = new_proc(s, pid, cmd_fd[0], 
-							&ws->remote_addr, ws->remote_addr_len,
-							&ws->our_addr, ws->our_addr_len,
-							ws->sid, sizeof(ws->sid));
-					if (ctmp == NULL) {
-						kill(pid, SIGTERM);
-						goto fork_failed;
-					}
-
-				}
-				close(cmd_fd[1]);
-				close(fd);
-
-				if (s->config->rate_limit_ms > 0)
-					ms_sleep(s->config->rate_limit_ms);
-			} else if (set && ltmp->sock_type == SOCK_TYPE_UDP) {
-				/* connection on UDP port */
-				forward_udp_to_owner(s, ltmp);
-
-				if (s->config->rate_limit_ms > 0)
-					ms_sleep(s->config->rate_limit_ms);
-			}
-		}
-
-		/* Check for any pending commands */
-		list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
-			if (ctmp->fd >= 0 && FD_ISSET(ctmp->fd, &rd_set)) {
-				ret = handle_commands(s, ctmp);
-				if (ret < 0) {
-					remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?RPROC_KILL:0);
-				}
-			}
-		}
-
-		if (FD_ISSET(s->sec_mod_fd, &rd_set)) {
-			ret = handle_sec_mod_commands(s);
-			if (ret < 0) { /* bad commands from sec-mod are unacceptable */
-				mslog(s, NULL, LOG_ERR,
-				       "error in command from sec-mod");
-				terminate = 1;
-				continue;
-			}
-		}
-
-		/* Check for pending control commands */
-		ctl_handler_run_pending(s, &rd_set, &wr_set);
-
-#ifdef DEBUG_LEAKS
-		talloc_report_full(s, stderr);
-#endif
+		ev_io_start (loop, &ltmp->io);
 	}
+
+	ev_io_set(&sec_mod_watcher, s->sec_mod_fd, EV_READ);
+	ctl_handler_set_fds(s, &ctl_watcher);
+
+	ev_io_start (loop, &ctl_watcher);
+	ev_io_start (loop, &sec_mod_watcher);
+
+	ev_child_init(&child_watcher, child_watcher_cb, s->sec_mod_pid, 0);
+	ev_child_start (loop, &child_watcher);
+
+	ev_init(&maintainance_watcher, maintainance_watcher_cb);
+	ev_timer_set(&maintainance_watcher, MAIN_MAINTAINANCE_TIME, MAIN_MAINTAINANCE_TIME);
+	ev_timer_start(loop, &maintainance_watcher);
+
+	/* Main server loop */
+	ev_run (loop, 0);
+
+	/* try to clean-up everything allocated to ease checks 
+	 * for memory leaks.
+	 */
+	remove(s->full_socket_file);
+	remove(s->perm_config->occtl_socket_file);
+	remove_pid_file();
+
+	clear_lists(s);
+	tls_global_deinit(s->creds);
+	clear_cfg(s->perm_config);
+	talloc_free(s->perm_config);
+	talloc_free(s->main_pool);
+	closelog();
 
 	return 0;
 }

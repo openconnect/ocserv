@@ -13,6 +13,7 @@ and is believed to be compatible with CISCO's AnyConnect SSL VPN.
 Required dependencies (Debian pkg/Fedora pkg):
 ```
 libgnutls28-dev      / gnutls-devel
+libev-dev            / libev-devel
 ```
 
 Optional dependencies that enable specific functionality:

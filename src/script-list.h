@@ -22,6 +22,9 @@
 # define SCRIPT_LIST_H
 
 #include <main.h>
+#include <ev.h>
+
+void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents);
 
 inline static
 void add_to_script_list(main_server_st* s, pid_t pid, unsigned up, struct proc_st* proc)
@@ -35,7 +38,10 @@ struct script_wait_st *stmp;
 	stmp->proc = proc;
 	stmp->pid = pid;
 	stmp->up = up;
-	
+
+	ev_child_init(&stmp->ev_child, script_child_watcher_cb, pid, 0);
+	ev_child_start(loop, &stmp->ev_child);
+
 	list_add(&s->script_list.head, &(stmp->list));
 }
 

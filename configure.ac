@@ -85,6 +85,14 @@ fi
 
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
+AC_LIB_HAVE_LINKFLAGS(ev,, [#include <ev.h>], [ev_run(0,0);])
+if test x$ac_cv_libev = xyes; then
+	AC_SUBST([LIBEV_LIBS], [$LIBEV])
+else
+	AC_MSG_ERROR([[***
+*** libev4 was not found.
+***]])
+fi
 
 AC_ARG_WITH(local-talloc,
   AS_HELP_STRING([--with-local-talloc], [use the included talloc library]),

@@ -192,7 +192,7 @@ static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: reload");
 
-	request_reload(0);
+	ev_feed_signal_event (loop, SIGHUP);
 
 	rep.status = 1;
 
@@ -214,7 +214,7 @@ static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: stop");
 
-	request_stop(0);
+	ev_feed_signal_event (loop, SIGTERM);
 
 	rep.status = 1;
 
@@ -766,21 +766,18 @@ static void ctl_handle_commands(main_server_st * s)
 		close(cfd);
 }
 
-int ctl_handler_set_fds(main_server_st * s, fd_set * rd_set, fd_set * wr_set)
-{
-	if (s->config->use_occtl == 0)
-		return -1;
-
-	FD_SET(s->ctl_fd, rd_set);
-	return s->ctl_fd;
-}
-
-void ctl_handler_run_pending(main_server_st* s, fd_set *rd_set, fd_set *wr_set)
+void ctl_handler_set_fds(main_server_st * s, ev_io *watcher)
 {
 	if (s->config->use_occtl == 0)
 		return;
 
-	if (FD_ISSET(s->ctl_fd, rd_set)) {
-		ctl_handle_commands(s);
-	}
+	ev_io_set(watcher, s->ctl_fd, EV_READ);
+}
+
+void ctl_handler_run_pending(main_server_st* s, ev_io *watcher)
+{
+	if (s->config->use_occtl == 0)
+		return;
+
+	ctl_handle_commands(s);
 }

@@ -108,10 +108,7 @@ with_local_talloc=no,
 )
 fi
 
-if test "$with_local_talloc" != no;then
-FLAGS='-Iccan/talloc/ -Iccan/typedef_cb/ -Iccan/compiler/'
-AC_SUBST([LIBTALLOC_CFLAGS], [$FLAGS])
-else
+if test "$with_local_talloc" = no;then
 AC_DEFINE(HAVE_LIBTALLOC, 1, [have libtalloc])
 fi
 

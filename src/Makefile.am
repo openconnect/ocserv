@@ -11,6 +11,10 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c
 
+if LOCAL_TALLOC
+AM_CPPFLAGS += -I$(top_srcdir)/src/ccan/talloc
+endif
+
 #AM_CPPFLAGS += -DDEBUG_LEAKS
 
 include common.mk

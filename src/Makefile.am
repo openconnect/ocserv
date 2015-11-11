@@ -1,4 +1,4 @@
-SUBDIRS =
+SUBDIRS = ccan
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
@@ -36,17 +36,6 @@ bin_PROGRAMS = ocpasswd occtl
 
 sbin_PROGRAMS = ocserv
 bin_SCRIPTS = ocserv-fw
-
-CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
-	ccan/container_of/container_of.h ccan/hash/hash.c ccan/hash/hash.h \
-	ccan/htable/htable.c ccan/htable/htable.h ccan/htable/htable_type.h \
-	ccan/list/list.c ccan/list/list.h
-
-if LOCAL_TALLOC
-CCAN_SOURCES += ccan/talloc/talloc.c ccan/talloc/talloc.h ccan/compiler/compiler.h \
-	ccan/typesafe_cb/typesafe_cb.h
-endif
-
 
 noinst_LIBRARIES = libcmd-ocserv.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
@@ -99,7 +88,7 @@ endif
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
 
-ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
+ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a ccan/libccan.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
@@ -130,7 +119,7 @@ ocpasswd-args.h: ocpasswd-args.c
 occtl_SOURCES = occtl.c occtl-pager.c occtl.h occtl-time.c occtl-cache.c occtl-ip-cache.c \
 	occtl-nl.c ctl.h ctl.pb-c.c ctl.pb-c.h $(CCAN_SOURCES) $(COMMON_SOURCES) \
 	occtl-print.c common-json.c common-json.h $(PROTOBUF_SOURCES)
-occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) \
+occtl_LDADD = ../gl/libgnu.a $(LIBREADLINE_LIBS) ccan/libccan.a \
 	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS)
 
 ocserv_SOURCES += main-ctl-unix.c

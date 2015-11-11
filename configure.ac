@@ -470,6 +470,7 @@ AC_CONFIG_FILES([
 	Makefile
 	src/version.inc
 	src/Makefile
+	src/ccan/Makefile
 	src/pcl/Makefile
 	doc/Makefile
 	gl/Makefile

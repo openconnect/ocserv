@@ -37,26 +37,22 @@ AC_DEFUN([gl_EARLY],
   m4_pattern_allow([^gl_ES$])dnl a valid locale name
   m4_pattern_allow([^gl_LIBOBJS$])dnl a variable
   m4_pattern_allow([^gl_LTLIBOBJS$])dnl a variable
+
+  # Pre-early section.
+  AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   AC_REQUIRE([gl_PROG_AR_RANLIB])
+
   # Code from module absolute-header:
   # Code from module c-ctype:
   # Code from module c-strcase:
-  # Code from module cloexec:
-  # Code from module close:
-  # Code from module dup2:
   # Code from module errno:
   # Code from module extensions:
-  AC_REQUIRE([gl_USE_SYSTEM_EXTENSIONS])
   # Code from module extern-inline:
-  # Code from module fcntl:
-  # Code from module fcntl-h:
-  # Code from module fd-hook:
   # Code from module fseek:
   # Code from module fseeko:
   AC_REQUIRE([AC_FUNC_FSEEKO])
   # Code from module fstat:
   # Code from module getdelim:
-  # Code from module getdtablesize:
   # Code from module getline:
   # Code from module getpass:
   # Code from module gettimeofday:
@@ -113,26 +109,8 @@ AC_DEFUN([gl_INIT],
   m4_pushdef([gl_LIBSOURCES_DIR], [])
   gl_COMMON
   gl_source_base='gl'
-  gl_MODULE_INDICATOR_FOR_TESTS([cloexec])
-  gl_FUNC_CLOSE
-  if test $REPLACE_CLOSE = 1; then
-    AC_LIBOBJ([close])
-  fi
-  gl_UNISTD_MODULE_INDICATOR([close])
-  gl_FUNC_DUP2
-  if test $HAVE_DUP2 = 0 || test $REPLACE_DUP2 = 1; then
-    AC_LIBOBJ([dup2])
-    gl_PREREQ_DUP2
-  fi
-  gl_UNISTD_MODULE_INDICATOR([dup2])
   gl_HEADER_ERRNO_H
   AC_REQUIRE([gl_EXTERN_INLINE])
-  gl_FUNC_FCNTL
-  if test $HAVE_FCNTL = 0 || test $REPLACE_FCNTL = 1; then
-    AC_LIBOBJ([fcntl])
-  fi
-  gl_FCNTL_MODULE_INDICATOR([fcntl])
-  gl_FCNTL_H
   gl_FUNC_FSEEK
   if test $REPLACE_FSEEK = 1; then
     AC_LIBOBJ([fseek])
@@ -156,12 +134,6 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_GETDELIM
   fi
   gl_STDIO_MODULE_INDICATOR([getdelim])
-  gl_FUNC_GETDTABLESIZE
-  if test $HAVE_GETDTABLESIZE = 0 || test $REPLACE_GETDTABLESIZE = 1; then
-    AC_LIBOBJ([getdtablesize])
-    gl_PREREQ_GETDTABLESIZE
-  fi
-  gl_UNISTD_MODULE_INDICATOR([getdtablesize])
   gl_FUNC_GETLINE
   if test $REPLACE_GETLINE = 1; then
     AC_LIBOBJ([getline])
@@ -412,20 +384,11 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/c-strcase.h
   lib/c-strcasecmp.c
   lib/c-strncasecmp.c
-  lib/cloexec.c
-  lib/cloexec.h
-  lib/close.c
-  lib/dup2.c
   lib/errno.in.h
-  lib/fcntl.c
-  lib/fcntl.in.h
-  lib/fd-hook.c
-  lib/fd-hook.h
   lib/fseek.c
   lib/fseeko.c
   lib/fstat.c
   lib/getdelim.c
-  lib/getdtablesize.c
   lib/getline.c
   lib/getpass.c
   lib/getpass.h
@@ -462,19 +425,13 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/unistd.in.h
   m4/00gnulib.m4
   m4/absolute-header.m4
-  m4/close.m4
-  m4/dup2.m4
   m4/errno_h.m4
   m4/extensions.m4
   m4/extern-inline.m4
-  m4/fcntl-o.m4
-  m4/fcntl.m4
-  m4/fcntl_h.m4
   m4/fseek.m4
   m4/fseeko.m4
   m4/fstat.m4
   m4/getdelim.m4
-  m4/getdtablesize.m4
   m4/getline.m4
   m4/getpass.m4
   m4/gettimeofday.m4

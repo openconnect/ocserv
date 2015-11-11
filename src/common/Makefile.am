@@ -6,6 +6,7 @@ if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(srcdir)/../ccan/talloc
 endif
 
+EXTRA_DIST = ctl.proto
 BUILT_SOURCES = ctl.pb-c.c ctl.pb-c.h
 
 # Files common to ocserv and occtl.

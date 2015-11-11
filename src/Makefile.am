@@ -9,14 +9,14 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS)
 
 BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
-	ctl.pb-c.c ctl.pb-c.h http-heads.h kkdcp_asn1_tab.c
+	http-heads.h kkdcp_asn1_tab.c
 
 #AM_CPPFLAGS += -DDEBUG_LEAKS
 
 include common.mk
 
 EXTRA_DIST = version.inc.in version.inc \
-	ipc.proto ctl.proto http-heads.gperf common.mk
+	ipc.proto http-heads.gperf common.mk
 
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/

@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
 	-I$(srcdir)/ -I$(srcdir)/../ -I$(builddir)/../../ -I$(srcdir)/../../ \
-	$(LIBPROTOBUF_C_CFLAGS)	$(LIBTALLOC_CFLAGS)
+	-I$(builddir)/../ $(LIBPROTOBUF_C_CFLAGS)	$(LIBTALLOC_CFLAGS)
 
 if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(srcdir)/../ccan/talloc

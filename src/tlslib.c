@@ -112,23 +112,24 @@ ssize_t cstp_send(worker_st *ws, const void *data,
 
 ssize_t cstp_send_file(worker_st *ws, const char *file)
 {
-FILE* fp;
+int fd;
 char buf[512];
 ssize_t len, total = 0;
 int ret;
 
-	fp = fopen(file, "r");
-	if (fp == NULL)
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
 		return GNUTLS_E_FILE_ERROR;
 
-	while (	(len = fread( buf, 1, sizeof(buf), fp)) > 0) {
+	while (	(len = read( fd, buf, sizeof(buf))) > 0 ||
+		(len == -1 && (errno == EINTR || errno == EAGAIN))) {
 		ret = cstp_send(ws, buf, len);
 		FATAL_ERR(ws, ret);
 
 		total += ret;
 	}
 
-	fclose(fp);
+	close(fd);
 
 	return total;
 }

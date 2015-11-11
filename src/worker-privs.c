@@ -102,8 +102,7 @@ int disable_system_calls(struct worker_st *ws)
 
 	/* we need to open files when we have an xml_config_file setup */
 	if (ws->config->xml_config_file) {
-		ADD_SYSCALL(fstat, 0);
-		ADD_SYSCALL(lseek, 0);
+		ADD_SYSCALL(stat, 0);
 		ADD_SYSCALL(open, 0);
 	}
 

@@ -39,11 +39,6 @@ if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(srcdir)/../src/ccan/talloc
 endif
 
-CCAN_SOURCES = ../src/ccan/build_assert/build_assert.h ../src/ccan/check_type/check_type.h \
-	../src/ccan/container_of/container_of.h ../src/ccan/hash/hash.c ../src/ccan/hash/hash.h \
-	../src/ccan/htable/htable.c ../src/ccan/htable/htable.h ../src/ccan/htable/htable_type.h \
-	../src/ccan/list/list.c ../src/ccan/list/list.h
-
 kkdcp_parsing_SOURCES = ../src/config-kkdcp.c kkdcp-parsing.c
 kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
@@ -54,7 +49,7 @@ ipv4_prefix_SOURCES = ../src/ip-util.c ../src/ip-util.h ipv4-prefix.c
 ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 ban_ips_CPPFLAGS = $(AM_CPPFLAGS) -DDISABLE_LOGS
-ban_ips_SOURCES = ../src/main-ban.c ../src/main.h ban-ips.c $(CCAN_SOURCES)
+ban_ips_SOURCES = ../src/main-ban.c ../src/main.h ban-ips.c
 ban_ips_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 str_test_SOURCES = ../src/str.c ../src/str.h str-test.c

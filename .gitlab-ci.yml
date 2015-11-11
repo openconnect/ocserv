@@ -7,7 +7,7 @@ Build with separate build dir:
 Build with minimal setup:
   script:
   - git submodule update --init && autoreconf -fvi && 
-    ./configure --with-local-talloc --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j4 && make check -j4
+    ./configure --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j4 && make check -j4
   except:
   - tags
 Build and Check with asan:

@@ -25,12 +25,19 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 
 AM_CPPFLAGS = \
 	$(LIBOPTS_CFLAGS) \
+	$(LIBTALLOC_CFLAGS) \
 	-I$(top_srcdir)/src/ \
 	-I$(top_builddir)/src/ \
+	-I$(top_srcdir)/src/common/ \
+	-I$(top_builddir)/src/common/ \
 	-I$(top_srcdir)/gl/ \
 	-I$(top_builddir)/gl/ \
 	-I$(top_srcdir)/ \
 	-I$(top_builddir)/
+
+if LOCAL_TALLOC
+AM_CPPFLAGS += -I$(srcdir)/../src/ccan/talloc
+endif
 
 CCAN_SOURCES = ../src/ccan/build_assert/build_assert.h ../src/ccan/check_type/check_type.h \
 	../src/ccan/container_of/container_of.h ../src/ccan/hash/hash.c ../src/ccan/hash/hash.h \
@@ -38,23 +45,23 @@ CCAN_SOURCES = ../src/ccan/build_assert/build_assert.h ../src/ccan/check_type/ch
 	../src/ccan/list/list.c ../src/ccan/list/list.h
 
 kkdcp_parsing_SOURCES = ../src/config-kkdcp.c kkdcp-parsing.c
-kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 json_escape_SOURCES = ../src/occtl/json.c json-escape.c
-json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 ipv4_prefix_SOURCES = ../src/ip-util.c ../src/ip-util.h ipv4-prefix.c
-ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 ban_ips_CPPFLAGS = $(AM_CPPFLAGS) -DDISABLE_LOGS
 ban_ips_SOURCES = ../src/main-ban.c ../src/main.h ban-ips.c $(CCAN_SOURCES)
-ban_ips_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+ban_ips_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 str_test_SOURCES = ../src/str.c ../src/str.h str-test.c
-str_test_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+str_test_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 ipv6_prefix_SOURCES = ../src/ip-util.c ../src/ip-util.h ipv6-prefix.c
-ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS)
+ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 check_PROGRAMS = str-test ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips
 

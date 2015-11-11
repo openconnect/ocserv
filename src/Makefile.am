@@ -1,8 +1,8 @@
-SUBDIRS = ccan
+SUBDIRS = ccan common
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
-	$(LIBGNUTLS_CFLAGS) \
+	$(LIBGNUTLS_CFLAGS) -I$(srcdir)/common -I$(builddir)/common \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBREADLINE_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
@@ -35,9 +35,6 @@ ocserv-args.c: $(srcdir)/ocserv-args.def $(builddir)/version.inc
 	$(AUTOGEN) $<
 ocserv-args.h: ocserv-args.c
 
-# Files common to ocserv and occtl.
-COMMON_SOURCES=common.c common.h system.c system.h
-
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
 	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c auth-unix.c \
@@ -52,7 +49,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	worker-extras.c html.c html.h worker-http.c \
 	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
 	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod-auth.h sec-mod.h \
-	script-list.h $(COMMON_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
+	script-list.h $(AUTH_SOURCES) $(ACCT_SOURCES) \
 	icmp-ping.c icmp-ping.h worker-kkdcp.c subconfig.c \
 	sec-mod-sup-config.c sec-mod-sup-config.h \
 	sup-config/file.c sup-config/file.h main-sec-mod-cmd.c \
@@ -72,9 +69,9 @@ if HAVE_GSSAPI
 ocserv_SOURCES += kkdcp_asn1_tab.c kkdcp.asn 
 endif
 
-ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
+ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c
 
-ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a ccan/libccan.a
+ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a ccan/libccan.a common/libcommon.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
@@ -103,11 +100,6 @@ ipc.pb-c.c: ipc.proto
 	protoc-c --c_out=. --proto_path=$(srcdir) $<
 
 ipc.pb-c.h: ipc.pb-c.c
-
-ctl.pb-c.c: ctl.proto
-	protoc-c --c_out=. --proto_path=$(srcdir) $<
-
-ctl.pb-c.h: ctl.pb-c.c
 
 http-heads.h: $(srcdir)/http-heads.gperf
 	-gperf --global-table -t $^ > $@-tmp && mv $@-tmp $@

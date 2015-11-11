@@ -479,6 +479,7 @@ AC_CONFIG_FILES([
 	src/occtl/Makefile
 	src/ocpasswd/Makefile
 	src/pcl/Makefile
+	src/protobuf/Makefile
 	doc/Makefile
 	gl/Makefile
 	tests/docker-ocserv/Makefile

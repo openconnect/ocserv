@@ -1,4 +1,4 @@
-SUBDIRS = occtl ocpasswd
+SUBDIRS = 
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
@@ -47,11 +47,6 @@ ocserv-args.c: $(srcdir)/ocserv-args.def $(builddir)/version.inc
 	$(AUTOGEN) $<
 ocserv-args.h: ocserv-args.c
 
-PROTOBUF_SOURCES =
-if LOCAL_PROTOBUF_C
-PROTOBUF_SOURCES += protobuf/protobuf-c/protobuf-c.h protobuf/protobuf-c/protobuf-c.c
-endif
-
 # Files common to ocserv and occtl.
 COMMON_SOURCES=common.c common.h system.c system.h
 
@@ -79,7 +74,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	proc-search.c proc-search.h http-heads.h ip-util.c ip-util.h \
 	main-ban.c main-ban.h common-config.h base64-helper.c base64-helper.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	$(PROTOBUF_SOURCES) sec-mod-acct.h setproctitle.c setproctitle.h
+	sec-mod-acct.h setproctitle.c setproctitle.h
 
 if ENABLE_COMPRESSION
 ocserv_SOURCES += lzs.c lzs.h
@@ -106,6 +101,13 @@ ocserv_LDADD += pcl/libpcl.a
 SUBDIRS += pcl
 AM_CPPFLAGS += -I$(srcdir)/pcl/
 endif
+
+if LOCAL_PROTOBUF_C
+SUBDIRS += protobuf
+ocserv_LDADD += protobuf/libprotobuf.a
+endif
+
+SUBDIRS += occtl ocpasswd
 
 ocserv_SOURCES += main-ctl-unix.c
 

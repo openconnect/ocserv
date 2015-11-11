@@ -74,3 +74,4 @@ tests/ipv6-prefix
 src/http-heads.h
 tests/kkdcp-parsing
 tests/json-escape
+src/ccan/libccan.a

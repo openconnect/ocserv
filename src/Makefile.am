@@ -1,4 +1,4 @@
-SUBDIRS = 
+SUBDIRS = ccan
 
 AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
@@ -15,8 +15,7 @@ BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 
 include common.mk
 
-EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
-	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
+EXTRA_DIST = version.inc.in version.inc \
 	ipc.proto ctl.proto http-heads.gperf common.mk
 
 if LOCAL_HTTP_PARSER
@@ -28,17 +27,6 @@ NEEDED_HTTP_PARSER_LIBS = $(HTTP_PARSER_LIBS)
 endif
 
 sbin_PROGRAMS = ocserv
-
-CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
-	ccan/container_of/container_of.h ccan/hash/hash.c ccan/hash/hash.h \
-	ccan/htable/htable.c ccan/htable/htable.h ccan/htable/htable_type.h \
-	ccan/list/list.c ccan/list/list.h
-
-if LOCAL_TALLOC
-CCAN_SOURCES += ccan/talloc/talloc.c ccan/talloc/talloc.h ccan/compiler/compiler.h \
-	ccan/typesafe_cb/typesafe_cb.h
-endif
-
 
 noinst_LIBRARIES = libcmd-ocserv.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
@@ -86,7 +74,7 @@ endif
 
 ocserv_SOURCES += ipc.pb-c.h ipc.pb-c.c ctl.pb-c.c ctl.pb-c.h
 
-ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a
+ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a ccan/libccan.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \

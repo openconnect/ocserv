@@ -478,6 +478,7 @@ AC_CONFIG_FILES([
 	src/Makefile
 	src/occtl/Makefile
 	src/ocpasswd/Makefile
+	src/ccan/Makefile
 	src/pcl/Makefile
 	src/protobuf/Makefile
 	doc/Makefile

@@ -10,6 +10,7 @@
   to advertise routes offered by some clients to all of them. This requires
   the config-per-user option.
 - When banning IPv6 addresses treat a /64 network as a single address.
+- Fixed conflict with isolate-workers and user-profile.
 - occtl: Allow disabling the pager functionality on compile time using --with-pager="".
 
 

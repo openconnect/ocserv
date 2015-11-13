@@ -1,5 +1,4 @@
-Intro
-=====
+# Intro
 
 To enforce isolation between clients and with the authenticating process, 
 ocserv consists of 3 components; the main process, the security module and
@@ -8,14 +7,12 @@ assigned to each component, and the last section describes the communication
 protocol between them.
 
 
-VPN overview
-============
+# VPN overview
 
 See http://www.infradead.org/ocserv/technical.html
 
 
-The main process
-================
+## The main process
 
 The main component consists of the process which is tasked to:
  
@@ -37,8 +34,7 @@ The main component consists of the process which is tasked to:
     e.g., store TLS session data for resumption - See main-misc.c
 
 
-The security module process
-===========================
+## The security module process
 
 The security module component consists of a process which keeps all
 sensitive data (e.g., private keys, PAM state), that should not be leaked to
@@ -74,9 +70,15 @@ leaked during a fork(). It handles:
    See SM_CMD_AUTH_SESSION_OPEN and SM_CMD_AUTH_SESSION_CLOSE message
    handling.
 
+Currently it seems we require quite an amount of communication between the
+main process and the security module. That may affect scaling. If that
+occurs it may be possible to exec() the worker process, to ensure there
+is no shared memory with main, and transfer some of the sec-mod tasks
+directly to main (e.g., accounting information, and remove SESSION_OPEN
+and SESSION_CLOSE messages).
 
-The worker processes
-====================
+
+## The worker processes
 
 The worker processes perform the TLS handshake, and HTTP exchange for
 authentication. After that they simply act as bridge between the tun
@@ -97,8 +99,7 @@ device and the client. The tasks handled are:
  * Bridge the tun device with the TLS and DTLS channels.
 
 
-IPC Communication
-=================
+## IPC Communication
 
 * Authentication
 
@@ -139,3 +140,5 @@ IPC Communication
   +user config
 
 ```
+
+

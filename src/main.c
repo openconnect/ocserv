@@ -902,7 +902,7 @@ static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)
 	int ret;
 
 	/* Check for any pending commands */
-	ret = handle_commands(s, ctmp);
+	ret = handle_worker_commands(s, ctmp);
 	if (ret < 0) {
 		remove_proc(s, ctmp, (ret!=ERR_WORKER_TERMINATED)?RPROC_KILL:0);
 	}

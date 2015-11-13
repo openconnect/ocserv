@@ -28,12 +28,14 @@
 #include <sys/un.h>
 #include <main.h>
 #include <vpn.h>
+#include <cloexec.h>
 #include <ip-lease.h>
 
 #include <errno.h>
 #include <system.h>
 #include <main-ctl.h>
 #include <main-ban.h>
+#include <ccan/container_of/container_of.h>
 
 #include <ctl.pb-c.h>
 #include <str.h>
@@ -691,43 +693,28 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	return;
 }
 
-static void ctl_handle_commands(main_server_st * s)
+struct ctl_watcher_st {
+	int fd;
+	struct ev_io ctl_cmd_io;
+};
+
+static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 {
-	int cfd = -1, e, ret;
-	unsigned i;
-	struct sockaddr_un sa;
-	socklen_t sa_len;
+	main_server_st *s = ev_userdata(loop);
+	int ret, e;
 	uint16_t length;
 	uint8_t buffer[256];
 	unsigned buffer_size;
 	method_ctx ctx;
-	void *pool = talloc_new(s);
-
-	if (pool == NULL) {
-		mslog(s, NULL, LOG_ERR, "memory allocation error");
-		return;
-	}
+	struct ctl_watcher_st *wst = container_of(w, struct ctl_watcher_st, ctl_cmd_io);
+	unsigned i;
 
 	ctx.s = s;
-	ctx.pool = pool;
-
-	sa_len = sizeof(sa);
-	cfd = accept(s->ctl_fd, (struct sockaddr *)&sa, &sa_len);
-	if (cfd == -1) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR,
-		      "error accepting control connection: %s", strerror(e));
-		goto cleanup;
-	}
-
-	ret = check_upeer_id("ctl", s->perm_config->debug, cfd, 0, 0, NULL, NULL);
-	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
-		goto cleanup;
-	}
+	ctx.pool = wst;
 
 	/* read request */
-	ret = recv(cfd, buffer, sizeof(buffer), 0);
+	ret = recv(wst->fd, buffer, sizeof(buffer), 0);
+
 	if (ret < 3) {
 		if (ret == -1) {
 			e = errno;
@@ -737,7 +724,7 @@ static void ctl_handle_commands(main_server_st * s)
 			mslog(s, NULL, LOG_ERR, "received ctl data: %d bytes",
 			      ret);
 		}
-		goto cleanup;
+		goto fail;
 	}
 	memcpy(&length, &buffer[1], 2);
 	buffer_size = ret - 3;
@@ -746,7 +733,7 @@ static void ctl_handle_commands(main_server_st * s)
 		mslog(s, NULL, LOG_ERR,
 		      "received data length doesn't match received data (%d/%d)",
 		      buffer_size, (int)length);
-		goto cleanup;
+		goto fail;
 	}
 
 	for (i = 0;; i++) {
@@ -756,12 +743,54 @@ static void ctl_handle_commands(main_server_st * s)
 			      (unsigned)buffer[0]);
 			break;
 		} else if (methods[i].cmd == buffer[0]) {
-			methods[i].func(&ctx, cfd, buffer + 3, buffer_size);
+			methods[i].func(&ctx, wst->fd, buffer + 3, buffer_size);
 			break;
 		}
 	}
- cleanup:
- 	talloc_free(pool);
+
+ 	return;
+ fail:
+ 	close(wst->fd);
+ 	ev_io_stop(EV_A_ w);
+ 	talloc_free(wst);
+ 	return;
+}
+
+static void ctl_handle_commands(main_server_st * s)
+{
+	int cfd = -1, e, ret;
+	struct sockaddr_un sa;
+	socklen_t sa_len;
+	struct ctl_watcher_st *wst;
+
+	sa_len = sizeof(sa);
+	cfd = accept(s->ctl_fd, (struct sockaddr *)&sa, &sa_len);
+	if (cfd == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR,
+		      "error accepting control connection: %s", strerror(e));
+		goto fail;
+	}
+
+	ret = check_upeer_id("ctl", s->perm_config->debug, cfd, 0, 0, NULL, NULL);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
+		goto fail;
+	}
+
+	set_cloexec_flag(cfd, 1);
+
+	wst = talloc(s, struct ctl_watcher_st);
+	if (wst == NULL)
+		goto fail;
+
+	wst->fd = cfd;
+
+	ev_io_init(&wst->ctl_cmd_io, ctl_cmd_wacher_cb, wst->fd, EV_READ);
+	ev_io_start(loop, &wst->ctl_cmd_io);
+
+	return;
+ fail:
 	if (cfd != -1)
 		close(cfd);
 }

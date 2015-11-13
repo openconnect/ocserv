@@ -49,7 +49,7 @@
 #endif
 
 
-int handle_worker_commands(struct worker_st *ws)
+int handle_commands_from_main(struct worker_st *ws)
 {
 	struct iovec iov[3];
 	uint8_t cmd;

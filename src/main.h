@@ -223,11 +223,8 @@ typedef struct main_server_st {
 	/* This one is on worker pool */
 	struct worker_st *ws;
 
-#ifdef HAVE_DBUS
-	void * ctl_ctx;
-#else
 	int ctl_fd;
-#endif
+
 	int sec_mod_fd; /* messages are sent and received async */
 	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
 	void *main_pool; /* talloc main pool */
@@ -235,7 +232,7 @@ typedef struct main_server_st {
 
 void clear_lists(main_server_st *s);
 
-int handle_commands(main_server_st *s, struct proc_st* cur);
+int handle_worker_commands(main_server_st *s, struct proc_st* cur);
 int handle_sec_mod_commands(main_server_st *s);
 
 int user_connected(main_server_st *s, struct proc_st* cur);

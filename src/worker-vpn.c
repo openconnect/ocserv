@@ -1974,7 +1974,7 @@ static int connect_handler(worker_st * ws)
 
 		/* read commands from command fd */
 		if (FD_ISSET(ws->cmd_fd, &rfds)) {
-			ret = handle_worker_commands(ws);
+			ret = handle_commands_from_main(ws);
 			if (ret == ERR_NO_CMD_FD) {
 				terminate_reason = REASON_ERROR;
 				goto terminate;

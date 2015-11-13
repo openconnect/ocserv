@@ -310,7 +310,7 @@ static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
 	return ret;
 }
 
-int handle_commands(main_server_st * s, struct proc_st *proc)
+int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 {
 	struct iovec iov[3];
 	uint8_t cmd;

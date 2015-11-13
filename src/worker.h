@@ -328,7 +328,7 @@ int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
 
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
-int handle_worker_commands(struct worker_st *ws);
+int handle_commands_from_main(struct worker_st *ws);
 int disable_system_calls(struct worker_st *ws);
 void ocsigaltstack(struct worker_st *ws);
 

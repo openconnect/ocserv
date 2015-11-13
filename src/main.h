@@ -155,6 +155,7 @@ typedef struct proc_st {
 	 * Cli stats message. */
 	uint64_t bytes_in;
 	uint64_t bytes_out;
+	uint32_t discon_reason; /* filled on session close */
 	
 	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
 
@@ -223,6 +224,7 @@ typedef struct main_server_st {
 	/* This one is on worker pool */
 	struct worker_st *ws;
 
+	int top_fd;
 	int ctl_fd;
 
 	int sec_mod_fd; /* messages are sent and received async */

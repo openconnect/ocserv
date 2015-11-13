@@ -93,6 +93,32 @@ static char tmp[32];
 	}
 }
 
+const char* discon_reason_to_str(unsigned reason)
+{
+static char tmp[32];
+
+	switch(reason) {
+	case 0:
+	case REASON_ANY:
+		return "unspecified";
+	case REASON_USER_DISCONNECT:
+		return "user disconnected";
+	case REASON_SERVER_DISCONNECT:
+		return "server disconnected";
+	case REASON_IDLE_TIMEOUT:
+		return "idle timeout";
+	case REASON_DPD_TIMEOUT:
+		return "DPD timeout";
+	case REASON_ERROR:
+		return "unspecified error";
+	case REASON_SESSION_TIMEOUT:
+		return "session timeout";
+	default:
+		snprintf(tmp, sizeof(tmp), "unknown (%u)", reason);
+		return tmp;
+	}
+}
+
 ssize_t force_write(int sockfd, const void *buf, size_t len)
 {
 int left = len;

@@ -975,6 +975,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
 			close(cmd_fd[0]);
 			clear_lists(s);
+			if (s->top_fd != -1) close(s->top_fd);
 			close(s->sec_mod_fd);
 			close(s->sec_mod_fd_sync);
 
@@ -1195,6 +1196,7 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 
+	s->top_fd = -1;
 	s->sec_mod_fd = run_sec_mod(s, &s->sec_mod_fd_sync);
 	ret = ctl_handler_init(s);
 	if (ret < 0) {

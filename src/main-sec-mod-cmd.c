@@ -528,6 +528,8 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	proc->bytes_out = msg->bytes_out;
 	if (msg->has_secmod_client_entries)
 		s->secmod_client_entries = msg->secmod_client_entries;
+	if (msg->has_discon_reason)
+		proc->discon_reason = msg->discon_reason;
 
 	cli_stats_msg__free_unpacked(msg, &pa);
 

@@ -43,6 +43,7 @@
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
+#include <main-ctl.h>
 #include <ip-lease.h>
 #include <script-list.h>
 #include <ccan/list/list.h>
@@ -436,6 +437,7 @@ int user_connected(main_server_st *s, struct proc_st* proc)
 {
 int ret;
 
+	ctl_handler_notify(s,proc, 1);
 	add_utmp_entry(s, proc);
 
 	ret = call_script(s, proc, 1);
@@ -447,6 +449,7 @@ int ret;
 
 void user_disconnected(main_server_st *s, struct proc_st* proc)
 {
+	ctl_handler_notify(s,proc, 0);
 	remove_utmp_entry(s, proc);
 	call_script(s, proc, 0);
 }

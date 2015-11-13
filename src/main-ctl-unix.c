@@ -45,6 +45,8 @@ typedef struct method_ctx {
 	void *pool;
 } method_ctx;
 
+static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
+			      unsigned msg_size);
 static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 			  unsigned msg_size);
 static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
@@ -73,12 +75,17 @@ typedef struct {
 	char *name;
 	unsigned cmd;
 	method_func func;
+	unsigned indefinite; /* session remains open */
 } ctl_method_st;
 
 #define ENTRY(cmd, func) \
-	{#cmd, cmd, func}
+	{#cmd, cmd, func, 0}
+
+#define ENTRY_INDEF(cmd, func) \
+	{#cmd, cmd, func, 1}
 
 static const ctl_method_st methods[] = {
+	ENTRY_INDEF(CTL_CMD_TOP, method_top),
 	ENTRY(CTL_CMD_STATUS, method_status),
 	ENTRY(CTL_CMD_RELOAD, method_reload),
 	ENTRY(CTL_CMD_STOP, method_stop),
@@ -403,7 +410,6 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-users");
 
-
 	list_for_each(&ctx->s->proc_list.head, ctmp, list) {
 		ret = append_user_info(ctx, &rep, ctmp);
 		if (ret < 0) {
@@ -422,6 +428,21 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 
  error:
 	return;
+}
+
+static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
+			      unsigned msg_size)
+{
+	/* we send the initial user list, and the we send a TOP reply message
+	 * once a user connects/disconnects. */
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: top");
+
+	/* we can only have a single top listener */
+	if (ctx->s->top_fd == -1)
+		ctx->s->top_fd = cfd;
+
+	method_list_users(ctx, cfd, msg, msg_size);
 }
 
 static int append_ban_info(method_ctx *ctx,
@@ -707,13 +728,18 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 	unsigned buffer_size;
 	method_ctx ctx;
 	struct ctl_watcher_st *wst = container_of(w, struct ctl_watcher_st, ctl_cmd_io);
-	unsigned i;
+	unsigned i, indef = 0;
 
 	ctx.s = s;
-	ctx.pool = wst;
+	ctx.pool = talloc_new(wst);
+
+	if (ctx.pool == NULL)
+		goto fail;
 
 	/* read request */
 	ret = recv(wst->fd, buffer, sizeof(buffer), 0);
+	if (ret == 0)
+		goto fail;
 
 	if (ret < 3) {
 		if (ret == -1) {
@@ -726,6 +752,7 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 		}
 		goto fail;
 	}
+
 	memcpy(&length, &buffer[1], 2);
 	buffer_size = ret - 3;
 
@@ -743,13 +770,19 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 			      (unsigned)buffer[0]);
 			break;
 		} else if (methods[i].cmd == buffer[0]) {
+			indef = methods[i].indefinite;
 			methods[i].func(&ctx, wst->fd, buffer + 3, buffer_size);
 			break;
 		}
 	}
 
- 	return;
+	if (indef) {
+		talloc_free(ctx.pool);
+		return;
+	}
  fail:
+ 	if (s->top_fd == wst->fd)
+ 		s->top_fd = -1;
  	close(wst->fd);
  	ev_io_stop(EV_A_ w);
  	talloc_free(wst);
@@ -809,4 +842,54 @@ void ctl_handler_run_pending(main_server_st* s, ev_io *watcher)
 		return;
 
 	ctl_handle_commands(s);
+}
+
+void ctl_handler_notify (main_server_st* s, struct proc_st *proc, unsigned connect)
+{
+	TopUpdateRep rep = TOP_UPDATE_REP__INIT;
+	UserListRep list = USER_LIST_REP__INIT;
+	int ret;
+	method_ctx ctx;
+	void *pool = talloc_new(proc);
+
+	if (s->top_fd == -1)
+		return;
+
+	if (pool == NULL) {
+		goto fail;
+	}
+
+	ctx.s = s;
+	ctx.pool = pool;
+
+	mslog(s, NULL, LOG_DEBUG, "ctl: top update");
+
+	rep.connected = connect;
+	if (connect == 0 && proc->discon_reason) {
+		rep.has_discon_reason = 1;
+		rep.discon_reason = proc->discon_reason;
+		rep.discon_reason_txt = (char*)discon_reason_to_str(proc->discon_reason);
+	}
+
+	ret = append_user_info(&ctx, &list, proc);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR,
+		      "error appending user info to reply");
+		goto fail;
+	}
+	rep.user = &list;
+
+	ret = send_msg(pool, s->top_fd, CTL_CMD_TOP_UPDATE_REP, &rep,
+		       (pack_size_func) top_update_rep__get_packed_size,
+		       (pack_func) top_update_rep__pack);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error sending ctl reply");
+		goto fail;
+	}
+
+	talloc_free(pool);
+	return;
+ fail:
+	talloc_free(pool);
+ 	s->top_fd = -1;
 }

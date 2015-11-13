@@ -69,6 +69,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 			int *socketfd, void** msg, unpack_func, unsigned timeout);
 
 const char* cmd_request_to_str(unsigned cmd);
+const char* discon_reason_to_str(unsigned reason);
 
 ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
                     struct sockaddr *src_addr, socklen_t *addrlen,

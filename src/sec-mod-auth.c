@@ -537,6 +537,8 @@ int handle_sec_auth_session_close(sec_mod_st *sec, int fd, const SecAuthSessionM
 	rep.bytes_in = e->stats.bytes_in;
 	rep.bytes_out = e->stats.bytes_out;
 	rep.has_secmod_client_entries = 1;
+	rep.has_discon_reason = 1;
+	rep.discon_reason = e->discon_reason;
 	rep.secmod_client_entries = sec_mod_client_db_elems(sec);
 
 	ret = send_msg(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,

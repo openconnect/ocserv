@@ -86,5 +86,6 @@ int handle_unban_ip_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params
 int handle_disconnect_id_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_reload_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_stop_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params);
 
 #endif

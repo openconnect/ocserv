@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Red Hat
+ * Copyright (C) 2014, 2015 Red Hat
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <signal.h>
+#include <system.h>
 #include <c-ctype.h>
 #include <occtl/occtl.h>
 #include <c-strcase.h>
@@ -67,6 +67,8 @@ static const commands_st commands[] = {
 	      "Prints information on the specified user", 1, 1),
 	ENTRY("show id", "[ID]", handle_show_id_cmd,
 	      "Prints information on the specified ID", 1, 1),
+	ENTRY("show events", NULL, handle_events_cmd,
+	      "Provides information about connecting users", 1, 1),
 	ENTRY("stop", "now", handle_stop_cmd,
 	      "Terminates the server", 1, 1),
 	ENTRY("reset", NULL, handle_reset_cmd, "Resets the screen and terminal",
@@ -498,7 +500,7 @@ void initialize_readline(void)
 #ifdef HAVE_ORIG_READLINE
 	rl_clear_signals();
 #endif
-	signal(SIGINT, handle_sigint);
+	ocsignal(SIGINT, handle_sigint);
 }
 
 static int single_cmd(int argc, char **argv, void *pool, const char *file, cmd_params_st *params)
@@ -533,8 +535,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	signal(SIGPIPE, SIG_IGN);
-
+	ocsignal(SIGPIPE, SIG_IGN);
 
 	if (argc > 1) {
 		while (argc > 1 && argv[1][0] == '-') {

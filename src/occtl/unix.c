@@ -34,7 +34,12 @@
 #include <c-strcase.h>
 #include <arpa/inet.h>
 
+#include <system.h>
+#include <termios.h>
 #include <unistd.h>
+#include <minmax.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -56,6 +61,7 @@ static uint8_t msg_map[] = {
         [CTL_CMD_LIST] = CTL_CMD_LIST_REP,
         [CTL_CMD_LIST_BANNED] = CTL_CMD_LIST_BANNED_REP,
         [CTL_CMD_USER_INFO] = CTL_CMD_LIST_REP,
+        [CTL_CMD_TOP] = CTL_CMD_LIST_REP,
         [CTL_CMD_ID_INFO] = CTL_CMD_LIST_REP,
         [CTL_CMD_DISCONNECT_NAME] = CTL_CMD_DISCONNECT_NAME_REP,
         [CTL_CMD_DISCONNECT_ID] = CTL_CMD_DISCONNECT_ID_REP,
@@ -526,35 +532,35 @@ int handle_disconnect_id_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_s
 	return ret;
 }
 
-int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+static const char *fix_ciphersuite(char *txt)
 {
-	int ret;
-	struct cmd_reply_st raw;
-	UserListRep *rep = NULL;
+	if (txt != NULL && txt[0] != 0) {
+		if (strlen(txt) > 16 && strncmp(txt, "(DTLS", 5) == 0 &&
+		    strncmp(&txt[8], ")-(RSA)-", 8) == 0) {
+			return txt + 16;
+		}
+	}
+
+	return "(no dtls)";
+}
+
+static const char *get_ip(const char *ip1, const char *ip2)
+{
+	if (ip1 != NULL && ip1[0] != 0)
+		return ip1;
+	else
+		return ip2;
+}
+
+void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_params_st *params)
+{
 	unsigned i;
 	const char *vpn_ip, *groupname, *username;
 	const char *dtls_ciphersuite;
 	char tmpbuf[MAX_TMPSTR_SIZE];
-	FILE *out;
 	time_t t;
 	struct tm *tm;
 	char str_since[64];
-	PROTOBUF_ALLOCATOR(pa, ctx);
-
-	init_reply(&raw);
-
-	entries_clear();
-
-	out = pager_start(params);
-
-	ret = send_cmd(ctx, CTL_CMD_LIST, NULL, NULL, NULL, &raw);
-	if (ret < 0) {
-		goto error;
-	}
-
-	rep = user_list_rep__unpack(&pa, raw.data_size, raw.data);
-	if (rep == NULL)
-		goto error;
 
 	if (HAVE_JSON(params)) {
 		common_info_cmd(rep, out, params);
@@ -563,10 +569,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 		if (username == NULL || username[0] == 0)
 			username = NO_USER;
 
-		if (rep->user[i]->local_ip != NULL && rep->user[i]->local_ip[0] != 0)
-			vpn_ip = rep->user[i]->local_ip;
-		else
-			vpn_ip = rep->user[i]->local_ip6;
+		vpn_ip = get_ip(rep->user[i]->local_ip, rep->user[i]->local_ip6);
 
 		/* add header */
 		if (i == 0) {
@@ -588,18 +591,38 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 		fprintf(out, "%8d %8s %8s %14s %14s %6s ",
 			(int)rep->user[i]->id, username, groupname, rep->user[i]->ip, vpn_ip, rep->user[i]->tun);
 
-		dtls_ciphersuite = rep->user[i]->dtls_ciphersuite;
-		if (dtls_ciphersuite != NULL && dtls_ciphersuite[0] != 0) {
-			if (strlen(dtls_ciphersuite) > 16 && strncmp(dtls_ciphersuite, "(DTLS", 5) == 0 &&
-			    strncmp(&dtls_ciphersuite[8], ")-(RSA)-", 8) == 0)
-				dtls_ciphersuite += 16;
-			fprintf(out, "%s %14s %9s\n", tmpbuf, dtls_ciphersuite, rep->user[i]->status);
-		} else {
-			fprintf(out, "%s %14s %9s\n", tmpbuf, "(no dtls)", rep->user[i]->status);
-		}
+		dtls_ciphersuite = fix_ciphersuite(rep->user[i]->dtls_ciphersuite);
+
+		fprintf(out, "%s %14s %9s\n", tmpbuf, dtls_ciphersuite, rep->user[i]->status);
 
 		entries_add(ctx, username, strlen(username), rep->user[i]->id);
 	}
+}
+
+int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	UserListRep *rep = NULL;
+	FILE *out;
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	init_reply(&raw);
+
+	entries_clear();
+
+	out = pager_start(params);
+
+	ret = send_cmd(ctx, CTL_CMD_LIST, NULL, NULL, NULL, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = user_list_rep__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	common_user_list(ctx, rep, out, params);
 
 	ret = 0;
 	goto cleanup;
@@ -924,6 +947,8 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *p
 	if (ret < 0)
 		goto error;
 
+
+
 	goto cleanup;
 
  error:
@@ -932,6 +957,188 @@ int handle_show_user_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *p
  cleanup:
 	if (rep != NULL)
 		user_list_rep__free_unpacked(rep, &pa);
+	free_reply(&raw);
+
+	return ret;
+}
+
+static void dummy_sighandler(int signo)
+{
+	return;
+}
+
+
+int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	uint8_t header[3];
+	int ret;
+	struct cmd_reply_st raw;
+	UserListRep *rep1 = NULL;
+	TopUpdateRep *rep2 = NULL;
+	uint16_t length;
+	unsigned data_size;
+	uint8_t *data = NULL;
+	char *groupname;
+	char tmpbuf[MAX_TMPSTR_SIZE];
+	PROTOBUF_ALLOCATOR(pa, ctx);
+	struct termios tio_old, tio_new;
+	sighandler_t old_sighandler;
+
+	init_reply(&raw);
+
+	ret = send_cmd(ctx, CTL_CMD_TOP, NULL, 0, 0, &raw); 
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep1 = user_list_rep__unpack(&pa, raw.data_size, raw.data);
+	if (rep1 == NULL)
+		goto error;
+
+	common_user_list(ctx, rep1, stdout, params);
+
+	user_list_rep__free_unpacked(rep1, &pa);
+	rep1 = NULL;
+
+	fputs("\n", stdout);
+	fputs("Press 'q' or CTRL+C to quit\n\n", stdout);
+
+	old_sighandler = ocsignal(SIGINT, dummy_sighandler);
+	tcgetattr(STDIN_FILENO, &tio_old);
+	tio_new = tio_old;
+	tio_new.c_lflag &= ~(ICANON|ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &tio_new);
+
+	/* start listening for updates */
+	while(1) {
+		fd_set rfds;
+
+		FD_ZERO(&rfds);
+		FD_SET(STDIN_FILENO, &rfds);
+		FD_SET(ctx->fd, &rfds);
+
+		ret = select(MAX(STDIN_FILENO,ctx->fd)+1, &rfds, NULL, NULL, NULL);
+		if (ret == -1 && errno == EINTR) {
+			ret = 0;
+			break;
+		}
+
+		if (ret == -1) {
+			int e = errno;
+			fprintf(stderr, "top: select: %s\n", strerror(e));
+			ret = -1;
+			break;
+		}
+
+		if (FD_ISSET(STDIN_FILENO, &rfds)) {
+			ret = getchar();
+			if (ret == 'q' || ret == 'Q') {
+				ret = 0;
+				break;
+			}
+		}
+
+		if (!FD_ISSET(ctx->fd, &rfds))
+			continue;
+
+		ret = read(ctx->fd, header, 3);
+		if (ret == -1) {
+			int e = errno;
+			fprintf(stderr, "top: read1: %s\n", strerror(e));
+			ret = -1;
+			break;
+		}
+
+		if (ret == 0) {
+			fprintf(stderr, "top: server closed the connection\n");
+			ret = 0;
+			break;
+		}
+
+		if (ret != 3) {
+			fprintf(stderr, "top: short read %d\n", ret);
+			ret = -1;
+			break;
+		}
+
+		if (header[0] != CTL_CMD_TOP_UPDATE_REP) {
+			fprintf(stderr, "top: Unexpected message '%d', expected '%d'\n", (int)header[0], (int)CTL_CMD_TOP_UPDATE_REP);
+			ret = -1;
+			break;
+		}
+
+		memcpy(&length, &header[1], 2);
+
+		data_size = length;
+		data = talloc_size(ctx, length);
+		if (data == NULL) {
+			fprintf(stderr, "top: memory error\n");
+			ret = -1;
+			break;
+		}
+
+		ret = read(ctx->fd, data, data_size);
+		if (ret == -1) {
+			int e = errno;
+			fprintf(stderr, "top: read: %s\n", strerror(e));
+			ret = -1;
+			break;
+		}
+
+		/* parse and print */
+		rep2 = top_update_rep__unpack(&pa, data_size, data);
+		if (rep2 == NULL)
+			goto error;
+
+		if (HAVE_JSON(params)) {
+			if (rep2->connected == 0)
+				rep2->user->user[0]->status = talloc_strdup(rep2, "disconnected");
+			else
+				rep2->user->user[0]->status = talloc_strdup(rep2, "connected");
+			common_info_cmd(rep2->user, stdout, params);
+		} else {
+			groupname = rep2->user->user[0]->groupname;
+			if (groupname == NULL || groupname[0] == 0)
+				groupname = NO_GROUP;
+
+			if (rep2->connected) {
+				printf("connected user '%s' (%u) from %s with IP %s\n",
+					rep2->user->user[0]->username,
+					rep2->user->user[0]->id,
+					rep2->user->user[0]->ip,
+					get_ip(rep2->user->user[0]->local_ip,
+					rep2->user->user[0]->local_ip6));
+
+				entries_add(ctx, rep2->user->user[0]->username, strlen(rep2->user->user[0]->username), rep2->user->user[0]->id);
+			} else {
+				print_time_ival7(tmpbuf, time(0), rep2->user->user[0]->conn_time);
+				printf("disconnect user '%s' (%u) from %s with IP %s (reason: %s, time: %s)\n",
+					rep2->user->user[0]->username,
+					rep2->user->user[0]->id,
+					rep2->user->user[0]->ip,
+					get_ip(rep2->user->user[0]->local_ip, rep2->user->user[0]->local_ip6),
+					rep2->discon_reason_txt?rep2->discon_reason_txt:"unknown", tmpbuf);
+			}
+
+		}
+
+		top_update_rep__free_unpacked(rep2, &pa);
+		rep2 = NULL;
+	}
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &tio_old);
+	ocsignal(SIGINT, old_sighandler);
+	goto cleanup;
+
+ error:
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+	ret = 1;
+ cleanup:
+	talloc_free(data);
+	if (rep1 != NULL)
+		user_list_rep__free_unpacked(rep1, &pa);
+	if (rep2 != NULL)
+		top_update_rep__free_unpacked(rep2, &pa);
 	free_reply(&raw);
 
 	return ret;

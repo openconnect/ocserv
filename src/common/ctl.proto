@@ -57,6 +57,14 @@ message user_list_rep
 	repeated user_info_rep user = 1;
 }
 
+message top_update_rep
+{
+	required uint32 connected = 1;
+	optional uint32 discon_reason = 2;
+	optional string discon_reason_txt = 3;
+	required user_list_rep user = 4;
+}
+
 message username_req
 {
 	required string username = 1;

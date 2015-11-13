@@ -6,6 +6,8 @@
   the old configuration semantics of appending the global routes to per
   user/group config.
 - Switched to an event-driven design in main; using libev
+- occtl: Added the show events command to allow viewing the users connecting in
+  real time. 
 
 
 * Version 0.10.9 (released 2015-10-07)

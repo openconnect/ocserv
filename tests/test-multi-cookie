@@ -25,7 +25,10 @@ PORT=4500
 . `dirname $0`/common.sh
 
 echo "Testing whether cookies are being re-used... "
-rm -f ${srcdir}/pid1.$$ ${srcdir}/pid2.$$
+
+PIDFILE1="${srcdir}/ci$$-1.pid"
+PIDFILE2="${srcdir}/ci$$-2.pid"
+rm -f "${PIDFILE1}" "${PIDFILE2}"
 
 launch_server -d 1 -f -c ${srcdir}/test-multi-cookie.config & PID=$!
 wait_server $PID
@@ -40,7 +43,7 @@ fi
 #echo "Cookie: $COOKIE"
 
 echo "Connecting with cookie... "
-echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid1.$$ --background
+echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE1}" --background
 CPID=$!
 
 sleep 4
@@ -48,23 +51,23 @@ sleep 4
 echo "Connecting again with same cookie... "
 #( echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 #	fail $PID "Could not connect to server"
-echo "test" | $OPENCONNECT -q localhost:$PORT -b -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pid2.$$ --background
+echo "test" | $OPENCONNECT -q localhost:$PORT -b -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE2}" --background
 C2PID=$!
 
 sleep 4
 
-if [ ! -f ${srcdir}/pid2.$$ ];then
+if [ ! -f "${PIDFILE2}" ];then
 	fail $PID "It was not possible to establish session!"
 fi
 
 # checking whether server has already terminated $CPID
 sleep 1
 
-if [ -f ${srcdir}/pid1.$$ ];then
+if [ -f "${PIDFILE1}" ];then
 	fail $PID "Initial connection was still running!"
 fi
 
-rm -f ${srcdir}/pid1.$$ ${srcdir}/pid2.$$
+rm -f "${PIDFILE1}" "${PIDFILE2}"
 
 kill $C2PID >/dev/null 2>&1
 kill $CPID >/dev/null 2>&1

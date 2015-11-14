@@ -85,6 +85,8 @@ static char tmp[32];
 		return "sm: ban IP";
 	case SM_CMD_AUTH_BAN_IP_REPLY:
 		return "sm: ban IP reply";
+	case SM_CMD_REFRESH_COOKIE_KEY:
+		return "sm: refresh cookie key";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

@@ -139,6 +139,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "net-priority", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "output-buffer", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "cookie-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "cookie-rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "session-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "stats-report-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -870,6 +871,10 @@ size_t urlfw_size = 0;
 	if (config->cookie_timeout == 0)
 		config->cookie_timeout = DEFAULT_COOKIE_RECON_TIMEOUT;
 	READ_TF("persistent-cookies", config->persistent_cookies, 0);
+
+	READ_NUMERIC("cookie-rekey-time", config->cookie_rekey_time);
+	if (config->cookie_rekey_time == 0)
+		config->cookie_rekey_time = DEFAULT_COOKIE_REKEY_TIME;
 
 	READ_NUMERIC("session-timeout", config->session_timeout);
 

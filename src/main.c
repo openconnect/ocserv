@@ -1219,6 +1219,7 @@ int main(int argc, char** argv)
 
 					/* clear the cookie key */
 					safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));
+					safe_memset(s->prev_cookie_key, 0, sizeof(s->prev_cookie_key));
 
 					setproctitle(PACKAGE_NAME"-worker");
 					kill_on_parent_kill(SIGTERM);

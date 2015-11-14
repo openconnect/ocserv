@@ -31,6 +31,7 @@
 typedef struct sec_mod_st {
 	gnutls_datum_t dcookie_key; /* the key to generate cookies */
 	uint8_t cookie_key[COOKIE_KEY_SIZE];
+	time_t cookie_key_last_update;
 
 	struct cfg_st *config;
 	struct perm_cfg_st *perm_config;

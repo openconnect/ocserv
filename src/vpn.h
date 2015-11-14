@@ -176,6 +176,7 @@ typedef enum {
 	SM_CMD_AUTH_BAN_IP,
 	SM_CMD_AUTH_BAN_IP_REPLY,
 	SM_CMD_AUTH_CLI_STATS,
+	SM_CMD_REFRESH_COOKIE_KEY,
 
 	MAX_SM_MAIN_CMD,
 } cmd_request_t;
@@ -329,6 +330,7 @@ struct cfg_st {
 
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */
+	time_t cookie_rekey_time;	/* in seconds */
 	time_t session_timeout;	/* in seconds */
 	unsigned persistent_cookies; /* whether cookies stay valid after disconnect */
 

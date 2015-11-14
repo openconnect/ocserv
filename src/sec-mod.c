@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
  *
  * This file is part of ocserv.
  *
@@ -44,6 +44,7 @@
 #include <cloexec.h>
 
 #include <gnutls/gnutls.h>
+#include <gnutls/crypto.h>
 #include <gnutls/abstract.h>
 
 #define MAX_WAIT_SECS 3
@@ -171,6 +172,24 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 
 	if (config->srk_pin != NULL) {
 		strlcpy(s->srk_pin, config->srk_pin, sizeof(s->srk_pin));
+	}
+
+	return 0;
+}
+
+static int send_refresh_cookie_key(sec_mod_st * sec, void *key_data, unsigned key_size)
+{
+	SecRefreshCookieKey msg = SEC_REFRESH_COOKIE_KEY__INIT;
+	int ret;
+
+	msg.key.data = key_data;
+	msg.key.len = key_size;
+
+	ret = send_msg(sec, sec->cmd_fd, SM_CMD_REFRESH_COOKIE_KEY, &msg,
+		       (pack_size_func) sec_refresh_cookie_key__get_packed_size,
+		       (pack_func) sec_refresh_cookie_key__pack);
+	if (ret < 0) {
+		seclog(sec, LOG_WARNING, "sec-mod error in sending cookie key");
 	}
 
 	return 0;
@@ -383,6 +402,8 @@ static void handle_sigterm(int signo)
 
 static void check_other_work(sec_mod_st *sec)
 {
+	time_t now = time(0);
+
 	if (need_exit) {
 		unsigned i;
 
@@ -393,6 +414,23 @@ static void check_other_work(sec_mod_st *sec)
 		sec_mod_client_db_deinit(sec);
 		talloc_free(sec);
 		exit(0);
+	}
+
+	if (sec->config->cookie_rekey_time > 0 && now - sec->cookie_key_last_update > sec->config->cookie_rekey_time) {
+		uint8_t cookie_key[COOKIE_KEY_SIZE];
+		int ret;
+
+		ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie_key, sizeof(cookie_key));
+		if (ret >= 0) {
+			if (send_refresh_cookie_key(sec, cookie_key, sizeof(cookie_key)) == 0) {
+				sec->cookie_key_last_update = now;
+				memcpy(sec->cookie_key, cookie_key, sizeof(cookie_key));
+			} else {
+				seclog(sec, LOG_ERR, "could not notify main for new cookie key");
+			}
+		} else {
+			seclog(sec, LOG_ERR, "could not refresh cookie key");
+		}
 	}
 
 	if (need_reload) {
@@ -560,6 +598,11 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	void *sec_mod_pool;
 	fd_set rd_set;
 	pid_t pid;
+#ifdef HAVE_PSELECT
+	struct timespec ts;
+#else
+	struct timeval ts;
+#endif
 	sigset_t emptyset, blockset;
 
 #ifdef DEBUG_LEAKS
@@ -585,6 +628,8 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	}
 
 	memcpy(sec->cookie_key, cookie_key, COOKIE_KEY_SIZE);
+	sec->cookie_key_last_update = time(0);
+
 	sec->dcookie_key.data = sec->cookie_key;
 	sec->dcookie_key.size = COOKIE_KEY_SIZE;
 	sec->perm_config = talloc_steal(sec, perm_config);
@@ -730,13 +775,17 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		n = MAX(n, sd);
 
 #ifdef HAVE_PSELECT
-		ret = pselect(n + 1, &rd_set, NULL, NULL, NULL, &emptyset);
+		ts.tv_nsec = 0;
+		ts.tv_sec = 120;
+		ret = pselect(n + 1, &rd_set, NULL, NULL, &ts, &emptyset);
 #else
+		ts.tv_usec = 0;
+		ts.tv_sec = 120;
 		sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-		ret = select(n + 1, &rd_set, NULL, NULL, NULL);
+		ret = select(n + 1, &rd_set, NULL, NULL, &ts);
 		sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
-		if (ret == -1 && errno == EINTR)
+		if (ret == 0 || (ret == -1 && errno == EINTR))
 			continue;
 
 		if (ret < 0) {

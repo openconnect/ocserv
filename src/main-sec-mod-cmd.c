@@ -60,6 +60,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	void *pool = talloc_new(s);
 	PROTOBUF_ALLOCATOR(pa, pool);
 	BanIpMsg *tmsg = NULL;
+	SecRefreshCookieKey *rmsg = NULL;
 
 	if (pool == NULL)
 		return -1;
@@ -116,6 +117,29 @@ int handle_sec_mod_commands(main_server_st * s)
 	}
 
 	switch (cmd) {
+	case SM_CMD_REFRESH_COOKIE_KEY:
+		rmsg = sec_refresh_cookie_key__unpack(&pa, raw_len, raw);
+		if (rmsg == NULL) {
+			mslog(s, NULL, LOG_ERR, "error unpacking sec-mod data");
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		if (rmsg->key.len != sizeof(s->cookie_key)) {
+			mslog(s, NULL, LOG_ERR, "received corrupt cookie key (%u bytes) from sec-mod", (unsigned)rmsg->key.len);
+			ret = ERR_BAD_COMMAND;
+			goto cleanup;
+		}
+
+		memcpy(s->prev_cookie_key, s->cookie_key, sizeof(s->cookie_key));
+		s->prev_cookie_key_active = 1;
+
+		memcpy(s->cookie_key, rmsg->key.data, sizeof(s->cookie_key));
+		safe_memset(rmsg->key.data, 0, rmsg->key.len);
+
+		mslog(s, NULL, LOG_INFO, "refreshed cookie key");
+		break;
+
 	case SM_CMD_AUTH_BAN_IP:{
 			BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
 

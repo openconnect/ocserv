@@ -30,6 +30,7 @@
 
 /* The time after a disconnection the cookie is valid */
 #define DEFAULT_COOKIE_RECON_TIMEOUT 120
+#define DEFAULT_COOKIE_REKEY_TIME 14400
 
 int encrypt_cookie(void *pool, gnutls_datum_t *key, const Cookie *msg,
         uint8_t** ecookie, unsigned *ecookie_size);

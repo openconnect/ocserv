@@ -215,6 +215,15 @@ struct proc_st *old_proc;
 	}
 
 	ret = decrypt_cookie(&pa, &key, req->cookie.data, req->cookie.len, &cmsg);
+	if (ret < 0 && s->prev_cookie_key_active) {
+		/* try the old key */
+		key.data = s->prev_cookie_key;
+		key.size = sizeof(s->prev_cookie_key);
+		ret = decrypt_cookie(&pa, &key, req->cookie.data, req->cookie.len, &cmsg);
+		if (ret == 0)
+			mslog(s, proc, LOG_INFO, "decrypted cookie with previous key");
+	}
+
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "error decrypting cookie");
 		return -1;

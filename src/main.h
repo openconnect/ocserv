@@ -179,6 +179,9 @@ typedef struct main_server_st {
 	tls_st *creds;
 	
 	uint8_t cookie_key[COOKIE_KEY_SIZE];
+	/* when we rotate keys, key the previous one active for verification */
+	uint8_t prev_cookie_key[COOKIE_KEY_SIZE];
+	unsigned prev_cookie_key_active;
 
 	struct listen_list_st listen_list;
 	struct proc_list_st proc_list;

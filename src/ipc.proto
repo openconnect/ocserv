@@ -298,5 +298,10 @@ message sec_auth_session_reply_msg
 	optional uint32 max_same_clients = 33;
 }
 
+message sec_refresh_cookie_key
+{
+	required bytes key = 1;
+}
+
 /* SEC_BAN_IP: sent from sec-mod to main */
 /* same as: ban_ip_msg */

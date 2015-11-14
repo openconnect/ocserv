@@ -15,7 +15,7 @@ AM_PROG_AR
 AM_PROG_CC_C_O
 AC_PROG_SED
 if [ test "$GCC" = "yes" ];then
-	CFLAGS="$CFLAGS -Wall"
+	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing"
 fi
 AC_PATH_PROG(CTAGS, ctags, [:])
 AC_PATH_PROG(CSCOPE, cscope, [:])

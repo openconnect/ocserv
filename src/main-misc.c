@@ -101,8 +101,6 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 	int ret;
 
 	if (code == 0) {
-		proc->status = PS_AUTH_COMPLETED;
-
 		ret = send_cookie_auth_reply(s, proc, AUTH__REP__OK);
 		if (ret < 0) {
 			mslog(s, proc, LOG_ERR,
@@ -111,7 +109,15 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 			goto fail;
 		}
 
-		apply_iroutes(s, proc);
+		ret = apply_iroutes(s, proc);
+		if (ret < 0) {
+			mslog(s, proc, LOG_ERR,
+			      "could not apply routes for user; denying access.");
+			ret = ERR_BAD_COMMAND;
+			goto fail;
+		}
+
+		proc->status = PS_AUTH_COMPLETED;
 	} else {
 		mslog(s, proc, LOG_INFO,
 		      "failed authentication attempt for user '%s'",

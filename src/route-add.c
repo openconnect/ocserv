@@ -123,13 +123,13 @@ int route_del(struct main_server_st* s, proc_st *proc, const char* route, const 
 /* Executes the commands required to apply all the configured routes 
  * for this client locally.
  */
-void apply_iroutes(struct main_server_st* s, struct proc_st *proc)
+int apply_iroutes(struct main_server_st* s, struct proc_st *proc)
 {
 unsigned i, j;
 int ret;
 
 	if (proc->config.iroutes_size == 0)
-		return;
+		return 0;
 
 	for (i=0;i<proc->config.iroutes_size;i++) {
 		ret = route_add(s, proc, proc->config.iroutes[i], proc->tun_lease.name);
@@ -138,12 +138,12 @@ int ret;
 	}
 	proc->applied_iroutes = 1;
 	
-	return;
+	return 0;
 fail:
 	for (j=0;j<i;j++)
 		route_del(s, proc, proc->config.iroutes[j], proc->tun_lease.name);
 	
-	return;
+	return -1;
 }
 
 /* Executes the commands required to removed all the configured routes 

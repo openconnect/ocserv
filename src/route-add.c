@@ -25,12 +25,59 @@
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 
 #include <route-add.h>
 #include <main.h>
 #include <str.h>
 #include <common.h>
+
+static
+int call_script(main_server_st *s, proc_st *proc, const char *cmd)
+{
+pid_t pid;
+int ret, status = 0;
+
+	if (cmd == NULL)
+		return 0;
+
+	pid = fork();
+	if (pid == 0) {
+		sigprocmask(SIG_SETMASK, &sig_default_set, NULL);
+
+		mslog(s, proc, LOG_DEBUG, "executing route script %s", cmd);
+		ret = execl("/bin/sh", "sh", "-c", cmd, NULL);
+		if (ret == -1) {
+			mslog(s, proc, LOG_ERR, "Could not execute route script %s", cmd);
+			exit(1);
+		}
+
+		exit(77);
+	} else if (pid == -1) {
+		mslog(s, proc, LOG_ERR, "Could not fork()");
+		return ERR_EXEC;
+	}
+
+	ret = waitpid(pid, &status, 0);
+	if (ret == -1) {
+		mslog(s, proc, LOG_ERR, "Could not waitpid()");
+		return ERR_EXEC;
+	}
+
+	if (!WIFEXITED(status)) {
+		mslog(s, proc, LOG_INFO, "cmd: %s: exited abnormally", cmd);
+		return ERR_EXEC;
+	}
+
+	if (WEXITSTATUS(status)) {
+		mslog(s, proc, LOG_INFO, "cmd: %s: exited with error %d", cmd, WEXITSTATUS(ret));
+		return ERR_EXEC;
+	}
+
+	return 0;
+}
 
 static
 int replace_cmd(struct main_server_st* s, proc_st *proc, 
@@ -72,7 +119,6 @@ int route_adddel(struct main_server_st* s, proc_st *proc,
 {
 int ret;
 char *cmd = NULL;
-sigset_t oldsigset;
 
 	if (pattern == 0) {
 		mslog(s, NULL, LOG_WARNING, "route-add-cmd or route-del-cmd are not set.");
@@ -83,31 +129,14 @@ sigset_t oldsigset;
 	if (ret < 0)
 		return ret;
 
-	sigprocmask(SIG_SETMASK, &sig_default_set, &oldsigset);
-
-	mslog(s, NULL, LOG_DEBUG, "spawning cmd: %s", cmd);
-	ret = system(cmd);
-
-	sigprocmask(SIG_SETMASK, &oldsigset, NULL);
-	if (ret == -1) {
+	ret = call_script(s, proc, cmd);
+	if (ret < 0) {
 		int e = errno;
 		mslog(s, NULL, LOG_INFO, "failed to spawn cmd: %s: %s", cmd, strerror(e));
 		ret = ERR_EXEC;
 		goto fail;
 	}
-	
-	if (!WIFEXITED(ret)) {
-		mslog(s, NULL, LOG_INFO, "cmd: %s: exited abnormally", cmd);
-		ret = ERR_EXEC;
-		goto fail;
-	}
 
-	if (WEXITSTATUS(ret)) {
-		mslog(s, NULL, LOG_INFO, "cmd: %s: exited with error %d", cmd, WEXITSTATUS(ret));
-		ret = ERR_EXEC;
-		goto fail;
-	}
-	
 	ret = 0;
  fail:
  	talloc_free(cmd);
@@ -143,12 +172,12 @@ int ret;
 			goto fail;
 	}
 	proc->applied_iroutes = 1;
-	
+
 	return 0;
 fail:
 	for (j=0;j<i;j++)
 		route_del(s, proc, proc->config.iroutes[j], proc->tun_lease.name);
-	
+
 	return -1;
 }
 
@@ -166,7 +195,7 @@ unsigned i;
 		route_del(s, proc, proc->config.iroutes[i], proc->tun_lease.name);
 	}
 	proc->applied_iroutes = 0;
-	
+
 	return;
 }
 

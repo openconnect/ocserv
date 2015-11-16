@@ -26,7 +26,7 @@ occtl:        libreadline-dev    / readline-devel
 GSSAPI:       libkrb5-dev        / krb5-devel
 ```
 
-Dependencies for development, or dependencies that can be skipped
+Dependencies for development, testing, or dependencies that can be skipped
 in an embedded system (e.g., because a replacement library is included):
 
 ```
@@ -38,6 +38,8 @@ libopts25-dev      / autogen-libopts-devel
 autogen            / autogen
 protobuf-c-compiler/ protobuf-c
 gperf              / gperf
+liblockfile-bin    / lockfile-progs
+nuttcp             / nuttcp
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

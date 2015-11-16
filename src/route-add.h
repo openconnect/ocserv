@@ -24,7 +24,7 @@
 #include <vpn.h>
 #include <main.h>
 
-void apply_iroutes(struct main_server_st* s, struct proc_st *proc);
+int apply_iroutes(struct main_server_st* s, struct proc_st *proc);
 void remove_iroutes(struct main_server_st* s, struct proc_st *proc);
 
 #endif

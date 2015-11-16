@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <signal.h>
 #include <sys/wait.h>
 
 #include <route-add.h>
@@ -71,6 +72,7 @@ int route_adddel(struct main_server_st* s, proc_st *proc,
 {
 int ret;
 char *cmd = NULL;
+sigset_t oldsigset;
 
 	if (pattern == 0) {
 		mslog(s, NULL, LOG_WARNING, "route-add-cmd or route-del-cmd are not set.");
@@ -80,9 +82,13 @@ char *cmd = NULL;
 	ret = replace_cmd(s, proc, &cmd, pattern, route, dev);
 	if (ret < 0)
 		return ret;
-	
+
+	sigprocmask(SIG_SETMASK, &sig_default_set, &oldsigset);
+
 	mslog(s, NULL, LOG_DEBUG, "spawning cmd: %s", cmd);
 	ret = system(cmd);
+
+	sigprocmask(SIG_SETMASK, &oldsigset, NULL);
 	if (ret == -1) {
 		int e = errno;
 		mslog(s, NULL, LOG_INFO, "failed to spawn cmd: %s: %s", cmd, strerror(e));

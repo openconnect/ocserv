@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,12 +39,181 @@
 #include <gettime.h>
 
 #include <vpn.h>
+#include <str.h>
 #include <cookies.h>
 #include <tun.h>
 #include <main.h>
 #include <ip-lease.h>
 #include <script-list.h>
 #include <ccan/list/list.h>
+
+#define APPEND_TO_STR(str, val) \
+			ret = str_append_str(str, val); \
+			if (ret < 0) { \
+				mslog(s, proc, LOG_ERR, "could not append value to environment\n"); \
+				exit(1); \
+			}
+
+static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
+{
+	str_st str4;
+	str_st str6;
+	str_st str_common;
+	unsigned i;
+	int ret;
+
+	str_init(&str4, proc);
+	str_init(&str6, proc);
+	str_init(&str_common, proc);
+
+	/* We use different export strings for IPv4 and IPv6 to ease handling
+	 * with legacy software such as iptables and ip6tables. */
+
+	/* append generic routes to str */
+	for (i=0;i<s->config->network.routes_size;i++) {
+		APPEND_TO_STR(&str_common, s->config->network.routes[i]);
+		APPEND_TO_STR(&str_common, " ");
+
+		if (strchr(s->config->network.routes[i], ':') != 0) {
+			APPEND_TO_STR(&str6, s->config->network.routes[i]);
+			APPEND_TO_STR(&str6, " ");
+		} else {
+			APPEND_TO_STR(&str4, s->config->network.routes[i]);
+			APPEND_TO_STR(&str4, " ");
+		}
+	}
+
+	/* append custom routes to str */
+	for (i=0;i<proc->config.routes_size;i++) {
+		APPEND_TO_STR(&str_common, proc->config.routes[i]);
+		APPEND_TO_STR(&str_common, " ");
+
+		if (strchr(proc->config.routes[i], ':') != 0) {
+			APPEND_TO_STR(&str6, proc->config.routes[i]);
+			APPEND_TO_STR(&str6, " ");
+		} else {
+			APPEND_TO_STR(&str4, proc->config.routes[i]);
+			APPEND_TO_STR(&str4, " ");
+		}
+	}
+
+	if (str4.length > 0 && setenv("OCSERV_ROUTES4", (char*)str4.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export routes\n");
+		exit(1);
+	}
+
+	if (str6.length > 0 && setenv("OCSERV_ROUTES6", (char*)str6.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export routes\n");
+		exit(1);
+	}
+
+	if (str_common.length > 0 && setenv("OCSERV_ROUTES", (char*)str_common.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export routes\n");
+		exit(1);
+	}
+
+	/* export the No-routes */
+
+	str_reset(&str4);
+	str_reset(&str6);
+	str_reset(&str_common);
+
+	/* append generic no_routes to str */
+	for (i=0;i<s->config->network.no_routes_size;i++) {
+		APPEND_TO_STR(&str_common, s->config->network.no_routes[i]);
+		APPEND_TO_STR(&str_common, " ");
+
+		if (strchr(s->config->network.no_routes[i], ':') != 0) {
+			APPEND_TO_STR(&str6, s->config->network.no_routes[i]);
+			APPEND_TO_STR(&str6, " ");
+		} else {
+			APPEND_TO_STR(&str4, s->config->network.no_routes[i]);
+			APPEND_TO_STR(&str4, " ");
+		}
+	}
+
+	/* append custom no_routes to str */
+	for (i=0;i<proc->config.no_routes_size;i++) {
+		APPEND_TO_STR(&str_common, proc->config.no_routes[i]);
+		APPEND_TO_STR(&str_common, " ");
+
+		if (strchr(proc->config.no_routes[i], ':') != 0) {
+			APPEND_TO_STR(&str6, proc->config.no_routes[i]);
+			APPEND_TO_STR(&str6, " ");
+		} else {
+			APPEND_TO_STR(&str4, proc->config.no_routes[i]);
+			APPEND_TO_STR(&str4, " ");
+		}
+	}
+
+	if (str4.length > 0 && setenv("OCSERV_NO_ROUTES4", (char*)str4.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
+		exit(1);
+	}
+
+	if (str6.length > 0 && setenv("OCSERV_NO_ROUTES6", (char*)str6.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
+		exit(1);
+	}
+
+	if (str_common.length > 0 && setenv("OCSERV_NO_ROUTES", (char*)str_common.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export no-routes\n");
+		exit(1);
+	}
+
+	/* export the DNS servers */
+
+	str_reset(&str4);
+	str_reset(&str6);
+	str_reset(&str_common);
+
+	if (proc->config.dns_size > 0) {
+		for (i=0;i<proc->config.dns_size;i++) {
+			APPEND_TO_STR(&str_common, proc->config.dns[i]);
+			APPEND_TO_STR(&str_common, " ");
+
+			if (strchr(proc->config.dns[i], ':') != 0) {
+				APPEND_TO_STR(&str6, proc->config.dns[i]);
+				APPEND_TO_STR(&str6, " ");
+			} else {
+				APPEND_TO_STR(&str4, proc->config.dns[i]);
+				APPEND_TO_STR(&str4, " ");
+			}
+		}
+	} else {
+		for (i=0;i<s->config->network.dns_size;i++) {
+			APPEND_TO_STR(&str_common, s->config->network.dns[i]);
+			APPEND_TO_STR(&str_common, " ");
+
+			if (strchr(s->config->network.dns[i], ':') != 0) {
+				APPEND_TO_STR(&str6, s->config->network.dns[i]);
+				APPEND_TO_STR(&str6, " ");
+			} else {
+				APPEND_TO_STR(&str4, s->config->network.dns[i]);
+				APPEND_TO_STR(&str4, " ");
+			}
+		}
+	}
+
+	if (str4.length > 0 && setenv("OCSERV_DNS4", (char*)str4.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
+		exit(1);
+	}
+
+	if (str6.length > 0 && setenv("OCSERV_DNS6", (char*)str6.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
+		exit(1);
+	}
+
+	if (str_common.length > 0 && setenv("OCSERV_DNS", (char*)str_common.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export DNS servers\n");
+		exit(1);
+	}
+
+	str_clear(&str4);
+	str_clear(&str6);
+	str_clear(&str_common);
+}
 
 static
 int call_script(main_server_st *s, struct proc_st* proc, unsigned up)
@@ -131,9 +301,9 @@ const char* script;
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
 		setenv("DEVICE", proc->tun_lease.name, 1);
-		if (up)
+		if (up) {
 			setenv("REASON", "connect", 1);
-		else {
+		} else {
 			/* use remote as temp buffer */
 			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_in);
 			setenv("STATS_BYTES_IN", remote, 1);
@@ -145,6 +315,9 @@ const char* script;
 			}
 			setenv("REASON", "disconnect", 1);
 		}
+
+		/* export DNS and route info */
+		export_dns_route_info(s, proc);
 
 		mslog(s, proc, LOG_DEBUG, "executing script %s %s", up?"up":"down", script);
 		ret = execl(script, script, NULL);

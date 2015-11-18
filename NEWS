@@ -1,7 +1,6 @@
 * Version 0.10.10 (unreleased)
 - Increase the number of log messages logged in the default level. That
-  is added any messages that could be of use to administrators on the
-  default log level.
+  is added messages that could be of use to administrators.
 - Introduced ipv6-subnet-prefix config option. That option allows to specify
   the IPv6 subnet prefix to be given to client. That is, allow providing the
   clients networks larger than /128. The default setting is 128 to keep

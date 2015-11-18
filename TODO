@@ -3,9 +3,6 @@ Short term items:
 * Modify the test suite to be able to run without root privileges. That
   could be done by using virt-builder for the tests instead of docker.
 
-* Use the UDP address to report the client's IP when sniproxy or haproxy
-  are being used.
-
 * When a user (IP) gets into the BAN list multiple times, disable it for
   longer time (or should we drop this functionality altogether and rely
   on PAM handling that?)

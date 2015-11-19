@@ -118,6 +118,7 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 		}
 
 		proc->status = PS_AUTH_COMPLETED;
+		mslog(s, proc, LOG_INFO, "user logged in");
 	} else {
 		mslog(s, proc, LOG_INFO,
 		      "failed authentication attempt for user '%s'",
@@ -131,7 +132,6 @@ int handle_script_exit(main_server_st *s, struct proc_st *proc, int code)
 			goto fail;
 		}
 	}
-	mslog(s, proc, LOG_INFO, "user logged in");
 	ret = 0;
 
  fail:

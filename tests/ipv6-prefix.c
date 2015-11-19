@@ -21,6 +21,7 @@
 #include <arpa/inet.h>
 
 #include "../src/ip-util.h"
+#include "../src/ip-util.c"
 
 static char* my_ipv6_prefix_to_mask(const char *str, unsigned prefix)
 {

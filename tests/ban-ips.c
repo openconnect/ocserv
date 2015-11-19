@@ -28,6 +28,7 @@
 #include "../src/main.h"
 #include "../src/main-ban.h"
 #include "../src/ip-util.h"
+#include "../src/main-ban.c"
 
 /* Test the IP banning functionality */
 static

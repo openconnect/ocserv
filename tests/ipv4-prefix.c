@@ -21,6 +21,7 @@
 #include <talloc.h>
 
 #include "../src/ip-util.h"
+#include "../src/ip-util.c"
 
 int main()
 {

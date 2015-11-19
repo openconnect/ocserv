@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include "../src/occtl/json.h"
+#include "../src/occtl/json.c"
 
 static char *strings[] = 
 {

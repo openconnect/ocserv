@@ -15,12 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <talloc.h>
 
 #include "../src/str.h"
+#include "../src/str.c"
 
 static char *myfunc(void *pool, const char *str)
 {

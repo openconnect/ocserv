@@ -27,21 +27,23 @@ PORT=4456
 
 echo "Testing local backend with encrypted PKCS #8 key file... "
 
-launch_sr_server -d 1 -f -c test-enc-key.config & PID=$!
+update_config test-enc-key.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
 ( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-kill $PID
-wait
+cleanup
+mkdir -p $SOCKDIR
 
-sleep 3
+sleep 2
 
 echo "Testing local backend with encrypted openssl key file... "
 
-launch_sr_server -d 1 -f -c test-enc-key2.config & PID=$!
+update_config test-enc-key2.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

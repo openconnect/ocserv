@@ -38,7 +38,8 @@ if test $? != 0;then
 	exit 77
 fi
 
-launch_simple_sr_server -d 1 -f -c test3.config
+update_config test3.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
 PID=$!
 
 wait_server $PID
@@ -50,7 +51,7 @@ echo -n "Connecting to obtain cookie (without certificate)... "
 echo ok
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -69,7 +70,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with DER CRL)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -77,7 +78,7 @@ echo ok
 
 #revoke the certificate
 certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
-	--outder --load-certificate ./user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
+	--outder --load-certificate ${srcdir}/user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
 if test $? != 0;then
 	cleanup
 	exit 77
@@ -88,7 +89,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with revoked certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected with revoked certificate!"
 
 echo ok

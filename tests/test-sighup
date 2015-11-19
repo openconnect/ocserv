@@ -27,14 +27,14 @@ PORT=4441
 
 echo "Testing ocserv and SIGHUP behavior... "
 
-cp test-sighup.config test-sighup2.config
-launch_simple_sr_server -d 1 -f -c test-sighup2.config
+update_config test-sighup.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
 PID=$!
 
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -44,25 +44,23 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
-sed -i 's/^auth = "certificate"/#auth = "certificate"/g' test-sighup2.config
-sed -i 's/^#auth = "plain[.\/test1.passwd]"/auth = "plain[.\/test1.passwd]"/g' test-sighup2.config
+sed -i 's/^auth = "certificate"/#auth = "certificate"/g' ${CONFIG}
+sed -i 's/^#auth = "plain[.\/test1.passwd]"/auth = "plain[.\/test1.passwd]"/g' ${CONFIG}
 sleep 10
 echo "Reloading server"
 kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
-
-rm -f test-sighup2.config
 
 cleanup
 

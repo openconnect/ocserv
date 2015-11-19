@@ -44,6 +44,12 @@ if ! test -x /usr/sbin/openconnect;then
 	exit 77
 fi
 
+update_config() {
+	file=$1
+	cp ${srcdir}/${file} "$file.tmp"
+	sed -i 's|@SRCDIR@|'${srcdir}'|g' "$file.tmp"
+	CONFIG="$file.tmp"
+}
 
 fail() {
    PID=$1
@@ -66,7 +72,7 @@ launch_server() {
 }
 
 launch_sr_server() {
-       LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+       LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &#>/dev/null 2>&1 &
        LOCALPID="$!";
        trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
        wait "${LOCALPID}"
@@ -106,6 +112,7 @@ cleanup() {
 	kill $PID
 	wait
 	test -n "$SOCKDIR" && rm -rf $SOCKDIR
+	rm -f ${CONFIG}
 }
 
 trap "fail \"Failed to launch the server, aborting test... \"" 10 

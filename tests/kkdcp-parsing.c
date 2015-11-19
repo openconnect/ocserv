@@ -25,6 +25,7 @@
 #include <netdb.h>
 
 #include "../src/common-config.h"
+#include "../src/config-kkdcp.c"
 
 int main()
 {

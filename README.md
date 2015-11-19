@@ -40,6 +40,8 @@ protobuf-c-compiler/ protobuf-c
 gperf              / gperf
 liblockfile-bin    / lockfile-progs
 nuttcp             / nuttcp
+                   / uid_wrapper
+                   / socket_wrapper
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

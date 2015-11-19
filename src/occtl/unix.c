@@ -753,6 +753,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 	char *groupname = "";
 	char str_since[64];
 	char tmpbuf[MAX_TMPSTR_SIZE];
+	char tmpbuf2[MAX_TMPSTR_SIZE];
 	struct tm *tm;
 	time_t t;
 	unsigned at_least_one = 0;
@@ -828,6 +829,8 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		}
 
 		print_iface_stats(args->user[i]->tun, args->user[i]->conn_time, out, params, 1);
+
+		print_pair_value(out, params, "DPD", int2str(tmpbuf, args->user[i]->dpd), "KeepAlive", int2str(tmpbuf2, args->user[i]->keepalive), 1);
 
 		print_single_value(out, params, "Hostname", args->user[i]->hostname, 1);
 

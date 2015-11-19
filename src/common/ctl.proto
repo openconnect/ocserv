@@ -47,6 +47,8 @@ message user_info_rep
 	repeated string no_routes = 25;
 	optional string local_dev_ip = 26;
 	repeated string domains = 27; /* split-dns domains */
+	required uint32 dpd = 28;
+	required uint32 keepalive = 29;
 }
 
 message user_list_rep

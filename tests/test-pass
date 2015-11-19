@@ -20,42 +20,42 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
 PORT=4444
 
 . `dirname $0`/common.sh
 
 echo "Testing local backend with username-password... "
 
-launch_server -d 1 -f -c test1.config & PID=$!
+launch_sr_server -d 1 -f -c test1.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting to obtain cookie with wrong password... "
-( echo "tost" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
 echo "Connecting to obtain cookie with wrong username... "
-( echo "tost" | $OPENCONNECT -q localhost:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
 #test special characters
 
 echo "Connecting to obtain cookie... "
-( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Connecting to obtain cookie with empty password... "
-( echo "" | $OPENCONNECT -q localhost:$PORT -u "empty" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u "empty" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 #echo "Normal connection... "
-#( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
 
-kill $PID
-wait
+cleanup
 
 exit 0

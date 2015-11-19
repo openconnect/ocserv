@@ -197,6 +197,23 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 LIBS="$oldlibs"
 fi
 
+AC_ARG_WITH(all-tests,
+  AS_HELP_STRING([--with-all-tests], [do not include tests which require code in the server]),
+  all_tests=$withval,
+  all_tests=no)
+
+if test "$all_tests" != no;then
+PKG_CHECK_MODULES([CWRAP], [uid_wrapper, socket_wrapper], have_cwrap=yes, have_cwrap=no)
+else
+have_cwrap=no
+fi
+
+if test "$have_cwrap" != no;then
+	AC_DEFINE([HAVE_CWRAP], 1, [Enable testing with cwrap])
+fi
+
+AM_CONDITIONAL(HAVE_CWRAP, test "x$have_cwrap" != xno)
+
 AC_ARG_WITH(radius,
   AS_HELP_STRING([--without-radius], [do not include Radius support]),
   test_for_radius=$withval,
@@ -494,6 +511,7 @@ Summary of build options:
   Install prefix:       ${prefix}
   Compiler:             ${CC}
   CFlags:               ${CFLAGS}
+  CWrap testing:        ${have_cwrap}
   
   PAM auth backend:     ${pam_enabled}
   Radius auth backend:  ${radius_enabled}

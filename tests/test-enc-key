@@ -20,17 +20,18 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
 PORT=4456
 
 . `dirname $0`/common.sh
 
 echo "Testing local backend with encrypted PKCS #8 key file... "
 
-launch_server -d 1 -f -c test-enc-key.config & PID=$!
+launch_sr_server -d 1 -f -c test-enc-key.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 kill $PID
@@ -40,15 +41,13 @@ sleep 3
 
 echo "Testing local backend with encrypted openssl key file... "
 
-launch_server -d 1 -f -c test-enc-key2.config & PID=$!
+launch_sr_server -d 1 -f -c test-enc-key2.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
-( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-kill $PID
-wait
-
+cleanup
 
 exit 0

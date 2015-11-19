@@ -20,6 +20,7 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
 PORT=4446
 
 . `dirname $0`/common.sh
@@ -37,24 +38,24 @@ if test $? != 0;then
 	exit 77
 fi
 
-launch_simple_server -d 1 -f -c test3.config
+launch_simple_sr_server -d 1 -f -c test3.config
 PID=$!
 
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
-( $OPENCONNECT -q localhost:$PORT --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected without certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( $OPENCONNECT -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
-#Try DER encoded CRL
+echo "Try a DER encoded CRL"
 
 certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
 	--outder --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
@@ -68,7 +69,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with DER CRL)... "
-( $OPENCONNECT -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -76,9 +77,9 @@ echo ok
 
 #revoke the certificate
 certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
-	--load-certificate ./user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
+	--outder --load-certificate ./user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
 if test $? != 0;then
-	kill $PID
+	cleanup
 	exit 77
 fi
 
@@ -87,18 +88,17 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with revoked certificate)... "
-( $OPENCONNECT -q localhost:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected with revoked certificate!"
 
 echo ok
 
 #echo "Normal connection... "
-#( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
 
 rm -f crl.pem crl.tmpl
 
-kill $PID
-wait
+cleanup
 
 exit 0

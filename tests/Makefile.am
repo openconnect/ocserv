@@ -15,15 +15,19 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 
 SUBDIRS = docker-ocserv docker-kerberos
 
-dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-script \
-	test-multi-cookie full-test test-group-pass test-pass-group-cert \
-	ocpasswd-test test-pass-group-cert-no-pass unix-test test-pass-opt-cert \
+dist_check_SCRIPTS = test-iroute test-pass-script \
+	test-multi-cookie full-test ocpasswd-test unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
-	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \
-	test-cookie-invalidation radius-test-config test-enc-key proxyproto-test \
+	radius-test test-gssapi kerberos-test pam-test test-ban \
+	test-cookie-invalidation radius-test-config proxyproto-test \
 	proxyproto-unix-test pam-noauth-test otp-test test-user-config \
 	test-cookie-rotation
 
+if HAVE_CWRAP
+dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
+	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
+	test-enc-key
+endif
 
 AM_CPPFLAGS = \
 	$(LIBOPTS_CFLAGS) \

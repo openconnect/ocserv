@@ -20,53 +20,53 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
 PORT=6551
 
 . `dirname $0`/common.sh
 
 echo "Testing local backend with username-password and certificate... "
 
-launch_server -d 1 -f -c test-user-group-cert.config & PID=$!
+launch_sr_server -d 1 -f -c test-user-group-cert.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "
-( echo "test" | $OPENCONNECT --authgroup group1 -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Connected without certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group1 (with certificate)... "
-( echo "test" | $OPENCONNECT --authgroup group1 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - DEFAULT (with certificate)... "
-( echo "test" | $OPENCONNECT --authgroup DEFAULT -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup DEFAULT -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group2 (with certificate)... "
-( echo "test" | $OPENCONNECT --authgroup group2 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group2 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group3 (hidden) (with certificate)... "
-( echo "test" | $OPENCONNECT --authgroup group3 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group3 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group4 (with certificate)... "
-( echo "test" | $OPENCONNECT --authgroup group4 -q localhost:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group4 -q $ADDRESS:$PORT --sslkey ./user-group-key.pem -c ./user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Got cookie when it shouldn't!"
 
 echo ok
 
-kill $PID
-wait
+cleanup
 
 
 exit 0

@@ -373,6 +373,16 @@ static int append_user_info(method_ctx *ctx,
 	tmp *= 1000;
 	rep->tx_per_sec = tmp;
 
+	if (ctmp->config.dpd)
+		rep->dpd = ctmp->config.dpd;
+	else
+		rep->dpd = ctx->s->config->dpd;
+
+	if (ctmp->config.keepalive)
+		rep->keepalive = ctmp->config.keepalive;
+	else
+		rep->dpd = ctx->s->config->dpd;
+
 	rep->domains = ctx->s->config->split_dns;
 	rep->n_domains = ctx->s->config->split_dns_size;
 

@@ -861,8 +861,10 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		if ((r = print_list_entries(out, params, "No-routes", args->user[i]->no_routes, args->user[i]->n_no_routes, 1)) < 0)
 			goto error_parse;
 
-		if (print_list_entries(out, params, "iRoutes", args->user[i]->iroutes, args->user[i]->n_iroutes, 0) < 0)
+		if (print_list_entries(out, params, "iRoutes", args->user[i]->iroutes, args->user[i]->n_iroutes, 1) < 0)
 			goto error_parse;
+
+		print_single_value(out, params, "Restricted to routes", args->user[i]->restrict_to_routes?"True":"False", 0);
 
 		print_end_block(out, params, i<(args->n_user-1)?1:0);
 

@@ -230,6 +230,7 @@ struct group_cfg_st {
 	unsigned deny_roaming; /* whether the user is allowed to re-use cookies from another IP */
 	unsigned net_priority;
 	unsigned no_udp; /* whether to disable UDP for this user */
+	unsigned restrict_user_to_routes;
 };
 
 struct vpn_st {
@@ -327,7 +328,7 @@ struct cfg_st {
 	char **split_dns;
 	size_t split_dns_size;;
 
-
+	unsigned restrict_user_to_routes; /* whether the firewall script will be run for the user */
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */
 	time_t cookie_rekey_time;	/* in seconds */

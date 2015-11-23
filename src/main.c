@@ -493,6 +493,9 @@ struct script_wait_st *stmp = NULL, *spos;
 	while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
 		estatus = WEXITSTATUS(status);
 
+		if (WIFSIGNALED(status))
+			estatus = 1;
+
 		if (pid == s->sec_mod_pid) {
 			mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
 			terminate = 1;

@@ -20,7 +20,7 @@ dist_check_SCRIPTS = test-pass test-pass-cert test-cert test-iroute test-pass-sc
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
 	radius-test test-gssapi kerberos-test pam-test test-ban test-sighup \
 	test-cookie-invalidation radius-test-config test-enc-key proxyproto-test \
-	proxyproto-unix-test pam-noauth-test otp-test test-user-config
+	proxyproto-unix-test pam-noauth-test otp-test test-user-config firewall-test
 
 
 AM_CPPFLAGS = \

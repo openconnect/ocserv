@@ -31,6 +31,7 @@ NEEDED_HTTP_PARSER_LIBS = $(HTTP_PARSER_LIBS)
 endif
 
 sbin_PROGRAMS = ocserv
+bin_SCRIPTS = ocserv-fw
 
 noinst_LIBRARIES = libcmd-ocserv.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h

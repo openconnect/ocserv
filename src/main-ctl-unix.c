@@ -336,6 +336,7 @@ static int append_user_info(method_ctx *ctx,
 	rep->conn_time = ctmp->conn_time;
 	rep->hostname = ctmp->hostname;
 	rep->user_agent = ctmp->user_agent;
+	rep->restrict_to_routes = ctmp->config.restrict_user_to_routes;
 
 	if (ctmp->status == PS_AUTH_COMPLETED)
 		strtmp = "connected";

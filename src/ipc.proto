@@ -262,6 +262,7 @@ message sec_auth_session_reply_msg
 	optional uint32 keepalive = 32;
 	optional uint32 max_same_clients = 33;
 	optional uint32 tunnel_all_dns = 34;
+	optional bool restrict_user_to_routes = 35;
 }
 
 message sec_refresh_cookie_key

@@ -47,6 +47,8 @@
 #include <script-list.h>
 #include <ccan/list/list.h>
 
+#define OCSERV_FW_SCRIPT "/usr/bin/ocserv-fw"
+
 #define APPEND_TO_STR(str, val) \
 			ret = str_append_str(str, val); \
 			if (ret < 0) { \
@@ -220,12 +222,17 @@ int call_script(main_server_st *s, struct proc_st* proc, unsigned up)
 {
 pid_t pid;
 int ret;
-const char* script;
+const char* script, *next_script = NULL;
 
 	if (up != 0)
 		script = s->config->connect_script;
 	else
 		script = s->config->disconnect_script;
+
+	if (proc->config.restrict_user_to_routes) {
+		next_script = script;
+		script = OCSERV_FW_SCRIPT;
+	}
 
 	if (script == NULL)
 		return 0;
@@ -319,7 +326,11 @@ const char* script;
 		/* export DNS and route info */
 		export_dns_route_info(s, proc);
 
-		mslog(s, proc, LOG_DEBUG, "executing script %s %s", up?"up":"down", script);
+		if (next_script) {
+			setenv("OCSERV_NEXT_SCRIPT", next_script, 1);
+			mslog(s, proc, LOG_DEBUG, "executing script %s %s (next: %s)", up?"up":"down", script, next_script);
+		} else
+			mslog(s, proc, LOG_DEBUG, "executing script %s %s", up?"up":"down", script);
 		ret = execl(script, script, NULL);
 		if (ret == -1) {
 			mslog(s, proc, LOG_ERR, "Could not execute script %s", script);

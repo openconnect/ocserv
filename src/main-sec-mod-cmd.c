@@ -265,6 +265,11 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	if (msg->has_no_udp)
 		proc->config.no_udp = msg->no_udp;
 
+	if (msg->has_restrict_user_to_routes)
+		proc->config.restrict_user_to_routes = msg->restrict_user_to_routes;
+	else
+		proc->config.restrict_user_to_routes = s->config->restrict_user_to_routes;
+
 	if (msg->has_max_same_clients)
 		proc->config.max_same_clients = msg->max_same_clients;
 

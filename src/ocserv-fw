@@ -115,4 +115,10 @@ else
 	allow_all
 fi
 
+if test -n "${OCSERV_NEXT_SCRIPT}";then
+	TMP_SCRIPT="${OCSERV_NEXT_SCRIPT}"
+	unset OCSERV_NEXT_SCRIPT
+	/bin/sh "${TMP_SCRIPT}"
+fi
+
 exit 0

@@ -132,6 +132,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "persistent-cookies", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "use-occtl", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "restrict-user-to-routes", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "chroot-dir", .type = OPTION_STRING, .mandatory = 0 },
@@ -831,6 +832,7 @@ size_t urlfw_size = 0;
 
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);
 	READ_TF("ping-leases", config->ping_leases, 0);
+	READ_TF("restrict-user-to-routes", config->restrict_user_to_routes, 0);
 
 	READ_STRING("tls-priorities", config->priorities);
 

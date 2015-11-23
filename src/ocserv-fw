@@ -1,0 +1,118 @@
+#!/bin/sh
+
+PATH=/sbin:/usr/sbin:$PATH
+
+COMMENT="ocserv-fw"
+
+if test "$1" = "--removeall";then
+	eval "$(iptables -S | grep "comment ${COMMENT}" | sed -e 's/-A/-D/g' -e 's/^-/iptables -/g')"
+	eval "$(ip6tables -S | grep "comment ${COMMENT}" | sed -e 's/-A/-D/g' -e 's/^-/ip6tables -/g')"
+fi
+
+if test "${REASON}" = "connect";then
+	MOD="-A"
+
+	#clear any leftover rules for thus device
+	eval "$(iptables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}" | sed -e 's/-A/-D/g' -e 's/^-/iptables -/g')" 2>/dev/null
+	eval "$(ip6tables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}" | sed -e 's/-A/-D/g' -e 's/^-/ip6tables -/g')" 2>/dev/null
+else
+	if test "${REASON}" = "disconnect";then
+		MOD="-D"
+	else
+		logger -t ocserv-fw "unknown reason ${REASON}"
+		exit 1
+	fi
+fi
+
+set -e
+
+allow_dns() {
+	"$1" ${MOD} INPUT -i ${DEVICE} -p udp -d "$2" --dport 53 -j ACCEPT --match comment --comment "${COMMENT}"
+	"$1" ${MOD} OUTPUT -o ${DEVICE} -p udp -s "$2" --sport 53 -j ACCEPT --match comment --comment "${COMMENT}"
+
+	"$1" ${MOD} INPUT -i ${DEVICE} -p tcp -d "$2" --dport 53 -m state --state NEW,ESTABLISHED -j ACCEPT --match comment --comment "${COMMENT}"
+	"$1" ${MOD} OUTPUT -o ${DEVICE} -p tcp -s "$2" --sport 53 -m state --state ESTABLISHED -j ACCEPT --match comment --comment "${COMMENT}"
+}
+
+allow_dns4() {
+	allow_dns iptables "$1"
+}
+
+allow_dns6() {
+	allow_dns ip6tables "$1"
+}
+
+allow_route() {
+	"$1" ${MOD} INPUT -i ${DEVICE} -s "$2" -j ACCEPT --match comment --comment "${COMMENT}"
+	"$1" ${MOD} OUTPUT -o ${DEVICE} -d "$2" -j ACCEPT --match comment --comment "${COMMENT}"
+}
+
+allow_route4() {
+	allow_route iptables "$1"
+}
+
+allow_route6() {
+	allow_route ip6tables "$1"
+}
+
+disallow_route() {
+	"$1" ${MOD} INPUT -i ${DEVICE} -s "$2" -j DROP --match comment --comment "${COMMENT}"
+	"$1" ${MOD} OUTPUT -o ${DEVICE} -d "$2" -j DROP --match comment --comment "${COMMENT}"
+}
+
+disallow_route4() {
+	disallow_route iptables "$1"
+}
+
+disallow_route6() {
+	disallow_route ip6tables "$1"
+}
+
+disallow_all() {
+	iptables ${MOD} INPUT -i ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
+	iptables ${MOD} OUTPUT -o ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
+	ip6tables ${MOD} INPUT -i ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
+	ip6tables ${MOD} OUTPUT -o ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
+}
+
+allow_all() {
+	iptables ${MOD} INPUT -i ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
+	iptables ${MOD} OUTPUT -o ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
+	ip6tables ${MOD} INPUT -i ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
+	ip6tables ${MOD} OUTPUT -o ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
+}
+
+# Allow DNS lookups
+for i in $OCSERV_DNS4;do
+	allow_dns4 $i
+done
+
+for i in $OCSERV_DNS6;do
+	allow_dns6 $i
+done
+
+for i in $OCSERV_NO_ROUTES4;do
+	disallow_route4 $i
+done
+
+for i in $OCSERV_NO_ROUTES6;do
+	disallow_route6 $i
+done
+
+if test -n "$OCSERV_ROUTES";then
+
+	for i in $OCSERV_ROUTES4;do
+		allow_route4 $i
+	done
+
+	for i in $OCSERV_ROUTES6;do
+		allow_route6 $i
+	done
+
+	# no default route, don't allow anything except the configured routes
+	disallow_all
+else
+	allow_all
+fi
+
+exit 0

@@ -35,6 +35,7 @@ EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 bin_PROGRAMS = ocpasswd occtl
 
 sbin_PROGRAMS = ocserv
+bin_SCRIPTS = ocserv-fw
 
 CCAN_SOURCES = ccan/build_assert/build_assert.h ccan/check_type/check_type.h \
 	ccan/container_of/container_of.h ccan/hash/hash.c ccan/hash/hash.h \

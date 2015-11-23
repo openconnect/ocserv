@@ -326,11 +326,18 @@ const char* script, *next_script = NULL;
 		/* export DNS and route info */
 		export_dns_route_info(s, proc);
 
+		/* set stdout to be stderr to avoid confusing scripts - note we have stdout closed */
+		if (dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {
+			int e = errno;
+			mslog(s, proc, LOG_INFO, "cannot dup2(STDERR_FILENO, STDOUT_FILENO): %s", strerror(e));
+		}
+
 		if (next_script) {
 			setenv("OCSERV_NEXT_SCRIPT", next_script, 1);
 			mslog(s, proc, LOG_DEBUG, "executing script %s %s (next: %s)", up?"up":"down", script, next_script);
 		} else
 			mslog(s, proc, LOG_DEBUG, "executing script %s %s", up?"up":"down", script);
+
 		ret = execl(script, script, NULL);
 		if (ret == -1) {
 			mslog(s, proc, LOG_ERR, "Could not execute script %s", script);

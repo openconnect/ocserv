@@ -27,9 +27,9 @@ if [ $? != 0 ];then
 fi
 
 PORT_OCSERV=443
-CONFIG="tcp"
-IMAGE=ocserv-test1
-IMAGE_NAME=test_ocserv
+CONFIG="fw"
+IMAGE=ocserv-fw-test
+IMAGE_NAME=test_fw_ocserv
 TMP=$IMAGE_NAME.tmp
 . ./docker-common.sh
 
@@ -88,34 +88,26 @@ fi
 
 PID=`cat ${srcdir}/pid1.$$`
 
-# The client IP depends on the username so it shouldn't change.
-ping -w 5 192.168.79.1
+ping -w 5 192.168.84.1 -s 400
 if test $? != 0;then
 	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
-ping -w 5 192.168.79.1 -s 1500
-if test $? != 0;then
-	kill -INT $PID
-	echo "Cannot ping ocserv"
-	stop
-fi
-
-ping6 -w 5 fd91:6d87:7341:db6a::1
+ping6 -w 5 fd91:6d87:7441:dc6a::1
 if test $? != 0;then
 	kill -INT $PID
 	echo "Cannot ping the IPv6 of ocserv"
 	stop
 fi
 
-retrieve_user_info test
+retrieve_user_info test "Restricted to routes: True"
 
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
 if test "$FEDORA" = 1;then
-nuttcp -T 10 -t 192.168.79.1
+nuttcp -T 10 -t 192.168.84.1
 if test $? != 0;then
 	echo "Cannot send to ocserv"
 	exit 77
@@ -123,7 +115,7 @@ if test $? != 0;then
 	stop
 fi
 
-nuttcp -T 10 -r 192.168.79.1
+nuttcp -T 10 -r 192.168.84.1
 if test $? != 0;then
 	echo "Cannot recv from ocserv"
 	exit 77
@@ -138,17 +130,10 @@ kill -INT $PID
 
 sleep 4
 
-#check whether /tmp/disconnect/ok was created
-check_for_file /tmp/disconnect/not-ok
-if test $? = 0;then
-	echo "There was an issue"
-	stop
-fi
-
-check_for_file /tmp/disconnect/ok
+check_for_file /tmp/follow-up-script-was-run
 if test $? != 0;then
-	echo "There was an issue getting stats"
-	ret=77
+	echo "There was an issue; followup script was not run"
+	stop
 fi
 
 $DOCKER stop $IMAGE_NAME

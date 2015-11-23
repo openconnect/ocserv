@@ -1,0 +1,31 @@
+#!/bin/sh
+
+if [ "$REASON" = "connect" ];then
+	iptables -S|grep ocserv-fw|grep 10.48.59.1|grep ACCEPT|grep 53
+	if test $? != 0;then
+		echo "dns was not accepted"
+		exit 1
+	fi
+
+	iptables -S|grep ocserv-fw|grep 10.47.59.0/24|grep ACCEPT
+	if test $? != 0;then
+		echo "route was not accepted"
+		exit 1
+	fi
+
+	iptables -S|grep ocserv-fw|grep 10.46.59.0/24|grep DROP
+	if test $? != 0;then
+		echo "route was not dropped"
+		exit 1
+	fi
+
+	ip6tables -S|grep ocserv-fw|grep "fd91:6d87:7441:dc6a::/64"|grep ACCEPT
+	if test $? != 0;then
+		echo "route6 was not accepted"
+		exit 1
+	fi
+
+	touch /tmp/follow-up-script-was-run
+fi
+
+exit 0

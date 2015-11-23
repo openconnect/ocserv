@@ -4,13 +4,21 @@
 
 case "$REASON" in
   connect)
+	test "${OCSERV_DNS}" = "192.168.1.1 192.168.5.1 " && \
+	test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \
+	test "${OCSERV_ROUTES}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
+	test "${OCSERV_ROUTES4}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
 	echo > connect.ok
 	;;
   disconnect)
   	if ! test -z "$DEVICE";then
 	  	#ifconfig $DEVICE
 	  	#if test "$?" = "0";then
-		  	echo > disconnect.ok
+		test "${OCSERV_DNS}" = "192.168.1.1 192.168.5.1 " && \
+		test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \
+		test "${OCSERV_ROUTES}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
+		test "${OCSERV_ROUTES4}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
+	  	echo > disconnect.ok
 		#fi
 	fi
 	;;

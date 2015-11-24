@@ -11,8 +11,9 @@
 - When a client has assigned iroutes which cannot be applied, he will be
   denied access.
 - Added restrict-user-to-routes configuration option which will execute
-  ocserv-fw script to set firewall rules which deny the user access to
-  other networks than the routes set.
+  ocserv-fw script on user connection. The script will set firewall rules which
+  deny the user access to any other networks than the routes set for the user.
+  This is added as a tech preview; details of this option may change on later releases.
 - When banning IPv6 addresses treat a /64 network as a single address.
 - Fixed conflict with isolate-workers and user-profile.
 - occtl: Allow disabling the pager functionality on compile time using --with-pager="".

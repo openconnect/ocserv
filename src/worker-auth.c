@@ -986,9 +986,13 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 	if (memmem(body, body_length, "<?xml", 5) != 0) {
 		xml = 1;
 
-		/* body should contain <password?>test</password?> */
+		/* body should contain <password?>test</password?> or <xxx_password>test</xxx_password> */
 		*value =
 		    strcasestr(body, "<password");
+		if (*value == NULL)
+			*value =
+			    strcasestr(body, "_password>");
+
 		if (*value == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG,
 			      "cannot find password in client XML message");
@@ -1006,8 +1010,7 @@ int match_password_in_reply(worker_st * ws, char *body, unsigned body_length,
 		*value = p;
 		len = 0;
 		while (*p != 0) {
-			if (*p == '<'
-			    && (strncasecmp(p, "</password", sizeof("</password")-1) == 0)) {
+			if (*p == '<' && *(p+1) == '/') {
 				break;
 			}
 			p++;

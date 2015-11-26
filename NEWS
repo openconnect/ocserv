@@ -1,4 +1,7 @@
 * Version 0.11.0 (unreleased)
+- Simplified configuration semantics. Any routes or no-routes set on the
+  per-user configuration file will override any global ones instead of
+  being appended.
 
 
 * Version 0.10.9 (released 2015-10-07)

@@ -11,7 +11,7 @@ test	Cleartext-Password := "test"
 	Framed-IP-Address = 192.168.55.190,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test2	Cleartext-Password := "test2"
 	Service-Type = Framed-User,
@@ -21,7 +21,7 @@ test2	Cleartext-Password := "test2"
 	Framed-IP-Address = 192.168.1.191,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test3	Cleartext-Password := "test3"
 	Service-Type = Framed-User,
@@ -31,7 +31,7 @@ test3	Cleartext-Password := "test3"
 	Framed-IP-Address = 192.168.1.192,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test4	Cleartext-Password := "test4"
 	Service-Type = Framed-User,
@@ -41,7 +41,7 @@ test4	Cleartext-Password := "test4"
 	Framed-IP-Address = 192.168.1.192,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test5	Cleartext-Password := "test5"
 	Service-Type = Framed-User,
@@ -51,7 +51,7 @@ test5	Cleartext-Password := "test5"
 	Framed-IP-Address = 192.168.1.192,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test6	Cleartext-Password := "test6"
 	Service-Type = Framed-User,
@@ -61,7 +61,7 @@ test6	Cleartext-Password := "test6"
 	Framed-IP-Address = 192.168.1.192,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test7	Cleartext-Password := "test7"
 	Service-Type = Framed-User,
@@ -71,7 +71,7 @@ test7	Cleartext-Password := "test7"
 	Framed-IP-Address = 192.168.1.192,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 test8	Cleartext-Password := "test8"
 	Service-Type = Framed-User,
@@ -81,7 +81,7 @@ test8	Cleartext-Password := "test8"
 	Framed-IP-Address = 192.168.1.192,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
-	Framed-MTU = 1500,
+	Framed-MTU = 1500
 
 testtime	Cleartext-Password := "test"
 	Service-Type = Framed-User,
@@ -91,5 +91,5 @@ testtime	Cleartext-Password := "test"
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-MTU = 1500,
 	Session-Timeout = 120,
-	Acct-Interim-Interval = 60,
+	Acct-Interim-Interval = 60
 

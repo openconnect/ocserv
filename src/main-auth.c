@@ -50,7 +50,6 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			AUTHREP r)
 {
 	AuthReplyMsg msg = AUTH_REPLY_MSG__INIT;
-	unsigned i;
 	int ret;
 
 	if (r == AUTH__REP__OK && proc->tun_lease.name[0] != 0) {
@@ -87,94 +86,7 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 					ipv6_local, sizeof(ipv6_local), 0);
 		}
 
-		msg.ipv4_netmask = proc->config.ipv4_netmask;
-
-		msg.ipv4_network = proc->config.ipv4_network;
-		msg.ipv6_network = proc->config.ipv6_network;
-		msg.ipv6_subnet_prefix = proc->config.ipv6_subnet_prefix;
-
-		if (proc->ipv6) {
-			msg.ipv6_prefix = proc->ipv6->prefix;
-			msg.has_ipv6_prefix = 1;
-		}
-
-		if (proc->config.interim_update_secs) {
-			msg.has_interim_update_secs = 1;
-			msg.interim_update_secs = proc->config.interim_update_secs;
-		}
-
-		if (proc->config.session_timeout_secs) {
-			msg.has_session_timeout_secs = 1;
-			msg.session_timeout_secs = proc->config.session_timeout_secs;
-		}
-
-		if (proc->config.dpd != 0) {
-			msg.has_dpd = 1;
-			msg.dpd = proc->config.dpd;
-		}
-
-		if (proc->config.keepalive != 0) {
-			msg.has_keepalive = 1;
-			msg.keepalive = proc->config.keepalive;
-		}
-
-		if (proc->config.mobile_dpd != 0) {
-			msg.has_mobile_dpd = 1;
-			msg.mobile_dpd = proc->config.mobile_dpd;
-		}
-
-		if (proc->config.rx_per_sec != 0) {
-			msg.has_rx_per_sec = 1;
-			msg.rx_per_sec = proc->config.rx_per_sec;
-		}
-
-		if (proc->config.tx_per_sec != 0) {
-			msg.has_tx_per_sec = 1;
-			msg.tx_per_sec = proc->config.tx_per_sec;
-		}
-
-		if (proc->config.net_priority != 0) {
-			msg.has_net_priority = 1;
-			msg.net_priority = proc->config.net_priority;
-		}
-
-		if (proc->config.no_udp != 0) {
-			msg.has_no_udp = 1;
-			msg.no_udp = proc->config.no_udp;
-		}
-
-		if (proc->config.tunnel_all_dns != 0) {
-			msg.has_tunnel_all_dns = 1;
-			msg.tunnel_all_dns = proc->config.tunnel_all_dns;
-		}
-
-		if (proc->config.xml_config_file != NULL) {
-			msg.xml_config_file = proc->config.xml_config_file;
-		}
-
-		msg.n_dns = proc->config.dns_size;
-		for (i=0;i<proc->config.dns_size;i++) {
-			mslog(s, proc, LOG_DEBUG, "sending dns '%s'", proc->config.dns[i]);
-			msg.dns = proc->config.dns;
-		}
-
-		msg.n_nbns = proc->config.nbns_size;
-		for (i=0;i<proc->config.nbns_size;i++) {
-			mslog(s, proc, LOG_DEBUG, "sending nbns '%s'", proc->config.nbns[i]);
-			msg.nbns = proc->config.nbns;
-		}
-
-		msg.n_routes = proc->config.routes_size;
-		for (i=0;i<proc->config.routes_size;i++) {
-			mslog(s, proc, LOG_DEBUG, "sending route '%s'", proc->config.routes[i]);
-			msg.routes = proc->config.routes;
-		}
-
-		msg.n_no_routes = proc->config.no_routes_size;
-		for (i=0;i<proc->config.no_routes_size;i++) {
-			mslog(s, proc, LOG_DEBUG, "sending no-route '%s'", proc->config.no_routes[i]);
-			msg.no_routes = proc->config.no_routes;
-		}
+		msg.config = proc->config;
 
 		ret = send_socket_msg_to_worker(s, proc, AUTH_COOKIE_REP, proc->tun_lease.fd,
 			 &msg,
@@ -196,12 +108,6 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 	}
 
 	return 0;
-}
-
-static void apply_default_sup_config(struct perm_cfg_st *config, struct proc_st *proc)
-{
-	proc->config.deny_roaming = config->config->deny_roaming;
-	proc->config.no_udp = (config->udp_port!=0)?0:1;
 }
 
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
@@ -255,11 +161,6 @@ struct proc_st *old_proc;
 	if (cmsg->groupname)
 		strlcpy(proc->groupname, cmsg->groupname, sizeof(proc->groupname));
 
-	/* cookie is good so far, now read config (in order to know
-	 * whether roaming is allowed or not */
-	memset(&proc->config, 0, sizeof(proc->config));
-	apply_default_sup_config(s->perm_config, proc);
-
 	/* loads sup config */
 	ret = session_open(s, proc, req->cookie.data, req->cookie.len);
 	if (ret < 0) {
@@ -270,12 +171,12 @@ struct proc_st *old_proc;
 	proc->active_sid = 1;
 
 	/* Put into right cgroup */
-        if (proc->config.cgroup != NULL) {
-        	put_into_cgroup(s, proc->config.cgroup, proc->pid);
+        if (proc->config->cgroup != NULL) {
+        	put_into_cgroup(s, proc->config->cgroup, proc->pid);
 	}
 
 	/* check whether the cookie IP matches */
-	if (proc->config.deny_roaming != 0) {
+	if (proc->config->deny_roaming != 0) {
 		if (cmsg->ip == NULL) {
 			return -1;
 		}
@@ -342,7 +243,7 @@ struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
 unsigned max;
 
-	if (s->config->max_same_clients == 0 && proc->config.max_same_clients == 0)
+	if (proc->config->max_same_clients == 0)
 		return 0;
 
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
@@ -353,10 +254,7 @@ unsigned max;
 		}
 	}
 
-	if (proc->config.max_same_clients > 0)
-		max = proc->config.max_same_clients;
-	else
-		max = s->config->max_same_clients;
+	max = proc->config->max_same_clients;
 
 	if (max && entries > max)
 		return -1;

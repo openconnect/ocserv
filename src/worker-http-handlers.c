@@ -48,15 +48,15 @@ int ret;
 struct stat st;
 
 	oclog(ws, LOG_HTTP_DEBUG, "requested config: %s", ws->req.url); 
-	if (ws->config->xml_config_file == NULL) {
+	if (ws->user_config->xml_config_file == NULL) {
 		oclog(ws, LOG_INFO, "requested config but no config file is set");
 		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);
 		return -1;
 	}
 	
-	ret = stat( ws->config->xml_config_file, &st);
+	ret = stat( ws->user_config->xml_config_file, &st);
 	if (ret == -1) {
-		oclog(ws, LOG_INFO, "cannot load config file '%s'", ws->config->xml_config_file);
+		oclog(ws, LOG_INFO, "cannot load config file '%s'", ws->user_config->xml_config_file);
 		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);
 		return -1;
 	}
@@ -90,9 +90,9 @@ struct stat st;
 	if (ret < 0)
 		return -1;
 
-	ret = cstp_send_file(ws, ws->config->xml_config_file);
+	ret = cstp_send_file(ws, ws->user_config->xml_config_file);
 	if (ret < 0) {
-		oclog(ws, LOG_ERR, "error sending file '%s': %s", ws->config->xml_config_file, gnutls_strerror(ret));
+		oclog(ws, LOG_ERR, "error sending file '%s': %s", ws->user_config->xml_config_file, gnutls_strerror(ret));
 		return -1;
 	}
 

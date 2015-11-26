@@ -408,6 +408,9 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 	void *lpool;
 	int ret;
 	SecAuthSessionReplyMsg rep = SEC_AUTH_SESSION_REPLY_MSG__INIT;
+	GroupCfgSt _cfg = GROUP_CFG_ST__INIT;
+
+	rep.config = &_cfg;
 
 	if (req->sid.len != SID_SIZE) {
 		seclog(sec, LOG_ERR, "auth session open but with illegal sid size (%d)!",

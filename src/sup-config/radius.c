@@ -48,34 +48,34 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 	if (pctx == NULL)
 		return 0;
 
-	msg->interim_update_secs = pctx->interim_interval_secs;
-	if (msg->interim_update_secs > 0)
-		msg->has_interim_update_secs = 1;
+	msg->config->interim_update_secs = pctx->interim_interval_secs;
+	if (msg->config->interim_update_secs > 0)
+		msg->config->has_interim_update_secs = 1;
 
-	msg->session_timeout_secs = pctx->session_timeout_secs;
-	if (msg->session_timeout_secs > 0)
-		msg->has_session_timeout_secs = 1;
+	msg->config->session_timeout_secs = pctx->session_timeout_secs;
+	if (msg->config->session_timeout_secs > 0)
+		msg->config->has_session_timeout_secs = 1;
 
 	if (pctx->ipv4[0] != 0) {
-		msg->explicit_ipv4 = talloc_strdup(pool, pctx->ipv4);
+		msg->config->explicit_ipv4 = talloc_strdup(pool, pctx->ipv4);
 	}
 
 	if (pctx->ipv4_mask[0] != 0) {
-		msg->ipv4_netmask = talloc_strdup(pool, pctx->ipv4_mask);
+		msg->config->ipv4_netmask = talloc_strdup(pool, pctx->ipv4_mask);
 	}
 
 	if (pctx->routes_size > 0) {
-		msg->routes = talloc_size(pool, pctx->routes_size*sizeof(char*));
-		if (msg->routes != NULL) {
+		msg->config->routes = talloc_size(pool, pctx->routes_size*sizeof(char*));
+		if (msg->config->routes != NULL) {
 			for (i=0;i<pctx->routes_size;i++) {
-				msg->routes[i] = talloc_strdup(pool, pctx->routes[i]);
+				msg->config->routes[i] = talloc_strdup(pool, pctx->routes[i]);
 			}
-			msg->n_routes = pctx->routes_size;
+			msg->config->n_routes = pctx->routes_size;
 		}
 	}
 
-	for (i=0;i<msg->n_routes;i++) {
-		ip_route_sanity_check(msg->routes, &msg->routes[i]);
+	for (i=0;i<msg->config->n_routes;i++) {
+		ip_route_sanity_check(msg->config->routes, &msg->config->routes[i]);
 	}
 
 	if (pctx->ipv4_dns1[0] != 0)
@@ -88,33 +88,33 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		dns++;
 
 	if (dns > 0) {
-		msg->dns = talloc_size(pool, dns*sizeof(char*));
-		if (msg->dns != NULL) {
+		msg->config->dns = talloc_size(pool, dns*sizeof(char*));
+		if (msg->config->dns != NULL) {
 			unsigned pos = 0;
 			if (pctx->ipv4_dns1[0] != 0)
-				msg->dns[pos++] = talloc_strdup(pool, pctx->ipv4_dns1);
+				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv4_dns1);
 			if (pctx->ipv4_dns2[0] != 0)
-				msg->dns[pos++] = talloc_strdup(pool, pctx->ipv4_dns2);
+				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv4_dns2);
 			if (pctx->ipv6_dns1[0] != 0)
-				msg->dns[pos++] = talloc_strdup(pool, pctx->ipv6_dns1);
+				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv6_dns1);
 			if (pctx->ipv6_dns2[0] != 0)
-				msg->dns[pos++] = talloc_strdup(pool, pctx->ipv6_dns2);
+				msg->config->dns[pos++] = talloc_strdup(pool, pctx->ipv6_dns2);
 
-			msg->n_dns = dns;
+			msg->config->n_dns = dns;
 		}
 	}
 
 	if (pctx->ipv6[0] != 0) {
-		msg->explicit_ipv6 = talloc_strdup(pool, pctx->ipv6);
+		msg->config->explicit_ipv6 = talloc_strdup(pool, pctx->ipv6);
 	}
 
 	if (pctx->ipv6_net[0] != 0) {
-		msg->ipv6_net = talloc_strdup(pool, pctx->ipv6_net);
+		msg->config->ipv6_net = talloc_strdup(pool, pctx->ipv6_net);
 	}
 
 	if (pctx->ipv6_subnet_prefix != 0) {
-		msg->ipv6_subnet_prefix = pctx->ipv6_subnet_prefix;
-		msg->has_ipv6_subnet_prefix = 1;
+		msg->config->ipv6_subnet_prefix = pctx->ipv6_subnet_prefix;
+		msg->config->has_ipv6_subnet_prefix = 1;
 	}
 
 	return 0;

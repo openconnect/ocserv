@@ -163,11 +163,11 @@ int apply_iroutes(struct main_server_st* s, struct proc_st *proc)
 unsigned i, j;
 int ret;
 
-	if (proc->config.iroutes_size == 0)
+	if (proc->config->n_iroutes == 0)
 		return 0;
 
-	for (i=0;i<proc->config.iroutes_size;i++) {
-		ret = route_add(s, proc, proc->config.iroutes[i], proc->tun_lease.name);
+	for (i=0;i<proc->config->n_iroutes;i++) {
+		ret = route_add(s, proc, proc->config->iroutes[i], proc->tun_lease.name);
 		if (ret < 0)
 			goto fail;
 	}
@@ -176,7 +176,7 @@ int ret;
 	return 0;
 fail:
 	for (j=0;j<i;j++)
-		route_del(s, proc, proc->config.iroutes[j], proc->tun_lease.name);
+		route_del(s, proc, proc->config->iroutes[j], proc->tun_lease.name);
 
 	return -1;
 }
@@ -188,11 +188,11 @@ void remove_iroutes(struct main_server_st* s, struct proc_st *proc)
 {
 unsigned i;
 
-	if (proc->config.iroutes_size == 0 || proc->applied_iroutes == 0)
+	if (proc->config == NULL || proc->config->n_iroutes == 0 || proc->applied_iroutes == 0)
 		return;
 
-	for (i=0;i<proc->config.iroutes_size;i++) {
-		route_del(s, proc, proc->config.iroutes[i], proc->tun_lease.name);
+	for (i=0;i<proc->config->n_iroutes;i++) {
+		route_del(s, proc, proc->config->iroutes[i], proc->tun_lease.name);
 	}
 	proc->applied_iroutes = 0;
 

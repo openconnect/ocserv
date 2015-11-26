@@ -507,10 +507,23 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 
 }
 
+static
+unsigned check_if_default_route(char **routes, unsigned routes_size)
+{
+	unsigned i;
+
+	for (i=0;i<routes_size;i++) {
+		if (strcmp(routes[i], "default") == 0 ||
+		    strcmp(routes[i], "0.0.0.0/0") == 0)
+		    return 1;
+	}
+
+	return 0;
+}
+
 /* auth reply from main process */
 static int recv_cookie_auth_reply(worker_st * ws)
 {
-	unsigned i;
 	int ret;
 	int socketfd = -1;
 	AuthReplyMsg *msg = NULL;
@@ -533,7 +546,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 		if (socketfd != -1) {
 			ws->tun_fd = socketfd;
 
-			if (msg->vname == NULL || msg->user_name == NULL || msg->sid.len != sizeof(ws->sid)) {
+			if (msg->vname == NULL || msg->config == NULL || msg->user_name == NULL || msg->sid.len != sizeof(ws->sid)) {
 				ret = ERR_AUTH_FAIL;
 				goto cleanup;
 			}
@@ -554,17 +567,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 			memcpy(ws->session_id, msg->session_id.data,
 			       msg->session_id.len);
 
-			if (msg->has_interim_update_secs) {
-				oclog(ws, LOG_DEBUG, "overriding stats-report-time with auth server's value (%u)",
-				      (unsigned)msg->interim_update_secs);
-				ws->config->stats_report_time = msg->interim_update_secs;
-			}
-
-			if (msg->has_session_timeout_secs) {
-				oclog(ws, LOG_DEBUG, "overriding session-timeout with auth server's value (%u)",
-				      (unsigned)msg->session_timeout_secs);
-				ws->config->session_timeout = msg->session_timeout_secs;
-			}
+			ws->user_config = msg->config;
 
 			if (msg->ipv4 != NULL) {
 				talloc_free(ws->vinfo.ipv4);
@@ -602,107 +605,12 @@ static int recv_cookie_auth_reply(worker_st * ws)
 					    talloc_strdup(ws, msg->ipv6_local);
 			}
 
-			/* Read any additional data */
-			if (msg->ipv4_netmask != NULL) {
-				talloc_free(ws->config->network.ipv4_netmask);
-				ws->config->network.ipv4_netmask =
-				    talloc_strdup(ws, msg->ipv4_netmask);
-			}
-
-			if (msg->ipv4_network != NULL) {
-				talloc_free(ws->config->network.ipv4_network);
-				ws->config->network.ipv4_network =
-				    talloc_strdup(ws, msg->ipv4_network);
-			}
-
-			if (msg->ipv6_network != NULL) {
-				talloc_free(ws->config->network.ipv6_network);
-				ws->config->network.ipv6_network =
-				    talloc_strdup(ws, msg->ipv6_network);
-			}
-
-			if (msg->has_ipv6_prefix) {
-				ws->config->network.ipv6_prefix = msg->ipv6_prefix;
-			}
-
-			if (msg->has_ipv6_subnet_prefix) {
-				ws->config->network.ipv6_subnet_prefix = msg->ipv6_subnet_prefix;
-			}
-
-			if (msg->has_dpd)
-				ws->config->dpd = msg->dpd;
-
-			if (msg->has_keepalive)
-				ws->config->keepalive = msg->keepalive;
-
-			if (msg->has_mobile_dpd)
-				ws->config->mobile_dpd = msg->mobile_dpd;
-
-			if (msg->has_rx_per_sec)
-				ws->config->rx_per_sec = msg->rx_per_sec;
-
-			if (msg->has_tx_per_sec)
-				ws->config->tx_per_sec = msg->tx_per_sec;
-
-			if (msg->has_net_priority)
-				ws->config->net_priority = msg->net_priority;
-
-			if (msg->has_no_udp && msg->no_udp != 0)
+			if (msg->config->no_udp != 0)
 				ws->perm_config->udp_port = 0;
 
-			if (msg->xml_config_file) {
-				talloc_free(ws->config->xml_config_file);
-				ws->config->xml_config_file = talloc_strdup(ws, msg->xml_config_file);
-			}
-
 			/* routes */
-			ws->routes = talloc_size(ws, msg->n_routes*sizeof(char*));
-			if (ws->routes != NULL) {
-				ws->routes_size = msg->n_routes;
-				for (i = 0; i < ws->routes_size; i++) {
-					ws->routes[i] =
-					    talloc_strdup(ws, msg->routes[i]);
-
-					/* If a default route is detected */
-					if (ws->routes[i] != NULL &&
-					    (strcmp(ws->routes[i], "default") == 0 ||
-					     strcmp(ws->routes[i], "0.0.0.0/0") == 0)) {
-
-					     /* disable all routes */
-					     ws->routes_size = 0;
-					     ws->default_route = 1;
-					     break;
-					}
-				}
-			}
-
-			if (check_if_default_route(ws->routes, ws->routes_size))
+			if (check_if_default_route(msg->config->routes, msg->config->n_routes))
 				ws->default_route = 1;
-
-			ws->no_routes = talloc_size(ws, msg->n_no_routes*sizeof(char*));
-			if (ws->no_routes != NULL) {
-				ws->no_routes_size = msg->n_no_routes;
-				for (i = 0; i < ws->no_routes_size; i++) {
-					ws->no_routes[i] =
-					    talloc_strdup(ws, msg->no_routes[i]);
-				}
-			}
-
-			ws->dns = talloc_size(ws, msg->n_dns*sizeof(char*));
-			if (ws->dns != NULL) {
-				ws->dns_size = msg->n_dns;
-				for (i = 0; i < ws->dns_size; i++) {
-					ws->dns[i] = talloc_strdup(ws, msg->dns[i]);
-				}
-			}
-
-			ws->nbns = talloc_size(ws, msg->n_nbns*sizeof(char*));
-			if (ws->nbns != NULL) {
-				ws->nbns_size = msg->n_nbns;
-				for (i = 0; i < ws->nbns_size; i++) {
-					ws->nbns[i] = talloc_strdup(ws, msg->nbns[i]);
-				}
-			}
 		} else {
 			oclog(ws, LOG_ERR, "error in received message");
 			ret = ERR_AUTH_FAIL;
@@ -720,7 +628,12 @@ static int recv_cookie_auth_reply(worker_st * ws)
 
 	ret = 0;
  cleanup:
-	auth_reply_msg__free_unpacked(msg, &pa);
+	if (ret < 0) {
+		/* we only release on error, as the user configuration
+		 * remains. */
+		auth_reply_msg__free_unpacked(msg, &pa);
+		ws->user_config = NULL;
+	}
 	return ret;
 }
 

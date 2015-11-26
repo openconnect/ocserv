@@ -194,13 +194,181 @@ int handle_sec_mod_commands(main_server_st * s)
 	return ret;
 }
 
+static
+void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
+{
+	if (!gc->has_no_udp) {
+		gc->no_udp = (s->perm_config->udp_port!=0)?0:1;
+		gc->has_no_udp = 1;
+	}
+
+	if (gc->routes == NULL) {
+		gc->routes = s->config->network.routes;
+		gc->n_routes = s->config->network.routes_size;
+	}
+
+	/* if we have known_iroutes, we must append them to the routes list */
+	if (s->config->known_iroutes_size > 0) {
+		char **old_routes = gc->routes;
+		unsigned old_routes_size = gc->n_routes;
+		unsigned i, j, append;
+
+		gc->n_routes = 0;
+		gc->routes = talloc_size(proc, sizeof(char*)*(old_routes_size+s->config->known_iroutes_size));
+
+		for (i=0;i<old_routes_size;i++) {
+			gc->routes[i] = talloc_strdup(proc, old_routes[i]);
+			if (gc->routes[i] == NULL)
+				break;
+			gc->n_routes++;
+		}
+
+		if (gc->routes) {
+			/* Append any iroutes that are known and don't match the client's */
+			for (i=0;i<s->config->known_iroutes_size;i++) {
+				append = 1;
+				for (j=0;j<gc->n_iroutes;j++) {
+					if (strcmp(gc->iroutes[j], s->config->known_iroutes[i]) == 0) {
+						append = 0;
+						break;
+					}
+				}
+
+				if (append) {
+					gc->routes[gc->n_routes] = talloc_strdup(proc, s->config->known_iroutes[i]);
+					if (gc->routes[gc->n_routes] == NULL)
+						break;
+					gc->n_routes++;
+				}
+			}
+		}
+	}
+
+	if (gc->no_routes == NULL) {
+		gc->no_routes = s->config->network.no_routes;
+		gc->n_no_routes = s->config->network.no_routes_size;
+	}
+
+	if (gc->dns == NULL) {
+		gc->dns = s->config->network.dns;
+		gc->n_dns = s->config->network.dns_size;
+	}
+
+	if (gc->nbns == NULL) {
+		gc->nbns = s->config->network.nbns;
+		gc->n_nbns = s->config->network.nbns_size;
+	}
+
+	if (!gc->has_interim_update_secs) {
+		gc->interim_update_secs = s->config->stats_report_time;
+		gc->has_interim_update_secs = 1;
+	}
+
+	if (!gc->has_session_timeout_secs) {
+		gc->session_timeout_secs = s->config->session_timeout;
+		gc->has_session_timeout_secs = 1;
+	}
+
+	if (!gc->has_deny_roaming) {
+		gc->deny_roaming = s->config->deny_roaming;
+		gc->has_deny_roaming = 1;
+	}
+
+	if (!gc->ipv4_net) {
+		gc->ipv4_net = s->config->network.ipv4_network;
+	}
+
+	if (!gc->ipv4_netmask) {
+		gc->ipv4_netmask = s->config->network.ipv4_netmask;
+	}
+
+	if (!gc->ipv6_net) {
+		gc->ipv6_net = s->config->network.ipv6_network;
+	}
+
+	if (!gc->has_ipv6_prefix) {
+		gc->ipv6_prefix = s->config->network.ipv6_prefix;
+		gc->has_ipv6_prefix = 1;
+	}
+
+	if (!gc->has_ipv6_subnet_prefix) {
+		gc->ipv6_subnet_prefix = s->config->network.ipv6_subnet_prefix;
+		gc->has_ipv6_subnet_prefix = 1;
+	}
+
+	if (!gc->cgroup) {
+		gc->cgroup = s->config->cgroup;
+	}
+
+	if (!gc->xml_config_file) {
+		gc->xml_config_file = s->config->xml_config_file;
+	}
+
+	if (!gc->has_rx_per_sec) {
+		gc->rx_per_sec = s->config->rx_per_sec;
+		gc->has_rx_per_sec = 1;
+	}
+
+	if (!gc->has_tx_per_sec) {
+		gc->tx_per_sec = s->config->tx_per_sec;
+		gc->has_tx_per_sec = 1;
+	}
+
+	if (!gc->has_net_priority) {
+		gc->net_priority = s->config->net_priority;
+		gc->has_net_priority = 1;
+	}
+
+	if (!gc->has_keepalive) {
+		gc->keepalive = s->config->keepalive;
+		gc->has_keepalive = 1;
+	}
+
+	if (!gc->has_dpd) {
+		gc->dpd = s->config->dpd;
+		gc->has_dpd = 1;
+	}
+
+	if (!gc->has_mobile_dpd) {
+		gc->mobile_dpd = s->config->mobile_dpd;
+		gc->has_mobile_dpd = 1;
+	}
+
+	if (!gc->has_max_same_clients) {
+		gc->max_same_clients = s->config->max_same_clients;
+		gc->has_max_same_clients = 1;
+	}
+
+	if (!gc->has_tunnel_all_dns) {
+		gc->tunnel_all_dns = s->config->tunnel_all_dns;
+		gc->has_tunnel_all_dns = 1;
+	}
+
+	if (!gc->has_restrict_user_to_routes) {
+		gc->restrict_user_to_routes = s->config->restrict_user_to_routes;
+		gc->has_restrict_user_to_routes = 1;
+	}
+
+	if (!gc->has_mtu) {
+		gc->mtu = s->config->network.mtu;
+		gc->has_mtu = 1;
+	}
+
+	if (!gc->has_idle_timeout) {
+		gc->idle_timeout = s->config->idle_timeout;
+		gc->has_idle_timeout = 1;
+	}
+
+	if (!gc->has_mobile_idle_timeout) {
+		gc->mobile_idle_timeout = s->config->mobile_idle_timeout;
+		gc->has_mobile_idle_timeout = 1;
+	}
+}
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int ret, e;
 	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
 	SecAuthSessionReplyMsg *msg = NULL;
-	unsigned i, j, append;
-	PROTOBUF_ALLOCATOR(pa, proc);
 	char str_ipv4[MAX_IP_STR];
 	char str_ipv6[MAX_IP_STR];
 
@@ -255,142 +423,14 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		return -1;
 	}
 
-	if (msg->has_interim_update_secs)
-		proc->config.interim_update_secs = msg->interim_update_secs;
-
-	if (msg->has_session_timeout_secs)
-		proc->config.session_timeout_secs = msg->session_timeout_secs;
-
-	/* fill in group_cfg_st */
-	if (msg->has_no_udp)
-		proc->config.no_udp = msg->no_udp;
-
-	if (msg->has_restrict_user_to_routes)
-		proc->config.restrict_user_to_routes = msg->restrict_user_to_routes;
-	else
-		proc->config.restrict_user_to_routes = s->config->restrict_user_to_routes;
-
-	if (msg->has_max_same_clients)
-		proc->config.max_same_clients = msg->max_same_clients;
-
-	if (msg->has_dpd)
-		proc->config.dpd = msg->dpd;
-
-	if (msg->has_tunnel_all_dns)
-		proc->config.tunnel_all_dns = msg->tunnel_all_dns;
-
-	if (msg->has_keepalive)
-		proc->config.keepalive = msg->keepalive;
-
-	if (msg->has_mobile_dpd)
-		proc->config.mobile_dpd = msg->mobile_dpd;
-
-	if (msg->has_deny_roaming)
-		proc->config.deny_roaming = msg->deny_roaming;
-
-	if (msg->has_ipv6_prefix)
-		proc->config.ipv6_prefix = msg->ipv6_prefix;
-
-	if (msg->rx_per_sec)
-		proc->config.rx_per_sec = msg->rx_per_sec;
-	if (msg->tx_per_sec)
-		proc->config.tx_per_sec = msg->tx_per_sec;
-
-	if (msg->net_priority)
-		proc->config.net_priority = msg->net_priority;
-
-	if (msg->ipv4_net) {
-		proc->config.ipv4_network = talloc_strdup(proc, msg->ipv4_net);
-	}
-	if (msg->ipv4_netmask) {
-		proc->config.ipv4_netmask = talloc_strdup(proc, msg->ipv4_netmask);
-	}
-	if (msg->ipv6_net) {
-		proc->config.ipv6_network = talloc_strdup(proc, msg->ipv6_net);
+	if (msg->config == NULL) {
+		mslog(s, proc, LOG_INFO, "received invalid configuration for '%s'; could not initiate session", proc->username);
+		return -1;
 	}
 
-	if (msg->has_ipv6_subnet_prefix) {
-		if (msg->ipv6_subnet_prefix != proc->config.ipv6_subnet_prefix) {
-			mslog(s, proc, LOG_WARNING, "currently a subnet prefix (%u) cannot be different than the default (%u)",
-			      msg->ipv6_subnet_prefix, proc->config.ipv6_prefix);
-		} else {
-			proc->config.ipv6_subnet_prefix = msg->ipv6_subnet_prefix;
-		}
-	}
+	proc->config = msg->config;
 
-	if (msg->cgroup) {
-		proc->config.cgroup = talloc_strdup(proc, msg->cgroup);
-	}
-
-	if (msg->xml_config_file) {
-		proc->config.xml_config_file = talloc_strdup(proc, msg->xml_config_file);
-	}
-
-	if (msg->explicit_ipv4) {
-		proc->config.explicit_ipv4 = talloc_strdup(proc, msg->explicit_ipv4);
-	}
-
-	if (msg->explicit_ipv6) {
-		proc->config.explicit_ipv6 = talloc_strdup(proc, msg->explicit_ipv6);
-	}
-
-	/* Append any custom routes for this user */
-	if (msg->n_routes > 0 || s->config->known_iroutes_size > 0) {
-		proc->config.routes = talloc_size(proc, sizeof(char*)*(msg->n_routes+s->config->known_iroutes_size));
-		for (i=0;i<msg->n_routes;i++) {
-			proc->config.routes[i] = talloc_strdup(proc, msg->routes[i]);
-		}
-		proc->config.routes_size = msg->n_routes;
-	}
-
-	/* Append any iroutes that are known and don't match the client's */
-	for (i=0;i<s->config->known_iroutes_size;i++) {
-		append = 1;
-		for (j=0;j<msg->n_iroutes;j++) {
-			if (strcmp(msg->iroutes[j], s->config->known_iroutes[i]) == 0) {
-				append = 0;
-				break;
-			}
-		}
-
-		if (append) {
-			proc->config.routes[proc->config.routes_size] = talloc_strdup(proc, s->config->known_iroutes[i]);
-			proc->config.routes_size++;
-		}
-	}
-
-	if (msg->n_no_routes > 0) {
-		proc->config.no_routes = talloc_size(proc, sizeof(char*)*msg->n_no_routes);
-		for (i=0;i<msg->n_no_routes;i++) {
-			proc->config.no_routes[i] = talloc_strdup(proc, msg->no_routes[i]);
-		}
-		proc->config.no_routes_size = msg->n_no_routes;
-	}
-
-	if (msg->n_iroutes > 0) {
-		proc->config.iroutes = talloc_size(proc, sizeof(char*)*msg->n_iroutes);
-		for (i=0;i<msg->n_iroutes;i++) {
-			proc->config.iroutes[i] = talloc_strdup(proc, msg->iroutes[i]);
-		}
-		proc->config.iroutes_size = msg->n_iroutes;
-	}
-
-	if (msg->n_dns > 0) {
-		proc->config.dns = talloc_size(proc, sizeof(char*)*msg->n_dns);
-		for (i=0;i<msg->n_dns;i++) {
-			proc->config.dns[i] = talloc_strdup(proc, msg->dns[i]);
-		}
-		proc->config.dns_size = msg->n_dns;
-	}
-
-	if (msg->n_nbns > 0) {
-		proc->config.nbns = talloc_size(proc, sizeof(char*)*msg->n_nbns);
-		for (i=0;i<msg->n_nbns;i++) {
-			proc->config.nbns[i] = talloc_strdup(proc, msg->nbns[i]);
-		}
-		proc->config.nbns_size = msg->n_nbns;
-	}
-	sec_auth_session_reply_msg__free_unpacked(msg, &pa);
+	apply_default_config(s, proc, proc->config);
 
 	return 0;
 }

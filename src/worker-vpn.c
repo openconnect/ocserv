@@ -784,8 +784,8 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, struct timespec *tnow,
 		}
 	}
 
-	if (ws->config->session_timeout > 0) {
-		if (now - ws->session_start_time > ws->config->session_timeout) {
+	if (ws->user_config->session_timeout_secs > 0) {
+		if (now - ws->session_start_time > ws->user_config->session_timeout_secs) {
 			oclog(ws, LOG_ERR,
 			      "session timeout reached for process (%d secs)",
 			      (int)(now - ws->session_start_time));
@@ -795,8 +795,8 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, struct timespec *tnow,
 		}
 	}
 
-	if (ws->config->stats_report_time > 0 &&
-	    now - ws->last_stats_msg >= ws->config->stats_report_time &&
+	if (ws->user_config->interim_update_secs > 0 &&
+	    now - ws->last_stats_msg >= ws->user_config->interim_update_secs &&
 	    ws->sid_set) {
 		send_stats_to_secmod(ws, now, 0);
 	}
@@ -885,7 +885,7 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 
 #ifdef SO_PRIORITY
 	if (priority != 0 && priority <= 7) {
-		t = ws->config->net_priority - 1;
+		t = ws->user_config->net_priority - 1;
 		ret = setsockopt(fd, SOL_SOCKET, SO_PRIORITY, &t, sizeof(t));
 		if (ret == -1)
 			oclog(ws, LOG_DEBUG,
@@ -1404,7 +1404,7 @@ static int connect_handler(worker_st * ws)
 		return -1;
 	}
 
-	FUZZ(ws->config->stats_report_time, 5, rnd);
+	FUZZ(ws->user_config->interim_update_secs, 5, rnd);
 	FUZZ(ws->config->rekey_time, 30, rnd);
 
 	/* Connected. Turn of the alarm */
@@ -1423,15 +1423,15 @@ static int connect_handler(worker_st * ws)
 	SEND_ERR(ret);
 
 	if (req->is_mobile) {
-		ws->config->dpd = ws->config->mobile_dpd;
+		ws->user_config->dpd = ws->user_config->mobile_dpd;
 		ws->config->idle_timeout = ws->config->mobile_idle_timeout;
 	}
 
-	oclog(ws, LOG_INFO, "suggesting DPD of %d secs", ws->config->dpd);
-	if (ws->config->dpd > 0) {
+	oclog(ws, LOG_INFO, "suggesting DPD of %d secs", ws->user_config->dpd);
+	if (ws->user_config->dpd > 0) {
 		ret =
 		    cstp_printf(ws, "X-CSTP-DPD: %u\r\n",
-			       ws->config->dpd);
+			       ws->user_config->dpd);
 		SEND_ERR(ret);
 	}
 
@@ -1451,8 +1451,8 @@ static int connect_handler(worker_st * ws)
 	}
 
 	/* calculate base MTU */
-	if (ws->config->default_mtu > 0) {
-		ws->vinfo.mtu = ws->config->default_mtu;
+	if (ws->user_config->mtu > 0) {
+		ws->vinfo.mtu = ws->user_config->mtu;
 	}
 
 	if (req->base_mtu > 0) {
@@ -1509,21 +1509,21 @@ static int connect_handler(worker_st * ws)
 			       ws->vinfo.ipv4);
 		SEND_ERR(ret);
 
-		if (ws->vinfo.ipv4_netmask) {
+		if (ws->user_config->ipv4_netmask) {
 			ret =
 			    cstp_printf(ws, "X-CSTP-Netmask: %s\r\n",
-				       ws->vinfo.ipv4_netmask);
+				       ws->user_config->ipv4_netmask);
 			SEND_ERR(ret);
 		}
 	}
 
-	if (ws->vinfo.ipv6 && req->no_ipv6 == 0 && ws->vinfo.ipv6_prefix != 0) {
-		oclog(ws, LOG_INFO, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
-		if (ws->full_ipv6 && ws->vinfo.ipv6_prefix) {
+	if (ws->vinfo.ipv6 && req->no_ipv6 == 0 && ws->user_config->ipv6_prefix != 0) {
+		oclog(ws, LOG_INFO, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->user_config->ipv6_prefix);
+		if (ws->full_ipv6 && ws->user_config->ipv6_prefix) {
 			ret =
 			    cstp_printf(ws,
 				       "X-CSTP-Address-IP6: %s/%u\r\n",
-				       ws->vinfo.ipv6, ws->vinfo.ipv6_prefix);
+				       ws->vinfo.ipv6, ws->user_config->ipv6_prefix);
 			SEND_ERR(ret);
 		} else {
 			const char *net;
@@ -1533,13 +1533,13 @@ static int connect_handler(worker_st * ws)
 				       ws->vinfo.ipv6);
 			SEND_ERR(ret);
 
-			net = ws->vinfo.ipv6_network;
+			net = ws->user_config->ipv6_net;
 			if (net == NULL)
 				net = ws->vinfo.ipv6;
 
 			ret =
 			    cstp_printf(ws, "X-CSTP-Netmask: %s/%u\r\n",
-				        net, ws->vinfo.ipv6_prefix);
+				        net, ws->user_config->ipv6_prefix);
 			SEND_ERR(ret);
 		}
 	}
@@ -1550,8 +1550,8 @@ static int connect_handler(worker_st * ws)
 	if (ws->full_ipv6 == 0 || req->user_agent_type != AGENT_OPENCONNECT)
 		req->no_ipv6 = 1;
 
-	for (i = 0; i < ws->vinfo.dns_size; i++) {
-		if (strchr(ws->vinfo.dns[i], ':') != 0)
+	for (i = 0; i < ws->user_config->n_dns; i++) {
+		if (strchr(ws->user_config->dns[i], ':') != 0)
 			ip6 = 1;
 		else
 			ip6 = 0;
@@ -1561,15 +1561,15 @@ static int connect_handler(worker_st * ws)
 		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 
-		oclog(ws, LOG_INFO, "adding DNS %s", ws->vinfo.dns[i]);
+		oclog(ws, LOG_INFO, "adding DNS %s", ws->user_config->dns[i]);
 		ret =
 		    cstp_printf(ws, "X-CSTP-DNS: %s\r\n",
-			       ws->vinfo.dns[i]);
+			       ws->user_config->dns[i]);
 		SEND_ERR(ret);
 	}
 
-	for (i = 0; i < ws->vinfo.nbns_size; i++) {
-		if (strchr(ws->vinfo.nbns[i], ':') != 0)
+	for (i = 0; i < ws->user_config->n_nbns; i++) {
+		if (strchr(ws->user_config->nbns[i], ':') != 0)
 			ip6 = 1;
 		else
 			ip6 = 0;
@@ -1579,10 +1579,10 @@ static int connect_handler(worker_st * ws)
 		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
 
-		oclog(ws, LOG_INFO, "adding NBNS %s", ws->vinfo.nbns[i]);
+		oclog(ws, LOG_INFO, "adding NBNS %s", ws->user_config->nbns[i]);
 		ret =
 		    cstp_printf(ws, "X-CSTP-NBNS: %s\r\n",
-			       ws->vinfo.nbns[i]);
+			       ws->user_config->nbns[i]);
 		SEND_ERR(ret);
 	}
 
@@ -1606,10 +1606,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	if (ws->default_route == 0) {
-		ret = send_routes(ws, req, ws->vinfo.routes, ws->vinfo.routes_size, 1);
-		SEND_ERR(ret);
-
-		ret = send_routes(ws, req, ws->routes, ws->routes_size, 1);
+		ret = send_routes(ws, req, ws->user_config->routes, ws->user_config->n_routes, 1);
 		SEND_ERR(ret);
 
 	} else {
@@ -1624,15 +1621,12 @@ static int connect_handler(worker_st * ws)
 	}
 	SEND_ERR(ret);
 
-	ret = send_routes(ws, req, ws->vinfo.no_routes, ws->vinfo.no_routes_size, 0);
-	SEND_ERR(ret);
-
-	ret = send_routes(ws, req, ws->no_routes, ws->no_routes_size, 0);
+	ret = send_routes(ws, req, ws->user_config->no_routes, ws->user_config->n_no_routes, 0);
 	SEND_ERR(ret);
 
 	ret =
 	    cstp_printf(ws, "X-CSTP-Keepalive: %u\r\n",
-		       ws->config->keepalive);
+		       ws->user_config->keepalive);
 	SEND_ERR(ret);
 
 	if (ws->config->idle_timeout > 0) {
@@ -1724,7 +1718,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	set_non_block(ws->conn_fd);
-	set_net_priority(ws, ws->conn_fd, ws->config->net_priority);
+	set_net_priority(ws, ws->conn_fd, ws->user_config->net_priority);
 
 	if (ws->udp_state != UP_DISABLED) {
 
@@ -1738,10 +1732,10 @@ static int connect_handler(worker_st * ws)
 			       ws->buffer);
 		SEND_ERR(ret);
 
-		if (ws->config->dpd > 0) {
+		if (ws->user_config->dpd > 0) {
 			ret =
 			    cstp_printf(ws, "X-DTLS-DPD: %u\r\n",
-				       ws->config->dpd);
+				       ws->user_config->dpd);
 			SEND_ERR(ret);
 		}
 
@@ -1767,7 +1761,7 @@ static int connect_handler(worker_st * ws)
 
 		ret =
 		    cstp_printf(ws, "X-DTLS-Keepalive: %u\r\n",
-			       ws->config->keepalive);
+			       ws->user_config->keepalive);
 		SEND_ERR(ret);
 
 		oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
@@ -1819,7 +1813,7 @@ static int connect_handler(worker_st * ws)
 				      t);
 		}
 
-		set_net_priority(ws, ws->dtls_tptr.fd, ws->config->net_priority);
+		set_net_priority(ws, ws->dtls_tptr.fd, ws->user_config->net_priority);
 	}
 
 	/* hack for openconnect. It uses only a single MTU value */
@@ -1869,8 +1863,8 @@ static int connect_handler(worker_st * ws)
 	gettime(&tnow);
 	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = tnow.tv_sec;
 
-	bandwidth_init(&ws->b_rx, ws->config->rx_per_sec);
-	bandwidth_init(&ws->b_tx, ws->config->tx_per_sec);
+	bandwidth_init(&ws->b_rx, ws->user_config->rx_per_sec);
+	bandwidth_init(&ws->b_tx, ws->user_config->tx_per_sec);
 
 	sigprocmask(SIG_BLOCK, &blockset, NULL);
 
@@ -1944,7 +1938,7 @@ static int connect_handler(worker_st * ws)
 
 		if (periodic_check
 		    (ws, ws->proto_overhead + ws->crypto_overhead, &tnow,
-		     ws->config->dpd) < 0) {
+		     ws->user_config->dpd) < 0) {
 			terminate_reason = REASON_ERROR;
 			goto exit;
 		}

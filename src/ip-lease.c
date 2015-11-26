@@ -163,9 +163,9 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 	char buf[64];
 
 	/* Our IP accounting */
-	if (proc->config.ipv4_network && proc->config.ipv4_netmask) {
-		c_network = proc->config.ipv4_network;
-		c_netmask = proc->config.ipv4_netmask;
+	if (proc->config->ipv4_net && proc->config->ipv4_netmask) {
+		c_network = proc->config->ipv4_net;
+		c_netmask = proc->config->ipv4_netmask;
 	} else {
 		c_network = s->config->network.ipv4;
 		c_netmask = s->config->network.ipv4_netmask;
@@ -196,15 +196,15 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
        	((struct sockaddr_in*)&network)->sin_family = AF_INET;
        	((struct sockaddr_in*)&network)->sin_port = 0;
 
-	if (proc->config.explicit_ipv4) {
+	if (proc->config->explicit_ipv4) {
 		/* if an explicit IP is given for that client, then
 		 * do implicit IP accounting. Require the address
 		 * to be odd, so we use the next even address as PtP. */
 		ret =
-		    inet_pton(AF_INET, proc->config.explicit_ipv4, SA_IN_P(&tmp));
+		    inet_pton(AF_INET, proc->config->explicit_ipv4, SA_IN_P(&tmp));
 
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "error reading explicit IP: %s", proc->config.explicit_ipv4);
+			mslog(s, NULL, LOG_ERR, "error reading explicit IP: %s", proc->config->explicit_ipv4);
 			return -1;
 		}
 
@@ -232,7 +232,7 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		SA_IN_U8_P(&proc->ipv4->lip)[3] |= 1;
 
 		if (ip_cmp(&proc->ipv4->lip, &proc->ipv4->rip) == 0) {
-			mslog(s, NULL, LOG_ERR, "cannot assign explicit IP %s; network: %s", proc->config.explicit_ipv4, c_network);
+			mslog(s, NULL, LOG_ERR, "cannot assign explicit IP %s; network: %s", proc->config->explicit_ipv4, c_network);
 			ret = ERR_NO_IP;
 			goto fail;
 		}
@@ -325,10 +325,10 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 	int ret;
 	char buf[64];
 
-	if (proc->config.ipv6_network && proc->config.ipv6_subnet_prefix) {
-		c_network = proc->config.ipv6_network;
-		prefix = proc->config.ipv6_prefix;
-		subnet_prefix = proc->config.ipv6_subnet_prefix;
+	if (proc->config->ipv6_net && proc->config->ipv6_subnet_prefix) {
+		c_network = proc->config->ipv6_net;
+		prefix = proc->config->ipv6_prefix;
+		subnet_prefix = proc->config->ipv6_subnet_prefix;
 	} else {
 		c_network = s->config->network.ipv6;
 		prefix = s->config->network.ipv6_prefix;
@@ -365,15 +365,15 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		SA_IN6_U8_P(&network)[i] &= (SA_IN6_U8_P(&mask)[i]);
 
 
-	if (proc->config.explicit_ipv6) {
+	if (proc->config->explicit_ipv6) {
 		/* if an explicit IP is given for that client, then
 		 * do implicit IP accounting. Require the address
 		 * to be odd, so we use the next even address as PtP. */
 		ret =
-		    inet_pton(AF_INET6, proc->config.explicit_ipv6, SA_IN6_P(&tmp));
+		    inet_pton(AF_INET6, proc->config->explicit_ipv6, SA_IN6_P(&tmp));
 
 		if (ret != 1) {
-			mslog(s, NULL, LOG_ERR, "error reading explicit IP %s", proc->config.explicit_ipv6);
+			mslog(s, NULL, LOG_ERR, "error reading explicit IP %s", proc->config->explicit_ipv6);
 			return -1;
 		}
 

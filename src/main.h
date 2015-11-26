@@ -144,7 +144,8 @@ typedef struct proc_st {
 	uint64_t bytes_out;
 	
 	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
-	struct group_cfg_st config; /* custom user/group config */
+
+	GroupCfgSt *config; /* custom user/group config */
 } proc_st;
 
 struct ip_lease_db_st {

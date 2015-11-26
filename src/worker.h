@@ -257,6 +257,8 @@ typedef struct worker_st {
 
 	unsigned int cookie_set;
 
+	GroupCfgSt *user_config;
+
 	uint8_t master_secret[TLS_MASTER_SIZE];
 	uint8_t session_id[GNUTLS_MAX_SESSION_ID];
 	unsigned cert_auth_ok;
@@ -273,17 +275,6 @@ typedef struct worker_st {
 	struct vpn_st vinfo;
 	unsigned default_route;
 	
-	/* additional data - received per user or per group */
-	unsigned routes_size;
-	char** routes;
-	unsigned no_routes_size;
-	char** no_routes;
-
-	unsigned dns_size;
-	char** dns;
-	unsigned nbns_size;
-	char** nbns;
-
 	void *main_pool; /* to be used only on deinitialization */
 } worker_st;
 
@@ -335,7 +326,6 @@ url_handler_fn http_post_url_handler(worker_st * ws, const char *url);
 
 int complete_vpn_info(worker_st * ws,
                     struct vpn_st* vinfo);
-unsigned check_if_default_route(char **routes, unsigned routes_size);
 
 int send_tun_mtu(worker_st *ws, unsigned int mtu);
 int handle_worker_commands(struct worker_st *ws);

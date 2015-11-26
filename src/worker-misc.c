@@ -180,19 +180,6 @@ udp_fd_fail:
 	return -1;
 }
 
-unsigned check_if_default_route(char **routes, unsigned routes_size)
-{
-	unsigned i;
-
-	for (i=0;i<routes_size;i++) {
-		if (strcmp(routes[i], "default") == 0 ||
-		    strcmp(routes[i], "0.0.0.0/0") == 0)
-		    return 1;
-	}
-
-	return 0;
-}
-
 /* Completes the VPN device information.
  * 
  * Returns 0 on success.
@@ -205,42 +192,6 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 	if (vinfo->ipv4 == NULL && vinfo->ipv6 == NULL) {
 		return -1;
 	}
-
-	if (ws->dns_size > 0) {
-		vinfo->dns_size = ws->dns_size;
-		vinfo->dns = ws->dns;
-	} else {
-		vinfo->dns_size = ws->config->network.dns_size;
-		if (ws->config->network.dns_size > 0)
-			vinfo->dns = ws->config->network.dns;
-	}
-
-	if (ws->nbns_size > 0) {
-		vinfo->nbns_size = ws->nbns_size;
-		vinfo->nbns = ws->nbns;
-	} else {
-		vinfo->nbns_size = ws->config->network.nbns_size;
-		if (ws->config->network.nbns_size > 0)
-			vinfo->nbns = ws->config->network.nbns;
-	}
-
-	vinfo->routes_size = ws->config->network.routes_size;
-	if (ws->config->network.routes_size > 0)
-		vinfo->routes = ws->config->network.routes;
-
-	if (check_if_default_route(vinfo->routes, vinfo->routes_size))
-		ws->default_route = 1;
-
-	vinfo->no_routes_size = ws->config->network.no_routes_size;
-	if (ws->config->network.no_routes_size > 0)
-		vinfo->no_routes = ws->config->network.no_routes;
-
-	vinfo->ipv4_network = ws->config->network.ipv4_network;
-	vinfo->ipv6_network = ws->config->network.ipv6_network;
-
-	vinfo->ipv4_netmask = ws->config->network.ipv4_netmask;
-	vinfo->ipv6_prefix = ws->config->network.ipv6_prefix;
-	vinfo->ipv6_subnet_prefix = ws->config->network.ipv6_subnet_prefix;
 
 	if (ws->config->network.mtu != 0) {
 		vinfo->mtu = ws->config->network.mtu;

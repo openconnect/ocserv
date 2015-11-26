@@ -336,7 +336,7 @@ static int append_user_info(method_ctx *ctx,
 	rep->conn_time = ctmp->conn_time;
 	rep->hostname = ctmp->hostname;
 	rep->user_agent = ctmp->user_agent;
-	rep->restrict_to_routes = ctmp->config.restrict_user_to_routes;
+	rep->restrict_to_routes = ctmp->config->restrict_user_to_routes;
 
 	if (ctmp->status == PS_AUTH_COMPLETED)
 		strtmp = "connected";
@@ -360,71 +360,35 @@ static int append_user_info(method_ctx *ctx,
 		rep->has_mtu = 1;
 	}
 
-	if (ctmp->config.rx_per_sec > 0)
-		tmp = ctmp->config.rx_per_sec;
-	else
-		tmp = ctx->s->config->rx_per_sec;
+	tmp = ctmp->config->rx_per_sec;
 	tmp *= 1000;
 	rep->rx_per_sec = tmp;
 
-	if (ctmp->config.tx_per_sec > 0)
-		tmp = ctmp->config.tx_per_sec;
-	else
-		tmp = ctx->s->config->tx_per_sec;
+	tmp = ctmp->config->tx_per_sec;
 	tmp *= 1000;
 	rep->tx_per_sec = tmp;
 
-	if (ctmp->config.dpd)
-		rep->dpd = ctmp->config.dpd;
-	else
-		rep->dpd = ctx->s->config->dpd;
+	rep->dpd = ctmp->config->dpd;
 
-	if (ctmp->config.keepalive)
-		rep->keepalive = ctmp->config.keepalive;
-	else
-		rep->dpd = ctx->s->config->dpd;
+	rep->keepalive = ctmp->config->keepalive;
 
 	rep->domains = ctx->s->config->split_dns;
 	rep->n_domains = ctx->s->config->split_dns_size;
 
-	if (ctmp->config.dns_size > 0) {
-		rep->dns = ctmp->config.dns;
-		rep->n_dns = ctmp->config.dns_size;
-	} else {
-		rep->dns = ctx->s->config->network.dns;
-		rep->n_dns = ctx->s->config->network.dns_size;
-	}
+	rep->dns = ctmp->config->dns;
+	rep->n_dns = ctmp->config->n_dns;
 
-	if (ctmp->config.nbns_size > 0) {
-		rep->nbns = ctmp->config.nbns;
-		rep->n_nbns = ctmp->config.nbns_size;
-	} else {
-		rep->nbns = ctx->s->config->network.nbns;
-		rep->n_nbns = ctx->s->config->network.nbns_size;
-	}
+	rep->nbns = ctmp->config->nbns;
+	rep->n_nbns = ctmp->config->n_nbns;
 
-	rep->n_routes = ctmp->config.routes_size + ctx->s->config->network.routes_size;
-	rep->routes = talloc_size(rep, sizeof(char*)*rep->n_routes);
-	if (rep->routes != NULL) {
-		memcpy(rep->routes, ctmp->config.routes, sizeof(char*)*ctmp->config.routes_size);
-		memcpy(&rep->routes[ctmp->config.routes_size], ctx->s->config->network.routes, sizeof(char*)*ctx->s->config->network.routes_size);
-	} else {
-		rep->n_routes = 0;
-	}
+	rep->n_routes = ctmp->config->n_routes;
+	rep->routes = ctmp->config->routes;
 
-	rep->n_no_routes = ctmp->config.no_routes_size + ctx->s->config->network.no_routes_size;
-	rep->no_routes = talloc_size(rep, sizeof(char*)*rep->n_no_routes);
-	if (rep->no_routes != NULL) {
-		memcpy(rep->no_routes, ctmp->config.no_routes, sizeof(char*)*ctmp->config.no_routes_size);
-		memcpy(&rep->no_routes[ctmp->config.no_routes_size], ctx->s->config->network.no_routes, sizeof(char*)*ctx->s->config->network.no_routes_size);
-	} else {
-		rep->n_no_routes = 0;
-	}
+	rep->n_no_routes = ctmp->config->n_no_routes;
+	rep->no_routes = ctmp->config->no_routes;
 
-	if (ctmp->config.iroutes_size > 0) {
-		rep->iroutes = ctmp->config.iroutes;
-		rep->n_iroutes = ctmp->config.iroutes_size;
-	}
+	rep->iroutes = ctmp->config->iroutes;
+	rep->n_iroutes = ctmp->config->n_iroutes;
 
 	return 0;
 }

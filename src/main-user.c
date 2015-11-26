@@ -71,30 +71,16 @@ static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
 	/* We use different export strings for IPv4 and IPv6 to ease handling
 	 * with legacy software such as iptables and ip6tables. */
 
-	/* append generic routes to str */
-	for (i=0;i<s->config->network.routes_size;i++) {
-		APPEND_TO_STR(&str_common, s->config->network.routes[i]);
-		APPEND_TO_STR(&str_common, " ");
-
-		if (strchr(s->config->network.routes[i], ':') != 0) {
-			APPEND_TO_STR(&str6, s->config->network.routes[i]);
-			APPEND_TO_STR(&str6, " ");
-		} else {
-			APPEND_TO_STR(&str4, s->config->network.routes[i]);
-			APPEND_TO_STR(&str4, " ");
-		}
-	}
-
 	/* append custom routes to str */
-	for (i=0;i<proc->config.routes_size;i++) {
-		APPEND_TO_STR(&str_common, proc->config.routes[i]);
+	for (i=0;i<proc->config->n_routes;i++) {
+		APPEND_TO_STR(&str_common, proc->config->routes[i]);
 		APPEND_TO_STR(&str_common, " ");
 
-		if (strchr(proc->config.routes[i], ':') != 0) {
-			APPEND_TO_STR(&str6, proc->config.routes[i]);
+		if (strchr(proc->config->routes[i], ':') != 0) {
+			APPEND_TO_STR(&str6, proc->config->routes[i]);
 			APPEND_TO_STR(&str6, " ");
 		} else {
-			APPEND_TO_STR(&str4, proc->config.routes[i]);
+			APPEND_TO_STR(&str4, proc->config->routes[i]);
 			APPEND_TO_STR(&str4, " ");
 		}
 	}
@@ -120,30 +106,16 @@ static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
 	str_reset(&str6);
 	str_reset(&str_common);
 
-	/* append generic no_routes to str */
-	for (i=0;i<s->config->network.no_routes_size;i++) {
-		APPEND_TO_STR(&str_common, s->config->network.no_routes[i]);
-		APPEND_TO_STR(&str_common, " ");
-
-		if (strchr(s->config->network.no_routes[i], ':') != 0) {
-			APPEND_TO_STR(&str6, s->config->network.no_routes[i]);
-			APPEND_TO_STR(&str6, " ");
-		} else {
-			APPEND_TO_STR(&str4, s->config->network.no_routes[i]);
-			APPEND_TO_STR(&str4, " ");
-		}
-	}
-
 	/* append custom no_routes to str */
-	for (i=0;i<proc->config.no_routes_size;i++) {
-		APPEND_TO_STR(&str_common, proc->config.no_routes[i]);
+	for (i=0;i<proc->config->n_no_routes;i++) {
+		APPEND_TO_STR(&str_common, proc->config->no_routes[i]);
 		APPEND_TO_STR(&str_common, " ");
 
-		if (strchr(proc->config.no_routes[i], ':') != 0) {
-			APPEND_TO_STR(&str6, proc->config.no_routes[i]);
+		if (strchr(proc->config->no_routes[i], ':') != 0) {
+			APPEND_TO_STR(&str6, proc->config->no_routes[i]);
 			APPEND_TO_STR(&str6, " ");
 		} else {
-			APPEND_TO_STR(&str4, proc->config.no_routes[i]);
+			APPEND_TO_STR(&str4, proc->config->no_routes[i]);
 			APPEND_TO_STR(&str4, " ");
 		}
 	}
@@ -169,29 +141,16 @@ static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
 	str_reset(&str6);
 	str_reset(&str_common);
 
-	if (proc->config.dns_size > 0) {
-		for (i=0;i<proc->config.dns_size;i++) {
-			APPEND_TO_STR(&str_common, proc->config.dns[i]);
+	if (proc->config->n_dns > 0) {
+		for (i=0;i<proc->config->n_dns;i++) {
+			APPEND_TO_STR(&str_common, proc->config->dns[i]);
 			APPEND_TO_STR(&str_common, " ");
 
-			if (strchr(proc->config.dns[i], ':') != 0) {
-				APPEND_TO_STR(&str6, proc->config.dns[i]);
+			if (strchr(proc->config->dns[i], ':') != 0) {
+				APPEND_TO_STR(&str6, proc->config->dns[i]);
 				APPEND_TO_STR(&str6, " ");
 			} else {
-				APPEND_TO_STR(&str4, proc->config.dns[i]);
-				APPEND_TO_STR(&str4, " ");
-			}
-		}
-	} else {
-		for (i=0;i<s->config->network.dns_size;i++) {
-			APPEND_TO_STR(&str_common, s->config->network.dns[i]);
-			APPEND_TO_STR(&str_common, " ");
-
-			if (strchr(s->config->network.dns[i], ':') != 0) {
-				APPEND_TO_STR(&str6, s->config->network.dns[i]);
-				APPEND_TO_STR(&str6, " ");
-			} else {
-				APPEND_TO_STR(&str4, s->config->network.dns[i]);
+				APPEND_TO_STR(&str4, proc->config->dns[i]);
 				APPEND_TO_STR(&str4, " ");
 			}
 		}
@@ -229,7 +188,7 @@ const char* script, *next_script = NULL;
 	else
 		script = s->config->disconnect_script;
 
-	if (proc->config.restrict_user_to_routes) {
+	if (proc->config->restrict_user_to_routes) {
 		next_script = script;
 		script = OCSERV_FW_SCRIPT;
 	}

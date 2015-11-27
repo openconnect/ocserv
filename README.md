@@ -42,6 +42,7 @@ liblockfile-bin    / lockfile-progs
 nuttcp             / nuttcp
                    / uid_wrapper
                    / socket_wrapper
+                   / gssntlmssp
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

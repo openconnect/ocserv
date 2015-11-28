@@ -382,7 +382,7 @@ static int append_user_info(method_ctx *ctx,
 	if (ctmp->config.keepalive)
 		rep->keepalive = ctmp->config.keepalive;
 	else
-		rep->dpd = ctx->s->config->dpd;
+		rep->keepalive = ctx->s->config->keepalive;
 
 	rep->domains = ctx->s->config->split_dns;
 	rep->n_domains = ctx->s->config->split_dns_size;

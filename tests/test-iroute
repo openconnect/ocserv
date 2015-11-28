@@ -38,7 +38,7 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 echo ok
 
 echo -n "Re-connecting to force script run... "
-$OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./bin/true </dev/null &
+$OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null &
 kpid=$!
 echo ok
 
@@ -53,7 +53,8 @@ if [ ! -f ${srcdir}/test-iroute.tmp ];then
 fi
 
 CONTENTS=`cat ${srcdir}/test-iroute.tmp`
-if [[ "$CONTENTS" =~ "192.168.1.0/24 [vpns|tun]$" ]];then
+if [[ "$CONTENTS" =~ "192.168.1.0/255.255.255.0 192.168.1.0/24 [vpns|tun]$" ]];then
+	cat ${srcdir}/test-iroute.tmp
 	fail $PID "Temporary file contents are not correct"
 fi
 

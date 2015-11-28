@@ -30,7 +30,7 @@ endif
 
 EXTRA_DIST = ccan/licenses/BSD-MIT version.inc.in \
 	ccan/licenses/CC0 ccan/licenses/LGPL-2.1 version.inc \
-	occtl-args.def ipc.proto ctl.proto http-heads.gperf
+	occtl-args.def ipc.proto ctl.proto http-heads.gperf ocserv-fw
 
 bin_PROGRAMS = ocpasswd occtl
 

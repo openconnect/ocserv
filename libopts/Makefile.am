@@ -1,8 +1,8 @@
 ## LIBOPTS Makefile
 MAINTAINERCLEANFILES    = Makefile.in
 noinst_LIBRARIES      = libopts.a
-libopts_a_SOURCES      = libopts.c
-libopts_a_CPPFLAGS     = -I$(srcdir)
+libopts_a_SOURCES       = libopts.c
+libopts_a_CPPFLAGS      = -I$(srcdir)
 EXTRA_DIST		=
 BUILT_SOURCES		=
 MOSTLYCLEANFILES	=
@@ -35,11 +35,11 @@ EXTRA_DIST += \
     COPYING.gplv3           COPYING.lgplv3          COPYING.mbsd  \
     MakeDefs.inc            README                  ag-char-map.h  \
     alias.c                 ao-strs.c               ao-strs.h  \
-    autoopts/options.h      autoopts/project.h      autoopts/usage-txt.h  \
-    autoopts.c              autoopts.h              boolean.c  \
-    check.c                 compat/strdup.c         compat/snprintf.c  \
-    compat/compat.h         compat/_Noreturn.h      compat/pathfind.c  \
-    compat/windows-config.h compat/strchr.c         configfile.c  \
+    autoopts.c              autoopts.h              autoopts/options.h  \
+    autoopts/project.h      autoopts/usage-txt.h    boolean.c  \
+    check.c                 compat/_Noreturn.h      compat/compat.h  \
+    compat/pathfind.c       compat/snprintf.c       compat/strchr.c  \
+    compat/strdup.c         compat/windows-config.h configfile.c  \
     cook.c                  enum.c                  env.c  \
     file.c                  find.c                  genshell.c  \
     genshell.h              gettext.h               init.c  \

@@ -18,7 +18,7 @@
 /*
  *  This file is part of AutoOpts, a companion to AutoGen.
  *  AutoOpts is free software.
- *  AutoOpts is Copyright (C) 1992-2014 by Bruce Korb - all rights reserved
+ *  AutoOpts is Copyright (C) 1992-2015 by Bruce Korb - all rights reserved
  *
  *  AutoOpts is available under any one of two licenses.  The license
  *  in use must be one of these two and the choice is under the control
@@ -240,7 +240,7 @@ skip_misuse_usage(tOptions * pOpts)
 /*=export_func  optionOnlyUsage
  *
  * what:  Print usage text for just the options
- * arg:   + tOptions*   + pOpts    + program options descriptor +
+ * arg:   + tOptions *  + pOpts    + program options descriptor +
  * arg:   + int         + ex_code  + exit code for calling exit(3) +
  *
  * doc:
@@ -351,8 +351,8 @@ print_usage_details(tOptions * opts, int exit_code)
             flen = setGnuOptFmts(opts, &pOptTitle);
             sprintf(line_fmt_buf, zFmtFmt, flen);
             fputc(NL, option_usage_fp);
-        }
-        else {
+
+        } else {
             flen = setStdOptFmts(opts, &pOptTitle);
             sprintf(line_fmt_buf, zFmtFmt, flen);
 
@@ -435,7 +435,7 @@ print_one_paragraph(char const * text, bool plain, FILE * fp)
     else {
         char const * t = optionQuoteString(text, LINE_SPLICE);
         fprintf(fp, PUTS_FMT, t);
-        AGFREE((void *)t);
+        AGFREE(t);
     }
 }
  
@@ -546,15 +546,15 @@ optionPrintParagraphs(char const * text, bool plain, FILE * fp)
             buf = scan;
         }
     }
-    AGFREE((void *)text);
+    AGFREE(text);
 }
 
 /*=export_func  optionUsage
  * private:
  *
  * what:  Print usage text
- * arg:   + tOptions* + opts + program options descriptor +
- * arg:   + int       + exitCode + exit code for calling exit(3) +
+ * arg:   + tOptions * + opts + program options descriptor +
+ * arg:   + int        + exitCode + exit code for calling exit(3) +
  *
  * doc:
  *  This routine will print usage in both GNU-standard and AutoOpts-expanded

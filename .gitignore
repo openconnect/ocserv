@@ -51,10 +51,11 @@ src/ocpasswd-args.c
 src/libcmd-ocpasswd.a
 src/libcmd-ocserv.a
 src/protobuf/libprotobuf.a
+src/common/libcommon.a
+src/common/ctl.pb-c.c
+src/common/ctl.pb-c.h
 src/ipc.pb-c.c
 src/ipc.pb-c.h
-src/ctl.pb-c.c
-src/ctl.pb-c.h
 src/occtl
 .dirstamp
 config.h.in
@@ -67,6 +68,7 @@ tests/docker-kerberos/Dockerfile
 tests/docker-kerberos/ocpasswd
 tests/docker-kerberos/occtl
 tests/docker-kerberos/ocserv
+tests/docker-ocserv/ocserv-fw
 tests/str-test
 gl/strings.h
 tests/ipv4-prefix

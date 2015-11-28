@@ -1,4 +1,4 @@
-* Version 0.10.10 (unreleased)
+* Version 0.10.10 (released 2015-11-28)
 - Increase the number of log messages logged in the default level. That
   is added messages that could be of use to administrators.
 - Introduced ipv6-subnet-prefix config option. That option allows to specify

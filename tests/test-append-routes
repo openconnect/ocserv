@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# Copyright (C) 2015 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4612
+
+# Test whether append-routes behaves as expected.
+
+. `dirname $0`/common.sh
+
+echo "Testing ocserv and user append-route application... "
+
+CONFFILE=${srcdir}/test-append-routes-conf.tmp
+TMPFILE1=${srcdir}/test-append-routes.tmp
+
+rm -f ${TMPFILE1}
+
+cp ${srcdir}/test-user-config.config ${CONFFILE}
+echo "append-routes = true" >> ${CONFFILE}
+sed -i 's/= 4512/= 4612/g' ${CONFFILE}
+
+launch_server -d 1 -f -c ${CONFFILE} & PID=$!
+wait_server $PID
+
+echo "Checking if routes are appended... "
+
+timeout 15s $OPENCONNECT localhost:$PORT -v --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1
+
+echo "cat"
+cat ${TMPFILE1}
+
+echo -n "Checking if routes have been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Split-Include|grep "192.168.5.0/255.255.255.0"`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}
+	fail $PID "Temporary file contents are not correct; route was not found"
+fi
+
+echo ok
+
+echo -n "Checking if no-routes have been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Split-Exclude|grep "192.168.98.0/255.255.255.0"`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}
+	fail $PID "Temporary file contents are not correct; no-route was not found"
+fi
+
+echo ok
+
+rm -f ${TMPFILE1}
+rm -f ${CONFFILE}
+
+kill $PID
+wait
+
+exit 0

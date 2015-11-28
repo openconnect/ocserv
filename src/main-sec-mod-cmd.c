@@ -194,27 +194,21 @@ int handle_sec_mod_commands(main_server_st * s)
 	return ret;
 }
 
-static
-void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
+static void append_routes(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 {
-	if (!gc->has_no_udp) {
-		gc->no_udp = (s->perm_config->udp_port!=0)?0:1;
-		gc->has_no_udp = 1;
-	}
-
-	if (gc->routes == NULL) {
-		gc->routes = s->config->network.routes;
-		gc->n_routes = s->config->network.routes_size;
-	}
-
 	/* if we have known_iroutes, we must append them to the routes list */
-	if (s->config->known_iroutes_size > 0) {
+	if (s->config->known_iroutes_size > 0 || s->config->append_routes) {
 		char **old_routes = gc->routes;
 		unsigned old_routes_size = gc->n_routes;
 		unsigned i, j, append;
+		unsigned to_append = 0;
+
+		to_append = s->config->known_iroutes_size;
+		if (s->config->append_routes)
+			to_append += s->config->network.routes_size;
 
 		gc->n_routes = 0;
-		gc->routes = talloc_size(proc, sizeof(char*)*(old_routes_size+s->config->known_iroutes_size));
+		gc->routes = talloc_size(proc, sizeof(char*)*(old_routes_size+to_append));
 
 		for (i=0;i<old_routes_size;i++) {
 			gc->routes[i] = talloc_strdup(proc, old_routes[i]);
@@ -242,7 +236,57 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 				}
 			}
 		}
+
+		if (s->config->append_routes) {
+			/* Append all global routes */
+			for (i=0;i<s->config->network.routes_size;i++) {
+				gc->routes[gc->n_routes] = talloc_strdup(proc, s->config->network.routes[i]);
+				if (gc->routes[gc->n_routes] == NULL)
+					break;
+				gc->n_routes++;
+			}
+
+			/* Append no-routes */
+			if (s->config->network.no_routes_size == 0)
+				return;
+
+			old_routes = gc->no_routes;
+			old_routes_size = gc->n_no_routes;
+
+			gc->n_no_routes = 0;
+			gc->no_routes = talloc_size(proc, sizeof(char*)*(old_routes_size+s->config->network.no_routes_size));
+
+			for (i=0;i<old_routes_size;i++) {
+				gc->no_routes[i] = talloc_strdup(proc, old_routes[i]);
+				if (gc->no_routes[i] == NULL)
+					break;
+				gc->n_no_routes++;
+			}
+
+			for (i=0;i<s->config->network.no_routes_size;i++) {
+				gc->no_routes[gc->n_no_routes] = talloc_strdup(proc, s->config->network.no_routes[i]);
+				if (gc->no_routes[gc->n_no_routes] == NULL)
+					break;
+				gc->n_no_routes++;
+			}
+		}
 	}
+}
+
+static
+void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
+{
+	if (!gc->has_no_udp) {
+		gc->no_udp = (s->perm_config->udp_port!=0)?0:1;
+		gc->has_no_udp = 1;
+	}
+
+	if (gc->routes == NULL) {
+		gc->routes = s->config->network.routes;
+		gc->n_routes = s->config->network.routes_size;
+	}
+
+	append_routes(s, proc, gc);
 
 	if (gc->no_routes == NULL) {
 		gc->no_routes = s->config->network.no_routes;

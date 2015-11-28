@@ -2,6 +2,9 @@
 - Simplified configuration semantics. Any routes or no-routes set on the
   per-user configuration file will override any global ones instead of
   being appended.
+- Added config option 'append-routes'. If set to true it will restore
+  the old configuration semantics of appending the global routes to per
+  user/group config.
 
 
 * Version 0.10.9 (released 2015-10-07)

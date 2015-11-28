@@ -328,6 +328,7 @@ struct cfg_st {
 	char **split_dns;
 	size_t split_dns_size;;
 
+	unsigned int append_routes; /* whether to append global routes to per-user config */
 	unsigned restrict_user_to_routes; /* whether the firewall script will be run for the user */
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */

@@ -145,6 +145,7 @@ typedef struct proc_st {
 	
 	unsigned applied_iroutes; /* whether the iroutes in the config have been successfully applied */
 
+	/* The following we rely on talloc for deallocation */
 	GroupCfgSt *config; /* custom user/group config */
 } proc_st;
 

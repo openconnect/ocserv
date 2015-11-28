@@ -566,6 +566,12 @@ no-route = 192.168.5.0/255.255.255.0
 # only makes sense if config-per-user is set.
 #expose-iroutes = true
 
+# When set to true, all global routes and no-routeswill be appended to individual
+# user or group configuration (in case you use the config-per-user
+# or config-per-group options. In previous versions of ocserv this
+# was the default.
+#append-global-routes = true
+
 # Groups that a client is allowed to select from.
 # A client may belong in multiple groups, and in certain use-cases
 # it is needed to switch between them. For these cases the client can

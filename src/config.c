@@ -70,6 +70,7 @@ struct cfg_options {
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "enable-auth", .type = OPTION_MULTI_LINE, .mandatory = 0 },
+	{ .name = "append-routes", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "expose-iroutes", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
 	{ .name = "no-route", .type = OPTION_MULTI_LINE, .mandatory = 0 },
@@ -744,6 +745,7 @@ size_t urlfw_size = 0;
 	 */
 	READ_TF("listen-host-is-dyndns", config->is_dyndns, 0);
 	READ_TF("listen-proxy-proto", config->listen_proxy_proto, 0);
+	READ_TF("append-routes", config->append_routes, 0);
 
 #ifdef HAVE_GSSAPI
 	READ_MULTI_LINE("kkdcp", urlfw, urlfw_size);

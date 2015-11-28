@@ -1,3 +1,7 @@
+* Version 0.10.11 (unreleased)
+- Corrected the reporting of keepalive to occtl.
+
+
 * Version 0.10.10 (released 2015-11-28)
 - Increase the number of log messages logged in the default level. That
   is added messages that could be of use to administrators.

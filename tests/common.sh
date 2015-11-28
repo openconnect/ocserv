@@ -109,10 +109,15 @@ wait_server() {
 }
 
 cleanup() {
+	ret=0
 	kill $PID
+	if test $? != 0;then
+		ret=1
+	fi
 	wait
 	test -n "$SOCKDIR" && rm -rf $SOCKDIR
 	rm -f ${CONFIG}
+	return $ret
 }
 
 trap "fail \"Failed to launch the server, aborting test... \"" 10 

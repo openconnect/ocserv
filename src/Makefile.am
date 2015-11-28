@@ -20,7 +20,7 @@ endif
 include common.mk
 
 EXTRA_DIST = version.inc.in version.inc \
-	ipc.proto http-heads.gperf common.mk
+	ipc.proto http-heads.gperf common.mk ocserv-fw
 
 if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/http-parser/

@@ -76,7 +76,7 @@ echo ok
 
 #revoke the certificate
 certtool --generate-crl --load-ca-privkey ca-key.pem --load-ca-certificate ca.pem \
-	--load-certificate ./user-cert.pem --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
+	--load-certificate ./user-cert.pem --outder --outfile crl.pem --template crl.tmpl >/dev/null 2>&1
 if test $? != 0;then
 	kill $PID
 	exit 77
@@ -99,6 +99,11 @@ echo ok
 rm -f crl.pem crl.tmpl
 
 kill $PID
+if test $? != 0;then
+	echo "server was already dead?"
+	exit 1
+fi
+
 wait
 
 exit 0

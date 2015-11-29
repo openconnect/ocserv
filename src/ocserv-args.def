@@ -556,9 +556,9 @@ no-route = 192.168.5.0/255.255.255.0
 
 # If set, the script /usr/bin/ocserv-fw will be called to restrict
 # the user to its allowed routes and prevent him from accessing
-# any other routes. All the routes applied by ocserv can be reverted
-# using /usr/bin/ocserv-fw --removeall. This option can be set globally
-# or in the per-user configuration.
+# any other routes. In case of defaultroute, the no-routes are restricted.
+# All the routes applied by ocserv can be reverted using /usr/bin/ocserv-fw
+# --removeall. This option can be set globally or in the per-user configuration.
 #restrict-user-to-routes = true
 
 # When set to true, all client's iroutes are made visible to all

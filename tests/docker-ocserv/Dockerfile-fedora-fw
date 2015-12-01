@@ -29,4 +29,4 @@ ADD fw-script /usr/bin/
 # template, so we untar it from this archive.
 ADD dev-tun.tgz /dev/
 
-CMD nuttcp -S;sshd-keygen;/usr/sbin/sshd;mkdir -p /tmp/disconnect/;usr/sbin/ocserv -d 1 -f;sleep 3600
+CMD nuttcp -p 6001 -P 6000 -S;nuttcp -S;sshd-keygen;/usr/sbin/sshd;mkdir -p /tmp/disconnect/;usr/sbin/ocserv -d 1 -f;sleep 3600

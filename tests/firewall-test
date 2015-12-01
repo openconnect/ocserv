@@ -41,9 +41,10 @@ fi
 
 echo "ocserv image was run"
 #wait for ocserv to server
+
 sleep 5
 
-IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -107,7 +108,8 @@ retrieve_user_info test "Restricted to routes: True"
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
 if test "$FEDORA" = 1;then
-nuttcp -T 10 -t 192.168.84.1
+
+nuttcp -p 6001 -P 6000 -T 10 -t 192.168.84.1
 if test $? != 0;then
 	echo "Cannot send to ocserv"
 	exit 77
@@ -115,13 +117,15 @@ if test $? != 0;then
 	stop
 fi
 
-nuttcp -T 10 -r 192.168.84.1
-if test $? != 0;then
-	echo "Cannot recv from ocserv"
-	exit 77
+nuttcp -T 10 -t 192.168.84.1
+if test $? = 0;then
+	echo "Could access ocserv although we are blocked"
+	exit 1
 	kill -INT $PID
 	stop
 fi
+
+
 fi
 
 sleep 2

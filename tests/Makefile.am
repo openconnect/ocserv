@@ -64,7 +64,10 @@ str_test_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 ipv6_prefix_SOURCES = ipv6-prefix.c
 ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
-check_PROGRAMS = str-test ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips
+port_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+
+check_PROGRAMS = str-test ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
+	port-parsing
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
 

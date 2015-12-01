@@ -59,6 +59,13 @@ typedef enum {
 	OC_COMP_LZS,
 } comp_type_t;
 
+typedef enum fw_proto_t {
+	PROTO_UDP,
+	PROTO_TCP,
+	PROTO_SCTP,
+	PROTO_ALL
+} fw_proto_t;
+
 /* Banning works with a point system. A wrong password
  * attempt gives you PASSWORD_POINTS, and you are banned
  * when the maximum ban score is reached.
@@ -180,58 +187,6 @@ typedef enum {
 
 	MAX_SM_MAIN_CMD,
 } cmd_request_t;
-
-struct group_cfg_st {
-	/* routes to be forwarded to the client */
-	char **routes;
-	size_t routes_size;
-
-	/* routes that are excluded */
-	char **no_routes;
-	size_t no_routes_size;
-
-	/* routes to be applied to the server */
-	char **iroutes;
-	size_t iroutes_size;
-
-	char **dns;
-	size_t dns_size;
-
-	char **nbns;
-	size_t nbns_size;
-
-	char *ipv4_network;
-	char *ipv6_network;
-	unsigned ipv6_prefix;
-	unsigned ipv6_subnet_prefix;
-	char *ipv4_netmask;
-
-	char *explicit_ipv4;
-	char *explicit_ipv6;
-
-	char *cgroup;
-
-	char *xml_config_file;
-
-	size_t rx_per_sec;
-	size_t tx_per_sec;
-
-	unsigned max_same_clients;
-	unsigned tunnel_all_dns;
-	unsigned dpd;
-	unsigned keepalive;
-	unsigned mobile_dpd;
-
-	/* the number of secs to send interim updates. If set, it overrides
-	 * stats-report-time. */
-	unsigned interim_update_secs;
-	unsigned session_timeout_secs;
-
-	unsigned deny_roaming; /* whether the user is allowed to re-use cookies from another IP */
-	unsigned net_priority;
-	unsigned no_udp; /* whether to disable UDP for this user */
-	unsigned restrict_user_to_routes;
-};
 
 struct vpn_st {
 	char name[IFNAMSIZ];

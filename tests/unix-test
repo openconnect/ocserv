@@ -42,7 +42,7 @@ fi
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect test_unix | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop

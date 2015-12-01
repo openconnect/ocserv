@@ -56,7 +56,7 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	$DOCKER inspect $IMAGE_NAME

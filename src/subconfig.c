@@ -62,10 +62,8 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 	do {
 		p2 = strchr(p, '=');
 		if (p2 == NULL) {
-			if (p2 == NULL) {
-				fprintf(stderr, "error parsing %s\n", str);
-				exit(1);
-			}
+			fprintf(stderr, "error parsing %s\n", str);
+			exit(1);
 		}
 		len = p2 - p;
 

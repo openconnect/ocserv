@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Nikos Mavrogiannopoulos
- * Copyright (C) 2014 Red Hat, Inc.
+ * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include <common.h>
 #include <ip-util.h>
 #include <c-strcase.h>
+#include <c-ctype.h>
 
 #include <vpn.h>
 #include <main.h>
@@ -64,6 +65,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-subnet-prefix", .type = OPTION_NUMERIC },
 	{ .name = "explicit-ipv4", .type = OPTION_STRING },
 	{ .name = "explicit-ipv6", .type = OPTION_STRING },
+	{ .name = "restrict-user-to-ports", .type = OPTION_STRING },
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC },
 	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC },
 	{ .name = "net-priority", .type = OPTION_STRING },
@@ -138,7 +140,7 @@ static struct cfg_options available_options[] = {
 
 static int handle_option(const tOptionValue* val)
 {
-unsigned j;
+	unsigned j;
 
 	for (j=0;j<sizeof(available_options)/sizeof(available_options[0]);j++) {
 		if (strcasecmp(val->pzName, available_options[j].name) == 0) {
@@ -148,6 +150,7 @@ unsigned j;
 	
 	return 0;
 }
+
 
 /* This will parse the configuration file and append/replace data into
  * config. The provided config must either be memset to zero, or be
@@ -160,6 +163,7 @@ int parse_group_cfg_file(struct cfg_st *global_config,
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
+char *tmp;
 unsigned prefix = 0;
 int ret;
 unsigned j;
@@ -271,6 +275,16 @@ unsigned j;
 	READ_RAW_PRIO_TOS("net-priority", msg->config->net_priority, msg->config->has_net_priority);
 
 	READ_RAW_STRING("user-profile", msg->config->xml_config_file);
+
+	tmp = NULL;
+	READ_RAW_STRING("restrict-user-to-ports", tmp);
+	if (tmp) {
+		ret = cfg_parse_ports(pool, &msg->config->fw_ports, &msg->config->n_fw_ports, tmp);
+		if (ret < 0) {
+			goto fail;
+		}
+		talloc_free(tmp);
+	}
 
 	ret = 0;
  fail:

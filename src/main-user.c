@@ -56,7 +56,7 @@
 				exit(1); \
 			}
 
-static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
+static void export_fw_info(main_server_st *s, struct proc_st* proc)
 {
 	str_st str4;
 	str_st str6;
@@ -135,6 +135,12 @@ static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
 		exit(1);
 	}
 
+	if (proc->config->restrict_user_to_routes) {
+		if (setenv("OCSERV_RESTRICT_TO_ROUTES", "1", 1) == -1) {
+			mslog(s, proc, LOG_ERR, "could not export OCSERV_RESTRICT_TO_ROUTES\n");
+			exit(1);
+		}
+	}
 	/* export the DNS servers */
 
 	str_reset(&str4);
@@ -174,6 +180,47 @@ static void export_dns_route_info(main_server_st *s, struct proc_st* proc)
 	str_clear(&str4);
 	str_clear(&str6);
 	str_clear(&str_common);
+
+	/* export the ports to reject */
+
+	str_reset(&str_common);
+
+	if (proc->config->n_fw_ports > 0) {
+		for (i=0;i<proc->config->n_fw_ports;i++) {
+			switch(proc->config->fw_ports[i]->proto) {
+				case PROTO_UDP:
+					ret = str_append_printf(&str_common, "udp %u ", proc->config->fw_ports[i]->port);
+					break;
+				case PROTO_TCP:
+					ret = str_append_printf(&str_common, "tcp %u ", proc->config->fw_ports[i]->port);
+					break;
+				case PROTO_SCTP:
+					ret = str_append_printf(&str_common, "sctp %u ", proc->config->fw_ports[i]->port);
+					break;
+				case PROTO_ICMP:
+					ret = str_append_printf(&str_common, "icmp all ");
+					break;
+				case PROTO_ESP:
+					ret = str_append_printf(&str_common, "esp all ");
+					break;
+				case PROTO_ICMPv6:
+					ret = str_append_printf(&str_common, "icmpv6 all ");
+					break;
+			}
+
+			if (ret < 0) {
+				mslog(s, proc, LOG_ERR, "could not append value to environment\n");
+				exit(1);
+			}
+		}
+	}
+
+	if (str_common.length > 0 && setenv("OCSERV_PORTS", (char*)str_common.data, 1) == -1) {
+		mslog(s, proc, LOG_ERR, "could not export PORTS\n");
+		exit(1);
+	}
+
+	str_clear(&str_common);
 }
 
 static
@@ -188,7 +235,7 @@ const char* script, *next_script = NULL;
 	else
 		script = s->config->disconnect_script;
 
-	if (proc->config->restrict_user_to_routes) {
+	if (proc->config->restrict_user_to_routes || proc->config->n_fw_ports > 0) {
 		next_script = script;
 		script = OCSERV_FW_SCRIPT;
 	}
@@ -283,7 +330,7 @@ const char* script, *next_script = NULL;
 		}
 
 		/* export DNS and route info */
-		export_dns_route_info(s, proc);
+		export_fw_info(s, proc);
 
 		/* set stdout to be stderr to avoid confusing scripts - note we have stdout closed */
 		if (dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {

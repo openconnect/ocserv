@@ -13,6 +13,13 @@ message auth_cookie_request_msg
 	required bytes cookie = 1;
 }
 
+message fw_port_st
+{
+	required uint32 port = 1;
+	/* fw_proto_t */
+	required uint32 proto = 2;
+}
+
 /* This is a structure for per-user/group supplemental configuration.
  */
 message group_cfg_st
@@ -49,6 +56,7 @@ message group_cfg_st
 	optional uint32 mtu = 36;
 	optional uint32 idle_timeout = 37;
 	optional uint32 mobile_idle_timeout = 38;
+	repeated fw_port_st fw_ports = 39;
 }
 
 /* AUTH_REP */

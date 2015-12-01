@@ -561,6 +561,12 @@ no-route = 192.168.5.0/255.255.255.0
 # --removeall. This option can be set globally or in the per-user configuration.
 #restrict-user-to-routes = true
 
+# This option implies restrict-user-to-routes set to true. If set, the
+# script /usr/bin/ocserv-fw will be called to restrict the user to its
+# to accessing specific ports in the network. This option can be set globally
+# or in the per-user configuration.
+#restrict-user-to-ports = "tcp(443), tcp(80), udp(443), sctp(99), tcp(583), icmp(), icmpv6()"
+
 # When set to true, all client's iroutes are made visible to all
 # connecting clients except for the ones offering them. This option
 # only makes sense if config-per-user is set.
@@ -596,7 +602,8 @@ no-route = 192.168.5.0/255.255.255.0
 #  explicit-ipv4, explicit-ipv6, net-priority, deny-roaming, no-udp, 
 #  keepalive, dpd, mobile-dpd, max-same-clients, tunnel-all-dns,
 #  restrict-user-to-routes, user-profile, cgroup, stats-report-time,
-#  mtu, idle-timeout, mobile-idle-timeout, and session-timeout.
+#  mtu, idle-timeout, mobile-idle-timeout, restrict-user-to-ports,
+#  and session-timeout.
 #
 # Note that the 'iroute' option allows to add routes on the server
 # based on a user or group. The syntax depends on the input accepted

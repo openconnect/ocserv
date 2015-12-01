@@ -407,7 +407,13 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 		gc->mobile_idle_timeout = s->config->mobile_idle_timeout;
 		gc->has_mobile_idle_timeout = 1;
 	}
+
+	if (gc->n_fw_ports == 0 && s->config->n_fw_ports > 0) {
+		gc->n_fw_ports = s->config->n_fw_ports;
+		gc->fw_ports = s->config->fw_ports;
+	}
 }
+
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int ret, e;

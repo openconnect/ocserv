@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,6 +135,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "use-occtl", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "try-mtu-discovery", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "restrict-user-to-routes", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "restrict-user-to-ports", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "ping-leases", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "tls-priorities", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "chroot-dir", .type = OPTION_STRING, .mandatory = 0 },
@@ -635,7 +637,7 @@ static void parse_cfg_file(void *pool, const char* file, struct perm_cfg_st *per
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
-unsigned j, i, mand;
+unsigned j, i, mand, ret;
 char** auth = NULL;
 size_t auth_size = 0;
 unsigned prefix = 0, auto_select_group = 0;
@@ -834,7 +836,19 @@ size_t urlfw_size = 0;
 
 	READ_TF("try-mtu-discovery", config->try_mtu, 0);
 	READ_TF("ping-leases", config->ping_leases, 0);
+
 	READ_TF("restrict-user-to-routes", config->restrict_user_to_routes, 0);
+
+	tmp = NULL;
+	READ_STRING("restrict-user-to-ports", tmp);
+	if (tmp) {
+		ret = cfg_parse_ports(pool, &config->fw_ports, &config->n_fw_ports, tmp);
+		if (ret < 0) {
+			fprintf(stderr, "error parsing restrict-user-to-ports\n");
+			exit(1);
+		}
+		talloc_free(tmp);
+	}
 
 	READ_STRING("tls-priorities", config->priorities);
 

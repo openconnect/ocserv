@@ -34,6 +34,8 @@
 #include <minmax.h>
 #include <auth/common.h>
 
+#include <ipc.pb-c.h>
+
 #ifdef __GNUC__
 # define _OCSERV_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 # if _OCSERV_GCC_VERSION >= 30000
@@ -63,7 +65,9 @@ typedef enum fw_proto_t {
 	PROTO_UDP,
 	PROTO_TCP,
 	PROTO_SCTP,
-	PROTO_ALL
+	PROTO_ESP,
+	PROTO_ICMP,
+	PROTO_ICMPv6
 } fw_proto_t;
 
 /* Banning works with a point system. A wrong password
@@ -362,6 +366,9 @@ struct cfg_st {
 	 */
 	char **known_iroutes;
 	size_t known_iroutes_size;
+
+	FwPortSt **fw_ports;
+	size_t n_fw_ports;
 
 	/* the tun network */
 	struct vpn_st network;

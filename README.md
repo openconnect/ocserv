@@ -24,6 +24,7 @@ seccomp:      libseccomp-dev     / libseccomp-devel
 occtl:        libreadline-dev    / readline-devel
               libnl-route-3-dev  / libnl3-devel
 GSSAPI:       libkrb5-dev        / krb5-devel
+OATH:         liboath-dev        / liboath-devel
 ```
 
 Dependencies for development, testing, or dependencies that can be skipped

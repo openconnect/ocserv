@@ -547,6 +547,7 @@ ping-leases = false
 route = 10.10.10.0/255.255.255.0
 route = 192.168.0.0/255.255.0.0
 #route = fef4:db8:1000:1001::/64
+#route = default
 
 # Subsets of the routes above that will not be routed by
 # the server. Note, that this may currently be not be supported 

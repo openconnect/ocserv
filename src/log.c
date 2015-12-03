@@ -99,16 +99,16 @@ void __attribute__ ((format(printf, 3, 4)))
 	const char* ip;
 	va_list args;
 
-	if (priority == LOG_DEBUG && ws->config->debug < 3)
+	if (priority == LOG_DEBUG && ws->perm_config->debug < 3)
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
-	    if (ws->config->debug < DEBUG_HTTP)
+	    if (ws->perm_config->debug < DEBUG_HTTP)
                 return;
             else
                 priority = LOG_INFO;
         } else if (priority == LOG_TRANSFER_DEBUG) {
-	    if (ws->config->debug < DEBUG_TRANSFERRED)
+	    if (ws->perm_config->debug < DEBUG_TRANSFERRED)
                 return;
             else
                 priority = LOG_DEBUG;
@@ -142,16 +142,16 @@ void __attribute__ ((format(printf, 4, 5)))
 	const char* ip = NULL;
 	va_list args;
 
-	if (priority == LOG_DEBUG && s->config->debug < 3)
+	if (priority == LOG_DEBUG && s->perm_config->debug < 3)
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {
-	    if (s->config->debug < DEBUG_HTTP)
+	    if (s->perm_config->debug < DEBUG_HTTP)
                 return;
             else
                 priority = LOG_DEBUG;
         } else if (priority == LOG_TRANSFER_DEBUG) {
-	    if (s->config->debug < DEBUG_TRANSFERRED)
+	    if (s->perm_config->debug < DEBUG_TRANSFERRED)
                 return;
             else
                 priority = LOG_DEBUG;
@@ -186,7 +186,7 @@ void  mslog_hex(const main_server_st * s, const struct proc_st* proc,
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
 
-	if (priority == LOG_DEBUG && s->config->debug == 0)
+	if (priority == LOG_DEBUG && s->perm_config->debug == 0)
 		return;
 
 	if (b64) {
@@ -211,7 +211,7 @@ void  oclog_hex(const worker_st* ws, int priority,
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
 
-	if (priority == LOG_DEBUG && ws->config->debug == 0)
+	if (priority == LOG_DEBUG && ws->perm_config->debug == 0)
 		return;
 
 	if (b64) {
@@ -236,7 +236,7 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 	size_t buf_size;
 	gnutls_datum_t data = {bin, bin_size};
 
-	if (priority == LOG_DEBUG && sec->config->debug == 0)
+	if (priority == LOG_DEBUG && sec->perm_config->debug == 0)
 		return;
 
 	if (b64) {

@@ -61,6 +61,8 @@
 static char pid_file[_POSIX_PATH_MAX] = "";
 static char cfg_file[_POSIX_PATH_MAX] = DEFAULT_CFG_FILE;
 
+static void archive_cfg(struct perm_cfg_st* perm_config);
+
 struct cfg_options {
 	const char* name;
 	unsigned type;
@@ -740,6 +742,21 @@ size_t urlfw_size = 0;
 			perm_config->occtl_socket_file = talloc_strdup(perm_config, OCCTL_UNIX_SOCKET);
 
 		PREAD_STRING(perm_config, "chroot-dir", perm_config->chroot_dir);
+
+		list_head_init(&perm_config->attic);
+	}
+
+	perm_config->config = talloc_zero(perm_config, struct cfg_st);
+	if (perm_config->config == NULL)
+		exit(1);
+
+	config = perm_config->config;
+	pool = config;
+
+	config->usage_count = talloc_zero(config, int);
+	if (config->usage_count == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
 	}
 
 	/* When adding allocated data, remember to modify
@@ -1145,21 +1162,17 @@ int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 	if (*config == NULL)
 		exit(1);
 
-	(*config)->config = talloc_zero(*config, struct cfg_st);
-	if ((*config)->config == NULL)
-		exit(1);
-
 	optionProcess( &ocservOptions, argc, argv);
   
 	if (HAVE_OPT(FOREGROUND))
-		(*config)->config->foreground = 1;
+		(*config)->foreground = 1;
 
 	if (HAVE_OPT(PID_FILE)) {
 		strlcpy(pid_file, OPT_ARG(PID_FILE), sizeof(pid_file));
 	}
 
 	if (HAVE_OPT(DEBUG))
-		(*config)->config->debug = OPT_VALUE_DEBUG;
+		(*config)->debug = OPT_VALUE_DEBUG;
 
 	if (HAVE_OPT(CONFIG)) {
 		strlcpy(cfg_file, OPT_ARG(CONFIG), sizeof(cfg_file));
@@ -1176,70 +1189,40 @@ int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 
 }
 
-#define DEL(x) {talloc_free(x);x=NULL;}
+static void archive_cfg(struct perm_cfg_st* perm_config)
+{
+	attic_entry_st *e;
+
+	/* we don't clear anything as it may be referenced by some
+	 * client (proc_st). We move everything to attic and
+	 * once nothing is in use we clear that */
+
+	e = talloc(perm_config, attic_entry_st);
+	if (e == NULL) {
+		/* we leak, but better than crashing */
+		return;
+	}
+
+	e->usage_count = perm_config->config->usage_count;
+
+	/* we rely on talloc doing that recursively */
+	talloc_steal(e, perm_config->config);
+	perm_config->config = NULL;
+
+	if (e->usage_count == NULL || *e->usage_count == 0) {
+		talloc_free(e);
+	} else {
+		list_add(&perm_config->attic, &e->list);
+	}
+
+	return;
+}
+
 void clear_cfg(struct perm_cfg_st* perm_config)
 {
-unsigned i;
-
-#ifdef ANYCONNECT_CLIENT_COMPAT
-	DEL(perm_config->config->xml_config_file);
-	DEL(perm_config->config->xml_config_hash);
-#endif
-	DEL(perm_config->config->cgroup);
-	DEL(perm_config->config->route_add_cmd);
-	DEL(perm_config->config->route_del_cmd);
-	DEL(perm_config->config->per_user_dir);
-	DEL(perm_config->config->per_group_dir);
-	DEL(perm_config->config->default_domain);
-
-	DEL(perm_config->config->ocsp_response);
-	DEL(perm_config->config->banner);
-	DEL(perm_config->config->crl);
-	DEL(perm_config->config->cert_user_oid);
-	DEL(perm_config->config->cert_group_oid);
-	DEL(perm_config->config->priorities);
-	DEL(perm_config->config->connect_script);
-	DEL(perm_config->config->disconnect_script);
-	DEL(perm_config->config->proxy_url);
-
-#ifdef HAVE_GSSAPI
-	for (i=0;i<perm_config->config->kkdcp_size;i++) {
-		unsigned j;
-		DEL(perm_config->config->kkdcp[i].url);
-		for (j=0;j<perm_config->config->kkdcp[i].realms_size;j++) {
-			DEL(perm_config->config->kkdcp[i].realms[j].realm);
-		}
-	}
-	DEL(perm_config->config->kkdcp);
-#endif
-
-	DEL(perm_config->config->network.ipv4);
-	DEL(perm_config->config->network.ipv4_netmask);
-	DEL(perm_config->config->network.ipv6);
-	for (i=0;i<perm_config->config->network.routes_size;i++)
-		DEL(perm_config->config->network.routes[i]);
-	DEL(perm_config->config->network.routes);
-	for (i=0;i<perm_config->config->network.dns_size;i++)
-		DEL(perm_config->config->network.dns[i]);
-	DEL(perm_config->config->network.dns);
-	for (i=0;i<perm_config->config->network.nbns_size;i++)
-		DEL(perm_config->config->network.nbns[i]);
-	DEL(perm_config->config->network.nbns);
-	for (i=0;i<perm_config->config->custom_header_size;i++)
-		DEL(perm_config->config->custom_header[i]);
-	DEL(perm_config->config->custom_header);
-	for (i=0;i<perm_config->config->split_dns_size;i++)
-		DEL(perm_config->config->split_dns[i]);
-	DEL(perm_config->config->split_dns);
-	for (i=0;i<perm_config->config->group_list_size;i++)
-		DEL(perm_config->config->group_list[i]);
-	DEL(perm_config->config->group_list);
-	DEL(perm_config->config->default_select_group);
-#ifdef HAVE_LIBTALLOC
-	/* our included talloc don't include that */
-	talloc_free_children(perm_config->config);
-#endif
-	memset(perm_config->config, 0, sizeof(*perm_config->config));
+	/* we rely on talloc doing that recursively */
+	talloc_free(perm_config->config);
+	perm_config->config = NULL;
 
 	return;
 }
@@ -1287,9 +1270,12 @@ void print_version(tOptions *opts, tOptDesc *desc)
 }
 
 
-void reload_cfg_file(void *pool, struct perm_cfg_st* perm_config)
+void reload_cfg_file(void *pool, struct perm_cfg_st* perm_config, unsigned archive)
 {
-	clear_cfg(perm_config);
+	if (archive)
+		archive_cfg(perm_config);
+	else
+		clear_cfg(perm_config);
 
 	parse_cfg_file(pool, cfg_file, perm_config, 1);
 
@@ -1354,4 +1340,17 @@ int add_multi_line_val(void *pool, const char *name, char ***s_name, size_t *num
       } while((val = optionNextValue(pov, val)) != NULL);
       (*s_name)[*num] = NULL;
       return 0;
+}
+
+void clear_old_configs(struct perm_cfg_st* config)
+{
+	attic_entry_st *e, *pos;
+
+	/* go through the attic and clear old configurations if unused */
+	list_for_each_safe(&config->attic, e, pos, list) {
+		if (*e->usage_count == 0) {
+			list_del(&e->list);
+			talloc_free(e);
+		}
+	}
 }

@@ -682,7 +682,7 @@ void tls_load_certs(main_server_st *s, tls_st *creds)
 int ret;
 const char* perr;
 
-	if (s->config->debug >= DEBUG_TLS) {
+	if (s->perm_config->debug >= DEBUG_TLS) {
 		gnutls_global_set_log_function(tls_log_func);
 		gnutls_global_set_log_level(9);
 	}

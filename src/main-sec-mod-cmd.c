@@ -412,6 +412,10 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 		gc->n_fw_ports = s->config->n_fw_ports;
 		gc->fw_ports = s->config->fw_ports;
 	}
+
+	/* since we keep pointers on s->config, increase its usage count */
+	proc->config_usage_count = s->config->usage_count;
+	(*proc->config_usage_count)++;
 }
 
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)

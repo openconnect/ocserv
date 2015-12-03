@@ -176,7 +176,7 @@ int _listen_ports(void *pool, struct perm_cfg_st* config,
 		else
 			continue;
 
-		if (config->config->foreground != 0)
+		if (config->foreground != 0)
 			fprintf(stderr, "listening (%s) on %s...\n",
 				type, human_addr(ptr->ai_addr, ptr->ai_addrlen,
 					   buf, sizeof(buf)));
@@ -249,7 +249,7 @@ int _listen_unix_ports(void *pool, struct perm_cfg_st* config,
 		strlcpy(sa.sun_path, config->unix_conn_file, sizeof(sa.sun_path));
 		remove(sa.sun_path);
 
-		if (config->config->foreground != 0)
+		if (config->foreground != 0)
 			fprintf(stderr, "listening (UNIX) on %s...\n",
 				sa.sun_path);
 
@@ -608,7 +608,7 @@ static void drop_privileges(main_server_st* s)
 	}
 
 #define MAX_WORKER_MEM (16*1024*1024)
-	if (s->config->debug == 0) {
+	if (s->perm_config->debug == 0) {
 		rl.rlim_cur = MAX_WORKER_MEM;
 		rl.rlim_max = MAX_WORKER_MEM;
 		ret = setrlimit(RLIMIT_AS, &rl);
@@ -850,7 +850,8 @@ unsigned total = 10;
 
 	if (reload_conf != 0) {
 		mslog(s, NULL, LOG_INFO, "reloading configuration");
-		reload_cfg_file(s->main_pool, s->perm_config);
+		reload_cfg_file(s->main_pool, s->perm_config, 1);
+		s->config = s->perm_config->config;
 		tls_reload_crl(s, s->creds, 1);
 		reload_conf = 0;
 		kill(s->sec_mod_pid, SIGHUP);
@@ -897,6 +898,7 @@ unsigned total = 10;
 		tls_reload_crl(s, s->creds, 0);
 		expire_tls_sessions(s);
 		cleanup_banned_entries(s);
+		clear_old_configs(s->perm_config);
 		alarm(MAINTAINANCE_TIME(s));
 	}
 }
@@ -1024,7 +1026,7 @@ int main(int argc, char** argv)
 
 	flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR
-	if (s->config->debug != 0)
+	if (s->perm_config->debug != 0)
 		flags |= LOG_PERROR;
 #endif
 	openlog("ocserv", flags, LOG_DAEMON);
@@ -1034,7 +1036,7 @@ int main(int argc, char** argv)
 	deny_severity = LOG_DAEMON|LOG_WARNING;
 #endif
 
-	if (s->config->foreground == 0) {
+	if (s->perm_config->foreground == 0) {
 		if (daemon(0, 0) == -1) {
 			e = errno;
 			fprintf(stderr, "daemon failed: %s\n", strerror(e));

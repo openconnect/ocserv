@@ -44,7 +44,8 @@ extern char **saved_argv;
 
 extern sigset_t sig_default_set;
 int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config);
-void reload_cfg_file(void *pool, struct perm_cfg_st* config);
+void reload_cfg_file(void *pool, struct perm_cfg_st* config, unsigned archive);
+void clear_old_configs(struct perm_cfg_st* config);
 void clear_cfg(struct perm_cfg_st* config);
 void write_pid_file(void);
 void remove_pid_file(void);
@@ -147,6 +148,7 @@ typedef struct proc_st {
 
 	/* The following we rely on talloc for deallocation */
 	GroupCfgSt *config; /* custom user/group config */
+	int *config_usage_count; /* points to s->config->usage_count */
 } proc_st;
 
 struct ip_lease_db_st {

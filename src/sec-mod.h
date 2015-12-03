@@ -112,7 +112,7 @@ void cleanup_client_entries(sec_mod_st *sec);
 
 #ifdef __GNUC__
 # define seclog(sec, prio, fmt, ...) \
-	if (prio != LOG_DEBUG || sec->config->debug >= 3) { \
+	if (prio != LOG_DEBUG || sec->perm_config->debug >= 3) { \
 		syslog(prio, "sec-mod: "fmt, ##__VA_ARGS__); \
 	}
 #else

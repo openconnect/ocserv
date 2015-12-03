@@ -435,7 +435,8 @@ static void check_other_work(sec_mod_st *sec)
 
 	if (need_reload) {
 		seclog(sec, LOG_DEBUG, "reloading configuration");
-		reload_cfg_file(sec, sec->perm_config);
+		reload_cfg_file(sec, sec->perm_config, 0);
+		sec->config = sec->perm_config->config;
 		need_reload = 0;
 	}
 
@@ -836,7 +837,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 
 			/* do not allow unauthorized processes to issue commands
 			 */
-			ret = check_upeer_id("sec-mod", sec->config->debug, cfd, perm_config->uid, perm_config->gid, &uid, &pid);
+			ret = check_upeer_id("sec-mod", sec->perm_config->debug, cfd, perm_config->uid, perm_config->gid, &uid, &pid);
 			if (ret < 0) {
 				seclog(sec, LOG_INFO, "rejected unauthorized connection");
 			} else {

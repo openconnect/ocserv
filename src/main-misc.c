@@ -211,6 +211,9 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 
 	close_tun(s, proc);
 	proc_table_del(s, proc);
+	if (proc->config_usage_count && *proc->config_usage_count > 0) {
+		(*proc->config_usage_count)--;
+	}
 
 	talloc_free(proc);
 }

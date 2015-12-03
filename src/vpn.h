@@ -25,6 +25,7 @@
 #include <gnutls/gnutls.h>
 #include <http_parser.h>
 #include <ccan/htable/htable.h>
+#include <ccan/list/list.h>
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -314,8 +315,6 @@ struct cfg_st {
 	unsigned keepalive;
 	unsigned dpd;
 	unsigned mobile_dpd;
-	unsigned foreground;
-	unsigned debug;
 	unsigned max_clients;
 	unsigned max_same_clients;
 	unsigned use_utmp;
@@ -372,6 +371,9 @@ struct cfg_st {
 
 	/* the tun network */
 	struct vpn_st network;
+
+	/* holds a usage count of holders of pointers in this struct */
+	int *usage_count;
 };
 
 struct perm_cfg_st {
@@ -404,6 +406,9 @@ struct perm_cfg_st {
 	char *cert_hash;
 #endif
 
+	unsigned foreground;
+	unsigned debug;
+
 	char *ca;
 	char *dh_params_file;
 
@@ -411,7 +416,16 @@ struct perm_cfg_st {
 	char* unix_conn_file;
 	unsigned int port;
 	unsigned int udp_port;
+
+	/* attic, where old config allocated values are stored */
+	struct list_head attic;
 };
+
+typedef struct attic_entry_st {
+	struct list_node list;
+	int *usage_count;
+} attic_entry_st;
+
 
 /* generic thing to stop complaints */
 struct worker_st;

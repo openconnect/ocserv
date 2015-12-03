@@ -371,7 +371,6 @@ static int append_user_info(method_ctx *ctx,
 	rep->dpd = ctmp->config->dpd;
 
 	rep->keepalive = ctmp->config->keepalive;
-
 	rep->domains = ctx->s->config->split_dns;
 	rep->n_domains = ctx->s->config->split_dns_size;
 
@@ -721,7 +720,7 @@ static void ctl_handle_commands(main_server_st * s)
 		goto cleanup;
 	}
 
-	ret = check_upeer_id("ctl", s->config->debug, cfd, 0, 0, NULL, NULL);
+	ret = check_upeer_id("ctl", s->perm_config->debug, cfd, 0, 0, NULL, NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
 		goto cleanup;

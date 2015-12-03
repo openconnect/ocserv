@@ -36,6 +36,11 @@ static int append_port(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, int
 		return -1;
 
 	current = talloc(pool, FwPortSt);
+	if (current == NULL) {
+		talloc_free(*fw_ports);
+		*fw_ports = NULL;
+		return -1;
+	}
 	fw_port_st__init(current);
 
 	current->port = port;

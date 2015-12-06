@@ -595,7 +595,7 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 				dtls_ciphersuite += 16;
 			fprintf(out, "%s %14s %9s\n", tmpbuf, dtls_ciphersuite, rep->user[i]->status);
 		} else {
-			fprintf(out, "%s %14s %9s\n", tmpbuf, "(no dtls)", rep->user[i]->status);
+			fprintf(out, "%s %14s %9s\n", tmpbuf, "(no-dtls)", rep->user[i]->status);
 		}
 
 		entries_add(ctx, username, strlen(username), rep->user[i]->id);

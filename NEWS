@@ -1,5 +1,6 @@
 * Version 0.10.11 (unreleased)
 - Corrected the reporting of keepalive to occtl.
+- Handle clients which send the first request to /VPN
 
 
 * Version 0.10.10 (released 2015-11-28)

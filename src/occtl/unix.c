@@ -541,7 +541,7 @@ static const char *fix_ciphersuite(char *txt)
 		}
 	}
 
-	return "(no dtls)";
+	return "(no-dtls)";
 }
 
 static const char *get_ip(const char *ip1, const char *ip2)

@@ -83,21 +83,21 @@ rm -f pass-radius$TMP
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.55.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
 ping -w 5 192.168.55.1 -s 1500
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
 ping6 -w 5 fc13:71:ea31:4b4e::1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping the IPv6 of ocserv"
 	stop
 fi
@@ -109,14 +109,14 @@ retrieve_user_info test
 if test "$FEDORA" = 1;then
 nuttcp -T 10 -t 192.168.55.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot send to ocserv"
 	stop
 fi
 
 nuttcp -T 10 -r 192.168.55.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot recv from ocserv"
 	stop
 fi
@@ -180,7 +180,7 @@ fi
 
 ping -w 5 192.168.55.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi

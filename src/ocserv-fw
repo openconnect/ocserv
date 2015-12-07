@@ -1,4 +1,54 @@
 #!/bin/sh
+#
+# Copyright (C) 2015 Red Hat, Inc.
+#
+# This file is part of ocserv.
+#
+# This file is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This file is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this file; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# Input is from environment:
+#
+# OCSERV_RESTRICT_TO_ROUTES: If set to '1' the user should be restricted
+#                    to accessing the OCSERV_ROUTES and prevented from accessing
+#                    OCSERV_NO_ROUTES.
+#
+# OCSERV_ROUTES:     A space separated list of IPv4 and IPv6 routes to
+#                    which the user has access. If empty or not set the
+#                    user has default route.
+#
+# OCSERV_ROUTES4:    A version of OCSERV_ROUTES with IPv4 addresses only.
+# OCSERV_ROUTES6:    A version of OCSERV_ROUTES with IPv6 addresses only.
+#
+# OCSERV_NO_ROUTES:  A space separated list of IPv4 and IPv6 routes to
+#                    which the user has NO access.
+#
+# OCSERV_NO_ROUTES4: A version of OCSERV_NO_ROUTES with IPv4 addresses only.
+# OCSERV_NO_ROUTES6: A version of OCSERV_NO_ROUTES with IPv6 addresses only.
+#
+# OCSERV_DNS:        A space-separated list of DNS servers the user has access to.
+# OCSERV_DNS4:       A version of OCSERV_DNS with IPv4 addresses only.
+# OCSERV_DNS6:       A version of OCSERV_DNS with IPv6 addresses only.
+#
+# OCSERV_DENY_PORTS: A space-separated list of port types and ports that the user
+#                    should be denied access to. An example of the format is:
+#                    "tcp 443 udp 312 sctp 999 icmp all esp all icmpv6 all"
+#
+# OCSERV_ALLOW_PORTS: A space-separated list of port types and ports that the user
+#                     should be granted access to. If set the user must be denied access
+#                     to any other ports. An example of the format is:
+#                     "tcp 443 udp 312 sctp 999 icmp all esp all icmpv6 all"
 
 PATH=/sbin:/usr/sbin:$PATH
 

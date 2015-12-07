@@ -18,6 +18,8 @@ message fw_port_st
 	required uint32 port = 1;
 	/* fw_proto_t */
 	required uint32 proto = 2;
+	/* negative rule, i.e., if non zero reject this port */
+	required uint32 negate = 3;
 }
 
 /* This is a structure for per-user/group supplemental configuration.

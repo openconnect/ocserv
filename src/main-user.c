@@ -62,7 +62,7 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 	str_st str4;
 	str_st str6;
 	str_st str_common;
-	unsigned i;
+	unsigned i, negate = 0;
 	int ret;
 
 	str_init(&str4, proc);
@@ -188,6 +188,9 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 
 	if (proc->config->n_fw_ports > 0) {
 		for (i=0;i<proc->config->n_fw_ports;i++) {
+			if (proc->config->fw_ports[i]->negate)
+				negate = 1;
+
 			switch(proc->config->fw_ports[i]->proto) {
 				case PROTO_UDP:
 					ret = str_append_printf(&str_common, "udp %u ", proc->config->fw_ports[i]->port);
@@ -216,9 +219,18 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 		}
 	}
 
-	if (str_common.length > 0 && setenv("OCSERV_PORTS", (char*)str_common.data, 1) == -1) {
-		mslog(s, proc, LOG_ERR, "could not export PORTS\n");
-		exit(1);
+	if (str_common.length > 0) {
+		if (negate) {
+			if (setenv("OCSERV_DENY_PORTS", (char*)str_common.data, 1) == -1) {
+				mslog(s, proc, LOG_ERR, "could not export DENY_PORTS\n");
+				exit(1);
+			}
+		} else {
+			if (setenv("OCSERV_ALLOW_PORTS", (char*)str_common.data, 1) == -1) {
+				mslog(s, proc, LOG_ERR, "could not export ALLOW_PORTS\n");
+				exit(1);
+			}
+		}
 	}
 
 	str_clear(&str_common);

@@ -124,6 +124,24 @@ allow_port() {
 	esac
 }
 
+deny_port() {
+	proto=$1
+	port=$2
+
+	case "$proto" in
+		icmp)
+			iptables -A INPUT -i ${DEVICE} -p $proto -j REJECT --match comment --comment "${COMMENT}"
+			;;
+		icmpv6)
+			ip6tables -A INPUT -i ${DEVICE} -p $proto -j REJECT --match comment --comment "${COMMENT}"
+			;;
+		*)
+			iptables -A INPUT -i ${DEVICE} -p $proto --dport $port -j REJECT --match comment --comment "${COMMENT}"
+			ip6tables -A INPUT -i ${DEVICE} -p $proto --dport $port -j REJECT --match comment --comment "${COMMENT}"
+			;;
+	esac
+}
+
 disallow_all_ports() {
 	iptables -A INPUT -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
 	ip6tables -A INPUT -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
@@ -140,24 +158,43 @@ for i in $OCSERV_DNS6;do
 done
 
 # block ports - if needed
-if test -n "${OCSERV_PORTS}";then
+if test -n "${OCSERV_DENY_PORTS}";then
 	INPUT_CHAIN="${SEC_INPUT_CHAIN}"
 	iptables -N "${INPUT_CHAIN}"
 	ip6tables -N "${INPUT_CHAIN}"
 
-	set ${OCSERV_PORTS}
+	set ${OCSERV_DENY_PORTS}
 	while test $# -gt 1; do
 		proto=$1
 		port=$2
 
-		allow_port $proto $port
+		deny_port $proto $port
 		if test $# -gt 1;then
 			shift 2
 		else
 			break
 		fi
 	done
-	disallow_all_ports
+else
+	if test -n "${OCSERV_ALLOW_PORTS}";then
+		INPUT_CHAIN="${SEC_INPUT_CHAIN}"
+		iptables -N "${INPUT_CHAIN}"
+		ip6tables -N "${INPUT_CHAIN}"
+
+		set ${OCSERV_ALLOW_PORTS}
+		while test $# -gt 1; do
+			proto=$1
+			port=$2
+
+			allow_port $proto $port
+			if test $# -gt 1;then
+				shift 2
+			else
+				break
+			fi
+		done
+		disallow_all_ports
+	fi
 fi
 
 if test "${OCSERV_RESTRICT_TO_ROUTES}" = "1";then

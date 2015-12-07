@@ -108,5 +108,20 @@ int main()
 		exit(1);
 	}
 
+	reset(fw_ports, n_fw_ports);
+	strcpy(p, "!(icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6())");
+
+	ret = cfg_parse_ports(NULL, &fw_ports, &n_fw_ports, p);
+	if (ret < 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
+	check_vals(fw_ports, n_fw_ports);
+	if (fw_ports[0]->negate == 0) {
+		fprintf(stderr, "error in %d\n", __LINE__);
+		exit(1);
+	}
+
 	return 0;
 }

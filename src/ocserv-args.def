@@ -568,6 +568,9 @@ no-route = 192.168.5.0/255.255.255.0
 # or in the per-user configuration.
 #restrict-user-to-ports = "tcp(443), tcp(80), udp(443), sctp(99), tcp(583), icmp(), icmpv6()"
 
+# You could also use negation, i.e., block the user from accessing these ports only.
+#restrict-user-to-ports = "!(tcp(443), tcp(80))"
+
 # When set to true, all client's iroutes are made visible to all
 # connecting clients except for the ones offering them. This option
 # only makes sense if config-per-user is set.

@@ -27,7 +27,7 @@
 
 #include <vpn.h>
 
-static int append_port(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, int port, fw_proto_t proto)
+static int append_port(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, int port, fw_proto_t proto, unsigned negate)
 {
 	FwPortSt *current;
 
@@ -45,6 +45,7 @@ static int append_port(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, int
 
 	current->port = port;
 	current->proto = proto;
+	current->negate = negate;
 
 	(*fw_ports)[*n_fw_ports] = current;
 	(*n_fw_ports)++;
@@ -61,13 +62,33 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 	unsigned finish = 0;
 	int port, ret;
 	fw_proto_t proto;
+	int negate = 0, bracket_start = 0;
 
 	if (str == NULL)
 		return 0;
 
 	p = str;
 
+	while (c_isspace(*p))
+		p++;
+
+	if (*p == '!') {
+		negate = 1;
+		p++;
+		while (c_isspace(*p) || (*p == '(')) {
+			if (*p == '(')
+				bracket_start = 1;
+			p++;
+		}
+
+		if (bracket_start == 0) {
+			syslog(LOG_ERR, "no bracket following negation at %d '%s'", (int)(ptrdiff_t)(p-str), str);
+			return -1;
+		}
+	}
+
 	do {
+
 		while (c_isspace(*p))
 			p++;
 
@@ -105,7 +126,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 		p++;
 		port = atoi(p);
 
-		ret = append_port(pool, fw_ports, n_fw_ports, port, proto);
+		ret = append_port(pool, fw_ports, n_fw_ports, port, proto, negate);
 		if (ret < 0) {
 			syslog(LOG_ERR, "memory error");
 			return -1;
@@ -121,7 +142,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 		while (c_isspace(*p2))
 			p2++;
 
-		if (*p2 == 0) {
+		if (*p2 == 0 || (negate != 0 && *p2 == ')')) {
 			finish = 1;
 		} else if (*p2 != ',') {
 			syslog(LOG_ERR, "expected comma or end of line on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p2-str), str);

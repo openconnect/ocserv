@@ -82,8 +82,6 @@ clean_all_rules() {
 }
 
 if test "${REASON}" = "connect";then
-	MOD="-A"
-
 	#clear any leftover rules for this device
 	clean_all_rules
 else

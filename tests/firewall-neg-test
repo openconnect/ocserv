@@ -125,14 +125,6 @@ sleep 2
 
 kill -INT $PID
 
-sleep 4
-
-check_for_file /tmp/follow-up-script-was-run
-if test $? != 0;then
-	echo "There was an issue; followup script was not run"
-	stop
-fi
-
 $DOCKER stop $IMAGE_NAME
 $DOCKER rm $IMAGE_NAME
 

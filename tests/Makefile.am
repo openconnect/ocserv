@@ -21,7 +21,8 @@ dist_check_SCRIPTS = test-iroute test-pass-script \
 	radius-test test-gssapi kerberos-test pam-test test-ban \
 	test-cookie-invalidation radius-test-config proxyproto-test \
 	proxyproto-unix-test pam-noauth-test otp-test test-user-config \
-	test-cookie-rotation firewall-test test-append-routes reload-info-test
+	test-cookie-rotation firewall-test test-append-routes reload-info-test \
+	firewall-neg-test
 
 if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \

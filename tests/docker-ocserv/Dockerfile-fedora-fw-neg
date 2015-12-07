@@ -18,7 +18,7 @@ RUN mkdir /etc/ocserv
 
 ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
-ADD ocserv-fw.conf /etc/ocserv/ocserv.conf
+ADD ocserv-fw-neg.conf /etc/ocserv/ocserv.conf
 ADD passwd /etc/ocserv/
 ADD ocserv /usr/sbin/
 ADD ocpasswd /usr/bin/

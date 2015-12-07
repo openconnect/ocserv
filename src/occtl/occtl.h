@@ -77,6 +77,7 @@ typedef int (*cmd_func) (CONN_TYPE * conn, const char *arg, cmd_params_st *param
 
 int handle_status_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_users_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_list_iroutes_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_banned_ips_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_banned_points_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_show_user_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);

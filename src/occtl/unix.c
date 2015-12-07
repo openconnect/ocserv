@@ -641,6 +641,91 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 	return ret;
 }
 
+int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	UserListRep *rep = NULL;
+	FILE *out;
+	unsigned i, j;
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	init_reply(&raw);
+
+	entries_clear();
+
+	out = pager_start(params);
+
+	/* get all user info */
+	ret = send_cmd(ctx, CTL_CMD_LIST, NULL, NULL, NULL, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = user_list_rep__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	/* print iroutes */
+	if (NO_JSON(params)) {
+		for (i=0;i<rep->n_user;i++) {
+			const char *username, *vpn_ip;
+
+			username = rep->user[i]->username;
+			if (username == NULL || username[0] == 0)
+				username = NO_USER;
+
+			vpn_ip = get_ip(rep->user[i]->local_ip, rep->user[i]->local_ip6);
+
+			/* add header */
+			if (i == 0) {
+				fprintf(out, "%6s %8s %6s %16s %28s\n",
+					"id", "user", "device", "vpn-ip", "iroute");
+			}
+
+			for (j=0;j<rep->user[i]->n_iroutes;j++)
+				fprintf(out, "%6d %8s %6s %16s %28s",
+					(int)rep->user[i]->id, username, rep->user[i]->tun, vpn_ip, rep->user[i]->iroutes[j]);
+
+		}
+	} else {
+		print_start_block(out, params);
+		for (i=0;i<rep->n_user;i++) {
+			const char *username, *vpn_ip;
+
+			username = rep->user[i]->username;
+			if (username == NULL || username[0] == 0)
+				username = NO_USER;
+
+			vpn_ip = get_ip(rep->user[i]->local_ip, rep->user[i]->local_ip6);
+
+			print_single_value_int(out, params, "ID", rep->user[i]->id, 1);
+			print_single_value(out, params, "Username", username, 1);
+			print_single_value(out, params, "Device", rep->user[i]->tun, 1);
+			print_single_value(out, params, "IP", vpn_ip, 1);
+			print_list_entries(out, params, "iRoutes", rep->user[i]->iroutes, rep->user[i]->n_iroutes, 1);
+			print_single_value(out, params, "IP", vpn_ip, 0);
+		}
+		print_end_block(out, params, 0);
+	}
+
+	ret = 0;
+	goto cleanup;
+
+ error:
+	ret = 1;
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+
+ cleanup:
+	if (rep != NULL)
+		user_list_rep__free_unpacked(rep, &pa);
+
+	free_reply(&raw);
+	pager_stop(out);
+
+	return ret;
+}
+
 static
 int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params, unsigned points)
 {

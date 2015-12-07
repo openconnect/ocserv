@@ -63,6 +63,8 @@ static const commands_st commands[] = {
 	      "Prints the banned IP addresses", 1, 1),
 	ENTRY("show ip ban points", NULL, handle_list_banned_points_cmd,
 	      "Prints all the known IP addresses which have points", 1, 1),
+	ENTRY("show iroutes", NULL, handle_list_iroutes_cmd,
+	      "Prints the routes provided by users of the server", 1, 1),
 	ENTRY("show user", "[NAME]", handle_show_user_cmd,
 	      "Prints information on the specified user", 1, 1),
 	ENTRY("show id", "[ID]", handle_show_id_cmd,

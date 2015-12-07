@@ -149,7 +149,6 @@ typedef struct proc_st {
 	uint8_t ipv4_seed[4];
 
 	unsigned status; /* PS_AUTH_ */
-	unsigned resume_reqs; /* the number of requests received */
 
 	/* these are filled in after the worker process dies, using the
 	 * Cli stats message. */
@@ -190,7 +189,6 @@ typedef struct main_server_st {
 	
 	struct ip_lease_db_st ip_leases;
 
-	tls_sess_db_st tls_db;
 	struct htable *ban_db;
 
 	tls_st *creds;
@@ -217,6 +215,7 @@ typedef struct main_server_st {
 	/* updated on the cli_stats_msg from sec-mod. 
 	 * Holds the number of entries in secmod list of users */
 	unsigned secmod_client_entries;
+	unsigned tlsdb_entries;
 	time_t start_time;
 
 	void * auth_extra;
@@ -240,19 +239,7 @@ int handle_sec_mod_commands(main_server_st *s);
 int user_connected(main_server_st *s, struct proc_st* cur);
 void user_disconnected(main_server_st *s, struct proc_st* cur);
 
-void expire_tls_sessions(main_server_st *s);
-
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
-
-int handle_resume_delete_req(main_server_st* s, struct proc_st * proc,
-  			   const SessionResumeFetchMsg * req);
-
-int handle_resume_fetch_req(main_server_st* s, struct proc_st * proc,
-  			   const SessionResumeFetchMsg * req, 
-  			   SessionResumeReplyMsg* rep);
-
-int handle_resume_store_req(main_server_st* s, struct proc_st *proc,
-  			   const SessionResumeStoreReqMsg *);
 
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
 int session_close(main_server_st * s, struct proc_st *proc);

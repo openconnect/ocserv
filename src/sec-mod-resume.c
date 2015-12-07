@@ -34,12 +34,12 @@
 #include <ccan/hash/hash.h>
 
 #include <vpn.h>
-#include <main.h>
+#include <sec-mod-resume.h>
 #include <common.h>
 #include <ip-util.h>
 #include <tlslib.h>
 
-int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,
+int handle_resume_delete_req(sec_mod_st *sec,
 			     const SessionResumeFetchMsg * req)
 {
 	tls_cache_st *cache;
@@ -48,7 +48,7 @@ int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,
 
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = htable_firstval(s->tls_db.ht, &iter, key);
+	cache = htable_firstval(sec->tls_db.ht, &iter, key);
 	while (cache != NULL) {
 		if (req->session_id.len == cache->session_id_size &&
 		    memcmp(req->session_id.data, cache->session_id,
@@ -57,19 +57,19 @@ int handle_resume_delete_req(main_server_st * s, struct proc_st *proc,
 			cache->session_data_size = 0;
 			cache->session_id_size = 0;
 
-			htable_delval(s->tls_db.ht, &iter);
+			htable_delval(sec->tls_db.ht, &iter);
 			talloc_free(cache);
-			s->tls_db.entries--;
+			sec->tls_db.entries--;
 			return 0;
 		}
 
-		cache = htable_nextval(s->tls_db.ht, &iter, key);
+		cache = htable_nextval(sec->tls_db.ht, &iter, key);
 	}
 
 	return 0;
 }
 
-int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
+int handle_resume_fetch_req(sec_mod_st *sec,
 			    const SessionResumeFetchMsg * req,
 			    SessionResumeReplyMsg * rep)
 {
@@ -81,14 +81,14 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = htable_firstval(s->tls_db.ht, &iter, key);
+	cache = htable_firstval(sec->tls_db.ht, &iter, key);
 	while (cache != NULL) {
 		if (req->session_id.len == cache->session_id_size &&
 		    memcmp(req->session_id.data, cache->session_id,
 			   req->session_id.len) == 0) {
 
-			if (proc->remote_addr_len == cache->remote_addr_len &&
-			    ip_cmp(&proc->remote_addr, &cache->remote_addr) == 0) {
+			if (req->cli_addr.len == cache->remote_addr_len &&
+			    ip_cmp((struct sockaddr_storage *)req->cli_addr.data, &cache->remote_addr) == 0) {
 
 				rep->reply =
 				    SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
@@ -100,7 +100,7 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 				rep->session_data.len =
 				    cache->session_data_size;
 
-				mslog_hex(s, proc, LOG_DEBUG, "TLS session DB resuming",
+				seclog_hex(sec, LOG_DEBUG, "TLS session DB resuming",
 					  req->session_id.data,
 					  req->session_id.len, 0);
 
@@ -108,14 +108,14 @@ int handle_resume_fetch_req(main_server_st * s, struct proc_st *proc,
 			}
 		}
 
-		cache = htable_nextval(s->tls_db.ht, &iter, key);
+		cache = htable_nextval(sec->tls_db.ht, &iter, key);
 	}
 
 	return 0;
 
 }
 
-int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
+int handle_resume_store_req(sec_mod_st *sec,
 			    const SessionResumeStoreReqMsg * req)
 {
 	tls_cache_st *cache;
@@ -127,40 +127,46 @@ int handle_resume_store_req(main_server_st * s, struct proc_st *proc,
 	if (req->session_data.len > MAX_SESSION_DATA_SIZE)
 		return -1;
 
-	max = MAX(2 * s->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
-	if (s->tls_db.entries >= max) {
-		mslog(s, NULL, LOG_INFO,
+	max = MAX(2 * sec->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
+	if (sec->tls_db.entries >= max) {
+		seclog(sec, LOG_INFO,
 		      "maximum number of stored TLS sessions reached (%u)",
 		      max);
 		return -1;
 	}
 
+	if (req->cli_addr.len == 0) {
+		seclog(sec, LOG_INFO,
+		      "invalid address length");
+		return -1;
+	}
+
 	key = hash_any(req->session_id.data, req->session_id.len, 0);
 
-	cache = talloc(s->tls_db.ht, tls_cache_st);
+	cache = talloc(sec->tls_db.ht, tls_cache_st);
 	if (cache == NULL)
 		return -1;
 
 	cache->session_id_size = req->session_id.len;
 	cache->session_data_size = req->session_data.len;
-	cache->remote_addr_len = proc->remote_addr_len;
+	cache->remote_addr_len = req->cli_addr.len;
 
 	memcpy(cache->session_id, req->session_id.data, req->session_id.len);
 	memcpy(cache->session_data, req->session_data.data,
 	       req->session_data.len);
-	memcpy(&cache->remote_addr, &proc->remote_addr, proc->remote_addr_len);
+	memcpy(&cache->remote_addr, req->cli_addr.data, req->cli_addr.len);
 
-	htable_add(s->tls_db.ht, key, cache);
-	s->tls_db.entries++;
+	htable_add(sec->tls_db.ht, key, cache);
+	sec->tls_db.entries++;
 
-	mslog_hex(s, proc, LOG_DEBUG, "TLS session DB storing",
+	seclog_hex(sec, LOG_DEBUG, "TLS session DB storing",
 				req->session_id.data,
 				req->session_id.len, 0);
 
 	return 0;
 }
 
-void expire_tls_sessions(main_server_st * s)
+void expire_tls_sessions(sec_mod_st *sec)
 {
 	tls_cache_st *cache;
 	struct htable_iter iter;
@@ -168,7 +174,7 @@ void expire_tls_sessions(main_server_st * s)
 
 	now = time(0);
 
-	cache = htable_first(s->tls_db.ht, &iter);
+	cache = htable_first(sec->tls_db.ht, &iter);
 	while (cache != NULL) {
 		gnutls_datum_t d;
 
@@ -177,16 +183,16 @@ void expire_tls_sessions(main_server_st * s)
 
 		exp = gnutls_db_check_entry_time(&d);
 
-		if (now - exp > TLS_SESSION_EXPIRATION_TIME(s->config)) {
+		if (now - exp > TLS_SESSION_EXPIRATION_TIME(sec->config)) {
 			cache->session_id_size = 0;
 
-			htable_delval(s->tls_db.ht, &iter);
+			htable_delval(sec->tls_db.ht, &iter);
 
 			safe_memset(cache->session_data, 0, cache->session_data_size);
 			talloc_free(cache);
-			s->tls_db.entries--;
+			sec->tls_db.entries--;
 		}
-		cache = htable_next(s->tls_db.ht, &iter);
+		cache = htable_next(sec->tls_db.ht, &iter);
 	}
 
 	return;

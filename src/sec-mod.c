@@ -41,6 +41,7 @@
 #include <tlslib.h>
 #include <ipc.pb-c.h>
 #include <sec-mod-sup-config.h>
+#include <sec-mod-resume.h>
 #include <cloexec.h>
 
 #include <gnutls/gnutls.h>
@@ -322,6 +323,102 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 			sec_auth_cont_msg__free_unpacked(auth_cont, &pa);
 			return ret;
 		}
+	case RESUME_STORE_REQ:{
+			SessionResumeStoreReqMsg *smsg;
+
+			smsg =
+			    session_resume_store_req_msg__unpack(&pa, buffer_size,
+								 buffer);
+			if (smsg == NULL) {
+				seclog(sec, LOG_ERR, "error unpacking data");
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_resume_store_req(sec, smsg);
+
+			/* zeroize the data */
+			safe_memset(buffer, 0, buffer_size);
+			safe_memset(smsg->session_data.data, 0, smsg->session_data.len);
+
+			session_resume_store_req_msg__free_unpacked(smsg, &pa);
+
+			if (ret < 0) {
+				seclog(sec, LOG_DEBUG,
+				      "could not store resumption data");
+			}
+		}
+
+		break;
+
+	case RESUME_DELETE_REQ:{
+			SessionResumeFetchMsg *fmsg;
+
+			fmsg =
+			    session_resume_fetch_msg__unpack(&pa, buffer_size,
+							     buffer);
+			if (fmsg == NULL) {
+				seclog(sec, LOG_ERR, "error unpacking data");
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_resume_delete_req(sec, fmsg);
+
+			session_resume_fetch_msg__free_unpacked(fmsg, &pa);
+
+			if (ret < 0) {
+				seclog(sec, LOG_DEBUG,
+				      "could not delete resumption data.");
+			}
+		}
+
+		break;
+	case RESUME_FETCH_REQ:{
+			SessionResumeReplyMsg msg =
+			    SESSION_RESUME_REPLY_MSG__INIT;
+			SessionResumeFetchMsg *fmsg;
+
+			/* FIXME: rate limit that */
+
+			fmsg =
+			    session_resume_fetch_msg__unpack(&pa, buffer_size,
+							     buffer);
+			if (fmsg == NULL) {
+				seclog(sec, LOG_ERR, "error unpacking data");
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_resume_fetch_req(sec, fmsg, &msg);
+
+			session_resume_fetch_msg__free_unpacked(fmsg, &pa);
+
+			if (ret < 0) {
+				msg.reply =
+				    SESSION_RESUME_REPLY_MSG__RESUME__REP__FAILED;
+				seclog(sec, LOG_DEBUG,
+				      "could not fetch resumption data.");
+			} else {
+				msg.reply =
+				    SESSION_RESUME_REPLY_MSG__RESUME__REP__OK;
+			}
+
+			ret =
+			    send_msg(pool, cfd, RESUME_FETCH_REP, &msg,
+					       (pack_size_func)
+					       session_resume_reply_msg__get_packed_size,
+					       (pack_func)
+					       session_resume_reply_msg__pack);
+
+			if (ret < 0) {
+				seclog(sec, LOG_ERR,
+				      "could not send reply cmd %d.",
+				      (unsigned)cmd);
+				return ERR_BAD_COMMAND;
+			}
+
+		}
+
+		break;
+
 	default:
 		seclog(sec, LOG_WARNING, "unknown type 0x%.2x", cmd);
 		return -1;
@@ -412,6 +509,7 @@ static void check_other_work(sec_mod_st *sec)
 		}
 
 		sec_mod_client_db_deinit(sec);
+		tls_cache_deinit(&sec->tls_db);
 		talloc_free(sec);
 		exit(0);
 	}
@@ -443,6 +541,7 @@ static void check_other_work(sec_mod_st *sec)
 	if (need_maintainance) {
 		seclog(sec, LOG_DEBUG, "performing maintenance");
 		cleanup_client_entries(sec);
+		expire_tls_sessions(sec);
 		seclog(sec, LOG_DEBUG, "active sessions %d", 
 			sec_mod_client_db_elems(sec));
 		alarm(MAINTAINANCE_TIME);
@@ -507,7 +606,7 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 }
 
 static
-int serve_request(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned buffer_size)
+int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
 	unsigned cmd, length;
@@ -636,6 +735,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	sec->perm_config = talloc_steal(sec, perm_config);
 	sec->config = sec->perm_config->config;
 
+	tls_cache_init(sec, &sec->tls_db);
 	sup_config_init(sec);
 
 	memset(&sa, 0, sizeof(sa));
@@ -845,7 +945,7 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 				seclog(sec, LOG_INFO, "rejected unauthorized connection");
 			} else {
 				memset(buffer, 0, buffer_size);
-				serve_request(sec, cfd, pid, buffer, buffer_size);
+				serve_request_worker(sec, cfd, pid, buffer, buffer_size);
 			}
 			close(cfd);
 		}

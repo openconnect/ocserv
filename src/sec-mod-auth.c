@@ -541,6 +541,9 @@ int handle_sec_auth_session_close(sec_mod_st *sec, int fd, const SecAuthSessionM
 	rep.discon_reason = e->discon_reason;
 	rep.secmod_client_entries = sec_mod_client_db_elems(sec);
 
+	rep.secmod_tlsdb_entries = sec->tls_db.entries;
+	rep.has_secmod_tlsdb_entries = 1;
+
 	ret = send_msg(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
 			(pack_size_func) cli_stats_msg__get_packed_size,
 			(pack_func) cli_stats_msg__pack);

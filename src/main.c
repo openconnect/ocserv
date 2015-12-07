@@ -611,7 +611,6 @@ void clear_lists(main_server_st *s)
 		talloc_free(script_tmp);
 	}
 
-	tls_cache_deinit(&s->tls_db);
 	ip_lease_deinit(&s->ip_leases);
 	proc_table_deinit(s);
 	ctl_handler_deinit(s);
@@ -1075,7 +1074,6 @@ static void maintainance_watcher_cb(EV_P_ ev_timer *w, int revents)
 	/* Check if we need to expire any data */
 	mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
 	tls_reload_crl(s, s->creds, 0);
-	expire_tls_sessions(s);
 	cleanup_banned_entries(s);
 	clear_old_configs(s->perm_config);
 }
@@ -1132,7 +1130,6 @@ int main(int argc, char** argv)
 
 	list_head_init(&s->proc_list.head);
 	list_head_init(&s->script_list.head);
-	tls_cache_init(s, &s->tls_db);
 	ip_lease_init(&s->ip_leases);
 	proc_table_init(s);
 	main_ban_db_init(s);

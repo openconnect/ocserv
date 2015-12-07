@@ -50,7 +50,7 @@ ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	cookies.c main-misc.c ip-lease.c ip-lease.h \
 	vpn.h cookies.h tlslib.h log.c tun.c tun.h config-kkdcp.c \
-	config.c worker-resume.c worker.h main-resume.c main.h \
+	config.c worker-resume.c worker.h sec-mod-resume.c main.h \
 	worker-http-handlers.c html.c html.h worker-http.c \
 	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
 	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod-auth.h sec-mod.h \
@@ -64,7 +64,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	proc-search.c proc-search.h http-heads.h ip-util.c ip-util.h \
 	main-ban.c main-ban.h common-config.h base64-helper.c base64-helper.h \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	sec-mod-acct.h setproctitle.c setproctitle.h
+	sec-mod-acct.h setproctitle.c setproctitle.h sec-mod-resume.h
 
 if ENABLE_COMPRESSION
 ocserv_SOURCES += lzs.c lzs.h

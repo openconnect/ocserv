@@ -41,13 +41,13 @@
 #include <tlslib.h>
 
 
-static int recv_resume_fetch_reply(worker_st *ws, gnutls_datum_t *sdata)
+static int recv_resume_fetch_reply(worker_st *ws, int sd, gnutls_datum_t *sdata)
 {
 	int ret;
 	SessionResumeReplyMsg *resp;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_msg(ws, ws->cmd_fd, RESUME_FETCH_REP, (void*)&resp, 
+	ret = recv_msg(ws, sd, RESUME_FETCH_REP, (void*)&resp, 
 		(unpack_func)session_resume_reply_msg__unpack, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving resumption reply (fetch)");
@@ -81,27 +81,38 @@ cleanup:
  */
 static gnutls_datum_t resume_db_fetch(void *dbf, gnutls_datum_t key)
 {
-worker_st *ws = dbf;
-gnutls_datum_t r = { NULL, 0 };
-int ret;
-SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
+	worker_st *ws = dbf;
+	gnutls_datum_t r = { NULL, 0 };
+	int ret, sd;
+	SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 
 	if (key.size > GNUTLS_MAX_SESSION_ID) {
 		oclog(ws, LOG_DEBUG, "session ID size exceeds the maximum %u", key.size);
 		return r;
 	}
 
+	sd = connect_to_secmod(ws);
+	if (sd == -1) {
+		oclog(ws, LOG_DEBUG, "cannot connect to secmod");
+		return r;
+	}
+
 	msg.session_id.len = key.size;
 	msg.session_id.data = key.data;
+	msg.cli_addr.len = ws->remote_addr_len;
+	msg.cli_addr.data = (void*)&ws->remote_addr;
 
-	ret = send_msg_to_main(ws, RESUME_FETCH_REQ, &msg,
+	ret = send_msg_to_secmod(ws, sd, RESUME_FETCH_REQ, &msg,
 		(pack_size_func)session_resume_fetch_msg__get_packed_size,
 		(pack_func)session_resume_fetch_msg__pack);
-	if (ret < 0)
-		return r;
+	if (ret < 0) {
+		goto cleanup;
+	}
 
-	recv_resume_fetch_reply(ws, &r);
-	
+	recv_resume_fetch_reply(ws, sd, &r);
+
+ cleanup:
+ 	close(sd);
 	return r;
 }
 
@@ -109,9 +120,9 @@ SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 static int
 resume_db_store (void *dbf, gnutls_datum_t key, gnutls_datum_t data)
 {
-worker_st *ws = dbf;
-SessionResumeStoreReqMsg msg = SESSION_RESUME_STORE_REQ_MSG__INIT;
-int ret;
+	worker_st *ws = dbf;
+	SessionResumeStoreReqMsg msg = SESSION_RESUME_STORE_REQ_MSG__INIT;
+	int ret, sd;
 
 	if (data.size > MAX_SESSION_DATA_SIZE) {
 		oclog(ws, LOG_DEBUG, "session data size exceeds the maximum %u", data.size);
@@ -129,9 +140,21 @@ int ret;
 	msg.session_id.data = key.data;
 	msg.session_data.data = data.data;
 
-	ret = send_msg_to_main(ws, RESUME_STORE_REQ, &msg,
+	msg.cli_addr.len = ws->remote_addr_len;
+	msg.cli_addr.data = (void*)&ws->remote_addr;
+
+	sd = connect_to_secmod(ws);
+	if (sd == -1) {
+		oclog(ws, LOG_DEBUG, "cannot connect to secmod");
+		return GNUTLS_E_DB_ERROR;
+	}
+
+	ret = send_msg_to_secmod(ws, sd, RESUME_STORE_REQ, &msg,
 		(pack_size_func)session_resume_store_req_msg__get_packed_size,
 		(pack_func)session_resume_store_req_msg__pack);
+
+	close(sd);
+
 	if (ret < 0) {
 		return GNUTLS_E_DB_ERROR;
 	}
@@ -145,9 +168,9 @@ int ret;
  */
 static int resume_db_delete(void *dbf, gnutls_datum_t key)
 {
-worker_st *ws = dbf;
-int ret;
-SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
+	worker_st *ws = dbf;
+	int ret, sd;
+	SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 
 	if (key.size > GNUTLS_MAX_SESSION_ID) {
 		oclog(ws, LOG_DEBUG, "Session ID size exceeds the maximum %u", key.size);
@@ -157,9 +180,17 @@ SessionResumeFetchMsg msg = SESSION_RESUME_FETCH_MSG__INIT;
 	msg.session_id.len = key.size;
 	msg.session_id.data = key.data;
 
-	ret = send_msg_to_main(ws, RESUME_DELETE_REQ, &msg,
+	sd = connect_to_secmod(ws);
+	if (sd == -1) {
+		oclog(ws, LOG_DEBUG, "cannot connect to secmod");
+		return GNUTLS_E_DB_ERROR;
+	}
+
+	ret = send_msg_to_secmod(ws, sd, RESUME_DELETE_REQ, &msg,
 		(pack_size_func)session_resume_fetch_msg__get_packed_size,
 		(pack_func)session_resume_fetch_msg__pack);
+
+	close(sd);
 	if (ret < 0)
 		return GNUTLS_E_DB_ERROR;
 

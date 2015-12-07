@@ -41,6 +41,8 @@ typedef struct sec_mod_st {
 	int cmd_fd;
 	int cmd_fd_sync;
 
+	tls_sess_db_st tls_db;
+
 	struct config_mod_st *config_module;
 } sec_mod_st;
 

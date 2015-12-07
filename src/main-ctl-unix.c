@@ -180,7 +180,7 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.sec_mod_pid = ctx->s->sec_mod_pid;
 	rep.active_clients = ctx->s->active_clients;
 	rep.secmod_client_entries = ctx->s->secmod_client_entries;
-	rep.stored_tls_sessions = ctx->s->tls_db.entries;
+	rep.stored_tls_sessions = ctx->s->tlsdb_entries;
 	rep.banned_ips = main_ban_db_elems(ctx->s);
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,

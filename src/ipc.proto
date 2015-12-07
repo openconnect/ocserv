@@ -86,6 +86,10 @@ message auth_reply_msg
 message session_resume_fetch_msg
 {
 	required bytes session_id = 1;
+	/* this is of type sockaddr_storage,
+	 * and contains the address of the client.
+	 */
+	required bytes cli_addr = 2;
 }
 
 /* RESUME_STORE_REQ */
@@ -93,6 +97,10 @@ message session_resume_store_req_msg
 {
 	required bytes session_id = 1;
 	required bytes session_data = 2;
+	/* this is of type sockaddr_storage,
+	 * and contains the address of the client.
+	 */
+	required bytes cli_addr = 3;
 }
 
 /* RESUME_FETCH_REP */
@@ -123,6 +131,7 @@ message cli_stats_msg
 	optional string ipv6 = 7;
 	optional uint32 discon_reason = 8;
 	optional uint32 secmod_client_entries = 9; /* from sec-mod to main only */
+	optional uint32 secmod_tlsdb_entries = 10; /* from sec-mod to main only */
 }
 
 /* UDP_FD */

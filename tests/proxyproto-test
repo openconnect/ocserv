@@ -79,14 +79,14 @@ rm -f $PIDFILE
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.195.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
 ping -w 5 192.168.195.1 -s 1500
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
@@ -99,23 +99,25 @@ if test "$FEDORA" = 1;then
 nuttcp -T 10 -t 192.168.195.1
 if test $? != 0;then
 	echo "Cannot send to ocserv"
-	exit 77
-	kill $PID
+	kill -INT $PID
 	stop
+	exit 77
 fi
 
 nuttcp -T 10 -r 192.168.195.1
 if test $? != 0;then
 	echo "Cannot recv from ocserv"
-	exit 77
-	kill $PID
+	kill -INT $PID
 	stop
+	exit 77
 fi
 fi
 
 sleep 2
 
-kill $PID
+kill -INT $PID
+
+sleep 3
 
 check_for_file /tmp/connect/ok
 if test $? != 0;then

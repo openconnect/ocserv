@@ -31,6 +31,7 @@ CONFIG="fw-neg"
 IMAGE=ocserv-fw-neg-test
 IMAGE_NAME=test_fw_neg_ocserv
 TMP=$IMAGE_NAME.tmp
+PIDFILE="$IMAGE_NAME.$$.pid"
 . ./docker-common.sh
 
 $DOCKER run -e OCCTL_PAGER=cat -P --privileged=true -p 22 --tty=false -d --name $IMAGE_NAME $IMAGE
@@ -72,7 +73,7 @@ fi
 echo ""
 echo "Connecting with correct username"
 $ECHO_E "test" >pass-full$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -b --pid-file ${srcdir}/pid1.$$ -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -b --pid-file $PIDFILE -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP
 if test $? != 0;then
 	echo "Cannot connect to server"
 	stop
@@ -82,12 +83,12 @@ fi
 sleep 5
 
 rm -f pass-full$TMP
-if [ ! -f ${srcdir}/pid1.$$ ];then
+if [ ! -f $PIDFILE ];then
 	echo "It was not possible to establish session!"
 	stop
 fi
 
-PID=`cat ${srcdir}/pid1.$$`
+PID=`cat $PIDFILE`
 
 ping -w 5 192.168.31.1 -s 400
 if test $? != 0;then
@@ -124,6 +125,7 @@ fi
 sleep 2
 
 kill -INT $PID
+rm -f $PIDFILE
 
 $DOCKER stop $IMAGE_NAME
 $DOCKER rm $IMAGE_NAME

@@ -14,10 +14,22 @@ bin_PROGRAMS = occtl
 occtl_SOURCES = occtl.c pager.c occtl.h time.c cache.c ip-cache.c \
 	nl.c ctl.h print.c json.c json.h
 occtl_LDADD = ../../gl/libgnu.a ../common/libcommon.a $(LIBREADLINE_LIBS) \
-	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS) ../ccan/libccan.a
+	$(LIBNL3_LIBS) $(LIBPROTOBUF_C_LIBS) $(LIBTALLOC_LIBS) ../ccan/libccan.a \
+	../libipc.a
 
 if LOCAL_PROTOBUF_C
 occtl_LDADD += ../protobuf/libprotobuf.a
 endif
 
 occtl_SOURCES += unix.c
+
+../libipc.a:
+	cd .. && $(MAKE) $(AM_MAKEFLAGS) libipc.a
+
+../ccan/libccan.a:
+	cd ../ccan && $(MAKE) $(AM_MAKEFLAGS) libccan.a
+
+../common/libcommon.a:
+	cd ../common && $(MAKE) $(AM_MAKEFLAGS) libcommon.a
+
+.PHONY: ../libipc.a ../ccan/libccan.a ../common/libcommon.a

@@ -496,6 +496,49 @@ int y;
 	return;
 }
 
+/* Adjusts the file descriptor limits for the main or worker processes
+ */
+static void update_fd_limits(main_server_st *s, unsigned main)
+{
+#ifdef RLIMIT_NOFILE
+	static struct rlimit def_set;
+	struct rlimit new_set;
+	unsigned max;
+	int ret;
+
+	if (main) {
+		ret = getrlimit(RLIMIT_NOFILE, &def_set);
+		if (ret < 0) {
+			fprintf(stderr, "error in getrlimit: %s\n", strerror(errno));
+			exit(1);
+		}
+
+		if (s->config->max_clients > 0 && s->config->max_clients > def_set.rlim_cur)
+			max = s->config->max_clients + 32;
+		else
+			max = MAX(4*1024, def_set.rlim_cur);
+
+		if (max > def_set.rlim_cur) {
+			new_set.rlim_cur = max;
+			new_set.rlim_max = new_set.rlim_cur;
+			ret = setrlimit(RLIMIT_NOFILE, &new_set);
+			if (ret < 0) {
+				fprintf(stderr, "error in setrlimit(%u): %s\n", max, strerror(errno));
+				exit(1);
+			}
+		}
+	} else {
+		/* set limits for worker processes */
+		ret = setrlimit(RLIMIT_NOFILE, &def_set);
+		if (ret < 0) {
+			fprintf(stderr, "error in setrlimit(%u): %s\n", (unsigned)def_set.rlim_cur, strerror(errno));
+			exit(1);
+		}
+	}
+#endif
+}
+
+
 static void drop_privileges(main_server_st* s)
 {
 	int ret, e;
@@ -545,6 +588,8 @@ static void drop_privileges(main_server_st* s)
 
 		}
 	}
+
+	update_fd_limits(s, 0);
 
 	rl.rlim_cur = 0;
 	rl.rlim_max = 0;
@@ -1251,6 +1296,9 @@ int main(int argc, char** argv)
 	/* we don't need them */
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
+
+	/* increase the number of our allowed file descriptors */
+	update_fd_limits(s, 1);
 
 	ev_set_userdata (loop, s);
 	ev_set_syserr_cb(syserr_cb);

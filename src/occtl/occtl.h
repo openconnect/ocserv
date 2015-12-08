@@ -28,6 +28,7 @@ void pager_stop(FILE* fp);
 void print_time_ival7(char output[MAX_TMPSTR_SIZE], time_t t1, time_t t2);
 void print_iface_stats(const char *iface, time_t since, FILE * out, cmd_params_st *params, unsigned have_more);
 int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char **val, unsigned vsize, unsigned have_more);
+int print_fwport_entries(FILE* out, cmd_params_st *params, const char* name, FwPortSt **val, unsigned vsize, unsigned have_more);
 void print_start_block(FILE *out, cmd_params_st *params);
 void print_end_block(FILE *out, cmd_params_st *params, unsigned have_more);
 void print_array_block(FILE *out, cmd_params_st *params);

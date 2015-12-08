@@ -30,6 +30,7 @@
 #include <occtl/occtl.h>
 #include <common.h>
 #include <json.h>
+#include <vpn.h>
 #include <c-strcase.h>
 
 #define MAX_STR_SIZE 512
@@ -63,6 +64,42 @@ int print_list_entries(FILE* out, cmd_params_st *params, const char* name, char 
 					fprintf(out, "\t\t%s\n", tmp);
 			}
 		}
+	}
+
+	return i;
+}
+
+int print_fwport_entries(FILE* out, cmd_params_st *params, const char* name, FwPortSt **val, unsigned vsize, unsigned have_more)
+{
+	unsigned int i = 0;
+	char tmp[64];
+
+	if (HAVE_JSON(params)) {
+		fprintf(out, "    \"%s\":\t[", name);
+		for (i=0;i<vsize;i++) {
+			if (val[i]->port)
+				snprintf(tmp, sizeof(tmp), "%s%s(%d)", val[i]->negate?"!":"", proto_to_str(val[i]->proto), val[i]->port);
+			else
+				snprintf(tmp, sizeof(tmp), "%s%s()", val[i]->negate?"!":"", proto_to_str(val[i]->proto));
+
+			if (i==0)
+				fprintf(out, "\"%s\"", tmp);
+			else
+				fprintf(out, ", \"%s\"", tmp);
+		}
+		fprintf(out, "]%s\n", have_more?",":"");
+	} else {
+		for (i=0;i<vsize;i++) {
+			if (val[i]->port)
+				snprintf(tmp, sizeof(tmp), "%s%s(%d)", val[i]->negate?"!":"", proto_to_str(val[i]->proto), val[i]->port);
+			else
+				snprintf(tmp, sizeof(tmp), "%s%s()", val[i]->negate?"!":"", proto_to_str(val[i]->proto));
+			if (i==0)
+				fprintf(out, "\t%s: %s", name, tmp);
+			else
+				fprintf(out, ", %s", tmp);
+		}
+		fprintf(out, "\n");
 	}
 
 	return i;

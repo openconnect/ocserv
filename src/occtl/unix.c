@@ -972,7 +972,10 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		if (print_list_entries(out, params, "iRoutes", args->user[i]->iroutes, args->user[i]->n_iroutes, 1) < 0)
 			goto error_parse;
 
-		print_single_value(out, params, "Restricted to routes", args->user[i]->restrict_to_routes?"True":"False", 0);
+		print_single_value(out, params, "Restricted to routes", args->user[i]->restrict_to_routes?"True":"False", 1);
+
+		if (print_fwport_entries(out, params, "Restricted to ports", args->user[i]->fw_ports, args->user[i]->n_fw_ports, 0) < 0)
+			goto error_parse;
 
 		print_end_block(out, params, i<(args->n_user-1)?1:0);
 

@@ -68,8 +68,28 @@ typedef enum fw_proto_t {
 	PROTO_SCTP,
 	PROTO_ESP,
 	PROTO_ICMP,
-	PROTO_ICMPv6
+	PROTO_ICMPv6,
+
+	/* fix proto2str below if anything is added */
+	PROTO_MAX
 } fw_proto_t;
+
+
+inline static const char *proto_to_str(fw_proto_t proto)
+{
+	const char *proto2str[] = {
+		"udp",
+		"tcp",
+		"sctp",
+		"esp",
+		"icmp",
+		"icmpv6"
+	};
+
+	if (proto < 0 || proto >= PROTO_MAX)
+		return "unknown";
+	return proto2str[proto];
+}
 
 /* Banning works with a point system. A wrong password
  * attempt gives you PASSWORD_POINTS, and you are banned

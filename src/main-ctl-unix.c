@@ -398,6 +398,9 @@ static int append_user_info(method_ctx *ctx,
 	rep->iroutes = ctmp->config->iroutes;
 	rep->n_iroutes = ctmp->config->n_iroutes;
 
+	rep->n_fw_ports = ctmp->config->n_fw_ports;
+	rep->fw_ports = ctmp->config->fw_ports;
+
 	return 0;
 }
 

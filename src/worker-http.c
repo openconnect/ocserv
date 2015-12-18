@@ -185,8 +185,12 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	if (req->value.length <= 0)
 		return;
 
-	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: %.*s", (int)req->header.length,
-	      req->header.data, (int)req->value.length, req->value.data);
+	if (ws->perm_config->debug < DEBUG_SENSITIVE && req->header.length == 6 && strncasecmp((char*)req->header.data, "Cookie", 6) == 0)
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: (censored)", (int)req->header.length,
+		      req->header.data);
+	else
+		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: %.*s", (int)req->header.length,
+		      req->header.data, (int)req->value.length, req->value.data);
 
 	value = talloc_size(ws, req->value.length + 1);
 	if (value == NULL)

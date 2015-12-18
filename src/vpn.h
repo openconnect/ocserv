@@ -108,8 +108,10 @@ inline static const char *proto_to_str(fw_proto_t proto)
 #define MAIN_SEC_MOD_TIMEOUT 120
 
 #define DEBUG_BASIC 1
+#define DEBUG_INFO  3
 #define DEBUG_HTTP  4
 #define DEBUG_TRANSFERRED 5
+#define DEBUG_SENSITIVE 8
 #define DEBUG_TLS   9
 
 #define DEFAULT_DPD_TIME 600

@@ -99,7 +99,7 @@ void __attribute__ ((format(printf, 3, 4)))
 	const char* ip;
 	va_list args;
 
-	if (priority == LOG_DEBUG && ws->perm_config->debug < 3)
+	if (priority == LOG_DEBUG && ws->perm_config->debug < DEBUG_INFO)
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {

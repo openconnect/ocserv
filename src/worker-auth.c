@@ -443,9 +443,13 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 		if (ret == GNUTLS_E_SHORT_MEMORY_BUFFER)
 			oclog(ws, LOG_ERR, "certificate's username exceed the maximum buffer size (%u)",
 			      (unsigned)sizeof(ws->cert_username));
-		else
-			oclog(ws, LOG_ERR, "cannot obtain user from certificate DN: %s",
-			      gnutls_strerror(ret));
+		else if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+			oclog(ws, LOG_ERR, "the certificate's DN does not contain OID %s; cannot determine username",
+			      ws->config->cert_user_oid);
+		} else {
+			oclog(ws, LOG_ERR, "cannot obtain user name from certificate DN(%s): %s",
+			      ws->config->cert_user_oid, gnutls_strerror(ret));
+		}
 		goto fail;
 	}
 
@@ -471,8 +475,8 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 				if (ret == 0)
 					ret = GNUTLS_E_INTERNAL_ERROR;
 				oclog(ws, LOG_ERR,
-				      "cannot obtain group from certificate DN: %s",
-				      gnutls_strerror(ret));
+				      "cannot obtain group from certificate DN(%s): %s",
+				      ws->config->cert_group_oid, gnutls_strerror(ret));
 				goto fail;
 			}
 
@@ -778,10 +782,9 @@ int get_cert_info(worker_st * ws)
 	ret = get_cert_names(ws, cert);
 	if (ret < 0) {
 		if (ws->config->cert_user_oid == NULL) {
-			oclog(ws, LOG_ERR, "cannot read username from certificate; no cert-user-oid is set");
+			oclog(ws, LOG_ERR, "cannot read username from certificate; cert-user-oid is not set");
 		} else {
-			oclog(ws, LOG_ERR, "cannot read username (%s) from certificate",
-			      ws->config->cert_user_oid);
+			oclog(ws, LOG_ERR, "cannot read username from certificate");
 		}
 		return -1;
 	}

@@ -32,6 +32,7 @@ Dependencies for development, testing, or dependencies that can be skipped
 in an embedded system (e.g., because a replacement library is included):
 
 ```
+libradcli-dev      / radcli-devel
 libprotobuf-c0-dev / protobuf-c-devel
 libtalloc-dev      / libtalloc-devel
 libhttp-parser-dev / http-parser-devel

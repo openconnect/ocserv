@@ -792,6 +792,45 @@ int get_cert_info(worker_st * ws)
 	return 0;
 }
 
+/* This makes sure that the provided cookie is valid,
+ * and fills in the ws->user_config.
+ */
+void cookie_authenticate_or_exit(worker_st *ws)
+{
+	int ret;
+
+	if (ws->auth_state == S_AUTH_COMPLETE)
+		return;
+
+	/* we must be in S_AUTH_COOKIE state */
+	if (ws->auth_state != S_AUTH_COOKIE || ws->cookie_set == 0) {
+		oclog(ws, LOG_WARNING, "no cookie found");
+		cstp_puts(ws,
+			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
+		exit_worker(ws);
+	}
+
+	/* we have authenticated against sec-mod, we need to complete
+	 * our authentication by forwarding our cookie to main. */
+	ret = auth_cookie(ws, ws->cookie, ws->cookie_size);
+	if (ret < 0) {
+		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
+		if (ret == ERR_AUTH_FAIL) {
+			cstp_puts(ws,
+				 "HTTP/1.1 401 Unauthorized\r\n\r\n");
+			cstp_puts(ws,
+				 "X-Reason: Cookie is not acceptable\r\n\r\n");
+		} else {
+			cstp_puts(ws,
+				 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
+		}
+		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
+		exit_worker(ws);
+	}
+	ws->auth_state = S_AUTH_COMPLETE;
+}
+
 /* sends a cookie authentication request to main thread and waits for
  * a reply.
  * Returns 0 on success.

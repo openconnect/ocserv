@@ -48,6 +48,9 @@ int ret;
 struct stat st;
 
 	oclog(ws, LOG_HTTP_DEBUG, "requested config: %s", ws->req.url); 
+
+	cookie_authenticate_or_exit(ws);
+
 	if (ws->user_config->xml_config_file == NULL) {
 		oclog(ws, LOG_INFO, "requested config but no config file is set");
 		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);

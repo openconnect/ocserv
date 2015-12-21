@@ -1312,6 +1312,7 @@ static int send_routes(worker_st *ws, struct http_req_st *req,
 	return 0;
 }
 
+
 /* connect_handler:
  * @ws: an initialized worker structure
  *
@@ -1350,33 +1351,7 @@ static int connect_handler(worker_st * ws)
 
 	ws->buffer_size = sizeof(ws->buffer);
 
-	/* we must be in S_AUTH_COOKIE state */
-	if (ws->auth_state != S_AUTH_COOKIE || ws->cookie_set == 0) {
-		oclog(ws, LOG_WARNING, "no cookie found");
-		cstp_puts(ws,
-			 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
-		exit_worker(ws);
-	}
-
-	/* we have authenticated against sec-mod, we need to complete
-	 * our authentication by forwarding our cookie to main. */
-	ret = auth_cookie(ws, ws->cookie, ws->cookie_size);
-	if (ret < 0) {
-		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
-		if (ret == ERR_AUTH_FAIL) {
-			cstp_puts(ws,
-				 "HTTP/1.1 401 Unauthorized\r\n\r\n");
-			cstp_puts(ws,
-				 "X-Reason: Cookie is not acceptable\r\n\r\n");
-		} else {
-			cstp_puts(ws,
-				 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
-		}
-		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
-		exit_worker(ws);
-	}
-	ws->auth_state = S_AUTH_COMPLETE;
+	cookie_authenticate_or_exit(ws);
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);

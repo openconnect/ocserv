@@ -345,6 +345,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			ws->full_ipv6 = 1;
 		break;
 	case HEADER_COOKIE:
+		/* don't bother parsing cookies if we are already authenticated */
+		if (ws->auth_state > S_AUTH_COOKIE)
+			break;
 
 		str = (char *)value;
 		while ((token = strtok(str, ";")) != NULL) {

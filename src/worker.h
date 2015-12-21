@@ -359,6 +359,8 @@ int send_msg_to_main(worker_st *ws, uint8_t cmd,
 
 int parse_proxy_proto_header(struct worker_st *ws, int fd);
 
+void cookie_authenticate_or_exit(worker_st *ws);
+
 /* after that time (secs) of inactivity in the UDP part, connection switches to 
  * TCP (if activity occurs there).
  */

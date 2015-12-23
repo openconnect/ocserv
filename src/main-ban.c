@@ -106,6 +106,7 @@ static void massage_ipv6_address(ban_entry_st *t)
 }
 
 /* returns -1 if the user is already banned, and zero otherwise */
+static
 int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_size, unsigned score)
 {
 	struct htable *db = s->ban_db;
@@ -114,6 +115,8 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	time_t now = time(0);
 	time_t expiration = now + s->config->min_reauth_time;
 	int ret = 0;
+	char str_ip[MAX_IP_STR];
+	const char *p_str_ip = NULL;
 	unsigned print_msg;
 
 	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || (ip_size != 4 && ip_size != 16))
@@ -157,12 +160,19 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 		print_msg = 1;
 	e->score += score;
 
+	if (ip_size == 4)
+		p_str_ip = inet_ntop(AF_INET, ip, str_ip, sizeof(str_ip));
+	else
+		p_str_ip = inet_ntop(AF_INET6, ip, str_ip, sizeof(str_ip));
+
 	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
-		if (print_msg)
-			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", ip, e->score, ctime(&e->expires));
+		if (print_msg && p_str_ip) {
+			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", str_ip, e->score, ctime(&e->expires));
+		}
 		ret = -1;
 	} else {
-		mslog(s, NULL, LOG_DEBUG, "added %d points (total %d) for IP '%s' to ban list", score, e->score, ip);
+		if (p_str_ip)
+			mslog(s, NULL, LOG_DEBUG, "added %d points (total %d) for IP '%s' to ban list", score, e->score, str_ip);
 		ret = 0;
 	}
 

@@ -38,7 +38,6 @@ typedef struct ban_entry_st {
 
 void cleanup_banned_entries(main_server_st *s);
 unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, socklen_t addr_size);
-int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_size, unsigned score);
 int add_str_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score);
 int remove_ip_from_ban_list(main_server_st *s, const uint8_t *ip, unsigned size);
 unsigned main_ban_db_elems(main_server_st *s);

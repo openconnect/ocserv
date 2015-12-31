@@ -76,7 +76,8 @@ ATTRIBUTE	NAS-IP-Address		4	ipaddr
 ATTRIBUTE	Framed-IP-Address	8	ipaddr
 ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
 
-# sets routes (quite a kludge)
+# sets routes (quite a kludge as it requires to have
+# a CIDR string)
 ATTRIBUTE	Framed-Route		22	string
 
 # sets DNS servers

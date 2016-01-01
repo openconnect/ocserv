@@ -84,8 +84,8 @@ int set_tun_mtu(main_server_st * s, struct proc_st *proc, unsigned mtu)
 	ret = ioctl(fd, SIOCSIFMTU, &ifr);
 	if (ret != 0) {
 		e = errno;
-		mslog(s, proc, LOG_INFO, "ioctl SIOCSIFMTU error: %s",
-		      strerror(e));
+		mslog(s, proc, LOG_INFO, "ioctl SIOCSIFMTU(%d) error: %s",
+		      mtu, strerror(e));
 		ret = -1;
 		goto fail;
 	}

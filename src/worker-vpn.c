@@ -504,7 +504,7 @@ void vpn_server(struct worker_st *ws)
 	http_req_reset(ws);
 	/* parse as we go */
 	do {
-		nrecvd = cstp_recv(ws, buf, sizeof(buf));
+		nrecvd = tls_recv(ws, buf, sizeof(buf));
 		if (nrecvd <= 0) {
 			if (nrecvd == 0)
 				goto finish;
@@ -540,7 +540,7 @@ void vpn_server(struct worker_st *ws)
 		/* continue reading */
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP POST %s", ws->req.url);
 		while (ws->req.message_complete == 0) {
-			nrecvd = cstp_recv(ws, buf, sizeof(buf));
+			nrecvd = tls_recv(ws, buf, sizeof(buf));
 			FATAL_ERR(ws, nrecvd);
 
 			nparsed =
@@ -1070,7 +1070,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 			gnutls_packet_get(packet, &data, NULL);
 		}
 	} else {
-		ret = recv(ws->conn_fd, ws->buffer, ws->buffer_size, 0);
+		ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
 		data.data = ws->buffer;
 		data.size = ret;
 	}

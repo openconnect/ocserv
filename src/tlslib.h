@@ -142,7 +142,7 @@ int __attribute__ ((format(printf, 2, 3)))
 void cstp_close(struct worker_st *ws);
 void cstp_fatal_close(struct worker_st *ws,
 			    gnutls_alert_description_t a);
-ssize_t cstp_recv(struct worker_st *ws, void *data, size_t data_size);
+ssize_t tls_recv(struct worker_st *ws, void *data, size_t data_size);
 ssize_t cstp_recv_nb(struct worker_st *ws, void *data, size_t data_size);
 ssize_t cstp_send_file(struct worker_st *ws, const char *file);
 ssize_t cstp_send(struct worker_st *ws, const void *data,

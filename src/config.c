@@ -617,6 +617,9 @@ static void load_iroutes(struct cfg_st *config)
 	struct dirent *r;
 	char path[_POSIX_PATH_MAX];
 
+	if (config->per_user_dir == NULL)
+		return;
+
 	dir = opendir(config->per_user_dir);
 	if (dir != NULL) {
 		do {
@@ -626,8 +629,8 @@ static void load_iroutes(struct cfg_st *config)
 				append_iroutes_from_file(config, path);
 			}
 		} while(r != NULL);
+		closedir(dir);
 	}
-	closedir(dir);
 }
 
 static void parse_cfg_file(void *pool, const char* file, struct perm_cfg_st *perm_config, unsigned reload)

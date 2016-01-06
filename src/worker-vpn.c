@@ -66,6 +66,7 @@
 
 #define PERIODIC_CHECK_TIME 30
 #define MIN_STATS_INTERVAL 10
+#define SOCKET_TIMEO_SECS 10
 
 /* The number of DPD packets a client skips before he's kicked */
 #define DPD_TRIES 2
@@ -1312,6 +1313,25 @@ static int send_routes(worker_st *ws, struct http_req_st *req,
 	return 0;
 }
 
+/* Enforces a socket timeout. That is because, although we
+ * use select() to see whether a call to recv() would block,
+ * there are certain cases in Linux where recv() blocks even
+ * though select() notified of data */
+static void set_socket_timeout(worker_st * ws, int fd)
+{
+	struct timeval tval;
+	int ret;
+
+	tval.tv_sec = SOCKET_TIMEO_SECS;
+	tval.tv_usec = 0;
+	ret =
+	    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tval,
+			       sizeof(tval));
+	if (ret == -1)
+		oclog(ws, LOG_DEBUG,
+		      "setsockopt(%s, SO_RCVTIMEO) failed.", (fd==ws->conn_fd)?"ΤCP":"UDP");
+}
+
 /* connect_handler:
  * @ws: an initialized worker structure
  *
@@ -1723,6 +1743,7 @@ static int connect_handler(worker_st * ws)
 			      "setsockopt(TCP, SO_SNDBUF) to %u, failed.", t);
 	}
 
+	set_socket_timeout(ws, ws->conn_fd);
 	set_non_block(ws->conn_fd);
 	set_net_priority(ws, ws->conn_fd, ws->config->net_priority);
 
@@ -1820,6 +1841,7 @@ static int connect_handler(worker_st * ws)
 		}
 
 		set_net_priority(ws, ws->dtls_tptr.fd, ws->config->net_priority);
+		set_socket_timeout(ws, ws->dtls_tptr.fd);
 	}
 
 	/* hack for openconnect. It uses only a single MTU value */

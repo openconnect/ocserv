@@ -387,7 +387,6 @@ static void exit_worker_reason(worker_st * ws, unsigned reason)
  */
 void vpn_server(struct worker_st *ws)
 {
-	unsigned char buf[2048];
 	int ret;
 	ssize_t nparsed, nrecvd;
 	gnutls_session_t session = NULL;
@@ -505,7 +504,7 @@ void vpn_server(struct worker_st *ws)
 	http_req_reset(ws);
 	/* parse as we go */
 	do {
-		nrecvd = tls_recv(ws, buf, sizeof(buf));
+		nrecvd = tls_recv(ws, ws->buffer, sizeof(ws->buffer));
 		if (nrecvd <= 0) {
 			if (nrecvd == 0)
 				goto finish;
@@ -516,7 +515,7 @@ void vpn_server(struct worker_st *ws)
 		}
 
 		nparsed =
-		    http_parser_execute(&parser, &settings, (void *)buf,
+		    http_parser_execute(&parser, &settings, (void *)ws->buffer,
 					nrecvd);
 		if (nparsed == 0) {
 			oclog(ws, LOG_INFO, "error parsing HTTP request");
@@ -541,11 +540,11 @@ void vpn_server(struct worker_st *ws)
 		/* continue reading */
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP POST %s", ws->req.url);
 		while (ws->req.message_complete == 0) {
-			nrecvd = tls_recv(ws, buf, sizeof(buf));
+			nrecvd = tls_recv(ws, ws->buffer, sizeof(ws->buffer));
 			FATAL_ERR(ws, nrecvd);
 
 			nparsed =
-			    http_parser_execute(&parser, &settings, (void *)buf,
+			    http_parser_execute(&parser, &settings, (void *)ws->buffer,
 						nrecvd);
 			if (nparsed == 0) {
 				oclog(ws, LOG_HTTP_DEBUG,

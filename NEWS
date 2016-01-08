@@ -1,4 +1,4 @@
-* Version 0.11.0 (unreleased)
+* Version 0.11.0rc0 (released 2016-01-08)
 - Simplified configuration semantics. Any routes or no-routes set on the
   per-user configuration file will override any global ones instead of
   being appended.

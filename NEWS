@@ -1,4 +1,4 @@
-* Version 0.10.11 (unreleased)
+* Version 0.10.11 (released 2016-01-08)
 - Corrected the reporting of keepalive to occtl.
 - Handle clients which send the first request to /VPN
 - Prevent a crash in per-user config dir is not available if

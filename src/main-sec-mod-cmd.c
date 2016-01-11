@@ -43,11 +43,16 @@
 #include <route-add.h>
 #include <ipc.pb-c.h>
 #include <script-list.h>
+#include <cloexec.h>
 
 #include <vpn.h>
 #include <main.h>
 #include <main-ban.h>
 #include <ccan/list/list.h>
+
+#ifdef HAVE_MALLOC_TRIM
+# include <malloc.h>
+#endif
 
 int handle_sec_mod_commands(main_server_st * s)
 {
@@ -537,3 +542,70 @@ int session_close(main_server_st * s, struct proc_st *proc)
 
 	return 0;
 }
+
+/* Returns two file descriptors to be used for communication with sec-mod.
+ * The sync_fd is used by main to send synchronous commands- commands which
+ * expect a reply immediately.
+ */
+int run_sec_mod(main_server_st * s, int *sync_fd)
+{
+	int e, fd[2], ret;
+	int sfd[2];
+	pid_t pid;
+	const char *p;
+
+	/* make socket name */
+	snprintf(s->socket_file, sizeof(s->socket_file), "%s.%u",
+		 s->perm_config->socket_file_prefix, (unsigned)getpid());
+
+	if (s->perm_config->chroot_dir != NULL) {
+		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
+			 s->perm_config->chroot_dir, s->socket_file);
+	} else {
+		strlcpy(s->full_socket_file, s->socket_file, sizeof(s->full_socket_file));
+	}
+	p = s->full_socket_file;
+
+	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error creating sec-mod command socket");
+		exit(1);
+	}
+
+	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sfd);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error creating sec-mod sync command socket");
+		exit(1);
+	}
+
+	pid = fork();
+	if (pid == 0) {		/* child */
+		clear_lists(s);
+		kill_on_parent_kill(SIGTERM);
+
+#ifdef HAVE_MALLOC_TRIM
+		/* try to return all the pages we've freed to
+		 * the operating system. */
+		malloc_trim(0);
+#endif
+		setproctitle(PACKAGE_NAME "-secmod");
+		close(fd[1]);
+		close(sfd[1]);
+		set_cloexec_flag (fd[0], 1);
+		set_cloexec_flag (sfd[0], 1);
+		sec_mod_server(s->main_pool, s->perm_config, p, s->cookie_key, fd[0], sfd[0]);
+		exit(0);
+	} else if (pid > 0) {	/* parent */
+		close(fd[0]);
+		s->sec_mod_pid = pid;
+		set_cloexec_flag (fd[1], 1);
+		set_cloexec_flag (sfd[1], 1);
+		*sync_fd = sfd[1];
+		return fd[1];
+	} else {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "error in fork(): %s", strerror(e));
+		exit(1);
+	}
+}
+

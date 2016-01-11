@@ -773,6 +773,12 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, struct timespec *tnow,
 	if (now - ws->last_periodic_check < periodic_check_time)
 		return 0;
 
+	/* we set an alarm at each periodic check to prevent any
+	 * freezes in the worker due to an unexpected block (due to worker
+	 * bug or kernel bug). In that case the worker will be killed due
+	 * the the alarm instead of hanging. */
+	alarm(1800);
+
 	if (ws->config->idle_timeout > 0) {
 		if (now - ws->last_nc_msg > ws->config->idle_timeout) {
 			oclog(ws, LOG_ERR,

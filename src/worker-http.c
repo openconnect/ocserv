@@ -40,7 +40,7 @@
 
 #define CS_AES128_GCM "OC-DTLS1_2-AES128-GCM"
 #define CS_AES256_GCM "OC-DTLS1_2-AES256-GCM"
-#define CS_CHACHA20_POLY1305 "OC-DTLS1_2-CHACHA20-POLY1305"
+#define CS_CHACHA20_POLY1305 "OC2-DTLS1_2-CHACHA20-POLY1305"
 
 struct known_urls_st {
 	const char *url;
@@ -84,6 +84,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
 	 .txt_version = "3.2.7",
 	 .server_prio = 90},
@@ -93,6 +94,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
 	 .server_prio = 80,
 	 .txt_version = "3.2.7",
@@ -103,6 +105,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT",
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_CBC,
 	 .server_prio = 50,
 	 },
@@ -112,6 +115,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT",
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
 	 .server_prio = 1,
 	 },
@@ -119,11 +123,12 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = CS_CHACHA20_POLY1305,
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+CHACHA20-POLY1305:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+CHACHA20-POLY1305:+AEAD:+PSK:%COMPAT:+SIGN-ALL",
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_PSK,
 	 .gnutls_cipher = GNUTLS_CIPHER_CHACHA20_POLY1305,
-	 .txt_version = "3.4.0",
+	 .txt_version = "3.4.8",
 	 .server_prio = 40
 	},
 #endif

@@ -100,6 +100,7 @@ typedef struct dtls_ciphersuite_st {
 	const char* gnutls_name; /* the gnutls priority string to set */
 	unsigned server_prio; /* the highest the more we want to negotiate that */
 	unsigned gnutls_cipher;
+	unsigned gnutls_kx;
 	unsigned gnutls_mac;
 	unsigned gnutls_version;
 	const char *txt_version;

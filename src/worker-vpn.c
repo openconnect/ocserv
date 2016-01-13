@@ -210,7 +210,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
 					   ws->req.
 					   selected_ciphersuite->gnutls_version,
-					   GNUTLS_KX_RSA,
+					   ws->req.
+					   selected_ciphersuite->gnutls_kx,
 					   ws->req.
 					   selected_ciphersuite->gnutls_cipher,
 					   ws->req.

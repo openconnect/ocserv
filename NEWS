@@ -1,6 +1,9 @@
 * Version 0.11.0rc1 (unreleased)
 - Radius: send the Connect-Info attribute with the user agent string
   on authentication.
+- Updated support for CHACHA20-POLY1305 to conform to latest draft
+- Added watchdog to worker processes to ensure they are killed
+  under unexpected long delays (e.g., the process being blocked).
 
 
 * Version 0.11.0rc0 (released 2016-01-08)

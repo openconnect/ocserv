@@ -91,12 +91,12 @@ static void radius_global_deinit()
 		rc_destroy(rh);
 }
 
-static int radius_auth_init(void **ctx, void *pool, const char *username, const char *ip, const char *our_ip, unsigned id)
+static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *info)
 {
 	struct radius_ctx_st *pctx;
 	char *default_realm;
 
-	if (username == NULL || username[0] == 0) {
+	if (info->username == NULL || info->username[0] == 0) {
 		syslog(LOG_AUTH,
 		       "radius-auth: no username present");
 		return ERR_AUTH_FAIL;
@@ -106,22 +106,22 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
-	strlcpy(pctx->username, username, sizeof(pctx->username));
-	strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
-	if (our_ip)
-		strlcpy(pctx->our_ip, our_ip, sizeof(pctx->our_ip));
+	strlcpy(pctx->remote_ip, info->ip, sizeof(pctx->remote_ip));
+	if (info->our_ip)
+		strlcpy(pctx->our_ip, info->our_ip, sizeof(pctx->our_ip));
 
 	pctx->pass_msg = NULL;
 
 	default_realm = rc_conf_str(rh, "default_realm");
 
-	if ((strchr(username, '@') == NULL) && default_realm &&
+	if ((strchr(info->username, '@') == NULL) && default_realm &&
 	    default_realm[0] != 0) {
-		snprintf(pctx->username, sizeof(pctx->username), "%s@%s", username, default_realm);
+		snprintf(pctx->username, sizeof(pctx->username), "%s@%s", info->username, default_realm);
 	} else {
-		strcpy(pctx->username, username);
+		strlcpy(pctx->username, info->username, sizeof(pctx->username));
 	}
-	pctx->id = id;
+	pctx->id = info->id;
+	strlcpy(pctx->user_agent, info->user_agent, sizeof(pctx->user_agent));
 
 	*ctx = pctx;
 
@@ -238,6 +238,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (rc_avpair_add(rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
+		syslog(LOG_ERR,
+		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
+		       pctx->username);
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
+	}
+
+	if (rc_avpair_add(rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);

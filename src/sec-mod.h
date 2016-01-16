@@ -52,7 +52,15 @@ typedef struct stats_st {
 	time_t uptime;
 } stats_st;
 
-typedef struct common_auth_info_st {
+typedef struct common_auth_init_st {
+	const char *username;
+	const char *ip;
+	const char *our_ip;
+	const char *user_agent;
+	unsigned id;
+} common_auth_init_st;
+
+typedef struct common_acct_info_st {
 	char username[MAX_USERNAME_SIZE*2];
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char psid[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1]; /* printable */
@@ -61,7 +69,7 @@ typedef struct common_auth_info_st {
 	char ipv4[MAX_IP_STR];
 	char ipv6[MAX_IP_STR];
 	unsigned id;
-} common_auth_info_st;
+} common_acct_info_st;
 
 typedef struct client_entry_st {
 	/* A unique session identifier used to distinguish sessions
@@ -97,7 +105,7 @@ typedef struct client_entry_st {
 	unsigned auth_type;
 	unsigned discon_reason; /* reason for disconnection */
 
-	struct common_auth_info_st auth_info;
+	struct common_acct_info_st auth_info;
 
 	/* the module this entry is using */
 	const struct auth_mod_st *module;

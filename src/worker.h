@@ -121,7 +121,7 @@ struct http_req_st {
 
 	char hostname[MAX_HOSTNAME_SIZE];
 	char user_agent[MAX_AGENT_NAME];
-	unsigned user_agent_type;;
+	unsigned user_agent_type;
 
 	unsigned int next_header;
 

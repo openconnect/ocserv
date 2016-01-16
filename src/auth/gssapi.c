@@ -209,7 +209,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 	return 0;
 }
 
-static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const char *ip, const char *our_ip, unsigned pid)
+static int gssapi_auth_init(void **ctx, void *pool, const common_auth_init_st *info)
 {
 	struct gssapi_ctx_st *pctx;
 	OM_uint32 minor, flags, time;
@@ -219,6 +219,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const char *spnego, const ch
 	int ret;
 	size_t raw_len;
 	char *raw;
+	const char *spnego = info->username;
 
 	if (spnego == NULL || spnego[0] == 0) {
 		syslog(LOG_ERR, "gssapi: error in spnego data %s", __func__);

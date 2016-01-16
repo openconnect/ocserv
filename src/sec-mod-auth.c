@@ -747,8 +747,16 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	}
 
 	if (e->module) {
+		common_auth_init_st st;
+
+		st.username = req->user_name;
+		st.ip = req->ip;
+		st.our_ip = req->our_ip;
+		st.user_agent = req->user_agent;
+		st.id = pid;
+
 		ret =
-		    e->module->auth_init(&e->auth_ctx, e, req->user_name, req->ip, req->our_ip, pid);
+		    e->module->auth_init(&e->auth_ctx, e, &st);
 		if (ret == ERR_AUTH_CONTINUE) {
 			need_continue = 1;
 		} else if (ret < 0) {

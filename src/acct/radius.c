@@ -115,7 +115,7 @@ static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
 	return;
 }
 
-static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, VALUE_PAIR **send)
+static void append_acct_standard(rc_handle *rh, const common_acct_info_st *ai, VALUE_PAIR **send)
 {
 	uint32_t i;
 
@@ -188,7 +188,7 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 	return;
 }
 
-static void radius_acct_session_stats(unsigned auth_method, const common_auth_info_st *ai, stats_st *stats)
+static void radius_acct_session_stats(unsigned auth_method, const common_acct_info_st *ai, stats_st *stats)
 {
 int ret;
 uint32_t status_type;
@@ -221,7 +221,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	return;
 }
 
-static int radius_acct_open_session(unsigned auth_method, const common_auth_info_st *ai, const void *sid, unsigned sid_size)
+static int radius_acct_open_session(unsigned auth_method, const common_acct_info_st *ai, const void *sid, unsigned sid_size)
 {
 int ret;
 uint32_t status_type;
@@ -260,7 +260,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	return ret;
 }
 
-static void radius_acct_close_session(unsigned auth_method, const common_auth_info_st *ai, stats_st *stats, unsigned discon_reason)
+static void radius_acct_close_session(unsigned auth_method, const common_acct_info_st *ai, stats_st *stats, unsigned discon_reason)
 {
 int ret;
 uint32_t status_type;

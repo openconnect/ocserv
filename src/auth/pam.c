@@ -150,12 +150,12 @@ wait:
 	}
 }
 
-static int pam_auth_init(void** ctx, void *pool, const char* user, const char* ip, const char *our_ip, unsigned pid)
+static int pam_auth_init(void** ctx, void *pool, const common_auth_init_st *info)
 {
 int pret;
 struct pam_ctx_st * pctx;
 
-	if (user == NULL || user[0] == 0) {
+	if (info->username == NULL || info->username[0] == 0) {
 		syslog(LOG_AUTH,
 		       "pam-auth: no username present");
 		return ERR_AUTH_FAIL;
@@ -169,7 +169,7 @@ struct pam_ctx_st * pctx;
 
 	pctx->dc.conv = ocserv_conv;
 	pctx->dc.appdata_ptr = pctx;
-	pret = pam_start(PACKAGE, user, &pctx->dc, &pctx->ph);
+	pret = pam_start(PACKAGE, info->username, &pctx->dc, &pctx->ph);
 	if (pret != PAM_SUCCESS) {
 		syslog(LOG_AUTH, "PAM-auth init: %s", pam_strerror(pctx->ph, pret));
 		goto fail1;
@@ -179,10 +179,10 @@ struct pam_ctx_st * pctx;
 	if (pctx->cr == NULL)
 		goto fail2;
 
-	strlcpy(pctx->username, user, sizeof(pctx->username));
+	strlcpy(pctx->username, info->username, sizeof(pctx->username));
 
-	if (ip != NULL)
-		pam_set_item(pctx->ph, PAM_RHOST, ip);
+	if (info->ip != NULL)
+		pam_set_item(pctx->ph, PAM_RHOST, info->ip);
 
 	*ctx = pctx;
 	

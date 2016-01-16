@@ -43,7 +43,7 @@ static int ocserv_conv(int msg_size, const struct pam_message **msg,
 	return PAM_SUCCESS;
 }
 
-static int pam_acct_open_session(unsigned auth_method, const struct common_auth_info_st *ai, const void *sid, unsigned sid_size)
+static int pam_acct_open_session(unsigned auth_method, const struct common_acct_info_st *ai, const void *sid, unsigned sid_size)
 {
 int pret;
 pam_handle_t *ph;
@@ -79,7 +79,7 @@ fail1:
 
 }
 
-static void pam_acct_close_session(unsigned auth_method, const struct common_auth_info_st *ai, stats_st *stats, unsigned status)
+static void pam_acct_close_session(unsigned auth_method, const struct common_acct_info_st *ai, stats_st *stats, unsigned status)
 {
 	return;
 }

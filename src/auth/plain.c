@@ -230,12 +230,12 @@ static int read_auth_pass(struct plain_ctx_st *pctx)
 	return ret;
 }
 
-static int plain_auth_init(void **ctx, void *pool, const char *username, const char *ip, const char *our_ip, unsigned pid)
+static int plain_auth_init(void **ctx, void *pool, const common_auth_init_st *info)
 {
 	struct plain_ctx_st *pctx;
 	int ret;
 
-	if (username == NULL || username[0] == 0) {
+	if (info->username == NULL || info->username[0] == 0) {
 		syslog(LOG_AUTH,
 		       "plain-auth: no username present");
 		return ERR_AUTH_FAIL;
@@ -245,7 +245,7 @@ static int plain_auth_init(void **ctx, void *pool, const char *username, const c
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
-	strlcpy(pctx->username, username, sizeof(pctx->username));
+	strlcpy(pctx->username, info->username, sizeof(pctx->username));
 	pctx->pass_msg = NULL; /* use default */
 
 	/* this doesn't fail on password mismatch but sets p->failed */

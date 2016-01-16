@@ -106,7 +106,6 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
-	strlcpy(pctx->username, username, sizeof(pctx->username));
 	strlcpy(pctx->remote_ip, ip, sizeof(pctx->remote_ip));
 	if (our_ip)
 		strlcpy(pctx->our_ip, our_ip, sizeof(pctx->our_ip));
@@ -114,13 +113,13 @@ static int radius_auth_init(void **ctx, void *pool, const char *username, const 
 	pctx->pass_msg = NULL;
 
 	default_realm = rc_conf_str(rh, "default_realm");
-
 	if ((strchr(username, '@') == NULL) && default_realm &&
 	    default_realm[0] != 0) {
 		snprintf(pctx->username, sizeof(pctx->username), "%s@%s", username, default_realm);
 	} else {
-		strcpy(pctx->username, username);
+		strlcpy(pctx->username, username, sizeof(pctx->username));
 	}
+
 	pctx->id = id;
 
 	*ctx = pctx;

@@ -1,3 +1,8 @@
+* Version 0.11.0rc1 (unreleased)
+- Radius: send the Connect-Info attribute with the user agent string
+  on authentication.
+
+
 * Version 0.11.0rc0 (released 2016-01-08)
 - Simplified configuration semantics. Any routes or no-routes set on the
   per-user configuration file will override any global ones instead of

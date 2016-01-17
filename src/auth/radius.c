@@ -106,7 +106,8 @@ static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
-	strlcpy(pctx->remote_ip, info->ip, sizeof(pctx->remote_ip));
+	if (info->ip)
+		strlcpy(pctx->remote_ip, info->ip, sizeof(pctx->remote_ip));
 	if (info->our_ip)
 		strlcpy(pctx->our_ip, info->our_ip, sizeof(pctx->our_ip));
 
@@ -121,7 +122,9 @@ static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 		strlcpy(pctx->username, info->username, sizeof(pctx->username));
 	}
 	pctx->id = info->id;
-	strlcpy(pctx->user_agent, info->user_agent, sizeof(pctx->user_agent));
+
+	if (info->user_agent)
+		strlcpy(pctx->user_agent, info->user_agent, sizeof(pctx->user_agent));
 
 	*ctx = pctx;
 
@@ -245,12 +248,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		goto cleanup;
 	}
 
-	if (rc_avpair_add(rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
-		syslog(LOG_ERR,
-		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
-		       pctx->username);
-		ret = ERR_AUTH_FAIL;
-		goto cleanup;
+	if (pctx->user_agent[0] != 0) {
+		if (rc_avpair_add(rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
+			syslog(LOG_ERR,
+			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
+			       pctx->username);
+			ret = ERR_AUTH_FAIL;
+			goto cleanup;
+		}
 	}
 
 	service = PW_AUTHENTICATE_ONLY;

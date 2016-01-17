@@ -65,6 +65,8 @@ ATTRIBUTE	Acct-Session-Id		44	string
 ATTRIBUTE	Acct-Input-Gigawords	52	integer
 ATTRIBUTE	Acct-Output-Gigawords	53	integer
 ATTRIBUTE	Acct-Interim-Interval	85	integer
+ATTRIBUTE	Connect-Info		77	string
+
 
 ###########################
 #	IPv4 attributes   #
@@ -89,6 +91,7 @@ ATTRIBUTE	MS-Primary-DNS-Server 	28 	ipaddr
 ATTRIBUTE 	MS-Secondary-DNS-Server 29 	ipaddr
 
 END-VENDOR Microsoft
+
 
 ############################
 #	IPv6 attributes    #

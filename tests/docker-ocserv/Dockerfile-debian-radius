@@ -16,13 +16,14 @@ RUN echo 'admin:admin' |chpasswd
 RUN mkdir /etc/ocserv
 
 
+ADD ca.pem /etc/ocserv/
 ADD key.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
 ADD cert.pem /etc/ocserv/
 ADD ocserv-radius.conf /etc/ocserv/ocserv.conf
-ADD radiusclient.conf /etc/radiusclient/
+ADD radiusclient-debian.conf /etc/radiusclient/radiusclient.conf
 ADD radius-clients.conf /etc/freeradius/clients.conf
-ADD radiusclient-servers /etc/freeradius/servers
+ADD radiusclient-servers /etc/radiusclient/servers
 ADD ocserv /usr/sbin/
 ADD ocpasswd /usr/bin/
 ADD occtl /usr/bin/

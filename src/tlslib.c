@@ -143,19 +143,19 @@ ssize_t tls_recv(worker_st *ws, void *data, size_t data_size)
 	if (ws->session != NULL) {
 		do {
 			ret = gnutls_record_recv(ws->session, data, data_size);
-			if (ret == GNUTLS_E_AGAIN) {
+			if (ret == GNUTLS_E_AGAIN || ret == GNUTLS_E_INTERRUPTED) {
 				counter--;
 				ms_sleep(20);
 			}
-		} while (ret == GNUTLS_E_AGAIN && counter > 0);
+		} while ((ret == GNUTLS_E_AGAIN || ret == GNUTLS_E_INTERRUPTED) && counter > 0);
 	} else {
 		do {
 			ret = recv(ws->conn_fd, data, data_size, 0);
-			if (ret == -1 && errno == EAGAIN) {
+			if (ret == -1 && (errno == EAGAIN || errno == EINTR)) {
 				counter--;
 				ms_sleep(20);
 			}
-		} while(ret == -1 && errno == EAGAIN && counter > 0);
+		} while(ret == -1 && (errno == EINTR || errno == EAGAIN) && counter > 0);
 	}
 
 	return ret;

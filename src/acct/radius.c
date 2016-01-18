@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Red Hat, Inc.
+ * Copyright (C) 2014-2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -239,6 +239,13 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		ret = -1;
 		goto cleanup;
+	}
+
+	if (ai->user_agent[0] != 0) {
+		if (rc_avpair_add(rh, &send, PW_CONNECT_INFO, ai->user_agent, -1, 0) == NULL) {
+			ret = -1;
+			goto cleanup;
+		}
 	}
 
 	append_acct_standard(rh, ai, &send);

@@ -65,6 +65,7 @@ typedef struct common_acct_info_st {
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
 	char psid[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1]; /* printable */
 	char remote_ip[MAX_IP_STR];
+	char user_agent[MAX_AGENT_NAME];
 	char our_ip[MAX_IP_STR];
 	char ipv4[MAX_IP_STR];
 	char ipv6[MAX_IP_STR];
@@ -105,7 +106,7 @@ typedef struct client_entry_st {
 	unsigned auth_type;
 	unsigned discon_reason; /* reason for disconnection */
 
-	struct common_acct_info_st auth_info;
+	struct common_acct_info_st acct_info;
 
 	/* the module this entry is using */
 	const struct auth_mod_st *module;

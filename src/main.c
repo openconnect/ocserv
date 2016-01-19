@@ -1200,6 +1200,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
 	}
+
 	s->config = s->perm_config->config;
 
 	setproctitle(PACKAGE_NAME"-main");

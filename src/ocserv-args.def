@@ -53,6 +53,13 @@ flag = {
 };
 
 flag = {
+    name      = test-config;
+    value     = t;
+    descrip   = "Test the provided configuration file";
+    doc   = "";
+};
+
+flag = {
     name      = pid-file;
     value     = p;
     arg-type  = file;

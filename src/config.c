@@ -1188,6 +1188,9 @@ int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 
 	check_cfg(*config);
 
+	if (HAVE_OPT(TEST_CONFIG))
+		exit(0);
+
 	return 0;
 
 }

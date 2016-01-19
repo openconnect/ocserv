@@ -135,7 +135,7 @@ int ret;
 }
 
 /* Restores gnutls_record_recv() on EAGAIN */
-ssize_t tls_recv(worker_st *ws, void *data, size_t data_size)
+ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 {
 	int ret;
 	int counter = 5;

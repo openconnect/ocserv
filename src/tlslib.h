@@ -37,25 +37,6 @@ typedef struct
 	unsigned int entries;
 } tls_sess_db_st;
 
-#if 0
-#define tls_puts(s, str) tls_send(s, str, sizeof(str)-1)
-
-int __attribute__ ((format(printf, 2, 3)))
-    tls_printf(gnutls_session_t session, const char *fmt, ...);
-
-#define tls_recv_nb gnutls_record_recv
-ssize_t tls_recv(gnutls_session_t session, void *data, size_t data_size);
-ssize_t tls_send(gnutls_session_t session, const void *data,
-			size_t data_size);
-ssize_t tls_send_nb(gnutls_session_t session, const void *data,
-			size_t data_size);
-
-void tls_cork(gnutls_session_t session);
-int tls_uncork(gnutls_session_t session);
-
-ssize_t tls_send_file(gnutls_session_t session, const char *file);
-#endif
-
 typedef struct tls_st {
 	gnutls_certificate_credentials_t xcred;
 	gnutls_priority_t cprio;
@@ -131,7 +112,7 @@ int __attribute__ ((format(printf, 2, 3)))
 void cstp_close(struct worker_st *ws);
 void cstp_fatal_close(struct worker_st *ws,
 			    gnutls_alert_description_t a);
-ssize_t tls_recv(struct worker_st *ws, void *data, size_t data_size);
+ssize_t cstp_recv(struct worker_st *ws, void *data, size_t data_size);
 ssize_t cstp_recv_nb(struct worker_st *ws, void *data, size_t data_size);
 ssize_t cstp_send_file(struct worker_st *ws, const char *file);
 ssize_t cstp_send(struct worker_st *ws, const void *data,

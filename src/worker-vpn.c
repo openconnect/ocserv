@@ -504,7 +504,7 @@ void vpn_server(struct worker_st *ws)
 	http_req_reset(ws);
 	/* parse as we go */
 	do {
-		nrecvd = tls_recv(ws, ws->buffer, sizeof(ws->buffer));
+		nrecvd = cstp_recv(ws, ws->buffer, sizeof(ws->buffer));
 		if (nrecvd <= 0) {
 			if (nrecvd == 0)
 				goto finish;
@@ -540,7 +540,7 @@ void vpn_server(struct worker_st *ws)
 		/* continue reading */
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP POST %s", ws->req.url);
 		while (ws->req.message_complete == 0) {
-			nrecvd = tls_recv(ws, ws->buffer, sizeof(ws->buffer));
+			nrecvd = cstp_recv(ws, ws->buffer, sizeof(ws->buffer));
 			CSTP_FATAL_ERR(ws, nrecvd);
 
 			if (nrecvd == 0) {

@@ -58,10 +58,6 @@
 
 #include <http_parser.h>
 
-#if GNUTLS_VERSION_NUMBER >= 0x030305
-# define ZERO_COPY
-#endif
-
 #define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:257)
 
 #define PERIODIC_CHECK_TIME 30
@@ -915,9 +911,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 {
 	int ret;
 	gnutls_datum_t data;
-#ifdef ZERO_COPY
-	gnutls_packet_t packet = NULL;
-#endif
+	void *packet = NULL;
 
 	switch (ws->udp_state) {
 	case UP_ACTIVE:
@@ -933,19 +927,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		}
 #endif
 
-#ifdef ZERO_COPY
-		ret = gnutls_record_recv_packet(ws->dtls_session, &packet);
-		if (ret > 0) {
-			gnutls_packet_get(packet, &data, NULL);
-		} else {
-			data.size = 0;
-		}
-#else
-		ret =
-		    gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
-		data.data = ws->buffer;
-		data.size = ret;
-#endif
+		ret = dtls_recv_packet(ws, &data, &packet);
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);
 
@@ -1062,10 +1044,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 
 	ret = 0;
  cleanup:
-#ifdef ZERO_COPY
- 	if (packet)
-	 	gnutls_packet_deinit(packet);
-#endif
+ 	packet_deinit(packet);
 	return ret;
 }
 
@@ -1073,24 +1052,9 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 {
 	int ret;
 	gnutls_datum_t data;
-#ifdef ZERO_COPY
-	gnutls_packet_t packet = NULL;
+	void *packet = NULL;
 
-	if (ws->session != NULL) {
-		ret = gnutls_record_recv_packet(ws->session, &packet);
-		if (ret > 0) {
-			gnutls_packet_get(packet, &data, NULL);
-		}
-	} else {
-		ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
-		data.data = ws->buffer;
-		data.size = ret;
-	}
-#else
-	ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
-	data.data = ws->buffer;
-	data.size = ret;
-#endif
+	ret = cstp_recv_packet(ws, &data, &packet);
 	CSTP_FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 
 	if (ret == 0) {		/* disconnect */
@@ -1139,10 +1103,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 	ret = 0;
  cleanup:
-#ifdef ZERO_COPY
- 	if (packet)
-	 	gnutls_packet_deinit(packet);
-#endif
+ 	packet_deinit(packet);
 	return ret;
 }
 

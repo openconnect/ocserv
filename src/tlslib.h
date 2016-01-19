@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -29,6 +30,10 @@
 
 # if GNUTLS_VERSION_NUMBER < 0x030200
 #  define GNUTLS_DTLS1_2 202
+# endif
+
+# if GNUTLS_VERSION_NUMBER >= 0x030305
+#  define ZERO_COPY
 # endif
 
 typedef struct 
@@ -125,5 +130,18 @@ int cstp_uncork(struct worker_st *ws);
 /* DTLS API */
 void dtls_close(struct worker_st *ws);
 ssize_t dtls_send(struct worker_st *ws, const void *data, size_t data_size);
+
+/* packet API */
+inline static void packet_deinit(void *p)
+{
+#ifdef ZERO_COPY
+	gnutls_packet_t packet = p;
+ 	if (packet)
+	 	gnutls_packet_deinit(packet);
+#endif
+}
+
+ssize_t cstp_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
+ssize_t dtls_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
 
 #endif

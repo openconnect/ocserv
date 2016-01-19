@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -132,6 +133,32 @@ int ret;
 	close(fd);
 
 	return total;
+}
+
+ssize_t cstp_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
+{
+	int ret;
+#ifdef ZERO_COPY
+	gnutls_packet_t packet = NULL;
+
+	if (ws->session != NULL) {
+		ret = gnutls_record_recv_packet(ws->session, &packet);
+		if (ret > 0) {
+			*p = packet;
+			gnutls_packet_get(packet, data, NULL);
+		}
+	} else {
+		ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
+		data->data = ws->buffer;
+		data->size = ret;
+	}
+
+#else
+	ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
+	data->data = ws->buffer;
+	data->size = ret;
+#endif
+	return ret;
 }
 
 /* Restores gnutls_record_recv() on EAGAIN */
@@ -281,6 +308,29 @@ void cstp_fatal_close(worker_st *ws,
 	} else {
 		close(ws->conn_fd);
 	}
+}
+
+ssize_t dtls_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
+{
+	int ret;
+#ifdef ZERO_COPY
+	gnutls_packet_t packet = NULL;
+
+	ret = gnutls_record_recv_packet(ws->dtls_session, &packet);
+	if (ret > 0) {
+		gnutls_packet_get(packet, data, NULL);
+		*p = packet;
+	} else {
+		data->size = 0;
+	}
+#else
+	ret =
+	    gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
+	data->data = ws->buffer;
+	data->size = ret;
+#endif
+
+	return ret;
 }
 
 ssize_t dtls_send(worker_st *ws, const void *data,

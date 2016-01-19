@@ -135,18 +135,19 @@ if test $? = 0;then
 	stop
 fi
 
-FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/`
+DIR=`$DOCKER exec $IMAGE_NAME ls '/var/log/radius/radacct/'|tail -1`
+FILE=`$DOCKER exec $IMAGE_NAME ls '/var/log/radius/radacct/'"$DIR"|tail -1`
 
-OCTETS=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
+OCTETS=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/$DIR/$FILE"|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
 if test -z "$OCTETS" || test "$OCTETS" = 0;then
-	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
+	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/$DIR/$FILE"
 	echo "Interim update showed no data!"
 	stop
 fi
 
 check_for_file /tmp/disconnect/ok
 if test $? != 0;then
-	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
+	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/$DIR/$FILE"
 	echo "There was an issue getting stats"
 	stop
 fi
@@ -156,9 +157,9 @@ ret=0
 #wait until sec-mod has cleaned up its entries
 echo "Waiting for disconnection report"
 sleep 10
-DISC=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"|grep "Acct-Terminate-Cause = User-Request"|tail -1`
+DISC=`$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/$DIR/$FILE"|grep "Acct-Terminate-Cause = User-Request"|tail -1`
 if test -z "$DISC";then
-	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE"
+	$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/$DIR/$FILE"
 	echo "No disconnect was detected!"
 	stop
 fi
@@ -166,7 +167,7 @@ fi
 # do the same with a certificate - test radius accounting with certificate auth
 echo "Trying with certificate"
 rm -f out$TMP.pid
-$DOCKER exec $IMAGE_NAME truncate --size=0 /var/log/radius/radacct/127.0.0.1/$FILE
+$DOCKER exec $IMAGE_NAME truncate --size=0 /var/log/radius/radacct/$DIR/$FILE
 $OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=out$TMP.pid
 
 sleep 10
@@ -195,8 +196,10 @@ kill -INT $PID
 
 sleep 10
 
-FILE=`$DOCKER exec $IMAGE_NAME ls /var/log/radius/radacct/127.0.0.1/|tail -1`
-$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/127.0.0.1/$FILE" >out$TMP
+DIR=`$DOCKER exec $IMAGE_NAME ls '/var/log/radius/radacct/'|tail -1`
+FILE=`$DOCKER exec $IMAGE_NAME ls '/var/log/radius/radacct/'"$DIR"|tail -1`
+
+$DOCKER exec $IMAGE_NAME cat "/var/log/radius/radacct/$DIR/$FILE" >out$TMP
 cat out$TMP
 OCTETS=`cat out$TMP|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g'`
 if test -z "$OCTETS" || test "$OCTETS" = 0;then
@@ -206,8 +209,14 @@ fi
 
 DISC=`cat out$TMP|grep "Acct-Status-Type = Start"|tail -1`
 if test -z "$DISC";then
-	cat out$TMP
 	echo "No connect status was detected!"
+	stop
+fi
+
+DISC=`cat out$TMP|grep Connect-Info`
+if test -z "$DISC";then
+	cat out$TMP
+	echo "Accounting information had no Connect-Info!"
 	stop
 fi
 

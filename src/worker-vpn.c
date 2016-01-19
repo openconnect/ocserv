@@ -544,6 +544,12 @@ void vpn_server(struct worker_st *ws)
 			nrecvd = tls_recv(ws, ws->buffer, sizeof(ws->buffer));
 			FATAL_ERR(ws, nrecvd);
 
+			if (nrecvd == 0) {
+				oclog(ws, LOG_HTTP_DEBUG,
+				      "EOF while receiving HTTP POST request");
+				exit_worker(ws);
+			}
+
 			nparsed =
 			    http_parser_execute(&parser, &settings, (void *)ws->buffer,
 						nrecvd);

@@ -140,7 +140,7 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 	uint8_t *p;
 	int ret;
 
-	ret = recv_timeout(fd, &hdr, 16, 3);
+	ret = force_read_timeout(fd, &hdr, 16, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR,
 		      "proxy-hdr: recv timed out");
@@ -164,7 +164,7 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		return -1;
 	}
 
-	ret = recv_timeout(fd, hdr.data, data_size, 3);
+	ret = force_read_timeout(fd, hdr.data, data_size, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR,
 		      "proxy-hdr: recv data timed out");

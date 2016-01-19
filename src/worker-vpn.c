@@ -66,7 +66,6 @@
 
 #define PERIODIC_CHECK_TIME 30
 #define MIN_STATS_INTERVAL 10
-#define SOCKET_TIMEO_SECS 10
 
 /* The number of DPD packets a client skips before he's kicked */
 #define DPD_TRIES 2
@@ -1334,7 +1333,7 @@ static void set_socket_timeout(worker_st * ws, int fd)
 	struct timeval tval;
 	int ret;
 
-	tval.tv_sec = SOCKET_TIMEO_SECS;
+	tval.tv_sec = DEFAULT_SOCKET_TIMEOUT;
 	tval.tv_usec = 0;
 	ret =
 	    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tval,

@@ -69,7 +69,9 @@ void tls_load_certs(struct main_server_st* s, struct tls_st *creds);
 
 size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
 
-#define GNUTLS_FATAL_ERR_CMD(x, CMD) \
+#define GNUTLS_FATAL_ERR DTLS_FATAL_ERR
+
+#define DTLS_FATAL_ERR_CMD(x, CMD) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
                 if (syslog_open) \
                 	syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
@@ -78,9 +80,9 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
                 CMD; \
         }
 
-#define GNUTLS_FATAL_ERR(x) GNUTLS_FATAL_ERR_CMD(x, exit(1))
+#define DTLS_FATAL_ERR(x) DTLS_FATAL_ERR_CMD(x, exit(1))
 
-#define FATAL_ERR_CMD(ws, x, CMD) \
+#define CSTP_FATAL_ERR_CMD(ws, x, CMD) \
         if (ws->session != NULL) { \
 	        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
                		oclog(ws, LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
@@ -93,20 +95,7 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 	        } \
 	}
 
-#define FATAL_ERR(ws, x) FATAL_ERR_CMD(ws, x, exit(1))
-
-#define GNUTLS_S_FATAL_ERR(session, x) \
-        if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
-                if (syslog_open) { \
-	        	if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED) { \
-	        		syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s: %s", __FILE__, __LINE__, gnutls_strerror(x), gnutls_alert_get_name(gnutls_alert_get(session))); \
-        		} else { \
-        			syslog(LOG_ERR, "GnuTLS error (at %s:%d): %s", __FILE__, __LINE__, gnutls_strerror(x)); \
-			} \
-                } else \
-                        fprintf(stderr, "GnuTLS error (at %s:%d): %s\n", __FILE__, __LINE__, gnutls_strerror(x)); \
-                exit(1); \
-        }
+#define CSTP_FATAL_ERR(ws, x) CSTP_FATAL_ERR_CMD(ws, x, exit(1))
 
 void tls_close(gnutls_session_t session);
 

@@ -124,7 +124,7 @@ int ret;
 	while (	(len = read( fd, buf, sizeof(buf))) > 0 ||
 		(len == -1 && (errno == EINTR || errno == EAGAIN))) {
 		ret = cstp_send(ws, buf, len);
-		FATAL_ERR(ws, ret);
+		CSTP_FATAL_ERR(ws, ret);
 
 		total += ret;
 	}

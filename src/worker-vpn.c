@@ -463,7 +463,7 @@ void vpn_server(struct worker_st *ws)
 		do {
 			ret = gnutls_handshake(session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-		GNUTLS_S_FATAL_ERR(session, ret);
+		GNUTLS_FATAL_ERR(ret);
 
 		oclog(ws, LOG_DEBUG, "TLS handshake completed");
 	} else {
@@ -542,7 +542,7 @@ void vpn_server(struct worker_st *ws)
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP POST %s", ws->req.url);
 		while (ws->req.message_complete == 0) {
 			nrecvd = tls_recv(ws, ws->buffer, sizeof(ws->buffer));
-			FATAL_ERR(ws, nrecvd);
+			CSTP_FATAL_ERR(ws, nrecvd);
 
 			if (nrecvd == 0) {
 				oclog(ws, LOG_HTTP_DEBUG,
@@ -823,7 +823,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, struct timespec *tnow,
 
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 		ret = dtls_send(ws, ws->buffer, 1);
-		GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
+		DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (now - ws->last_msg_udp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
@@ -845,7 +845,7 @@ int periodic_check(worker_st * ws, unsigned mtu_overhead, struct timespec *tnow,
 		ws->buffer[7] = 0;
 
 		ret = cstp_send(ws, ws->buffer, 8);
-		FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
+		CSTP_FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
@@ -950,7 +950,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);
 
-		GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
+		DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (ret == GNUTLS_E_REHANDSHAKE) {
 
@@ -974,7 +974,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			} while (ret == GNUTLS_E_AGAIN
 				 || ret == GNUTLS_E_INTERRUPTED);
 
-			GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
+			DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 			oclog(ws, LOG_DEBUG, "DTLS rehandshake completed");
 
 			ws->last_dtls_rehandshake = tnow->tv_sec;
@@ -1092,7 +1092,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	data.data = ws->buffer;
 	data.size = ret;
 #endif
-	FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
+	CSTP_FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 
 	if (ret == 0) {		/* disconnect */
 		oclog(ws, LOG_DEBUG, "client disconnected");
@@ -1132,7 +1132,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		do {
 			ret = gnutls_handshake(ws->session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
-		GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
+		DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		ws->last_tls_rehandshake = tnow->tv_sec;
 		oclog(ws, LOG_INFO, "TLS rehandshake completed");
@@ -1223,7 +1223,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 			dtls_to_send.data[7] = dtls_type;
 			ret = dtls_send(ws, dtls_to_send.data + 7, dtls_to_send.size + 1);
-			GNUTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
+			DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {
 				mtu_not_ok(ws);
@@ -1250,7 +1250,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			ws->tun_bytes_out += cstp_to_send.size;
 
 			ret = cstp_send(ws, cstp_to_send.data, cstp_to_send.size + 8);
-			FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
+			CSTP_FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 		}
 		ws->last_nc_msg = tnow->tv_sec;
 	}

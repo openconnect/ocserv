@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Red Hat
+ * Copyright (C) 2014-2016 Red Hat
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -172,7 +172,7 @@ void version(void)
 {
 	fprintf(stderr,
 		"OpenConnect server control (occtl) version %s\n", VERSION);
-	fprintf(stderr, "Copyright (C) 2014 Red Hat and others.\n");
+	fprintf(stderr, "Copyright (C) 2014-2016 Red Hat and others.\n");
 	fprintf(stderr,
 		"ocserv comes with ABSOLUTELY NO WARRANTY. This is free software,\n");
 	fprintf(stderr,

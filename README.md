@@ -26,13 +26,13 @@ occtl:        libreadline-dev    / readline-devel
               libnl-route-3-dev  / libnl3-devel
 GSSAPI:       libkrb5-dev        / krb5-devel
 OATH:         liboath-dev        / liboath-devel
+Radius:       libradcli-dev      / radcli-devel
 ```
 
 Dependencies for development, testing, or dependencies that can be skipped
 in an embedded system (e.g., because a replacement library is included):
 
 ```
-libradcli-dev      / radcli-devel
 libprotobuf-c0-dev / protobuf-c-devel
 libtalloc-dev      / libtalloc-devel
 libhttp-parser-dev / http-parser-devel

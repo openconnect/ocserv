@@ -210,6 +210,8 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 				case PROTO_ICMPv6:
 					ret = str_append_printf(&str_common, "icmpv6 all ");
 					break;
+				default:
+					ret = -1;
 			}
 
 			if (ret < 0) {

@@ -566,6 +566,9 @@ route = 192.168.0.0/255.255.0.0
 
 no-route = 192.168.5.0/255.255.255.0
 
+# Note the that following two firewalling options currently are available
+# in Linux systems with iptables software. 
+
 # If set, the script /usr/bin/ocserv-fw will be called to restrict
 # the user to its allowed routes and prevent him from accessing
 # any other routes. In case of defaultroute, the no-routes are restricted.

@@ -194,7 +194,7 @@ typedef struct main_server_st {
 	tls_st *creds;
 	
 	uint8_t cookie_key[COOKIE_KEY_SIZE];
-	/* when we rotate keys, key the previous one active for verification */
+	/* when we rotate keys, this is the previous one active for verification */
 	uint8_t prev_cookie_key[COOKIE_KEY_SIZE];
 	unsigned prev_cookie_key_active;
 

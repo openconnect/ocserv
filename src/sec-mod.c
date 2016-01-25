@@ -61,6 +61,8 @@ struct pin_st {
 	char srk_pin[MAX_PIN_SIZE];
 };
 
+static int load_keys(sec_mod_st *sec, unsigned force);
+
 static
 int pin_callback(void *user, int attempt, const char *token_url,
 		 const char *token_label, unsigned int flags, char *pin,
@@ -535,6 +537,7 @@ static void check_other_work(sec_mod_st *sec)
 		seclog(sec, LOG_DEBUG, "reloading configuration");
 		reload_cfg_file(sec, sec->perm_config, 0);
 		sec->config = sec->perm_config->config;
+		load_keys(sec, 0);
 		need_reload = 0;
 	}
 
@@ -654,6 +657,95 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 	return ret;
 }
 
+#define CHECK_LOOP_ERR(x) \
+	if (force != 0) { GNUTLS_FATAL_ERR(x); } \
+	else { if (ret < 0) { \
+		seclog(sec, LOG_ERR, "could not reload key %s", sec->perm_config->key[i]); \
+		continue; } \
+	}
+
+static int load_keys(sec_mod_st *sec, unsigned force)
+{
+	unsigned i, need_reload = 0;
+	int ret;
+	struct pin_st pins;
+	static time_t last_access = 0;
+
+	for (i = 0; i < sec->perm_config->key_size; i++) {
+		if (need_file_reload(sec->perm_config->key[i], last_access) != 0) {
+			need_reload = 1;
+			break;
+		}
+	}
+
+	if (need_reload == 0)
+		return 0;
+
+	last_access = time(0);
+
+	ret = load_pins(sec->perm_config, &pins);
+	if (ret < 0) {
+		seclog(sec, LOG_ERR, "error loading PIN files");
+		exit(1);
+	}
+
+	/* Reminder: the number of private keys or their filenames cannot be changed on reload
+	 */
+	if (sec->key == NULL) {
+		sec->key_size = sec->perm_config->key_size;
+		sec->key = talloc_size(sec, sizeof(*sec->key) * sec->perm_config->key_size);
+		if (sec->key == NULL) {
+			seclog(sec, LOG_ERR, "error in memory allocation");
+			exit(1);
+		}
+	}
+
+	/* read private keys */
+	for (i = 0; i < sec->key_size; i++) {
+		gnutls_privkey_t p;
+
+		ret = gnutls_privkey_init(&p);
+		CHECK_LOOP_ERR(ret);
+		/* load the private key */
+		if (gnutls_url_is_supported(sec->perm_config->key[i]) != 0) {
+			gnutls_privkey_set_pin_function(p,
+							pin_callback, &pins);
+			ret =
+			    gnutls_privkey_import_url(p,
+						      sec->perm_config->key[i], 0);
+			CHECK_LOOP_ERR(ret);
+		} else {
+			gnutls_datum_t data;
+			ret = gnutls_load_file(sec->perm_config->key[i], &data);
+			if (ret < 0) {
+				seclog(sec, LOG_ERR, "error loading file '%s'",
+				       sec->perm_config->key[i]);
+				CHECK_LOOP_ERR(ret);
+			}
+
+			ret =
+			    gnutls_privkey_import_x509_raw(p, &data,
+							   GNUTLS_X509_FMT_PEM,
+							   NULL, 0);
+			if (ret == GNUTLS_E_DECRYPTION_FAILED && pins.pin[0]) {
+				ret =
+				    gnutls_privkey_import_x509_raw(p, &data,
+								   GNUTLS_X509_FMT_PEM,
+								   pins.pin, 0);
+			}
+			CHECK_LOOP_ERR(ret);
+
+			gnutls_free(data.data);
+		}
+
+		if (sec->key[i] != NULL)
+			gnutls_privkey_deinit(sec->key[i]);
+		sec->key[i] = p;
+	}
+
+	return 0;
+}
+
 /* sec_mod_server:
  * @config: server configuration
  * @socket_file: the name of the socket
@@ -689,10 +781,9 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	struct sockaddr_un sa;
 	socklen_t sa_len;
 	int cfd, ret, e, n;
-	unsigned i, buffer_size;
+	unsigned buffer_size;
 	uid_t uid;
 	uint8_t *buffer;
-	struct pin_st pins;
 	int sd;
 	sec_mod_st *sec;
 	void *sec_mod_pool;
@@ -803,56 +894,10 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		exit(1);
 	}
 
-	ret = load_pins(sec->perm_config, &pins);
+	ret = load_keys(sec, 1);
 	if (ret < 0) {
-		seclog(sec, LOG_ERR, "error loading PIN files");
+		seclog(sec, LOG_ERR, "error loading private key files");
 		exit(1);
-	}
-
-	/* FIXME: the private key isn't reloaded on reload */
-	sec->key_size = sec->perm_config->key_size;
-	sec->key = talloc_size(sec, sizeof(*sec->key) * sec->perm_config->key_size);
-	if (sec->key == NULL) {
-		seclog(sec, LOG_ERR, "error in memory allocation");
-		exit(1);
-	}
-
-	/* read private keys */
-	for (i = 0; i < sec->key_size; i++) {
-		ret = gnutls_privkey_init(&sec->key[i]);
-		GNUTLS_FATAL_ERR(ret);
-
-		/* load the private key */
-		if (gnutls_url_is_supported(sec->perm_config->key[i]) != 0) {
-			gnutls_privkey_set_pin_function(sec->key[i],
-							pin_callback, &pins);
-			ret =
-			    gnutls_privkey_import_url(sec->key[i],
-						      sec->perm_config->key[i], 0);
-			GNUTLS_FATAL_ERR(ret);
-		} else {
-			gnutls_datum_t data;
-			ret = gnutls_load_file(sec->perm_config->key[i], &data);
-			if (ret < 0) {
-				seclog(sec, LOG_ERR, "error loading file '%s'",
-				       sec->perm_config->key[i]);
-				GNUTLS_FATAL_ERR(ret);
-			}
-
-			ret =
-			    gnutls_privkey_import_x509_raw(sec->key[i], &data,
-							   GNUTLS_X509_FMT_PEM,
-							   NULL, 0);
-			if (ret == GNUTLS_E_DECRYPTION_FAILED && pins.pin[0]) {
-				ret =
-				    gnutls_privkey_import_x509_raw(sec->key[i], &data,
-								   GNUTLS_X509_FMT_PEM,
-								   pins.pin, 0);
-			}
-			GNUTLS_FATAL_ERR(ret);
-
-			gnutls_free(data.data);
-		}
 	}
 
 	sigprocmask(SIG_BLOCK, &blockset, &sig_default_set);

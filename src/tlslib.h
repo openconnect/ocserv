@@ -51,7 +51,8 @@ typedef struct tls_st {
 void tls_reload_crl(struct main_server_st* s, struct tls_st *creds, unsigned force);
 void tls_global_init(struct tls_st *creds);
 void tls_global_deinit(struct tls_st *creds);
-void tls_load_certs(struct main_server_st* s, struct tls_st *creds);
+void tls_load_files(struct main_server_st* s, struct tls_st *creds);
+void tls_load_prio(struct main_server_st *s, tls_st *creds);
 
 size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
 
@@ -143,5 +144,8 @@ inline static void packet_deinit(void *p)
 
 ssize_t cstp_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
 ssize_t dtls_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
+
+/* Helper functions */
+unsigned need_file_reload(const char *file, time_t last_access);
 
 #endif

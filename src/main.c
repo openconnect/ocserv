@@ -933,10 +933,20 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revent
 	main_server_st *s = ev_userdata(loop);
 
 	mslog(s, NULL, LOG_INFO, "reloading configuration");
+	kill(s->sec_mod_pid, SIGHUP);
+
 	reload_cfg_file(s->main_pool, s->perm_config, 1);
 	s->config = s->perm_config->config;
+
+	/* These must be called after sec-mod has been sent SIGHUP.
+	 * That's because of a test that the certificate matches the
+	 * used key in certain gnutls versions */
+#if GNUTLS_VERSION_NUMBER < 0x030407
+	ms_sleep(1000);
+#endif
+	tls_load_files(s, s->creds);
+	tls_load_prio(s, s->creds);
 	tls_reload_crl(s, s->creds, 1);
-	kill(s->sec_mod_pid, SIGHUP);
 }
 
 static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)
@@ -1261,7 +1271,8 @@ int main(int argc, char** argv)
 	ms_sleep(100); /* give some time for sec-mod to initialize */
 
 	/* Initialize certificates */
-	tls_load_certs(s, &creds);
+	tls_load_files(s, &creds);
+	tls_load_prio(s, s->creds);
 
 	s->secmod_addr.sun_family = AF_UNIX;
 	p = s->socket_file;

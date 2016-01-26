@@ -1,0 +1,96 @@
+#!/bin/sh
+#
+# Copyright (C) 2016 Red Hat, Inc.
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4473
+TEMPLATE=temp-key.$$.tmpl.tmp
+SERVER_CERT=server-cert-temp.pem.tmp
+SERVER_KEY=server-key-temp.pem.tmp
+
+. `dirname $0`/common.sh
+
+echo "Testing ocserv and SIGHUP behavior on server key change... "
+
+cat <<_EOF_>"${TEMPLATE}"
+cn = "VPN server"
+dns_name = $ADDRESS
+expiration_days = -1
+signing_key
+encryption_key
+tls_www_server
+_EOF_
+
+update_config test-sighup.config
+
+# changing server cert
+sed -i 's/server-cert.pem/'"${SERVER_CERT}"'/' "${CONFIG}"
+sed -i 's/server-key.pem/'"${SERVER_KEY}"'/' "${CONFIG}"
+sed -i 's/4441/'$PORT'/' "${CONFIG}"
+cp server-cert.pem "${SERVER_CERT}"
+cp server-key.pem "${SERVER_KEY}"
+
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert="sha1:a82547f68f44d6351bef6cacd1d7b96e84f9dfa3" --cookieonly </dev/null >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+sleep 5
+
+#updating the certificate
+certtool --generate-self-signed --load-privkey "${SERVER_KEY}" --template "${TEMPLATE}" --outfile "${SERVER_CERT}" 2>/dev/null
+
+echo "Reloading server with new certificate"
+kill -HUP $PID
+sleep 5
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert="sha1:a82547f68f44d6351bef6cacd1d7b96e84f9dfa3" --cookieonly </dev/null >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+sleep 10
+#updating the certificate and key
+certtool --generate-privkey --outfile "${SERVER_KEY}" 2>/dev/null
+certtool --generate-self-signed --load-privkey "${SERVER_KEY}" --template "${TEMPLATE}" --outfile "${SERVER_CERT}" 2>/dev/null
+
+echo "Reloading server with new key/cert pair"
+kill -HUP $PID
+sleep 5
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --no-cert-check --cookieonly </dev/null >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+
+echo ok
+
+rm -f "${SERVER_CERT}"
+rm -f "${SERVER_KEY}"
+rm -f "${TEMPLATE}"
+cleanup
+
+exit 0

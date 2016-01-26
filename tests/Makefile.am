@@ -27,7 +27,7 @@ dist_check_SCRIPTS = test-iroute test-pass-script \
 if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
-	test-enc-key
+	test-enc-key test-sighup-key-change
 endif
 
 AM_CPPFLAGS = \

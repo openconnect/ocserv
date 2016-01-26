@@ -4,6 +4,7 @@
 - Updated support for CHACHA20-POLY1305 to conform to latest draft
 - Added watchdog to worker processes to ensure they are killed
   under unexpected long delays (e.g., the process being blocked).
+- Certificates and private keys are reloaded on server reload (SIGHUP).
 
 
 * Version 0.11.0rc0 (released 2016-01-08)

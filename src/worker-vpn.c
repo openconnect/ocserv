@@ -524,7 +524,7 @@ void vpn_server(struct worker_st *ws)
 		fn = http_get_url_handler(ws->req.url);
 		if (fn == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG, "unexpected URL %s", ws->req.url);
-			cstp_puts(ws, "HTTP/1.1 404 Not found\r\n\r\n");
+			response_404(ws, parser.http_minor);
 			goto finish;
 		}
 		ret = fn(ws, parser.http_minor);
@@ -559,7 +559,7 @@ void vpn_server(struct worker_st *ws)
 		if (fn == NULL) {
 			oclog(ws, LOG_HTTP_DEBUG, "unexpected POST URL %s",
 			      ws->req.url);
-			cstp_puts(ws, "HTTP/1.1 404 Not found\r\n\r\n");
+			response_404(ws, parser.http_minor);
 			goto finish;
 		}
 
@@ -578,8 +578,7 @@ void vpn_server(struct worker_st *ws)
 	} else {
 		oclog(ws, LOG_HTTP_DEBUG, "unexpected HTTP method %s",
 		      http_method_str(parser.method));
-		cstp_printf(ws, "HTTP/1.%u 404 Nah, go away\r\n\r\n",
-			   parser.http_minor);
+		response_404(ws, parser.http_minor);
 	}
 
  finish:
@@ -1346,7 +1345,7 @@ static int connect_handler(worker_st * ws)
 
 	if (strcmp(req->url, "/CSCOSSLC/tunnel") != 0) {
 		oclog(ws, LOG_INFO, "bad connect request: '%s'\n", req->url);
-		cstp_puts(ws, "HTTP/1.1 404 Nah, go away\r\n\r\n");
+		response_404(ws, 1);
 		cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 		exit_worker(ws);
 	}

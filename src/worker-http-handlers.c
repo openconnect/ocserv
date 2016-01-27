@@ -39,6 +39,18 @@
 #include <cookies.h>
 #include <tlslib.h>
 
+#define HTML_404 "<html><body><h1>404 Not Found</h1></body></html>\r\n"
+
+int response_404(worker_st *ws, unsigned http_ver)
+{
+	if (cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver) < 0 ||
+	    cstp_printf(ws, "Content-length: %u\r\n", (unsigned)(sizeof(HTML_404) - 1)) < 0 ||
+	    cstp_puts  (ws, "Connection: close\r\n\r\n") < 0 ||
+	    cstp_puts  (ws, HTML_404) < 0)
+		return -1;
+	return 0;
+}
+
 #ifdef ANYCONNECT_CLIENT_COMPAT
 static int send_headers(worker_st *ws, unsigned http_ver, const char *content_type,
 			unsigned content_length)
@@ -76,14 +88,14 @@ int get_config_handler(worker_st *ws, unsigned http_ver)
 
 	if (ws->user_config->xml_config_file == NULL) {
 		oclog(ws, LOG_INFO, "requested config but no config file is set");
-		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);
+		response_404(ws, http_ver);
 		return -1;
 	}
 	
 	ret = stat(ws->user_config->xml_config_file, &st);
 	if (ret == -1) {
 		oclog(ws, LOG_INFO, "cannot load config file '%s'", ws->user_config->xml_config_file);
-		cstp_printf(ws, "HTTP/1.%u 404 Not found\r\n", http_ver);
+		response_404(ws, http_ver);
 		return -1;
 	}
 

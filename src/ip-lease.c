@@ -150,6 +150,7 @@ static int is_ipv4_ok(main_server_st *s, struct sockaddr_storage *ip, struct soc
 }
 
 #define MAX_IP_TRIES 16
+#define FIXED_IPS 5
 
 static
 int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
@@ -263,8 +264,12 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 		if (max_loops == MAX_IP_TRIES) {
 			memcpy(SA_IN_U8_P(&rnd), proc->ipv4_seed, 4);
 		} else {
-			ip_from_seed(SA_IN_U8_P(&rnd), sizeof(struct in_addr),
-				     SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+			if (max_loops < MAX_IP_TRIES-FIXED_IPS) {
+				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+			} else {
+				ip_from_seed(SA_IN_U8_P(&rnd), sizeof(struct in_addr),
+					     SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+			}
 		}
 		max_loops--;
 
@@ -424,8 +429,12 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			ip_from_seed(proc->ipv4_seed, 4,
 				     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
 		} else {
-			ip_from_seed(SA_IN6_U8_P(&rnd), sizeof(struct in6_addr),
-				     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
+			if (max_loops < MAX_IP_TRIES-FIXED_IPS) {
+				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in6_addr));
+			} else {
+				ip_from_seed(SA_IN6_U8_P(&rnd), sizeof(struct in6_addr),
+					     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
+			}
 		}
 		max_loops--;
 

@@ -345,7 +345,6 @@ static int append_user_info(method_ctx *ctx,
 	rep->conn_time = ctmp->conn_time;
 	rep->hostname = ctmp->hostname;
 	rep->user_agent = ctmp->user_agent;
-	rep->restrict_to_routes = ctmp->config->restrict_user_to_routes;
 
 	if (ctmp->status == PS_AUTH_COMPLETED)
 		strtmp = "connected";
@@ -369,37 +368,41 @@ static int append_user_info(method_ctx *ctx,
 		rep->has_mtu = 1;
 	}
 
-	tmp = ctmp->config->rx_per_sec;
-	tmp *= 1000;
-	rep->rx_per_sec = tmp;
+	if (ctmp->config) {
+		rep->restrict_to_routes = ctmp->config->restrict_user_to_routes;
 
-	tmp = ctmp->config->tx_per_sec;
-	tmp *= 1000;
-	rep->tx_per_sec = tmp;
+		tmp = ctmp->config->rx_per_sec;
+		tmp *= 1000;
+		rep->rx_per_sec = tmp;
 
-	rep->dpd = ctmp->config->dpd;
+		tmp = ctmp->config->tx_per_sec;
+		tmp *= 1000;
+		rep->tx_per_sec = tmp;
 
-	rep->keepalive = ctmp->config->keepalive;
-	rep->domains = ctx->s->config->split_dns;
-	rep->n_domains = ctx->s->config->split_dns_size;
+		rep->dpd = ctmp->config->dpd;
 
-	rep->dns = ctmp->config->dns;
-	rep->n_dns = ctmp->config->n_dns;
+		rep->keepalive = ctmp->config->keepalive;
+		rep->domains = ctx->s->config->split_dns;
+		rep->n_domains = ctx->s->config->split_dns_size;
 
-	rep->nbns = ctmp->config->nbns;
-	rep->n_nbns = ctmp->config->n_nbns;
+		rep->dns = ctmp->config->dns;
+		rep->n_dns = ctmp->config->n_dns;
 
-	rep->n_routes = ctmp->config->n_routes;
-	rep->routes = ctmp->config->routes;
+		rep->nbns = ctmp->config->nbns;
+		rep->n_nbns = ctmp->config->n_nbns;
 
-	rep->n_no_routes = ctmp->config->n_no_routes;
-	rep->no_routes = ctmp->config->no_routes;
+		rep->n_routes = ctmp->config->n_routes;
+		rep->routes = ctmp->config->routes;
 
-	rep->iroutes = ctmp->config->iroutes;
-	rep->n_iroutes = ctmp->config->n_iroutes;
+		rep->n_no_routes = ctmp->config->n_no_routes;
+		rep->no_routes = ctmp->config->no_routes;
 
-	rep->n_fw_ports = ctmp->config->n_fw_ports;
-	rep->fw_ports = ctmp->config->fw_ports;
+		rep->iroutes = ctmp->config->iroutes;
+		rep->n_iroutes = ctmp->config->n_iroutes;
+
+		rep->n_fw_ports = ctmp->config->n_fw_ports;
+		rep->fw_ports = ctmp->config->fw_ports;
+	}
 
 	return 0;
 }

@@ -837,15 +837,9 @@ static int check_tcp_wrapper(int fd)
 # define check_tcp_wrapper(x) 0
 #endif
 
-static void child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
+static void sec_mod_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
-
-	if (w->pid == s->sec_mod_pid) {
-		mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
-		ev_feed_signal_event (loop, SIGTERM);
-		return;
-	}
 
 	if (WIFSIGNALED(w->rstatus)) {
 		if (WTERMSIG(w->rstatus) == SIGSEGV)
@@ -855,6 +849,11 @@ static void child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
 		else
 			mslog(s, NULL, LOG_ERR, "Sec-mod %u died with signal %d\n", (unsigned)w->pid, (int)WTERMSIG(w->rstatus));
 	}
+
+	ev_child_stop(loop, w);
+	mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
+	ev_feed_signal_event (loop, SIGTERM);
+
 }
 
 void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
@@ -871,6 +870,7 @@ void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
 	/* check if someone was waiting for that pid */
 	mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
 	list_del(&stmp->list);
+	ev_child_stop(loop, &stmp->ev_child);
 
 	ret = handle_script_exit(s, stmp->proc, estatus);
 	if (ret < 0) {
@@ -893,6 +893,8 @@ static void worker_child_watcher_cb(struct ev_loop *loop, ev_child *w, int reven
 		else
 			mslog(s, NULL, LOG_ERR, "Child %u died with signal %d\n", (unsigned)w->pid, (int)WTERMSIG(w->rstatus));
 	}
+
+	ev_child_stop(loop, w);
 }
 
 static void kill_children(main_server_st* s)
@@ -1343,7 +1345,7 @@ int main(int argc, char** argv)
 	ev_io_start (loop, &ctl_watcher);
 	ev_io_start (loop, &sec_mod_watcher);
 
-	ev_child_init(&child_watcher, child_watcher_cb, s->sec_mod_pid, 0);
+	ev_child_init(&child_watcher, sec_mod_child_watcher_cb, s->sec_mod_pid, 0);
 	ev_child_start (loop, &child_watcher);
 
 	ev_init(&maintainance_watcher, maintainance_watcher_cb);

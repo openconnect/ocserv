@@ -75,7 +75,7 @@ struct listen_list_st {
 };
 
 struct script_wait_st {
-	/* so that this structure can behave as ev_child */
+	/* must be first so that this structure can behave as ev_child */
 	struct ev_child ev_child;
 
 	struct list_node list;

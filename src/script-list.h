@@ -47,7 +47,7 @@ struct script_wait_st *stmp;
 
 inline static void remove_from_script_list(main_server_st* s, struct proc_st* proc)
 {
-struct script_wait_st *stmp = NULL, *spos;
+	struct script_wait_st *stmp = NULL, *spos;
 
 	list_for_each_safe(&s->script_list.head, stmp, spos, list) {
 		if (stmp->proc == proc) {

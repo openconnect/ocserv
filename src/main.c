@@ -523,8 +523,7 @@ static void update_fd_limits(main_server_st *s, unsigned main)
 			new_set.rlim_max = new_set.rlim_cur;
 			ret = setrlimit(RLIMIT_NOFILE, &new_set);
 			if (ret < 0) {
-				fprintf(stderr, "error in setrlimit(%u): %s\n", max, strerror(errno));
-				exit(1);
+				fprintf(stderr, "error in setrlimit(%u): %s (cur: %u)\n", max, strerror(errno), (unsigned)def_set.rlim_cur);
 			}
 		}
 	} else {
@@ -532,7 +531,6 @@ static void update_fd_limits(main_server_st *s, unsigned main)
 		ret = setrlimit(RLIMIT_NOFILE, &def_set);
 		if (ret < 0) {
 			fprintf(stderr, "error in setrlimit(%u): %s\n", (unsigned)def_set.rlim_cur, strerror(errno));
-			exit(1);
 		}
 	}
 #endif

@@ -39,22 +39,21 @@ encryption_key
 tls_www_server
 _EOF_
 
-update_config test-sighup.config
+update_config test-sighup-key-change.config
 
 # changing server cert
 sed -i 's/server-cert.pem/'"${SERVER_CERT}"'/' "${CONFIG}"
 sed -i 's/server-key.pem/'"${SERVER_KEY}"'/' "${CONFIG}"
-sed -i 's/4441/'$PORT'/' "${CONFIG}"
-cp server-cert.pem "${SERVER_CERT}"
-cp server-key.pem "${SERVER_KEY}"
+cp "${srcdir}/server-cert.pem" "${SERVER_CERT}"
+cp "${srcdir}/server-key.pem" "${SERVER_KEY}"
 
-launch_simple_sr_server -d 1 -f -c ${CONFIG}
+launch_simple_sr_server -d 1 -f -c "${CONFIG}"
 PID=$!
 
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert="sha1:a82547f68f44d6351bef6cacd1d7b96e84f9dfa3" --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert.pem" --servercert="sha1:a82547f68f44d6351bef6cacd1d7b96e84f9dfa3" --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -68,7 +67,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert="sha1:a82547f68f44d6351bef6cacd1d7b96e84f9dfa3" --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert.pem" --servercert="sha1:a82547f68f44d6351bef6cacd1d7b96e84f9dfa3" --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
@@ -83,7 +82,7 @@ kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --no-cert-check --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert.pem" --no-cert-check --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok

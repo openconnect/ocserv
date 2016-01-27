@@ -223,6 +223,7 @@ int remove_ip_from_ban_list(main_server_st *s, const uint8_t *ip, unsigned size)
 			mslog(s, NULL, LOG_INFO,
 				      "unbanning IP '%s'", txt_ip);
 
+		t.ip.size = size;
 		memcpy(&t.ip.ip, ip, size);
 
 		/* In IPv6 treat a /64 as a single address */

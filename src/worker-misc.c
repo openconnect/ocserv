@@ -124,7 +124,7 @@ int handle_commands_from_main(struct worker_st *ws)
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-				if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
+				if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS || CMSG_DATA(cmptr) == NULL) {
 					oclog(ws, LOG_ERR, "received UDP fd message of wrong type");
 					goto udp_fd_fail;
 				}

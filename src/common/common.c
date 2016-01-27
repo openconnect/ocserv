@@ -417,7 +417,10 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 				return ERR_BAD_COMMAND;
 			}
 
-			memcpy(socketfd, CMSG_DATA(cmptr), sizeof(int));
+			if (CMSG_DATA(cmptr))
+				memcpy(socketfd, CMSG_DATA(cmptr), sizeof(int));
+			else
+	                        *socketfd = -1;
 		} else {
 			*socketfd = -1;
 		}
@@ -508,7 +511,7 @@ struct msghdr mh = {
 			struct in_pktinfo *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in))
+			if (*our_addrlen < sizeof(struct sockaddr_in) || pi == NULL)
 				return -1;
 
 			a->sin_family = AF_INET;
@@ -522,7 +525,7 @@ struct msghdr mh = {
 			struct in_addr *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in))
+			if (*our_addrlen < sizeof(struct sockaddr_in) || pi == NULL)
 				return -1;
 
 			a->sin_family = AF_INET;
@@ -537,7 +540,7 @@ struct msghdr mh = {
 			struct in6_pktinfo *pi = (void*)CMSG_DATA(cmsg);
 			struct sockaddr_in6 *a = (struct sockaddr_in6*)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in6))
+			if (*our_addrlen < sizeof(struct sockaddr_in6) || pi == NULL)
 				return -1;
 
 			a->sin6_family = AF_INET6;

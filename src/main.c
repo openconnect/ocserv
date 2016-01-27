@@ -913,12 +913,12 @@ static void kill_children(main_server_st* s)
 	struct proc_st *ctmp = NULL, *cpos;
 
 	/* kill the security module server */
-	kill(s->sec_mod_pid, SIGTERM);
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid != -1) {
 			remove_proc(s, ctmp, RPROC_KILL|RPROC_QUIT);
 		}
 	}
+	kill(s->sec_mod_pid, SIGTERM);
 }
 
 static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)

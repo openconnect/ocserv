@@ -693,7 +693,7 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 	 */
 	if (sec->key == NULL) {
 		sec->key_size = sec->perm_config->key_size;
-		sec->key = talloc_size(sec, sizeof(*sec->key) * sec->perm_config->key_size);
+		sec->key = talloc_zero_size(sec, sizeof(*sec->key) * sec->perm_config->key_size);
 		if (sec->key == NULL) {
 			seclog(sec, LOG_ERR, "error in memory allocation");
 			exit(1);
@@ -738,8 +738,9 @@ static int load_keys(sec_mod_st *sec, unsigned force)
 			gnutls_free(data.data);
 		}
 
-		if (sec->key[i] != NULL)
+		if (sec->key[i] != NULL) {
 			gnutls_privkey_deinit(sec->key[i]);
+		}
 		sec->key[i] = p;
 	}
 

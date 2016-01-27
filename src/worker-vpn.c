@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
- * Copyright (C) 2015 Red Hat, Inc.
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015, 2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -45,6 +45,8 @@
 #include <c-strcase.h>
 #include <c-ctype.h>
 #include <worker-bandwidth.h>
+#include <signal.h>
+#include <poll.h>
 
 #if defined(__linux__) &&!defined(IPV6_PATHMTU)
 # define IPV6_PATHMTU 61
@@ -102,6 +104,26 @@ static void handle_term(int signo)
 	alarm(2);		/* force exit by SIGALRM */
 }
 
+/* we override that function to force gnutls use poll()
+ */
+static
+int tls_pull_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
+{
+	int ret;
+	int fd = (long)ptr;
+	struct pollfd pfd;
+
+	pfd.fd = fd;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
+
+	ret = poll(&pfd, 1, ms);
+	if (ret <= 0)
+		return ret;
+
+	return ret;
+}
+
 inline static ssize_t dtls_pull_buffer_non_empty(gnutls_transport_ptr_t ptr)
 {
 	dtls_transport_ptr *p = ptr;
@@ -132,28 +154,20 @@ ssize_t dtls_pull(gnutls_transport_ptr_t ptr, void *data, size_t size)
 static
 int dtls_pull_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
 {
-	fd_set rfds;
-	struct timeval tv;
 	int ret;
 	dtls_transport_ptr *p = ptr;
 	int fd = p->fd;
+	struct pollfd pfd;
 
 	if (dtls_pull_buffer_non_empty(ptr)) {
 		return 1;
 	}
 
-	FD_ZERO(&rfds);
-	FD_SET(fd, &rfds);
+	pfd.fd = fd;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
 
-	tv.tv_sec = 0;
-	tv.tv_usec = ms * 1000;
-
-	while (tv.tv_usec >= 1000000) {
-		tv.tv_usec -= 1000000;
-		tv.tv_sec++;
-	}
-
-	ret = select(fd + 1, &rfds, NULL, NULL, &tv);
+	ret = poll(&pfd, 1, ms);
 	if (ret <= 0)
 		return ret;
 
@@ -449,12 +463,14 @@ void vpn_server(struct worker_st *ws)
 
 		gnutls_transport_set_ptr(session,
 				 (gnutls_transport_ptr_t) (long)ws->conn_fd);
+
 		set_resume_db_funcs(session);
 		gnutls_session_set_ptr(session, ws);
 		gnutls_db_set_ptr(session, ws);
 		gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(ws->config));
 
 		gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+		gnutls_transport_set_pull_timeout_function(session, tls_pull_timeout);
 		do {
 			ret = gnutls_handshake(session);
 		} while (ret < 0 && gnutls_error_is_fatal(ret) == 0);
@@ -1285,9 +1301,9 @@ static int send_routes(worker_st *ws, struct http_req_st *req,
 }
 
 /* Enforces a socket timeout. That is because, although we
- * use select() to see whether a call to recv() would block,
+ * use poll() to see whether a call to recv() would block,
  * there are certain cases in Linux where recv() blocks even
- * though select() notified of data */
+ * though poll() notified of data */
 static void set_socket_timeout(worker_st * ws, int fd)
 {
 	struct timeval tval;
@@ -1318,14 +1334,13 @@ static void set_socket_timeout(worker_st * ws, int fd)
 static int connect_handler(worker_st * ws)
 {
 	struct http_req_st *req = &ws->req;
-	fd_set rfds;
+	struct pollfd pfd[4];
+	unsigned pfd_size;
 	int e, max, ret, t;
 	char *p;
 	unsigned rnd;
-#ifdef HAVE_PSELECT
+#ifdef HAVE_PPOLL
 	struct timespec tv;
-#else
-	struct timeval tv;
 #endif
 	unsigned tls_pending, dtls_pending = 0, i;
 	struct timespec tnow;
@@ -1837,8 +1852,6 @@ static int connect_handler(worker_st * ws)
 
 	/* worker main loop  */
 	for (;;) {
-		FD_ZERO(&rfds);
-
 		if (terminate != 0) {
  terminate:
 			ws->buffer[0] = 'S';
@@ -1870,28 +1883,36 @@ static int connect_handler(worker_st * ws)
 			dtls_pending = 0;
 		}
 
+		pfd[0].revents = 0;
+		pfd[1].revents = 0;
+		pfd[2].revents = 0;
+		pfd[3].revents = 0;
+
 		if (tls_pending == 0 && dtls_pending == 0) {
-			FD_SET(ws->conn_fd, &rfds);
-			FD_SET(ws->cmd_fd, &rfds);
-			FD_SET(ws->tun_fd, &rfds);
-			max = MAX(ws->cmd_fd, ws->conn_fd);
-			max = MAX(max, ws->tun_fd);
+			pfd[0].fd = ws->conn_fd;
+			pfd[0].events = POLLIN;
+
+			pfd[1].fd = ws->cmd_fd;
+			pfd[1].events = POLLIN;
+
+			pfd[2].fd = ws->tun_fd;
+			pfd[2].events = POLLIN;
+
+			pfd_size = 3;
 
 			if (ws->udp_state > UP_WAIT_FD) {
-				FD_SET(ws->dtls_tptr.fd, &rfds);
-				max = MAX(max, ws->dtls_tptr.fd);
+				pfd[3].fd = ws->dtls_tptr.fd;
+				pfd[3].events = POLLIN;
+				pfd_size++;
 			}
 
-#ifdef HAVE_PSELECT
+#ifdef HAVE_PPOLL
 			tv.tv_nsec = 0;
 			tv.tv_sec = 10;
-			ret =
-			    pselect(max + 1, &rfds, NULL, NULL, &tv, &emptyset);
+			ret = ppoll(pfd, pfd_size, &tv, &emptyset);
 #else
-			tv.tv_usec = 0;
-			tv.tv_sec = 10;
 			sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-			ret = select(max + 1, &rfds, NULL, NULL, &tv);
+			ret = poll(pfd, pfd_size, 10*1000);
 			sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 			if (ret == -1) {
@@ -1911,7 +1932,7 @@ static int connect_handler(worker_st * ws)
 		}
 
 		/* send pending data from tun device */
-		if (FD_ISSET(ws->tun_fd, &rfds)) {
+		if (pfd[2].revents & (POLLIN|POLLHUP)) {
 			ret = tun_mainloop(ws, &tnow);
 			if (ret < 0) {
 				terminate_reason = REASON_ERROR;
@@ -1920,7 +1941,7 @@ static int connect_handler(worker_st * ws)
 		}
 
 		/* read pending data from TCP channel */
-		if (FD_ISSET(ws->conn_fd, &rfds) || tls_pending != 0) {
+		if ((pfd[0].revents & (POLLIN|POLLHUP)) || tls_pending != 0) {
 			ret = tls_mainloop(ws, &tnow);
 			if (ret < 0) {
 				terminate_reason = REASON_ERROR;
@@ -1930,7 +1951,7 @@ static int connect_handler(worker_st * ws)
 
 		/* read data from UDP channel */
 		if (ws->udp_state > UP_WAIT_FD &&
-		    (FD_ISSET(ws->dtls_tptr.fd, &rfds) || dtls_pending != 0)) {
+		    ((pfd[3].revents & (POLLIN|POLLHUP)) || dtls_pending != 0)) {
 
 			ret = dtls_mainloop(ws, &tnow);
 			if (ret < 0) {
@@ -1940,7 +1961,7 @@ static int connect_handler(worker_st * ws)
 		}
 
 		/* read commands from command fd */
-		if (FD_ISSET(ws->cmd_fd, &rfds)) {
+		if (pfd[1].revents & (POLLIN|POLLHUP)) {
 			ret = handle_commands_from_main(ws);
 			if (ret == ERR_NO_CMD_FD) {
 				terminate_reason = REASON_ERROR;

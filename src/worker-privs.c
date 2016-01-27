@@ -86,11 +86,9 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(sigprocmask, 0);
 	ADD_SYSCALL(rt_sigprocmask, 0);
 
-	ADD_SYSCALL(select, 0);
-	/* in x86, glibc uses _newselect() */
-	ADD_SYSCALL(_newselect, 0);
+	ADD_SYSCALL(poll, 0);
+	ADD_SYSCALL(ppoll, 0);
 
-	ADD_SYSCALL(pselect6, 0);
 	ADD_SYSCALL(close, 0);
 	ADD_SYSCALL(exit, 0);
 	ADD_SYSCALL(exit_group, 0);

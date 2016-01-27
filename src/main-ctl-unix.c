@@ -252,9 +252,11 @@ static int append_user_info(method_ctx *ctx,
 	if (list->user == NULL)
 		return -1;
 
-	rep = list->user[list->n_user] = talloc(ctx->pool, UserInfoRep);
+	rep = talloc(ctx->pool, UserInfoRep);
 	if (rep == NULL)
 		return -1;
+
+	list->user[list->n_user] = rep;
 	list->n_user++;
 
 	user_info_rep__init(rep);

@@ -299,7 +299,7 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 
 AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h], [], [], [])
 
-AC_CHECK_FUNCS([setproctitle vasprintf clock_gettime isatty pselect getpeereid sigaltstack])
+AC_CHECK_FUNCS([setproctitle vasprintf clock_gettime isatty pselect ppoll getpeereid sigaltstack])
 AC_CHECK_FUNCS([strlcpy posix_memalign malloc_trim strsep])
 
 if [ test -z "$LIBWRAP" ];then

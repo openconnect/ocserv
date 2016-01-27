@@ -86,6 +86,7 @@
 #include <errno.h>
 #include <gnutls/crypto.h>
 #include <icmp-ping.h>
+#include <poll.h>
 
 #ifndef ICMP_DEST_UNREACH
 # ifdef ICMP_UNREACH
@@ -151,17 +152,14 @@ static
 ssize_t recvfrom_timeout(int sockfd, void *buf, size_t len, int flags,
 			 struct sockaddr *src_addr, socklen_t * addrlen)
 {
-	fd_set rfds;
-	struct timeval tv;
 	int ret;
+    struct pollfd pfd;
 
-	FD_ZERO(&rfds);
-	FD_SET(sockfd, &rfds);
+    pfd.fd = sockfd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
 
-	tv.tv_sec = 0;
-	tv.tv_usec = 250000;
-
-	ret = select(sockfd + 1, &rfds, NULL, NULL, &tv);
+    ret = poll(&pfd, 1, 250);
 	if (ret == -1)
 		return -1;
 	else if (ret > 0)

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
- * Copyright (C) 2015 Red Hat, Inc.
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2016 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,15 +29,16 @@
 /* for recvmsg */
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <poll.h>
 
 #include "common.h"
 
-const char* cmd_request_to_str(unsigned _cmd)
+const char *cmd_request_to_str(unsigned _cmd)
 {
-cmd_request_t cmd = _cmd;
-static char tmp[32];
+	cmd_request_t cmd = _cmd;
+	static char tmp[32];
 
-	switch(cmd) {
+	switch (cmd) {
 	case AUTH_COOKIE_REP:
 		return "auth cookie reply";
 	case AUTH_COOKIE_REQ:
@@ -93,11 +94,11 @@ static char tmp[32];
 	}
 }
 
-const char* discon_reason_to_str(unsigned reason)
+const char *discon_reason_to_str(unsigned reason)
 {
-static char tmp[32];
+	static char tmp[32];
 
-	switch(reason) {
+	switch (reason) {
 	case 0:
 	case REASON_ANY:
 		return "unspecified";
@@ -121,11 +122,11 @@ static char tmp[32];
 
 ssize_t force_write(int sockfd, const void *buf, size_t len)
 {
-int left = len;
-int ret;
-const uint8_t * p = buf;
+	int left = len;
+	int ret;
+	const uint8_t *p = buf;
 
-	while(left > 0) {
+	while (left > 0) {
 		ret = write(sockfd, p, left);
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
@@ -145,11 +146,11 @@ const uint8_t * p = buf;
 
 ssize_t force_read(int sockfd, void *buf, size_t len)
 {
-int left = len;
-int ret;
-uint8_t * p = buf;
+	int left = len;
+	int ret;
+	uint8_t *p = buf;
 
-	while(left > 0) {
+	while (left > 0) {
 		ret = read(sockfd, p, left);
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
@@ -170,22 +171,19 @@ uint8_t * p = buf;
 
 ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec)
 {
-int left = len;
-int ret;
-uint8_t * p = buf;
-struct timeval tv;
-fd_set set;
+	int left = len;
+	int ret;
+	uint8_t *p = buf;
+	struct pollfd pfd;
 
-	while(left > 0) {
+	while (left > 0) {
 		if (sec > 0) {
-			tv.tv_sec = sec;
-			tv.tv_usec = 0;
-
-			FD_ZERO(&set);
-			FD_SET(sockfd, &set);
+			pfd.fd = sockfd;
+			pfd.events = POLLIN;
+			pfd.revents = 0;
 
 			do {
-				ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+				ret = poll(&pfd, 1, sec * 1000);
 			} while (ret == -1 && errno == EINTR);
 
 			if (ret == -1 || ret == 0) {
@@ -198,7 +196,7 @@ fd_set set;
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
-		} else 	if (ret == 0 && left != 0) {
+		} else if (ret == 0 && left != 0) {
 			errno = ENOENT;
 			return -1;
 		}
@@ -214,7 +212,7 @@ fd_set set;
 
 void set_non_block(int fd)
 {
-int val;
+	int val;
 
 	val = fcntl(fd, F_GETFL, 0);
 	fcntl(fd, F_SETFL, val | O_NONBLOCK);
@@ -222,7 +220,7 @@ int val;
 
 void set_block(int fd)
 {
-int val;
+	int val;
 
 	val = fcntl(fd, F_GETFL, 0);
 	fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
@@ -230,18 +228,15 @@ int val;
 
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)
 {
-int ret;
-struct timeval tv;
-fd_set set;
+	int ret;
+	struct pollfd pfd;
 
-	tv.tv_sec = sec;
-	tv.tv_usec = 0;
-
-	FD_ZERO(&set);
-	FD_SET(sockfd, &set);
+	pfd.fd = sockfd;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
 
 	do {
-		ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+		ret = poll(&pfd, 1, sec * 1000);
 	} while (ret == -1 && errno == EINTR);
 
 	if (ret == -1 || ret == 0) {
@@ -252,21 +247,20 @@ fd_set set;
 	return recv(sockfd, buf, len, 0);
 }
 
-ssize_t recvmsg_timeout(int sockfd, struct msghdr *msg, int flags, unsigned sec)
+ssize_t recvmsg_timeout(int sockfd, struct msghdr * msg, int flags,
+			unsigned sec)
 {
-int ret;
-struct timeval tv;
-fd_set set;
+	int ret;
 
 	if (sec) {
-		tv.tv_sec = sec;
-		tv.tv_usec = 0;
+		struct pollfd pfd;
 
-		FD_ZERO(&set);
-		FD_SET(sockfd, &set);
+		pfd.fd = sockfd;
+		pfd.events = POLLIN;
+		pfd.revents = 0;
 
 		do {
-			ret = select(sockfd + 1, &set, NULL, NULL, &tv);
+			ret = poll(&pfd, 1, sec * 1000);
 		} while (ret == -1 && errno == EINTR);
 
 		if (ret == -1 || ret == 0) {
@@ -283,18 +277,18 @@ fd_set set;
 }
 
 /* Sends message + socketfd */
-int send_socket_msg(void *pool, int fd, uint8_t cmd, 
+int send_socket_msg(void *pool, int fd, uint8_t cmd,
 		    int socketfd,
-		    const void* msg, pack_size_func get_size, pack_func pack)
+		    const void *msg, pack_size_func get_size, pack_func pack)
 {
 	struct iovec iov[3];
 	struct msghdr hdr;
 	union {
-		struct cmsghdr    cm;
+		struct cmsghdr cm;
 		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
-	struct cmsghdr  *cmptr;
-	void* packed = NULL;
+	struct cmsghdr *cmptr;
+	void *packed = NULL;
 	uint16_t length;
 	int ret;
 
@@ -314,7 +308,8 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	if (length > 0) {
 		packed = talloc_size(pool, length);
 		if (packed == NULL) {
-			syslog(LOG_ERR, "%s:%u: memory error", __FILE__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: memory error", __FILE__,
+			       __LINE__);
 			return -1;
 		}
 
@@ -323,7 +318,8 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 		ret = pack(msg, packed);
 		if (ret == 0) {
-			syslog(LOG_ERR, "%s:%u: packing error", __FILE__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: packing error", __FILE__,
+			       __LINE__);
 			ret = -1;
 			goto cleanup;
 		}
@@ -344,38 +340,38 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	do {
 		ret = sendmsg(fd, &hdr, 0);
-	} while(ret == -1 && errno == EINTR);
+	} while (ret == -1 && errno == EINTR);
 	if (ret < 0) {
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
 	}
 
-cleanup:
+ cleanup:
 	talloc_free(packed);
 	return ret;
 
 }
 
-int send_msg(void *pool, int fd, uint8_t cmd, 
-	    const void* msg, pack_size_func get_size, pack_func pack)
+int send_msg(void *pool, int fd, uint8_t cmd,
+	     const void *msg, pack_size_func get_size, pack_func pack)
 {
 	return send_socket_msg(pool, fd, cmd, -1, msg, get_size, pack);
 }
 
-int recv_socket_msg(void *pool, int fd, uint8_t cmd, 
-		     int* socketfd, void** msg, unpack_func unpack,
-		     unsigned timeout)
+int recv_socket_msg(void *pool, int fd, uint8_t cmd,
+		    int *socketfd, void **msg, unpack_func unpack,
+		    unsigned timeout)
 {
 	struct iovec iov[3];
 	uint16_t length;
 	uint8_t rcmd;
 	struct msghdr hdr;
-	uint8_t* data = NULL;
+	uint8_t *data = NULL;
 	union {
-		struct cmsghdr    cm;
-		char              control[CMSG_SPACE(sizeof(int))];
+		struct cmsghdr cm;
+		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
-	struct cmsghdr  *cmptr;
+	struct cmsghdr *cmptr;
 	int ret;
 	PROTOBUF_ALLOCATOR(pa, pool);
 
@@ -395,32 +391,39 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
 	if (ret == -1) {
 		int e = errno;
-		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		       strerror(e));
 		return ERR_BAD_COMMAND;
 	}
 
 	if (ret == 0) {
-		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__, __LINE__);
+		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
+		       __LINE__);
 		return ERR_PEER_TERMINATED;
 	}
 
 	if (rcmd != cmd) {
-		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__, __LINE__, (int)rcmd, (int)cmd);
+		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
+		       __LINE__, (int)rcmd, (int)cmd);
 		return ERR_BAD_COMMAND;
 	}
 
 	/* try to receive socket (if any) */
 	if (socketfd != NULL) {
-		if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-			if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS) {
-				syslog(LOG_ERR, "%s:%u: recvmsg returned invalid msg type", __FILE__, __LINE__);
+		if ((cmptr = CMSG_FIRSTHDR(&hdr)) != NULL
+		    && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+			if (cmptr->cmsg_level != SOL_SOCKET
+			    || cmptr->cmsg_type != SCM_RIGHTS) {
+				syslog(LOG_ERR,
+				       "%s:%u: recvmsg returned invalid msg type",
+				       __FILE__, __LINE__);
 				return ERR_BAD_COMMAND;
 			}
 
 			if (CMSG_DATA(cmptr))
 				memcpy(socketfd, CMSG_DATA(cmptr), sizeof(int));
 			else
-	                        *socketfd = -1;
+				*socketfd = -1;
 		} else {
 			*socketfd = -1;
 		}
@@ -436,14 +439,16 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		ret = force_read_timeout(fd, data, length, timeout);
 		if (ret < length) {
 			int e = errno;
-			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__, strerror(e));
+			syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
+			       __LINE__, strerror(e));
 			ret = ERR_BAD_COMMAND;
 			goto cleanup;
 		}
 
 		*msg = unpack(&pa, length, data);
 		if (*msg == NULL) {
-			syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: unpacking error", __FILE__,
+			       __LINE__);
 			ret = ERR_MEM;
 			goto cleanup;
 		}
@@ -451,15 +456,15 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	ret = 0;
 
-cleanup:
+ cleanup:
 	talloc_free(data);
 	if (ret < 0 && socketfd != NULL && *socketfd != -1)
 		close(*socketfd);
 	return ret;
 }
 
-int recv_msg(void *pool, int fd, uint8_t cmd, 
-		void** msg, unpack_func unpack, unsigned timeout)
+int recv_msg(void *pool, int fd, uint8_t cmd,
+	     void **msg, unpack_func unpack, unsigned timeout)
 {
 	return recv_socket_msg(pool, fd, cmd, NULL, msg, unpack, timeout);
 }
@@ -480,22 +485,22 @@ void *_talloc_size2(void *ctx, size_t size)
  *   in our_addr.
  */
 ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
-                    struct sockaddr *src_addr, socklen_t *addrlen,
-                    struct sockaddr *our_addr, socklen_t *our_addrlen,
-                    int def_port)
+		       struct sockaddr * src_addr, socklen_t * addrlen,
+		       struct sockaddr * our_addr, socklen_t * our_addrlen,
+		       int def_port)
 {
-int ret;
-char cmbuf[256];
-struct iovec iov = { buf, len };
-struct cmsghdr *cmsg;
-struct msghdr mh = {
-	.msg_name = src_addr,
-	.msg_namelen = *addrlen,
-	.msg_iov = &iov,
-	.msg_iovlen = 1,
-	.msg_control = cmbuf,
-	.msg_controllen = sizeof(cmbuf),
-};
+	int ret;
+	char cmbuf[256];
+	struct iovec iov = { buf, len };
+	struct cmsghdr *cmsg;
+	struct msghdr mh = {
+		.msg_name = src_addr,
+		.msg_namelen = *addrlen,
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+		.msg_control = cmbuf,
+		.msg_controllen = sizeof(cmbuf),
+	};
 
 	do {
 		ret = recvmsg(sockfd, &mh, 0);
@@ -505,46 +510,57 @@ struct msghdr mh = {
 	}
 
 	/* find our address */
-	for (cmsg = CMSG_FIRSTHDR(&mh); cmsg != NULL; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
+	for (cmsg = CMSG_FIRSTHDR(&mh); cmsg != NULL;
+	     cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 #if defined(IP_PKTINFO)
-		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
-			struct in_pktinfo *pi = (void*)CMSG_DATA(cmsg);
-			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
+		if (cmsg->cmsg_level == IPPROTO_IP
+		    && cmsg->cmsg_type == IP_PKTINFO) {
+			struct in_pktinfo *pi = (void *)CMSG_DATA(cmsg);
+			struct sockaddr_in *a = (struct sockaddr_in *)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in) || pi == NULL)
+			if (*our_addrlen < sizeof(struct sockaddr_in)
+			    || pi == NULL)
 				return -1;
 
 			a->sin_family = AF_INET;
-			memcpy(&a->sin_addr, &pi->ipi_addr, sizeof(struct in_addr));
+			memcpy(&a->sin_addr, &pi->ipi_addr,
+			       sizeof(struct in_addr));
 			a->sin_port = htons(def_port);
 			*our_addrlen = sizeof(struct sockaddr_in);
 			break;
 		}
 #elif defined(IP_RECVDSTADDR)
-		if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_RECVDSTADDR) {
-			struct in_addr *pi = (void*)CMSG_DATA(cmsg);
-			struct sockaddr_in *a = (struct sockaddr_in*)our_addr;
+		if (cmsg->cmsg_level == IPPROTO_IP
+		    && cmsg->cmsg_type == IP_RECVDSTADDR) {
+			struct in_addr *pi = (void *)CMSG_DATA(cmsg);
+			struct sockaddr_in *a = (struct sockaddr_in *)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in) || pi == NULL)
+			if (*our_addrlen < sizeof(struct sockaddr_in)
+			    || pi == NULL)
 				return -1;
 
 			a->sin_family = AF_INET;
-			memcpy(&a->sin_addr, &pi->s_addr, sizeof(struct in_addr));
+			memcpy(&a->sin_addr, &pi->s_addr,
+			       sizeof(struct in_addr));
 			a->sin_port = htons(def_port);
 			*our_addrlen = sizeof(struct sockaddr_in);
 			break;
 		}
 #endif
 #ifdef IPV6_RECVPKTINFO
-		if (cmsg->cmsg_level == IPPROTO_IPV6 && cmsg->cmsg_type == IPV6_PKTINFO) {
-			struct in6_pktinfo *pi = (void*)CMSG_DATA(cmsg);
-			struct sockaddr_in6 *a = (struct sockaddr_in6*)our_addr;
+		if (cmsg->cmsg_level == IPPROTO_IPV6
+		    && cmsg->cmsg_type == IPV6_PKTINFO) {
+			struct in6_pktinfo *pi = (void *)CMSG_DATA(cmsg);
+			struct sockaddr_in6 *a =
+			    (struct sockaddr_in6 *)our_addr;
 
-			if (*our_addrlen < sizeof(struct sockaddr_in6) || pi == NULL)
+			if (*our_addrlen < sizeof(struct sockaddr_in6)
+			    || pi == NULL)
 				return -1;
 
 			a->sin6_family = AF_INET6;
-			memcpy(&a->sin6_addr, &pi->ipi6_addr, sizeof(struct in6_addr));
+			memcpy(&a->sin6_addr, &pi->ipi6_addr,
+			       sizeof(struct in6_addr));
 			a->sin6_port = htons(def_port);
 			*our_addrlen = sizeof(struct sockaddr_in6);
 			break;
@@ -581,31 +597,28 @@ struct msghdr mh = {
  * will be copied.  Always NUL terminates (unless siz == 0).
  * Returns strlen(src); if retval >= siz, truncation occurred.
  */
-size_t
-oc_strlcpy(char *dst, char const *src, size_t siz)
+size_t oc_strlcpy(char *dst, char const *src, size_t siz)
 {
-    char *d = dst;
-    char const *s = src;
-    size_t n = siz;
+	char *d = dst;
+	char const *s = src;
+	size_t n = siz;
 
-    /* Copy as many bytes as will fit */
-    if (n != 0 && --n != 0) {
-        do {
-            if ((*d++ = *s++) == 0)
-                break;
-        } while (--n != 0);
-    }
+	/* Copy as many bytes as will fit */
+	if (n != 0 && --n != 0) {
+		do {
+			if ((*d++ = *s++) == 0)
+				break;
+		} while (--n != 0);
+	}
 
-    /* Not enough room in dst, add NUL and traverse rest of src */
-    if (n == 0) {
-        if (siz != 0)
-            *d = '\0';      /* NUL-terminate dst */
-        while (*s++)
-            ;
-    }
+	/* Not enough room in dst, add NUL and traverse rest of src */
+	if (n == 0) {
+		if (siz != 0)
+			*d = '\0';	/* NUL-terminate dst */
+		while (*s++) ;
+	}
 
-    return(s - src - 1);    /* count does not include NUL */
+	return (s - src - 1);	/* count does not include NUL */
 }
 
 #endif
-

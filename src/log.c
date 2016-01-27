@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <arpa/inet.h>
 #include <base64-helper.h>
 
 #include <vpn.h>
@@ -36,6 +37,8 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 	char *save_buf = _buf;
 	char *buf = _buf;
 	size_t l;
+	const char *ret;
+	unsigned port;
 
 	if (!buf || !buflen)
 		return NULL;
@@ -44,22 +47,24 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 		return NULL;
 	}
 
-	if (full != 0 && salen == sizeof(struct sockaddr_in6) &&
-		((struct sockaddr_in6*)sa)->sin6_port != 0) {
-		*buf = '[';
-		buf++;
-		buflen--;
+	if (salen == sizeof(struct sockaddr_in6)) {
+		port = (unsigned)ntohs(((struct sockaddr_in6*)sa)->sin6_port);
+
+		if (full != 0 && port != 0 && buflen > 0) {
+			*buf = '[';
+			buf++;
+			buflen--;
+		}
+
+		ret = inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr, buf, buflen);
+	} else {
+		port = (unsigned)ntohs(((struct sockaddr_in*)sa)->sin_port);
+
+		ret = inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr, buf, buflen);
 	}
 
-	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) != 0)
+	if (ret == NULL) {
 		return NULL;
-
-	if (salen == sizeof(struct sockaddr_in6)) {
-		char *p = strchr(buf, '%');
-		/* remove any zone info */
-		if (p != NULL) {
-			*p = 0;
-		}
 	}
 
 	if (full == 0)
@@ -69,23 +74,18 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 	buf += l;
 	buflen -= l;
 
-	if (salen == sizeof(struct sockaddr_in6) &&
-		((struct sockaddr_in6*)sa)->sin6_port != 0) {
+	if (salen == sizeof(struct sockaddr_in6) && port != 0 && buflen > 0) {
 		*buf = ']';
 		buf++;
 		buflen--;
 	}
 
-	*buf = ':';
-	buf++;
-	buflen--;
+	if (port != 0 && buflen > 0) {
+		*buf = ':';
+		buf++;
+		buflen--;
 
-	if (getnameinfo(sa, salen, NULL, 0, buf, buflen, NI_NUMERICSERV) != 0)
-		return NULL;
-
-	if (buf[0] == '0' && buf[1] == 0) {
-		buf--;
-		buf[0] = 0;
+		snprintf(buf, buflen, "%u", port);
 	}
 
 finish:

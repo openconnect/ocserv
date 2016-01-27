@@ -760,7 +760,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 	print_array_block(out, params);
 
 	for (i=0;i<rep->n_info;i++) {
-		if (rep->info[i]->ip.len <= 4)
+		if (rep->info[i]->ip.len < 4)
 			continue;
 
 		if (rep->info[i]->ip.len == 16)

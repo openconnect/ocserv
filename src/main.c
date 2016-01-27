@@ -646,6 +646,8 @@ void clear_lists(main_server_st *s)
 		if (ctmp->tun_lease.fd >= 0)
 			close(ctmp->tun_lease.fd);
 		list_del(&ctmp->list);
+		ev_child_stop(EV_A_ &ctmp->ev_child);
+		ev_io_stop(EV_A_ &ctmp->io);
 		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);
 		s->proc_list.total--;
@@ -653,6 +655,7 @@ void clear_lists(main_server_st *s)
 
 	list_for_each_safe(&s->script_list.head, script_tmp, script_pos, list) {
 		list_del(&script_tmp->list);
+		ev_child_stop(loop, &script_tmp->ev_child);
 		talloc_free(script_tmp);
 	}
 
@@ -660,6 +663,14 @@ void clear_lists(main_server_st *s)
 	proc_table_deinit(s);
 	ctl_handler_deinit(s);
 	main_ban_db_deinit(s);
+
+	/* clear libev state */
+	ev_io_stop (loop, &ctl_watcher);
+	ev_io_stop (loop, &sec_mod_watcher);
+	ev_child_stop (loop, &child_watcher);
+	ev_timer_stop(loop, &maintainance_watcher);
+	/* free memory by the event loop */
+	ev_loop_destroy (loop);
 }
 
 /* A UDP fd will not be forwarded to worker process before this number of

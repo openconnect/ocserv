@@ -5,6 +5,9 @@
 - Added watchdog to worker processes to ensure they are killed
   under unexpected long delays (e.g., the process being blocked).
 - Certificates and private keys are reloaded on server reload (SIGHUP).
+- The main event loop memory is deinitialized after fork to reduce
+  memory taken by worker processes.
+- Return HTML error message on 404, patch by Kevin Cernekee.
 
 
 * Version 0.11.0rc0 (released 2016-01-08)

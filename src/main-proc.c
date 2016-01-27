@@ -109,7 +109,10 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 
 	/* close any pending sessions */
 	if (proc->active_sid && !(flags & RPROC_QUIT)) {
-		session_close(s, proc);
+		if (session_close(s, proc) < 0) {
+			mslog(s, proc, LOG_ERR, "error closing session (communication with sec-mod issue)");
+			exit(1);
+		}
 	}
 
 	remove_from_script_list(s, proc);

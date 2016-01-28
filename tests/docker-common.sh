@@ -39,6 +39,10 @@ if test -z $FEDORA && test -z $DEBIAN;then
 	exit 77
 fi
 
+get_ip() {
+	IP=`$DOCKER inspect $IMAGE_NAME | grep \"IPAddress\" | cut -d '"' -f 4|head -n1`
+}
+
 check_for_file() {
 	FILENAME=$1
 	IMG=$2

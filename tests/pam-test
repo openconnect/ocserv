@@ -43,7 +43,7 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -98,14 +98,14 @@ rm -f pass-pam.tmp
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.56.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
 ping -w 5 192.168.56.1 -s 1500
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
@@ -117,14 +117,14 @@ retrieve_user_info testuser
 if test "$FEDORA" = 1;then
 nuttcp -T 10 -t 192.168.56.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot send to ocserv"
 	stop
 fi
 
 nuttcp -T 10 -r 192.168.56.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot recv from ocserv"
 	stop
 fi
@@ -132,7 +132,7 @@ fi
 
 sleep 2
 
-kill $PID
+kill -INT $PID
 
 sleep 4
 

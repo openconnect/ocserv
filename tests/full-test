@@ -31,6 +31,7 @@ CONFIG="tcp"
 IMAGE=ocserv-test1
 IMAGE_NAME=test_ocserv
 TMP=$IMAGE_NAME.tmp
+PIDFILE="$IMAGE_NAME.$$.pid"
 . ./docker-common.sh
 
 $DOCKER run -e OCCTL_PAGER=cat -P --privileged=true -p 22 --tty=false -d --name $IMAGE_NAME $IMAGE
@@ -43,7 +44,7 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -71,7 +72,7 @@ fi
 echo ""
 echo "Connecting with correct username"
 $ECHO_E "test" >pass-full$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -b --pid-file ${srcdir}/pid1.$$ -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -b --pid-file $PIDFILE -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP
 if test $? != 0;then
 	echo "Cannot connect to server"
 	stop
@@ -81,12 +82,13 @@ fi
 sleep 5
 
 rm -f pass-full$TMP
-if [ ! -f ${srcdir}/pid1.$$ ];then
+if [ ! -f $PIDFILE ];then
 	echo "It was not possible to establish session!"
 	stop
 fi
 
-PID=`cat ${srcdir}/pid1.$$`
+PID=`cat $PIDFILE`
+rm -f $PIDFILE
 
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.79.1

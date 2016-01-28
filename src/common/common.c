@@ -30,6 +30,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <poll.h>
+#include <limits.h>
 
 #include "common.h"
 
@@ -277,9 +278,11 @@ ssize_t recvmsg_timeout(int sockfd, struct msghdr * msg, int flags,
 }
 
 /* Sends message + socketfd */
+static
 int send_socket_msg(void *pool, int fd, uint8_t cmd,
-		    int socketfd,
-		    const void *msg, pack_size_func get_size, pack_func pack)
+		    int socketfd, const void *msg,
+		    pack_size_func get_size, pack_func pack,
+		    unsigned use_32bit)
 {
 	struct iovec iov[3];
 	struct msghdr hdr;
@@ -289,7 +292,9 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	} control_un;
 	struct cmsghdr *cmptr;
 	void *packed = NULL;
-	uint16_t length;
+	uint16_t length16;
+	uint32_t length32;
+	size_t length;
 	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
@@ -299,8 +304,21 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	length = get_size(msg);
 
-	iov[1].iov_base = &length;
-	iov[1].iov_len = 2;
+	if (use_32bit) {
+		if (length >= UINT32_MAX)
+			return -1;
+
+		length32 = length;
+		iov[1].iov_base = &length32;
+		iov[1].iov_len = 4;
+	} else {
+		if (length >= UINT16_MAX)
+			return -1;
+
+		length16 = length;
+		iov[1].iov_base = &length16;
+		iov[1].iov_len = 2;
+	}
 
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
@@ -349,16 +367,23 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
  cleanup:
 	talloc_free(packed);
 	return ret;
-
 }
 
-int send_msg(void *pool, int fd, uint8_t cmd,
-	     const void *msg, pack_size_func get_size, pack_func pack)
+int send_socket_msg16(void *pool, int fd, uint8_t cmd,
+		      int socketfd, const void *msg,
+		      pack_size_func get_size, pack_func pack)
 {
-	return send_socket_msg(pool, fd, cmd, -1, msg, get_size, pack);
+	return send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 0);
 }
 
-int recv_socket_msg(void *pool, int fd, uint8_t cmd,
+int send_socket_msg32(void *pool, int fd, uint8_t cmd,
+		      int socketfd, const void *msg,
+		      pack_size_func get_size, pack_func pack)
+{
+	return send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 1);
+}
+
+int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
 		    int *socketfd, void **msg, unpack_func unpack,
 		    unsigned timeout)
 {
@@ -461,12 +486,6 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	if (ret < 0 && socketfd != NULL && *socketfd != -1)
 		close(*socketfd);
 	return ret;
-}
-
-int recv_msg(void *pool, int fd, uint8_t cmd,
-	     void **msg, unpack_func unpack, unsigned timeout)
-{
-	return recv_socket_msg(pool, fd, cmd, NULL, msg, unpack, timeout);
 }
 
 void _talloc_free2(void *ctx, void *ptr)

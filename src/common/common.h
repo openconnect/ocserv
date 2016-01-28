@@ -54,19 +54,39 @@ typedef void* (*unpack_func)(ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
 
-int send_msg(void *pool, int fd, uint8_t cmd, 
-	    const void* msg, pack_size_func get_size, pack_func pack);
+int send_socket_msg16(void *pool, int fd, uint8_t cmd, 
+		      int socketfd,
+		      const void* msg, pack_size_func get_size, pack_func pack);
 
-int send_socket_msg(void *pool, int fd, uint8_t cmd, 
-		    int socketfd,
-		    const void* msg, pack_size_func get_size, pack_func pack);
+int send_socket_msg32(void *pool, int fd, uint8_t cmd, 
+		      int socketfd,
+		      const void* msg, pack_size_func get_size, pack_func pack);
+
+inline static int send_msg16(void *pool, int fd, uint8_t cmd,
+	     const void *msg, pack_size_func get_size, pack_func pack)
+{
+	return send_socket_msg16(pool, fd, cmd, -1, msg, get_size, pack);
+}
+
+inline static
+int send_msg32(void *pool, int fd, uint8_t cmd,
+	     const void *msg, pack_size_func get_size, pack_func pack)
+{
+	return send_socket_msg32(pool, fd, cmd, -1, msg, get_size, pack);
+}
+
+
+int recv_socket_msg16(void *pool, int fd, uint8_t cmd, 
+  	    	      int *socketfd, void** msg, unpack_func, unsigned timeout);
 
 /* the timeout is in seconds */
-int recv_msg(void *pool, int fd, uint8_t cmd, 
-	     void** msg, unpack_func, unsigned timeout);
+inline static int recv_msg16(void *pool, int fd, uint8_t cmd,
+	     void **msg, unpack_func unpack, unsigned timeout)
+{
+	return recv_socket_msg16(pool, fd, cmd, NULL, msg, unpack, timeout);
+}
 
-int recv_socket_msg(void *pool, int fd, uint8_t cmd, 
-			int *socketfd, void** msg, unpack_func, unsigned timeout);
+
 
 const char* cmd_request_to_str(unsigned cmd);
 const char* discon_reason_to_str(unsigned reason);

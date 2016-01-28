@@ -636,14 +636,14 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 	msg.data.data = raw_data->data;
 	msg.data.len = raw_data->size;
 
-	ret = send_msg(userdata, sd, type, &msg,
+	ret = send_msg16(userdata, sd, type, &msg,
 			(pack_size_func)sec_op_msg__get_packed_size,
 			(pack_func)sec_op_msg__pack);
 	if (ret < 0) {
 		goto error;
 	}
 
-	ret = recv_msg(userdata, sd, type, (void*)&reply,
+	ret = recv_msg16(userdata, sd, type, (void*)&reply,
 		       (unpack_func)sec_op_msg__unpack,
 		       DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {

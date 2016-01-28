@@ -94,7 +94,7 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, client_entry_st *e, const char *ip
 		return;
 	}
 
-	ret = send_msg(lpool, sec->cmd_fd, SM_CMD_AUTH_BAN_IP, &msg,
+	ret = send_msg16(lpool, sec->cmd_fd, SM_CMD_AUTH_BAN_IP, &msg,
 				(pack_size_func) ban_ip_msg__get_packed_size,
 				(pack_func) ban_ip_msg__pack);
 	if (ret < 0) {
@@ -178,7 +178,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 		msg.dtls_session_id.data = entry->dtls_session_id;
 		msg.dtls_session_id.len = sizeof(entry->dtls_session_id);
 
-		ret = send_msg(entry, cfd, SM_CMD_AUTH_REP,
+		ret = send_msg16(entry, cfd, SM_CMD_AUTH_REP,
 			       &msg,
 			       (pack_size_func)
 			       sec_auth_reply_msg__get_packed_size,
@@ -186,7 +186,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 	} else {
 		msg.reply = AUTH__REP__FAILED;
 
-		ret = send_msg(entry, cfd, SM_CMD_AUTH_REP,
+		ret = send_msg16(entry, cfd, SM_CMD_AUTH_REP,
 			       &msg,
 			       (pack_size_func)
 			       sec_auth_reply_msg__get_packed_size,
@@ -222,7 +222,7 @@ int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 	msg.sid.data = e->sid;
 	msg.sid.len = sizeof(e->sid);
 
-	ret = send_msg(e, cfd, SM_CMD_AUTH_REP, &msg,
+	ret = send_msg16(e, cfd, SM_CMD_AUTH_REP, &msg,
 		       (pack_size_func) sec_auth_reply_msg__get_packed_size,
 		       (pack_func) sec_auth_reply_msg__pack);
 	if (ret < 0) {
@@ -389,7 +389,7 @@ int send_failed_session_open_reply(sec_mod_st *sec, int fd)
 		return ERR_BAD_COMMAND;
 	}
 
-	ret = send_msg(lpool, fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
+	ret = send_msg16(lpool, fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
 			(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
 			(pack_func) sec_auth_session_reply_msg__pack);
 	if (ret < 0) {
@@ -476,7 +476,7 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 		}
 	}
 
-	ret = send_msg(lpool, fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
+	ret = send_msg16(lpool, fd, SM_CMD_AUTH_SESSION_REPLY, &rep,
 			(pack_size_func) sec_auth_session_reply_msg__get_packed_size,
 			(pack_func) sec_auth_session_reply_msg__pack);
 	if (ret < 0) {
@@ -510,14 +510,14 @@ int handle_sec_auth_session_close(sec_mod_st *sec, int fd, const SecAuthSessionM
 		char tmp[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
 		oc_base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
 		seclog(sec, LOG_INFO, "session close but with non-existing SID: %s", tmp);
-		return send_msg(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
+		return send_msg16(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
 		                (pack_func) cli_stats_msg__pack);
 	}
 
 	if (e->status < PS_AUTH_COMPLETED) {
 		seclog(sec, LOG_DEBUG, "session close received in unauthenticated client %s "SESSION_STR"!", e->acct_info.username, e->acct_info.psid);
-		return send_msg(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
+		return send_msg16(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
 		                (pack_func) cli_stats_msg__pack);
 	}
@@ -544,7 +544,7 @@ int handle_sec_auth_session_close(sec_mod_st *sec, int fd, const SecAuthSessionM
 	rep.secmod_tlsdb_entries = sec->tls_db.entries;
 	rep.has_secmod_tlsdb_entries = 1;
 
-	ret = send_msg(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
+	ret = send_msg16(e, fd, SM_CMD_AUTH_CLI_STATS, &rep,
 			(pack_size_func) cli_stats_msg__get_packed_size,
 			(pack_func) cli_stats_msg__pack);
 	if (ret < 0) {

@@ -533,7 +533,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 	AuthReplyMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_socket_msg(ws, ws->cmd_fd, AUTH_COOKIE_REP, &socketfd,
+	ret = recv_socket_msg16(ws, ws->cmd_fd, AUTH_COOKIE_REP, &socketfd,
 			      (void *)&msg,
 			      (unpack_func) auth_reply_msg__unpack,
 			      DEFAULT_SOCKET_TIMEOUT);
@@ -674,7 +674,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounte
 	SecAuthReplyMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_msg(ws, sd, SM_CMD_AUTH_REP,
+	ret = recv_msg16(ws, sd, SM_CMD_AUTH_REP,
 		       (void *)&msg, (unpack_func) sec_auth_reply_msg__unpack,
 		       DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {

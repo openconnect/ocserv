@@ -348,7 +348,7 @@ int send_msg_to_secmod(worker_st * ws, int sd, uint8_t cmd,
 	oclog(ws, LOG_DEBUG, "sending message '%s' to secmod",
 	      cmd_request_to_str(cmd));
 
-	return send_msg(ws, sd, cmd, msg, get_size, pack);
+	return send_msg16(ws, sd, cmd, msg, get_size, pack);
 }
 
 inline static
@@ -356,7 +356,7 @@ int send_msg_to_main(worker_st *ws, uint8_t cmd,
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
 	oclog(ws, LOG_DEBUG, "sending message '%s' to main", cmd_request_to_str(cmd));
-	return send_msg(ws, ws->cmd_fd, cmd, msg, get_size, pack);
+	return send_msg16(ws, ws->cmd_fd, cmd, msg, get_size, pack);
 }
 
 int parse_proxy_proto_header(struct worker_st *ws, int fd);

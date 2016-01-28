@@ -188,7 +188,7 @@ static int send_refresh_cookie_key(sec_mod_st * sec, void *key_data, unsigned ke
 	msg.key.data = key_data;
 	msg.key.len = key_size;
 
-	ret = send_msg(sec, sec->cmd_fd, SM_CMD_REFRESH_COOKIE_KEY, &msg,
+	ret = send_msg16(sec, sec->cmd_fd, SM_CMD_REFRESH_COOKIE_KEY, &msg,
 		       (pack_size_func) sec_refresh_cookie_key__get_packed_size,
 		       (pack_func) sec_refresh_cookie_key__pack);
 	if (ret < 0) {
@@ -207,7 +207,7 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 	msg.data.data = rep;
 	msg.data.len = rep_size;
 
-	ret = send_msg(pool, cfd, type, &msg,
+	ret = send_msg16(pool, cfd, type, &msg,
 		       (pack_size_func) sec_op_msg__get_packed_size,
 		       (pack_func) sec_op_msg__pack);
 	if (ret < 0) {
@@ -404,7 +404,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 			}
 
 			ret =
-			    send_msg(pool, cfd, RESUME_FETCH_REP, &msg,
+			    send_msg16(pool, cfd, RESUME_FETCH_REP, &msg,
 					       (pack_size_func)
 					       session_resume_reply_msg__get_packed_size,
 					       (pack_func)

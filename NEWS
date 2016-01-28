@@ -8,6 +8,8 @@
 - The main event loop memory is deinitialized after fork to reduce
   memory taken by worker processes.
 - Return HTML error message on 404, patch by Kevin Cernekee.
+- Remove all uses of select() in main or worker processes allowing
+  the number of connected clients to exceed 1024.
 
 
 * Version 0.11.0rc0 (released 2016-01-08)

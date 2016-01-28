@@ -54,6 +54,9 @@ typedef void* (*unpack_func)(ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
 
+int send_msg32(void *pool, int fd, uint8_t cmd, 
+	    const void* msg, pack_size_func get_size, pack_func pack);
+
 int send_msg(void *pool, int fd, uint8_t cmd, 
 	    const void* msg, pack_size_func get_size, pack_func pack);
 

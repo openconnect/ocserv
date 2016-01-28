@@ -257,19 +257,23 @@ fd_set set;
 }
 
 /* Sends message + socketfd */
-int send_socket_msg(void *pool, int fd, uint8_t cmd, 
-		    int socketfd,
-		    const void* msg, pack_size_func get_size, pack_func pack)
+static
+int _send_socket_msg(void *pool, int fd, uint8_t cmd,
+		    int socketfd, const void *msg,
+		    pack_size_func get_size, pack_func pack,
+		    unsigned use_32bit)
 {
 	struct iovec iov[3];
 	struct msghdr hdr;
 	union {
-		struct cmsghdr    cm;
+		struct cmsghdr cm;
 		char control[CMSG_SPACE(sizeof(int))];
 	} control_un;
-	struct cmsghdr  *cmptr;
-	void* packed = NULL;
-	uint16_t length;
+	struct cmsghdr *cmptr;
+	void *packed = NULL;
+	uint16_t length16;
+	uint32_t length32;
+	size_t length;
 	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
@@ -279,8 +283,21 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	length = get_size(msg);
 
-	iov[1].iov_base = &length;
-	iov[1].iov_len = 2;
+	if (use_32bit) {
+		if (length >= UINT32_MAX)
+			return -1;
+
+		length32 = length;
+		iov[1].iov_base = &length32;
+		iov[1].iov_len = 4;
+	} else {
+		if (length >= UINT16_MAX)
+			return -1;
+
+		length16 = length;
+		iov[1].iov_base = &length16;
+		iov[1].iov_len = 2;
+	}
 
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
@@ -288,7 +305,8 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	if (length > 0) {
 		packed = talloc_size(pool, length);
 		if (packed == NULL) {
-			syslog(LOG_ERR, "%s:%u: memory error", __FILE__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: memory error", __FILE__,
+			       __LINE__);
 			return -1;
 		}
 
@@ -297,7 +315,8 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 		ret = pack(msg, packed);
 		if (ret == 0) {
-			syslog(LOG_ERR, "%s:%u: packing error", __FILE__, __LINE__);
+			syslog(LOG_ERR, "%s:%u: packing error", __FILE__,
+			       __LINE__);
 			ret = -1;
 			goto cleanup;
 		}
@@ -318,22 +337,41 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 
 	do {
 		ret = sendmsg(fd, &hdr, 0);
-	} while(ret == -1 && errno == EINTR);
+	} while (ret == -1 && errno == EINTR);
 	if (ret < 0) {
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: %s", __FILE__, __LINE__, strerror(e));
 	}
 
-cleanup:
+ cleanup:
 	talloc_free(packed);
 	return ret;
+}
 
+int send_socket_msg(void *pool, int fd, uint8_t cmd,
+		      int socketfd, const void *msg,
+		      pack_size_func get_size, pack_func pack)
+{
+	return _send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 0);
+}
+
+int send_socket_msg32(void *pool, int fd, uint8_t cmd,
+		      int socketfd, const void *msg,
+		      pack_size_func get_size, pack_func pack)
+{
+	return _send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 1);
 }
 
 int send_msg(void *pool, int fd, uint8_t cmd, 
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
-	return send_socket_msg(pool, fd, cmd, -1, msg, get_size, pack);
+	return _send_socket_msg(pool, fd, cmd, -1, msg, get_size, pack, 0);
+}
+
+int send_msg32(void *pool, int fd, uint8_t cmd, 
+	    const void* msg, pack_size_func get_size, pack_func pack)
+{
+	return _send_socket_msg(pool, fd, cmd, -1, msg, get_size, pack, 1);
 }
 
 int recv_socket_msg(void *pool, int fd, uint8_t cmd, 

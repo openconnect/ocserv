@@ -174,7 +174,7 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.stored_tls_sessions = ctx->s->tls_db.entries;
 	rep.banned_ips = main_ban_db_elems(ctx->s);
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,
 		       (pack_func) status_rep__pack);
 	if (ret < 0) {
@@ -196,7 +196,7 @@ static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	rep.status = 1;
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_RELOAD_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_RELOAD_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -218,7 +218,7 @@ static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	rep.status = 1;
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_STOP_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_STOP_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -448,7 +448,7 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 		}
 	}
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
 		       (pack_size_func) user_list_rep__get_packed_size,
 		       (pack_func) user_list_rep__pack);
 	if (ret < 0) {
@@ -511,7 +511,7 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 		e = htable_next(db, &iter);
 	}
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_BANNED_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_LIST_BANNED_REP, &rep,
 		       (pack_size_func) ban_list_rep__get_packed_size,
 		       (pack_func) ban_list_rep__pack);
 	if (ret < 0) {
@@ -567,7 +567,7 @@ static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 			mslog(ctx->s, NULL, LOG_INFO, "could not find ID '%u'", id);
 	}
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
 		       (pack_size_func) user_list_rep__get_packed_size,
 		       (pack_func) user_list_rep__pack);
 	if (ret < 0) {
@@ -639,7 +639,7 @@ static void method_unban_ip(method_ctx *ctx,
 
 	unban_req__free_unpacked(req, NULL);
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_UNBAN_IP_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_UNBAN_IP_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -678,7 +678,7 @@ static void method_disconnect_user_name(method_ctx *ctx,
 
 	username_req__free_unpacked(req, NULL);
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -718,7 +718,7 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	/* reply */
 	id_req__free_unpacked(req, NULL);
 
-	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
+	ret = send_msg32(ctx->pool, cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {

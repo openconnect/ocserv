@@ -1,3 +1,8 @@
+* Version 0.10.12 (unreleased)
+- Fixed crash in the transfer of big chunks of data between ocserv
+  and occtl. Reported by Liviu. (#29)
+
+
 * Version 0.10.11 (released 2016-01-08)
 - Corrected the reporting of keepalive to occtl.
 - Handle clients which send the first request to /VPN

@@ -86,7 +86,7 @@ retrieve_route_info testtime '192.168.67.0/255.255.255.0'
 
 echo "Waiting for accounting report"
 
-sleep 75
+sleep 95
 
 DIR=`$DOCKER exec $IMAGE_NAME ls '/var/log/radius/radacct/'|tail -1`
 FILE=`$DOCKER exec $IMAGE_NAME ls '/var/log/radius/radacct/'"$DIR"|tail -1`

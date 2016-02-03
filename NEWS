@@ -1,4 +1,4 @@
-* Version 0.11.0rc1 (unreleased)
+* Version 0.11.0rc1 (released 2016-02-03)
 - Radius: send the Connect-Info attribute with the user agent string
   on authentication.
 - Updated support for CHACHA20-POLY1305 to conform to latest draft

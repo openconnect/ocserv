@@ -757,6 +757,10 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 
 	}
 
+	if (req->user_agent != NULL) {
+		strlcpy(e->auth_info.user_agent, req->user_agent, sizeof(e->auth_info.user_agent));
+	}
+
 	if (req->user_name != NULL) {
 		strlcpy(e->auth_info.username, req->user_name, sizeof(e->auth_info.username));
 	}

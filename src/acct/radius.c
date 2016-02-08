@@ -185,6 +185,12 @@ static void append_acct_standard(rc_handle *rh, const common_auth_info_st *ai, V
 		return;
 	}
 
+	if (ai->user_agent[0] != 0) {
+	    if (rc_avpair_add(rh, send, PW_CONNECT_INFO, ai->user_agent, -1, 0) == NULL) {
+		    return;
+	    }
+	}
+
 	return;
 }
 

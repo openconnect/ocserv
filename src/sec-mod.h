@@ -59,6 +59,7 @@ typedef struct common_auth_info_st {
 	char ipv4[MAX_IP_STR];
 	char ipv6[MAX_IP_STR];
 	unsigned id;
+	char user_agent[MAX_AGENT_NAME];
 } common_auth_info_st;
 
 typedef struct client_entry_st {

@@ -1445,6 +1445,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		ireq.hostname = req->hostname;
 		ireq.ip = ws->remote_ip_str;
 		ireq.our_ip = get_our_ip(ws, our_ip_str);
+		ireq.user_agent = ws->req.user_agent;
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {

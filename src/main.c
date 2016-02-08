@@ -1183,6 +1183,13 @@ int main(int argc, char** argv)
 					break;
 				}
 
+				/* Disallow fds which cannot be input to select() */
+				if (fd >= FD_SETSIZE-32) {
+					close(fd);
+					mslog(s, NULL, LOG_INFO, "reached maximum select() limit (active: %u)", s->active_clients);
+					break;
+				}
+
 				if (check_tcp_wrapper(fd) < 0) {
 					close(fd);
 					mslog(s, NULL, LOG_INFO, "TCP wrappers rejected the connection (see /etc/hosts->[allow|deny])");

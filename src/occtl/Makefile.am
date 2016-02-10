@@ -7,6 +7,10 @@ if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(srcdir)/../ccan/talloc
 endif
 
+if LOCAL_HTTP_PARSER
+AM_CPPFLAGS += -I$(srcdir)/../http-parser/
+endif
+
 EXTRA_DIST = args.def
 
 bin_PROGRAMS = occtl

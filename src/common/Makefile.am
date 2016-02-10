@@ -6,6 +6,10 @@ if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(srcdir)/../ccan/talloc
 endif
 
+if LOCAL_HTTP_PARSER
+AM_CPPFLAGS += -I$(srcdir)/../http-parser/
+endif
+
 # Files common to ocserv and occtl.
 libcommon_a_SOURCES=common.c common.h system.c system.h \
 	cloexec.c cloexec.h

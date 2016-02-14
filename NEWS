@@ -1,6 +1,8 @@
 * Version 0.10.12 (unreleased)
 - Fixed crash in the transfer of big chunks of data between ocserv
   and occtl. Reported by Liviu. (#29)
+- Radius: send the Connect-Info attribute with the user agent string
+  on accounting messages; backported by Liviu (#31).
 - Disallow new connections after reaching the select fd limit.
 
 

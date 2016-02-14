@@ -1,4 +1,4 @@
-FROM debian:testing
+FROM debian:stretch
 
 RUN apt-get update -y
 RUN apt-get install -y libgnutls-deb0-28 liboath0 libprotobuf-c1 libev4

@@ -365,6 +365,5 @@ void cookie_authenticate_or_exit(worker_st *ws);
  * TCP (if activity occurs there).
  */
 #define UDP_SWITCH_TIME 15
-#define ACTIVE_SESSION_TIMEOUT 30
 
 #endif

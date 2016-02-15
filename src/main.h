@@ -218,6 +218,9 @@ typedef struct main_server_st {
 	int sec_mod_fd; /* messages are sent and received async */
 	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
 	void *main_pool; /* talloc main pool */
+
+	/* used as temporary buffer (currently by forward_udp_to_owner) */
+	uint8_t msg_buffer[MAX_MSG_SIZE];
 } main_server_st;
 
 void clear_lists(main_server_st *s);

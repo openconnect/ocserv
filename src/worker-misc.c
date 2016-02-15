@@ -47,6 +47,35 @@
 # include <sys/mman.h>
 #endif
 
+/* recv from the new file descriptor and make sure we have a valid packet */
+static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg *tmsg)
+{
+	int saved_fd, ret;
+	UdpFdMsg *saved_tmsg;
+
+	/* don't bother with anything if we are on uninitialized state */
+	if (ws->dtls_session == NULL || ws->udp_state != UP_ACTIVE)
+		return 1;
+
+	saved_fd = ws->dtls_tptr.fd;
+	saved_tmsg = ws->dtls_tptr.msg;
+
+	ws->dtls_tptr.msg = tmsg;
+	ws->dtls_tptr.fd = fd;
+
+	ret = gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
+	/* we receive GNUTLS_E_AGAIN in case the packet was discarded */
+	if (ret > 0) {
+		ret = 1;
+		goto revert;
+	}
+
+	ret = 0;
+ revert:
+ 	ws->dtls_tptr.fd = saved_fd;
+ 	ws->dtls_tptr.msg = saved_tmsg;
+ 	return ret;
+}
 
 int handle_commands_from_main(struct worker_st *ws)
 {
@@ -66,7 +95,7 @@ int handle_commands_from_main(struct worker_st *ws)
 	/*int cmd_data_len;*/
 
 	memset(&cmd_data, 0, sizeof(cmd_data));
-	
+
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
@@ -75,14 +104,14 @@ int handle_commands_from_main(struct worker_st *ws)
 
 	iov[2].iov_base = cmd_data;
 	iov[2].iov_len = sizeof(cmd_data);
-	
+
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 3;
 
 	hdr.msg_control = control_un.control;
 	hdr.msg_controllen = sizeof(control_un.control);
-	
+
 	do {
 		ret = recvmsg( ws->cmd_fd, &hdr, 0);
 	} while(ret == -1 && errno == EINTR);
@@ -105,12 +134,12 @@ int handle_commands_from_main(struct worker_st *ws)
 	}
 
 	/*cmd_data_len = ret - 1;*/
-	
+
 	switch(cmd) {
 		case CMD_TERMINATE:
 			exit_worker(ws);
 		case CMD_UDP_FD: {
-			unsigned hello = 1;
+			unsigned has_hello = 1;
 			int fd;
 
 			if (ws->udp_state != UP_WAIT_FD) {
@@ -119,7 +148,7 @@ int handle_commands_from_main(struct worker_st *ws)
 
 			tmsg = udp_fd_msg__unpack(NULL, length, cmd_data);
 			if (tmsg) {
-				hello = tmsg->hello;
+				has_hello = tmsg->hello;
 			}
 
 			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
@@ -129,12 +158,13 @@ int handle_commands_from_main(struct worker_st *ws)
 				}
 
 				memcpy(&fd, CMSG_DATA(cmptr), sizeof(int));
+				set_non_block(fd);
 
-				if (hello == 0) {
-					/* only replace our session if we are inactive for more than 60 secs */
-					if ((ws->udp_state != UP_ACTIVE && ws->udp_state != UP_INACTIVE) ||
-						time(0) - ws->last_msg_udp < ACTIVE_SESSION_TIMEOUT) {
-						oclog(ws, LOG_INFO, "received UDP fd message but our session is active!");
+				if (has_hello == 0) {
+					/* check if the first packet received is a valid one -
+					 * if not discard the new fd */
+					if (!recv_from_new_fd(ws, fd, tmsg)) {
+						oclog(ws, LOG_INFO, "received UDP fd message but its session has invalid data!");
 						if (tmsg)
 							udp_fd_msg__free_unpacked(tmsg, NULL);
 						close(fd);
@@ -150,9 +180,7 @@ int handle_commands_from_main(struct worker_st *ws)
 					udp_fd_msg__free_unpacked(ws->dtls_tptr.msg, NULL);
 
 				ws->dtls_tptr.msg = tmsg;
-
 				ws->dtls_tptr.fd = fd;
-				set_non_block(fd);
 
 				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
 				return 0;
@@ -167,7 +195,7 @@ int handle_commands_from_main(struct worker_st *ws)
 			oclog(ws, LOG_ERR, "unknown CMD 0x%x", (unsigned)cmd);
 			exit_worker(ws);
 	}
-	
+
 	return 0;
 
 udp_fd_fail:

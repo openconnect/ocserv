@@ -684,7 +684,6 @@ struct sockaddr_storage cli_addr;
 struct sockaddr_storage our_addr;
 struct proc_st *proc_to_send = NULL;
 socklen_t cli_addr_size, our_addr_size;
-uint8_t buffer[1536];
 char tbuf[64];
 uint8_t  *session_id = NULL;
 int session_id_size = 0;
@@ -696,7 +695,7 @@ int sfd = -1;
 	/* first receive from the correct client and connect socket */
 	cli_addr_size = sizeof(cli_addr);
 	our_addr_size = sizeof(our_addr);
-	ret = oc_recvfrom_at(listener->fd, buffer, sizeof(buffer), 0,
+	ret = oc_recvfrom_at(listener->fd, s->msg_buffer, sizeof(s->msg_buffer), 0,
 			  (struct sockaddr*)&cli_addr, &cli_addr_size,
 			  (struct sockaddr*)&our_addr, &our_addr_size,
 			  s->perm_config->udp_port);
@@ -714,25 +713,25 @@ int sfd = -1;
 	}
 
 	/* check version */
-	if (buffer[0] == 22) {
+	if (s->msg_buffer[0] == 22) {
 		mslog(s, NULL, LOG_DEBUG, "new DTLS session from %s (record v%u.%u, hello v%u.%u)", 
 			human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
-			(unsigned int)buffer[1], (unsigned int)buffer[2],
-			(unsigned int)buffer[RECORD_PAYLOAD_POS], (unsigned int)buffer[RECORD_PAYLOAD_POS+1]);
+			(unsigned int)s->msg_buffer[1], (unsigned int)s->msg_buffer[2],
+			(unsigned int)s->msg_buffer[RECORD_PAYLOAD_POS], (unsigned int)s->msg_buffer[RECORD_PAYLOAD_POS+1]);
 	}
 
-	if (buffer[1] != 254 && (buffer[1] != 1 && buffer[2] != 0) &&
-		buffer[RECORD_PAYLOAD_POS] != 254 && (buffer[RECORD_PAYLOAD_POS] != 0 && buffer[RECORD_PAYLOAD_POS+1] != 0)) {
+	if (s->msg_buffer[1] != 254 && (s->msg_buffer[1] != 1 && s->msg_buffer[2] != 0) &&
+		s->msg_buffer[RECORD_PAYLOAD_POS] != 254 && (s->msg_buffer[RECORD_PAYLOAD_POS] != 0 && s->msg_buffer[RECORD_PAYLOAD_POS+1] != 0)) {
 		mslog(s, NULL, LOG_INFO, "%s: unknown DTLS record version: %u.%u", 
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
-		      (unsigned)buffer[1], (unsigned)buffer[2]);
+		      (unsigned)s->msg_buffer[1], (unsigned)s->msg_buffer[2]);
 		goto fail;
 	}
 
-	if (buffer[0] != 22) {
+	if (s->msg_buffer[0] != 22) {
 		mslog(s, NULL, LOG_DEBUG, "%s: unexpected DTLS content type: %u; possibly a firewall disassociated a UDP session",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
-		      (unsigned int)buffer[0]);
+		      (unsigned int)s->msg_buffer[0]);
 		/* Here we received a non-client hello packet. It may be that
 		 * the client's NAT changed its UDP source port and the previous
 		 * connection is invalidated. Try to see if we can simply match
@@ -745,8 +744,8 @@ int sfd = -1;
 			goto fail;
 	} else {
 		/* read session_id */
-		session_id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
-		session_id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
+		session_id_size = s->msg_buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
+		session_id = &s->msg_buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 	}
 
 	/* search for the IP and the session ID in all procs */
@@ -797,11 +796,10 @@ int sfd = -1;
 		}
 
 		if (match_ip_only != 0) {
-			msg.hello = 0;
+			msg.hello = 0; /* by default this is one */
 		} else {
-			msg.has_data = 1;
 		}
-		msg.data.data = buffer;
+		msg.data.data = s->msg_buffer;
 		msg.data.len = buffer_size;
 
 		ret = send_socket_msg_to_worker(s, proc_to_send, CMD_UDP_FD,

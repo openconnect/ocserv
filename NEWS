@@ -4,6 +4,8 @@
 - Radius: send the Connect-Info attribute with the user agent string
   on accounting messages; backported by Liviu (#31).
 - Disallow new connections after reaching the select fd limit.
+- Allow the import of a chain of more than 2 certificates when using
+  GnuTLS 3.4.x. Reported by Frank Rosquin.
 
 
 * Version 0.10.11 (released 2016-01-08)

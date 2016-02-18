@@ -1,3 +1,8 @@
+* Version 0.11.0 (unreleased)
+- Allow the import of a chain of more than 2 certificates when using
+  GnuTLS 3.4.x. Reported by Frank Rosquin.
+
+
 * Version 0.11.0rc1 (released 2016-02-03)
 - Radius: send the Connect-Info attribute with the user agent string
   on authentication.

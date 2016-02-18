@@ -726,7 +726,7 @@ int load_cert_files(main_server_st *s, tls_st *creds)
 			}
 
 			flags = GNUTLS_X509_CRT_LIST_FAIL_IF_UNSORTED|GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED;
-#if GNUTLS_VERSION_NUMBER >= 0x030400
+#if GNUTLS_VERSION_NUMBER > 0x030409
 			flags |= GNUTLS_X509_CRT_LIST_SORT;
 #endif
 

@@ -230,7 +230,7 @@ AC_ARG_WITH(radius,
 radius_enabled=no
 
 if test "$test_for_radius" = yes;then
-	PKG_CHECK_MODULES([RADCLI], [radcli >= 1.2.1], radius_enabled=radcli, radius_enabled=no)
+	PKG_CHECK_MODULES([RADCLI], [radcli >= 1.2.5], radius_enabled=radcli, radius_enabled=no)
 
 	if test "$radius_enabled" = no;then
 		LIBS="$oldlibs -lfreeradius-client"

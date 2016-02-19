@@ -1,4 +1,4 @@
-* Version 0.10.12 (unreleased)
+* Version 0.10.12 (released 2016-02-19)
 - Fixed crash in the transfer of big chunks of data between ocserv
   and occtl. Reported by Liviu. (#29)
 - Radius: send the Connect-Info attribute with the user agent string

@@ -36,6 +36,10 @@ if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(srcdir)/../src/ccan/talloc
 endif
 
+if LOCAL_HTTP_PARSER
+AM_CPPFLAGS += -I$(srcdir)/../src/http-parser/
+endif
+
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
 kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 

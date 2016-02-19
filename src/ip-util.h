@@ -55,4 +55,9 @@ char *ipv4_route_to_cidr(void *pool, const char *route);
 #define SA_IN_P_TYPE(addr, type) ((type==AF_INET)?SA_IN_U8_P(addr):SA_IN6_U8_P(addr))
 #define SA_IN_SIZE(size) ((size==sizeof(struct sockaddr_in))?sizeof(struct in_addr):sizeof(struct in6_addr))
 
+char *human_addr2(const struct sockaddr *sa, socklen_t salen,
+		       void *buf, size_t buflen, unsigned full);
+
+#define human_addr(x, y, z, w) human_addr2(x, y, z, w, 1)
+
 #endif

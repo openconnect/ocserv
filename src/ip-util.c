@@ -192,3 +192,64 @@ char *ipv4_route_to_cidr(void *pool, const char *route)
 
 	return talloc_asprintf(pool, "%.*s/%d", len, route, prefix);
 }
+
+char *human_addr2(const struct sockaddr *sa, socklen_t salen,
+		       void *_buf, size_t buflen, unsigned full)
+{
+	char *save_buf = _buf;
+	char *buf = _buf;
+	size_t l;
+	const char *ret;
+	unsigned port;
+
+	if (!buf || !buflen)
+		return NULL;
+
+	if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6) {
+		return NULL;
+	}
+
+	if (salen == sizeof(struct sockaddr_in6)) {
+		port = (unsigned)ntohs(((struct sockaddr_in6*)sa)->sin6_port);
+
+		if (full != 0 && port != 0 && buflen > 0) {
+			*buf = '[';
+			buf++;
+			buflen--;
+		}
+
+		ret = inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr, buf, buflen);
+	} else {
+		port = (unsigned)ntohs(((struct sockaddr_in*)sa)->sin_port);
+
+		ret = inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr, buf, buflen);
+	}
+
+	if (ret == NULL) {
+		return NULL;
+	}
+
+	if (full == 0)
+		goto finish;
+
+	l = strlen(buf);
+	buf += l;
+	buflen -= l;
+
+	if (salen == sizeof(struct sockaddr_in6) && port != 0 && buflen > 0) {
+		*buf = ']';
+		buf++;
+		buflen--;
+	}
+
+	if (port != 0 && buflen > 0) {
+		*buf = ':';
+		buf++;
+		buflen--;
+
+		snprintf(buf, buflen, "%u", port);
+	}
+
+finish:
+	return save_buf;
+}

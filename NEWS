@@ -1,4 +1,4 @@
-* Version 0.11.0 (unreleased)
+* Version 0.11.0 (released 2016-02-19)
 - Allow the import of a chain of more than 2 certificates when using
   GnuTLS 3.4.x. Reported by Frank Rosquin.
 

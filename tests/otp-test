@@ -43,7 +43,7 @@ echo "ocserv image was run"
 #wait for ocserv to server
 sleep 5
 
-IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -88,13 +88,13 @@ rm -f pass-${TMP}.tmp
 # The client IP depends on the username so it shouldn't change.
 ping -w 5 192.168.237.1
 if test $? != 0;then
-	kill $PID
+	kill -INT $PID
 	echo "Cannot ping ocserv"
 	stop
 fi
 
 retrieve_user_info test
-kill $PID
+kill -INT $PID
 
 $DOCKER stop $IMAGE_NAME
 $DOCKER rm $IMAGE_NAME

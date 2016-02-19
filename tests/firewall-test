@@ -31,6 +31,7 @@ CONFIG="fw"
 IMAGE=ocserv-fw-test
 IMAGE_NAME=test_fw_ocserv
 TMP=$IMAGE_NAME.tmp
+PIDFILE=IMAGE_NAME.$$.pid
 . ./docker-common.sh
 
 $DOCKER run -e OCCTL_PAGER=cat -P --privileged=true -p 22 --tty=false -d --name $IMAGE_NAME $IMAGE
@@ -41,9 +42,10 @@ fi
 
 echo "ocserv image was run"
 #wait for ocserv to server
+
 sleep 5
 
-IP=`$DOCKER inspect $IMAGE_NAME | grep IPAddress | cut -d '"' -f 4`
+get_ip
 if test -z "$IP";then
 	echo "Detected IP is null!"
 	stop
@@ -71,7 +73,7 @@ fi
 echo ""
 echo "Connecting with correct username"
 $ECHO_E "test" >pass-full$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -b --pid-file ${srcdir}/pid1.$$ -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -b --pid-file $PIDFILE -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-full$TMP
 if test $? != 0;then
 	echo "Cannot connect to server"
 	stop
@@ -81,12 +83,13 @@ fi
 sleep 5
 
 rm -f pass-full$TMP
-if [ ! -f ${srcdir}/pid1.$$ ];then
+if [ ! -f $PIDFILE ];then
 	echo "It was not possible to establish session!"
 	stop
 fi
 
-PID=`cat ${srcdir}/pid1.$$`
+PID=`cat $PIDFILE`
+rm -f $PIDFILE
 
 ping -w 5 192.168.84.1 -s 400
 if test $? != 0;then
@@ -107,6 +110,7 @@ retrieve_user_info test "Restricted to routes: True"
 # There is an issue in nuttcp that makes it crash under docker if
 # /proc/sys/net/ipv4/tcp_adv_win_scale does not exist.
 if test "$FEDORA" = 1;then
+
 nuttcp -T 10 -t 192.168.84.1
 if test $? != 0;then
 	echo "Cannot send to ocserv"
@@ -115,13 +119,6 @@ if test $? != 0;then
 	stop
 fi
 
-nuttcp -T 10 -r 192.168.84.1
-if test $? != 0;then
-	echo "Cannot recv from ocserv"
-	exit 77
-	kill -INT $PID
-	stop
-fi
 fi
 
 sleep 2

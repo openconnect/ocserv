@@ -1071,7 +1071,7 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	PROTOBUF_ALLOCATOR(pa, ctx);
 	struct termios tio_old, tio_new;
-	sighandler_t old_sighandler;
+	SIGHANDLER_T old_sighandler;
 
 	init_reply(&raw);
 

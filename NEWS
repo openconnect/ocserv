@@ -1,5 +1,6 @@
 * Version 0.11.1 (unreleased)
 - Several *BSD compilation fixes. Reported by Björn Ketelaars.
+- The default cookie rekey time was increased to 3 days.
 
 
 * Version 0.11.0 (released 2016-02-19)

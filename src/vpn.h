@@ -181,7 +181,7 @@ extern int syslog_open;
 
 
 #define MAX_CIPHERSUITE_NAME 64
-#define SID_SIZE 16
+#define SID_SIZE 32
 
 typedef enum {
 	AUTH_COOKIE_REP = 2,

@@ -756,7 +756,7 @@ int sfd = -1;
 	if (match_ip_only == 0) {
 		proc_to_send = proc_search_dtls_id(s, session_id, session_id_size);
 	} else {
-		proc_to_send = proc_search_ip(s, &cli_addr, cli_addr_size);
+		proc_to_send = proc_search_single_ip(s, &cli_addr, cli_addr_size);
 	}
 
 	if (proc_to_send != 0) {

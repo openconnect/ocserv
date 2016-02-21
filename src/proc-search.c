@@ -133,7 +133,9 @@ struct find_ip_st* c2 = _c2;
 	return 0;
 }
 
-struct proc_st *proc_search_ip(struct main_server_st *s,
+/* returns a result only if there is a single IP matching
+ */
+struct proc_st *proc_search_single_ip(struct main_server_st *s,
 			       struct sockaddr_storage *sockaddr,
 			       unsigned sockaddr_size)
 {

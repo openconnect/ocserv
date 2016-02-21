@@ -27,7 +27,7 @@
 #include <ccan/hash/hash.h>
 #include <main.h>
 
-struct proc_st *proc_search_ip(struct main_server_st *s,
+struct proc_st *proc_search_single_ip(struct main_server_st *s,
 			       struct sockaddr_storage *sockaddr,
 			       unsigned sockaddr_size);
 struct proc_st *proc_search_dtls_id(struct main_server_st *s, const uint8_t *id, unsigned id_size);

@@ -54,7 +54,6 @@
 
 #include <vpn.h>
 #include "ipc.pb-c.h"
-#include <cookies.h>
 #include <worker.h>
 #include <tlslib.h>
 

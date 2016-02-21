@@ -39,7 +39,6 @@
 #include <vpn.h>
 #include "html.h"
 #include <worker.h>
-#include <cookies.h>
 #include <common.h>
 #include <tlslib.h>
 
@@ -720,19 +719,17 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounte
 			ws->sid_set = 1;
 		}
 
-		if (msg->has_cookie == 0 ||
-		    msg->cookie.len == 0 ||
+		if (msg->has_sid == 0 ||
+		    msg->sid.len != sizeof(ws->cookie) ||
 		    msg->dtls_session_id.len != sizeof(ws->session_id)) {
 
 			ret = ERR_AUTH_FAIL;
 			goto cleanup;
 		}
-		
-		ws->cookie = talloc_memdup(ws, msg->cookie.data, msg->cookie.len);
-		if (ws->cookie) {
-			ws->cookie_size = msg->cookie.len;
-			ws->cookie_set = 1;
-		}
+
+		memcpy(ws->cookie, msg->sid.data, msg->sid.len);
+		ws->cookie_set = 1;
+
 		memcpy(ws->session_id, msg->dtls_session_id.data,
 		       msg->dtls_session_id.len);
 
@@ -813,7 +810,7 @@ void cookie_authenticate_or_exit(worker_st *ws)
 
 	/* we have authenticated against sec-mod, we need to complete
 	 * our authentication by forwarding our cookie to main. */
-	ret = auth_cookie(ws, ws->cookie, ws->cookie_size);
+	ret = auth_cookie(ws, ws->cookie, sizeof(ws->cookie));
 	if (ret < 0) {
 		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
 		if (ret == ERR_AUTH_FAIL) {
@@ -880,7 +877,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 {
 	int ret, size;
-	char str_cookie[BASE64_ENCODE_RAW_LENGTH(ws->cookie_size)+1];
+	char str_cookie[BASE64_ENCODE_RAW_LENGTH(sizeof(ws->cookie))+1];
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 	const char *success_msg_head;
@@ -900,7 +897,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		success_msg_foot_size = sizeof(oc_success_msg_foot)-1;
 	}
 
-	oc_base64_encode((char *)ws->cookie, ws->cookie_size,
+	oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie),
 		      (char *)str_cookie, str_cookie_size);
 
 	/* reply */

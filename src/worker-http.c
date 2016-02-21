@@ -370,21 +370,26 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 					tmplen--;
 				}
 
+				/* we allow for BASE64_DECODE_LENGTH reporting few bytes more
+				 * than the expected */
 				nlen = BASE64_DECODE_LENGTH(tmplen);
-				ws->cookie = talloc_size(ws, nlen);
-				if (ws->cookie == NULL)
+				if (nlen < sizeof(ws->cookie) || nlen > sizeof(ws->cookie)+8)
 					return;
+
+				/* we assume that - should be build time optimized */
+				if (sizeof(ws->buffer) < sizeof(ws->cookie)+8)
+					abort();
 
 				ret =
 				    oc_base64_decode((uint8_t*)p, tmplen,
-						  ws->cookie, &nlen);
-				if (ret == 0) {
-					oclog(ws, LOG_DEBUG,
+						  ws->buffer, &nlen);
+				if (ret == 0 || nlen != sizeof(ws->cookie)) {
+					oclog(ws, LOG_INFO,
 					      "could not decode cookie: %.*s",
 					      tmplen, p);
 					ws->cookie_set = 0;
 				} else {
-					ws->cookie_size = nlen;
+					memcpy(ws->cookie, ws->buffer, sizeof(ws->cookie));
 					ws->auth_state = S_AUTH_COOKIE;
 					ws->cookie_set = 1;
 				}

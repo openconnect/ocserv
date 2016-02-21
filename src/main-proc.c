@@ -55,7 +55,6 @@
 #endif
 
 #include <vpn.h>
-#include <cookies.h>
 #include <tun.h>
 #include <main.h>
 #include <main-ban.h>

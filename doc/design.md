@@ -63,12 +63,13 @@ leaked during a fork(). It handles:
    data to the radius accounting server. See the SM_CMD_CLI_STATS message
    handling.
 
- * Gatekeeper for new user sessions. When the main process receives a valid cookie
-   from a worker process, it will notify the security module which keeps the
-   authentication state. The security module will return any additional user
-   configuration settings (received via radius or per-user config file) -
-   See SM_CMD_AUTH_SESSION_OPEN and SM_CMD_AUTH_SESSION_CLOSE message
-   handling.
+ * Gatekeeper for new user sessions. The security module assigns a session
+   ID (SID) to all connecting users. When the main process receives a request
+   to resume a session with a SID from a worker process, it will notify the
+   security module which keeps the authentication state. The security module
+   will return any additional user configuration settings (received via radius
+   or per-user config file) - See SM_CMD_AUTH_SESSION_OPEN and SM_CMD_AUTH_SESSION_CLOSE
+   message handling.
 
 Currently it seems we require quite an amount of communication between the
 main process and the security module. That may affect scaling. If that
@@ -141,4 +142,41 @@ device and the client. The tasks handled are:
 
 ```
 
+
+## IPC Communication for SID assignment
+
+This is the same diagram as above but shows how the session ID (SID)
+is assigned and used throughout the server.
+
+``` 
+  main                  sec-mod                       worker
+   |                       |                            |
+   |                       |  <--SEC_AUTH_INIT---       |
+   |                       |  -SEC_AUTH_REP (NEW SID)-> |
+   |                       |  <--SEC_AUTH_CONT (SID)--- |
+   |                       |         .                  |
+   |                       |         .                  |
+   |                       |         .                  |
+   |                       |  ----SEC_AUTH_REP -------> |
+
+(note that by that time the client/worker may be disconnected,
+and reconnect later and use the cookie -SID- to resume the
+already authenticated session).
+
+   |                       |                            |
+   | <----------AUTH_COOKIE_REQ (SID)-----------------  |
+   |                       |                            |
+   | -SESSION_OPEN (SID)-> |                            |
+   | <--SESSION_REPLY----  |                            |   #contains additional config for client
+   |                       |                            |
+   | -----------------AUTH_REP----------------------->  |   #forwards the additional config for client
+   |                       |                            |
+   | <------------SESSION_INFO------------------------  |
+   |                       |                            |
+   |                       | <-- CLI_STATS (SID)------- |
+   |                       |            (disconnect)
+   | -SESSION_CLOSE(SID)-> |
+   | <-- CLI_STATS (SID)-- |
+
+```
 

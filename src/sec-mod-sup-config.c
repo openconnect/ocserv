@@ -22,7 +22,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <vpn.h>
-#include <cookies.h>
 #include <tun.h>
 #include <main.h>
 #include <common.h>

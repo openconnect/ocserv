@@ -57,7 +57,6 @@
 #include <main-ban.h>
 #include <route-add.h>
 #include <worker.h>
-#include <cookies.h>
 #include <proc-search.h>
 #include <tun.h>
 #include <grp.h>
@@ -1044,10 +1043,6 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			close(s->sec_mod_fd);
 			close(s->sec_mod_fd_sync);
 
-			/* clear the cookie key */
-			safe_memset(s->cookie_key, 0, sizeof(s->cookie_key));
-			safe_memset(s->prev_cookie_key, 0, sizeof(s->prev_cookie_key));
-
 			setproctitle(PACKAGE_NAME"-worker");
 			kill_on_parent_kill(SIGTERM);
 
@@ -1206,14 +1201,6 @@ int main(int argc, char** argv)
 
 	/* Initialize GnuTLS */
 	tls_global_init(&creds);
-
-	/* this is the key used to sign and verify cookies. It is used
-	 * by sec-mod (for signing) and main (for verification). */
-	ret = gnutls_rnd(GNUTLS_RND_RANDOM, s->cookie_key, sizeof(s->cookie_key));
-	if (ret < 0) {
-		fprintf(stderr, "Error in cookie key generation\n");
-		exit(1);
-	}
 
 	/* load configuration */
 	ret = cmd_parser(main_pool, argc, argv, &s->perm_config);

@@ -40,7 +40,6 @@
 
 #include <vpn.h>
 #include <worker.h>
-#include <cookies.h>
 #include <tlslib.h>
 
 #ifdef HAVE_SIGALTSTACK

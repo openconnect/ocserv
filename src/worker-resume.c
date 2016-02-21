@@ -37,7 +37,6 @@
 #include <worker.h>
 #include "common.h"
 #include "ipc.pb-c.h"
-#include <cookies.h>
 #include <tlslib.h>
 
 

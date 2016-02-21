@@ -49,7 +49,6 @@
 #include <netdb.h>
 
 #include <vpn.h>
-#include <cookies.h>
 #include <main.h>
 #include <tlslib.h>
 #include <occtl/ctl.h>
@@ -909,10 +908,6 @@ size_t urlfw_size = 0;
 	if (config->cookie_timeout == 0)
 		config->cookie_timeout = DEFAULT_COOKIE_RECON_TIMEOUT;
 	READ_TF("persistent-cookies", config->persistent_cookies, 0);
-
-	READ_NUMERIC("cookie-rekey-time", config->cookie_rekey_time);
-	if (config->cookie_rekey_time == 0)
-		config->cookie_rekey_time = DEFAULT_COOKIE_REKEY_TIME;
 
 	READ_NUMERIC("session-timeout", config->session_timeout);
 

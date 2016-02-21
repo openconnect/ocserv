@@ -40,7 +40,6 @@
 
 #include <vpn.h>
 #include <str.h>
-#include <cookies.h>
 #include <tun.h>
 #include <main.h>
 #include <main-ctl.h>

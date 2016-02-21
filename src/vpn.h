@@ -104,6 +104,9 @@ inline static const char *proto_to_str(fw_proto_t proto)
 #define MIN_NO_COMPRESS_LIMIT 64
 #define DEFAULT_NO_COMPRESS_LIMIT 256
 
+/* The time after a disconnection the cookie is valid */
+#define DEFAULT_COOKIE_RECON_TIMEOUT 120
+
 /* Timeout (secs) for communication between main and sec-mod */
 #define MAIN_SEC_MOD_TIMEOUT 120
 
@@ -210,7 +213,6 @@ typedef enum {
 	SM_CMD_AUTH_BAN_IP,
 	SM_CMD_AUTH_BAN_IP_REPLY,
 	SM_CMD_AUTH_CLI_STATS,
-	SM_CMD_REFRESH_COOKIE_KEY,
 
 	MAX_SM_MAIN_CMD,
 } cmd_request_t;
@@ -314,7 +316,6 @@ struct cfg_st {
 	unsigned restrict_user_to_routes; /* whether the firewall script will be run for the user */
 	unsigned deny_roaming; /* whether a cookie is restricted to a single IP */
 	time_t cookie_timeout;	/* in seconds */
-	time_t cookie_rekey_time;	/* in seconds */
 	time_t session_timeout;	/* in seconds */
 	unsigned persistent_cookies; /* whether cookies stay valid after disconnect */
 
@@ -477,5 +478,13 @@ unsigned extract_prefix(char *network);
 enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_LINE };
 
 #include <ip-util.h>
+
+void reload_cfg_file(void *pool, struct perm_cfg_st* config, unsigned archive);
+void clear_old_configs(struct perm_cfg_st* config);
+void clear_cfg(struct perm_cfg_st* config);
+void write_pid_file(void);
+void remove_pid_file(void);
+
+extern sigset_t sig_default_set;
 
 #endif

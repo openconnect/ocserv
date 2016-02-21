@@ -220,11 +220,10 @@ message sec_auth_cont_msg
 message sec_auth_reply_msg
 {
 	required AUTH_REP reply = 1;
-	optional bytes cookie = 2;
 	optional string user_name = 3;
 	optional string msg = 4; /* message to display to user */
 	optional bytes dtls_session_id = 5;
-	optional bytes sid = 6;
+	optional bytes sid = 6; /* cookie */
 	optional uint32 passwd_counter = 8; /* if that's a password prompt indicates the number of password asked */
 }
 
@@ -233,19 +232,6 @@ message sec_op_msg
 {
 	optional uint32 key_idx = 1;
 	required bytes data = 2;
-}
-
-/* Not a real message, but the cookie */
-message cookie
-{
-	required string username = 1;
-	required string groupname = 2;
-	required string hostname = 3;
-	required string ip = 4;
-	required uint32 expiration = 6;
-	required uint32 ipv4_seed = 7;
-	required bytes sid = 8;
-	required bool tls_auth_ok = 9;
 }
 
 /*
@@ -259,9 +245,8 @@ message cookie
 /* SEC_SESSION_CLOSE */
 message sec_auth_session_msg
 {
-	required bytes sid = 1;
-	/* on open */
-	optional bytes cookie = 2;
+	/* on open/close */
+	required bytes sid = 1; /* cookie */
 	/* on close */
 	optional uint32 uptime = 3;
 	optional uint64 bytes_in = 4;
@@ -270,16 +255,19 @@ message sec_auth_session_msg
 	optional string ipv6 = 7;
 }
 
-
 message sec_auth_session_reply_msg
 {
 	required AUTH_REP reply = 1;
-	required group_cfg_st config = 2;
-}
 
-message sec_refresh_cookie_key
-{
-	required bytes key = 1;
+	required group_cfg_st config = 2;
+
+	required string username = 3;
+	required string groupname = 4;
+	required string hostname = 5;
+	required string ip = 6;
+	required uint32 ipv4_seed = 8;
+	required bytes sid = 9;
+	required bool tls_auth_ok = 10;
 }
 
 /* SEC_BAN_IP: sent from sec-mod to main */

@@ -180,24 +180,6 @@ int load_pins(struct perm_cfg_st *config, struct pin_st *s)
 	return 0;
 }
 
-static int send_refresh_cookie_key(sec_mod_st * sec, void *key_data, unsigned key_size)
-{
-	SecRefreshCookieKey msg = SEC_REFRESH_COOKIE_KEY__INIT;
-	int ret;
-
-	msg.key.data = key_data;
-	msg.key.len = key_size;
-
-	ret = send_msg16(sec, sec->cmd_fd, SM_CMD_REFRESH_COOKIE_KEY, &msg,
-		       (pack_size_func) sec_refresh_cookie_key__get_packed_size,
-		       (pack_func) sec_refresh_cookie_key__pack);
-	if (ret < 0) {
-		seclog(sec, LOG_WARNING, "sec-mod error in sending cookie key");
-	}
-
-	return 0;
-}
-
 static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_t * rep,
 		     size_t rep_size)
 {
@@ -501,8 +483,6 @@ static void handle_sigterm(int signo)
 
 static void check_other_work(sec_mod_st *sec)
 {
-	time_t now = time(0);
-
 	if (need_exit) {
 		unsigned i;
 
@@ -514,23 +494,6 @@ static void check_other_work(sec_mod_st *sec)
 		tls_cache_deinit(&sec->tls_db);
 		talloc_free(sec);
 		exit(0);
-	}
-
-	if (sec->config->cookie_rekey_time > 0 && now - sec->cookie_key_last_update > sec->config->cookie_rekey_time) {
-		uint8_t cookie_key[COOKIE_KEY_SIZE];
-		int ret;
-
-		ret = gnutls_rnd(GNUTLS_RND_RANDOM, cookie_key, sizeof(cookie_key));
-		if (ret >= 0) {
-			if (send_refresh_cookie_key(sec, cookie_key, sizeof(cookie_key)) == 0) {
-				sec->cookie_key_last_update = now;
-				memcpy(sec->cookie_key, cookie_key, sizeof(cookie_key));
-			} else {
-				seclog(sec, LOG_ERR, "could not notify main for new cookie key");
-			}
-		} else {
-			seclog(sec, LOG_ERR, "could not refresh cookie key");
-		}
 	}
 
 	if (need_reload) {
@@ -777,7 +740,7 @@ static int load_keys(sec_mod_st *sec, unsigned force)
  * key operations.
  */
 void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char *socket_file,
-		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd, int cmd_fd_sync)
+		    int cmd_fd, int cmd_fd_sync)
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
@@ -819,11 +782,6 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 		exit(1);
 	}
 
-	memcpy(sec->cookie_key, cookie_key, COOKIE_KEY_SIZE);
-	sec->cookie_key_last_update = time(0);
-
-	sec->dcookie_key.data = sec->cookie_key;
-	sec->dcookie_key.size = COOKIE_KEY_SIZE;
 	sec->perm_config = talloc_steal(sec, perm_config);
 	sec->config = sec->perm_config->config;
 

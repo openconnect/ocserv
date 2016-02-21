@@ -49,13 +49,7 @@ extern ev_timer maintainance_watcher;
 
 #define MAIN_MAINTAINANCE_TIME (900)
 
-extern sigset_t sig_default_set;
 int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config);
-void reload_cfg_file(void *pool, struct perm_cfg_st* config, unsigned archive);
-void clear_old_configs(struct perm_cfg_st* config);
-void clear_cfg(struct perm_cfg_st* config);
-void write_pid_file(void);
-void remove_pid_file(void);
 
 struct listener_st {
 	ev_io io;
@@ -118,7 +112,7 @@ typedef struct proc_st {
 	struct sockaddr_storage our_addr; /* our address */
 	socklen_t our_addr_len;
 
-	/* The SID present in the cookie. Used for session control only */
+	/* The SID which acts as a cookie */
 	uint8_t sid[SID_SIZE];
 	unsigned active_sid;
 
@@ -193,11 +187,6 @@ typedef struct main_server_st {
 
 	tls_st *creds;
 	
-	uint8_t cookie_key[COOKIE_KEY_SIZE];
-	/* when we rotate keys, this is the previous one active for verification */
-	uint8_t prev_cookie_key[COOKIE_KEY_SIZE];
-	unsigned prev_cookie_key_active;
-
 	struct listen_list_st listen_list;
 	struct proc_list_st proc_list;
 	struct script_list_st script_list;

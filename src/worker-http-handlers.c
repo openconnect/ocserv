@@ -36,7 +36,6 @@
 
 #include <vpn.h>
 #include <worker.h>
-#include <cookies.h>
 #include <tlslib.h>
 
 #define HTML_404 "<html><body><h1>404 Not Found</h1></body></html>\r\n"

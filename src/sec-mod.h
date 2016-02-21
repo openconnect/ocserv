@@ -21,18 +21,14 @@
 #ifndef SEC_MOD_H
 # define SEC_MOD_H
 
-#include <cookies.h>
 #include <gnutls/abstract.h>
 #include <ccan/htable/htable.h>
 #include <nettle/base64.h>
+#include <tlslib.h>
 
 #define SESSION_STR "(session: %.5s)"
 
 typedef struct sec_mod_st {
-	gnutls_datum_t dcookie_key; /* the key to generate cookies */
-	uint8_t cookie_key[COOKIE_KEY_SIZE];
-	time_t cookie_key_last_update;
-
 	struct cfg_st *config;
 	struct perm_cfg_st *perm_config;
 	gnutls_privkey_t *key;
@@ -94,8 +90,6 @@ typedef struct client_entry_st {
 	unsigned status; /* PS_AUTH_ */
 
 	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
-	uint8_t *cookie; /* the cookie associated with the session */
-	unsigned cookie_size;
 
 	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
 
@@ -146,6 +140,6 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct perm_cfg_st *config, const char *socket_file,
-		    uint8_t cookie_key[COOKIE_KEY_SIZE], int cmd_fd, int cmd_fd_sync);
+		    int cmd_fd, int cmd_fd_sync);
 
 #endif

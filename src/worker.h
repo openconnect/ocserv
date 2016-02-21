@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <vpn.h>
-#include <cookies.h>
 #include <tlslib.h>
 #include <common.h>
 #include <str.h>
@@ -253,8 +252,7 @@ typedef struct worker_st {
 	unsigned cert_groups_size;
 
 	char hostname[MAX_HOSTNAME_SIZE];
-	uint8_t *cookie;
-	unsigned cookie_size;
+	uint8_t cookie[SID_SIZE];
 
 	unsigned int cookie_set;
 

@@ -39,7 +39,6 @@
 #include "str.h"
 
 #include <vpn.h>
-#include <cookies.h>
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
@@ -109,42 +108,6 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, client_entry_st *e, const char *ip
 	return;
 }
 
-static int generate_cookie(sec_mod_st * sec, client_entry_st * entry)
-{
-	int ret;
-	Cookie msg = COOKIE__INIT;
-
-	msg.username = entry->acct_info.username;
-	msg.groupname = entry->acct_info.groupname;
-	msg.hostname = entry->hostname;
-	msg.ip = entry->acct_info.remote_ip;
-	msg.tls_auth_ok = entry->tls_auth_ok;
-
-	/* Fixme: possibly we should allow for completely random seeds */
-	if (sec->config->predictable_ips != 0) {
-		msg.ipv4_seed = hash_any(entry->acct_info.username, strlen(entry->acct_info.username), 0);
-	} else {
-		ret = gnutls_rnd(GNUTLS_RND_NONCE, &msg.ipv4_seed, sizeof(msg.ipv4_seed));
-		if (ret < 0)
-			return -1;
-	}
-
-	msg.sid.data = entry->sid;
-	msg.sid.len = sizeof(entry->sid);
-
-	/* this is the time when this cookie must be activated (used to authenticate).
-	 * if not activated by that time it expires */
-	msg.expiration = time(0) + sec->config->cookie_timeout;
-
-	ret =
-	    encrypt_cookie(entry, &sec->dcookie_key, &msg, &entry->cookie,
-			   &entry->cookie_size);
-	if (ret < 0)
-		return -1;
-
-	return 0;
-}
-
 static
 int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 {
@@ -153,16 +116,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 
 	if (r == AUTH__REP__OK) {
 		/* fill message */
-		ret = generate_cookie(sec, entry);
-		if (ret < 0) {
-			seclog(sec, LOG_INFO, "cannot generate cookie");
-			return ret;
-		}
-
 		msg.reply = AUTH__REP__OK;
-		msg.has_cookie = 1;
-		msg.cookie.data = entry->cookie;
-		msg.cookie.len = entry->cookie_size;
 
 		msg.user_name = entry->acct_info.username;
 
@@ -437,13 +391,6 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 		return send_failed_session_open_reply(sec, fd);
 	}
 
-	if (req->has_cookie == 0 || (req->cookie.len != e->cookie_size) ||
-	    memcmp(req->cookie.data, e->cookie, e->cookie_size) != 0) {
-		seclog(sec, LOG_ERR, "cookie error; denied session for user '%s' "SESSION_STR, e->acct_info.username, e->acct_info.psid);
-		e->status = PS_AUTH_FAILED;
-		return send_failed_session_open_reply(sec, fd);
-	}
-
 	if (req->ipv4)
 		strlcpy(e->acct_info.ipv4, req->ipv4, sizeof(e->acct_info.ipv4));
 	if (req->ipv6)
@@ -459,6 +406,24 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 			e->session_is_open = 1;
 		}
 	}
+
+	rep.username = e->acct_info.username;
+	rep.groupname = e->acct_info.groupname;
+	rep.hostname = e->hostname;
+	rep.ip = e->acct_info.remote_ip;
+	rep.tls_auth_ok = e->tls_auth_ok;
+
+	/* Fixme: possibly we should allow for completely random seeds */
+	if (sec->config->predictable_ips != 0) {
+		rep.ipv4_seed = hash_any(e->acct_info.username, strlen(e->acct_info.username), 0);
+	} else {
+		ret = gnutls_rnd(GNUTLS_RND_NONCE, &rep.ipv4_seed, sizeof(rep.ipv4_seed));
+		if (ret < 0)
+			return -1;
+	}
+
+	rep.sid.data = e->sid;
+	rep.sid.len = sizeof(e->sid);
 
 	rep.reply = AUTH__REP__OK;
 

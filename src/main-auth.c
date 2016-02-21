@@ -40,7 +40,6 @@
 #include "str.h"
 
 #include <vpn.h>
-#include <cookies.h>
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
@@ -167,37 +166,9 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req)
 {
 int ret;
-Cookie *cmsg;
-gnutls_datum_t key = {s->cookie_key, sizeof(s->cookie_key)};
-char str_ip[MAX_IP_STR+1];
-PROTOBUF_ALLOCATOR(pa, proc);
 struct proc_st *old_proc;
 
-	if (req->cookie.len == 0) {
-		mslog(s, proc, LOG_INFO, "error in cookie size");
-		return -1;
-	}
-
-	ret = decrypt_cookie(&pa, &key, req->cookie.data, req->cookie.len, &cmsg);
-	if (ret < 0 && s->prev_cookie_key_active) {
-		/* try the old key */
-		key.data = s->prev_cookie_key;
-		key.size = sizeof(s->prev_cookie_key);
-		ret = decrypt_cookie(&pa, &key, req->cookie.data, req->cookie.len, &cmsg);
-		if (ret == 0)
-			mslog(s, proc, LOG_INFO, "decrypted cookie with previous key");
-	}
-
-	if (ret < 0) {
-		mslog(s, proc, LOG_INFO, "error decrypting cookie");
-		return -1;
-	}
-
-	if (cmsg->username == NULL)
-		return -1;
-	strlcpy(proc->username, cmsg->username, sizeof(proc->username));
-
-	if (cmsg->sid.len != sizeof(proc->sid))
+	if (req->cookie.data == NULL || req->cookie.len != sizeof(proc->sid))
 		return -1;
 
 	/* generate a new DTLS session ID for each connection, to allow
@@ -207,46 +178,20 @@ struct proc_st *old_proc;
 		return -1;
 	proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
 
-	memcpy(proc->sid, cmsg->sid.data, cmsg->sid.len);
-
-	/* override the group name in order to load the correct configuration in
-	 * case his group is specified in the certificate */
-	if (cmsg->groupname)
-		strlcpy(proc->groupname, cmsg->groupname, sizeof(proc->groupname));
-
-	/* loads sup config */
+	/* loads sup config and basic proc info (e.g., username) */
 	ret = session_open(s, proc, req->cookie.data, req->cookie.len);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;
 	}
-	/* this hints to call session_close() */
-	proc->active_sid = 1;
 
 	/* Put into right cgroup */
         if (proc->config->cgroup != NULL) {
         	put_into_cgroup(s, proc->config->cgroup, proc->pid);
 	}
 
-	/* check whether the cookie IP matches */
-	if (proc->config->deny_roaming != 0) {
-		if (cmsg->ip == NULL) {
-			return -1;
-		}
-
-		if (human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
-					    str_ip, sizeof(str_ip), 0) == NULL)
-			return -1;
-
-		if (strcmp(str_ip, cmsg->ip) != 0) {
-			mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
-				cmsg->username, cmsg->ip, str_ip);
-			return -1;
-		}
-	}
-
 	/* check for a user with the same sid as in the cookie */
-	old_proc = proc_search_sid(s, cmsg->sid.data);
+	old_proc = proc_search_sid(s, req->cookie.data);
 	if (old_proc != NULL) {
 		mslog(s, old_proc, LOG_DEBUG, "disconnecting previous user session (%u) due to session re-use",
 			(unsigned)old_proc->pid);
@@ -267,10 +212,10 @@ struct proc_st *old_proc;
 		mslog(s, proc, LOG_INFO, "new user session");
 	}
 
-	if (cmsg->hostname)
-		strlcpy(proc->hostname, cmsg->hostname, sizeof(proc->hostname));
-
-	memcpy(proc->ipv4_seed, &cmsg->ipv4_seed, sizeof(proc->ipv4_seed));
+	/* update the SID */
+	memcpy(proc->sid, req->cookie.data, req->cookie.len);
+	/* this also hints to call session_close() */
+	proc->active_sid = 1;
 
 	/* add the links to proc hash */
 	if (proc_table_add(s, proc) < 0) {

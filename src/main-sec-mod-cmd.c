@@ -65,7 +65,6 @@ int handle_sec_mod_commands(main_server_st * s)
 	void *pool = talloc_new(s);
 	PROTOBUF_ALLOCATOR(pa, pool);
 	BanIpMsg *tmsg = NULL;
-	SecRefreshCookieKey *rmsg = NULL;
 
 	if (pool == NULL)
 		return -1;
@@ -122,29 +121,6 @@ int handle_sec_mod_commands(main_server_st * s)
 	}
 
 	switch (cmd) {
-	case SM_CMD_REFRESH_COOKIE_KEY:
-		rmsg = sec_refresh_cookie_key__unpack(&pa, raw_len, raw);
-		if (rmsg == NULL) {
-			mslog(s, NULL, LOG_ERR, "error unpacking sec-mod data");
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		if (rmsg->key.len != sizeof(s->cookie_key)) {
-			mslog(s, NULL, LOG_ERR, "received corrupt cookie key (%u bytes) from sec-mod", (unsigned)rmsg->key.len);
-			ret = ERR_BAD_COMMAND;
-			goto cleanup;
-		}
-
-		memcpy(s->prev_cookie_key, s->cookie_key, sizeof(s->cookie_key));
-		s->prev_cookie_key_active = 1;
-
-		memcpy(s->cookie_key, rmsg->key.data, sizeof(s->cookie_key));
-		safe_memset(rmsg->key.data, 0, rmsg->key.len);
-
-		mslog(s, NULL, LOG_INFO, "refreshed cookie key");
-		break;
-
 	case SM_CMD_AUTH_BAN_IP:{
 			BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
 
@@ -430,6 +406,10 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	SecAuthSessionReplyMsg *msg = NULL;
 	char str_ipv4[MAX_IP_STR];
 	char str_ipv6[MAX_IP_STR];
+	char str_ip[MAX_IP_STR];
+
+	if (cookie == NULL || cookie_size != SID_SIZE)
+		return -1;
 
 	ireq.uptime = time(0)-proc->conn_time;
 	ireq.has_uptime = 1;
@@ -437,8 +417,8 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	ireq.has_bytes_in = 1;
 	ireq.bytes_out = proc->bytes_out;
 	ireq.has_bytes_out = 1;
-	ireq.sid.data = proc->sid;
-	ireq.sid.len = sizeof(proc->sid);
+	ireq.sid.data = (void*)cookie;
+	ireq.sid.len = cookie_size;
 
 	if (proc->ipv4 && 
 	    human_addr2((struct sockaddr *)&proc->ipv4->rip, proc->ipv4->rip_len,
@@ -450,12 +430,6 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	    human_addr2((struct sockaddr *)&proc->ipv6->rip, proc->ipv6->rip_len,
 	    str_ipv6, sizeof(str_ipv6), 0) != NULL) {
 		ireq.ipv6 = str_ipv6;
-	}
-
-	if (cookie) {
-		ireq.cookie.data = (void*)cookie;
-		ireq.cookie.len = cookie_size;
-		ireq.has_cookie = 1;
 	}
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(SM_CMD_AUTH_SESSION_OPEN));
@@ -478,18 +452,52 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	}
 
 	if (msg->reply != AUTH__REP__OK) {
-		mslog(s, proc, LOG_INFO, "could not initiate session for '%s'", proc->username);
+		mslog(s, proc, LOG_INFO, "could not initiate session");
 		return -1;
 	}
+
+	if (msg->username == NULL) {
+		mslog(s, proc, LOG_INFO, "no username present in session reply");
+		return -1;
+	}
+	strlcpy(proc->username, msg->username, sizeof(proc->username));
+
+	if (msg->hostname)
+		strlcpy(proc->hostname, msg->hostname, sizeof(proc->hostname));
+
+
+	/* override the group name in order to load the correct configuration in
+	 * case his group is specified in the certificate */
+	if (msg->groupname)
+		strlcpy(proc->groupname, msg->groupname, sizeof(proc->groupname));
 
 	if (msg->config == NULL) {
 		mslog(s, proc, LOG_INFO, "received invalid configuration for '%s'; could not initiate session", proc->username);
 		return -1;
 	}
 
+	memcpy(proc->ipv4_seed, &msg->ipv4_seed, sizeof(proc->ipv4_seed));
+
 	proc->config = msg->config;
 
 	apply_default_config(s, proc, proc->config);
+
+	/* check whether the cookie IP matches */
+	if (proc->config && proc->config->deny_roaming != 0) {
+		if (msg->ip == NULL) {
+			return -1;
+		}
+
+		if (human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
+					    str_ip, sizeof(str_ip), 0) == NULL)
+			return -1;
+
+		if (strcmp(str_ip, msg->ip) != 0) {
+			mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
+				proc->username, msg->ip, str_ip);
+			return -1;
+		}
+	}
 
 	return 0;
 }
@@ -593,7 +601,7 @@ int run_sec_mod(main_server_st * s, int *sync_fd)
 		close(sfd[1]);
 		set_cloexec_flag (fd[0], 1);
 		set_cloexec_flag (sfd[0], 1);
-		sec_mod_server(s->main_pool, s->perm_config, p, s->cookie_key, fd[0], sfd[0]);
+		sec_mod_server(s->main_pool, s->perm_config, p, fd[0], sfd[0]);
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);

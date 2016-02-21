@@ -95,9 +95,6 @@ struct proc_st *ctmp;
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 {
-	mslog(s, proc, LOG_INFO, "user disconnected (reason: %s, rx: %"PRIu64", tx: %"PRIu64")",
-		discon_reason_to_str(proc->discon_reason), proc->bytes_in, proc->bytes_out);
-
 	ev_io_stop(EV_A_ &proc->io);
 	ev_child_stop(EV_A_ &proc->ev_child);
 
@@ -114,6 +111,9 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 			exit(1);
 		}
 	}
+
+	mslog(s, proc, LOG_INFO, "user disconnected (reason: %s, rx: %"PRIu64", tx: %"PRIu64")",
+		discon_reason_to_str(proc->discon_reason), proc->bytes_in, proc->bytes_out);
 
 	remove_from_script_list(s, proc);
 	if (proc->status == PS_AUTH_COMPLETED) {

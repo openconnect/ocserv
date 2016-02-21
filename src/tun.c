@@ -219,8 +219,6 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	int fd, e, ret;
 	struct in6_aliasreq ifr6;
 	struct ifreq ifr;
-	char c_netmask_buf[64];
-	char *p;
 
 	fd = socket(AF_INET6, SOCK_STREAM, 0);
 	if (fd == -1) {

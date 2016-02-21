@@ -31,6 +31,7 @@
 #include <stdlib.h> /* getenv */
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
 
 void kill_on_parent_kill(int sig)
 {

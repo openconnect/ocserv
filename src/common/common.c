@@ -294,7 +294,7 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	void *packed = NULL;
 	uint16_t length16;
 	uint32_t length32;
-	size_t length;
+	size_t length = 0;
 	int ret;
 
 	memset(&hdr, 0, sizeof(hdr));
@@ -365,6 +365,8 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	}
 
  cleanup:
+	if (length > 0)
+		safe_memset(packed, 0, length);
 	talloc_free(packed);
 	return ret;
 }

@@ -22,6 +22,7 @@ occtl_LDADD = ../../gl/libgnu.a ../common/libcommon.a $(LIBREADLINE_LIBS) \
 	../libipc.a
 
 if LOCAL_PROTOBUF_C
+AM_CPPFLAGS += -I$(srcdir)/../protobuf/
 occtl_LDADD += ../protobuf/libprotobuf.a
 endif
 

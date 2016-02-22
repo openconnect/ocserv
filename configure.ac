@@ -78,11 +78,6 @@ with_local_protobuf_c=no
 )
 fi
 
-if test "$with_local_protobuf_c" != no;then
-  FLAGS='-Iprotobuf'
-  AC_SUBST([LIBPROTOBUF_C_CFLAGS], [$FLAGS])
-fi
-
 AM_CONDITIONAL(LOCAL_PROTOBUF_C, test "x$with_local_protobuf_c" != xno)
 
 AC_LIB_HAVE_LINKFLAGS(ev,, [#include <ev.h>], [ev_run(0,0);])

@@ -17,6 +17,7 @@ libcommon_a_LIBS = ../../gl/libgnu.a
 noinst_LIBRARIES = libcommon.a
 
 if LOCAL_PROTOBUF_C
+AM_CPPFLAGS += -I$(srcdir)/../protobuf/
 libcommon_a_LIBS += ../protobuf/libprotobuf.a
 endif
 

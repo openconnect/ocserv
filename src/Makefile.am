@@ -93,6 +93,7 @@ endif
 
 if LOCAL_PROTOBUF_C
 SUBDIRS += protobuf
+AM_CPPFLAGS += -I$(srcdir)/protobuf/
 ocserv_LDADD += protobuf/libprotobuf.a
 endif
 

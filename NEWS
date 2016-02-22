@@ -1,3 +1,7 @@
+* Version 0.10.13 (unreleased)
+- Backported fix for IP logging issue in banned IPs
+
+
 * Version 0.10.12 (released 2016-02-19)
 - Fixed crash in the transfer of big chunks of data between ocserv
   and occtl. Reported by Liviu. (#29)

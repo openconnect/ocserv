@@ -50,6 +50,10 @@ if LOCAL_HTTP_PARSER
 AM_CPPFLAGS += -I$(srcdir)/../src/http-parser/
 endif
 
+if LOCAL_PROTOBUF_C
+AM_CPPFLAGS += -I$(srcdir)/../src/protobuf/
+endif
+
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
 kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 

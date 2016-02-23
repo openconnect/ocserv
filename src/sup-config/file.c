@@ -164,7 +164,7 @@ int parse_group_cfg_file(struct cfg_st *global_config,
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
 char *tmp;
-unsigned prefix = 0;
+unsigned prefix = 0, prefix4 = 0;
 int ret;
 unsigned j;
 
@@ -234,11 +234,17 @@ unsigned j;
 
 	READ_RAW_STRING("cgroup", msg->config->cgroup);
 	READ_RAW_STRING("ipv4-network", msg->config->ipv4_net);
-	READ_RAW_STRING("ipv6-network", msg->config->ipv6_net);
-	READ_RAW_STRING("ipv4-netmask", msg->config->ipv4_netmask);
 	READ_RAW_STRING("explicit-ipv4", msg->config->explicit_ipv4);
-	READ_RAW_STRING("explicit-ipv6", msg->config->explicit_ipv6);
 
+	prefix4 = extract_prefix(msg->config->ipv4_net);
+	if (prefix4 == 0) {
+		READ_RAW_STRING("ipv4-netmask", msg->config->ipv4_netmask);
+	} else {
+		msg->config->ipv4_netmask = ipv4_prefix_to_strmask(pool, prefix4);
+	}
+
+	READ_RAW_STRING("ipv6-network", msg->config->ipv6_net);
+	READ_RAW_STRING("explicit-ipv6", msg->config->explicit_ipv6);
 	READ_RAW_NUMERIC("ipv6-subnet-prefix", msg->config->ipv6_subnet_prefix, msg->config->has_ipv6_subnet_prefix);
 
 	msg->config->ipv6_prefix = extract_prefix(msg->config->ipv6_net);

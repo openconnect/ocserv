@@ -5,6 +5,10 @@
   by Frank Rosquin.
 - Simplified the cookie handling code by making it an index to sec-mod's
   internal state.
+- Simplified the UDP session (re)forwarding from main to worker. Instead
+  of applying time-based heuristics to figure a valid session being
+  re-forwarded, attempt to decrypt the first message and keep the new
+  descriptor if succeeded.
 
 
 * Version 0.11.0 (released 2016-02-19)

@@ -33,6 +33,7 @@ TMPFILE1=${srcdir}/test-user-config.tmp
 TMPFILE2=${srcdir}/test-user-config-2.tmp
 
 rm -f ${TMPFILE1}
+rm -f ${TMPFILE2}
 
 launch_server -d 1 -f -c ${srcdir}/test-user-config.config & PID=$!
 wait_server $PID
@@ -110,6 +111,29 @@ echo ok
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 
+echo -n "Re-connecting to check the ipv4-network... "
+$OPENCONNECT -v localhost:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert-testipnet.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 &
+kpid1=$!
+
+echo ok
+sleep 3
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Netmask|grep '255.255.0.0'`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Netmask
+	fail $PID "Temporary file contents are not correct; netmask was not the expected (255.255.0.0)"
+fi
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Address|grep ' 10.9.'`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Address
+	fail $PID "Temporary file contents are not correct; address was not the expected (10.9.)"
+fi
+
+
+kill $kpid1
+rm -f ${TMPFILE1}
+rm -f ${TMPFILE2}
 kill $PID
 wait
 

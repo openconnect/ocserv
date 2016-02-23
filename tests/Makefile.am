@@ -11,7 +11,8 @@ EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.co
 	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
 	server-key-ossl.pem server-key-p8.pem proxyproto-unix-test user-cn.pem \
 	user-cert-testuser.pem test-stress test-user-config.config user-config/testuser \
-	test-cookie-rotation.config test-sighup-key-change.config
+	test-cookie-rotation.config test-sighup-key-change.config user-config/testipnet \
+	user-cert-testipnet.pem
 
 SUBDIRS = docker-ocserv docker-kerberos
 

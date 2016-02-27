@@ -59,6 +59,7 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(nanosleep, 0);
 	ADD_SYSCALL(getrusage, 0);
 	ADD_SYSCALL(alarm, 0);
+	ADD_SYSCALL(getpid, 0);
 	ADD_SYSCALL(brk, 0);
 
 	ADD_SYSCALL(recvmsg, 0);

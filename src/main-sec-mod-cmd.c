@@ -605,6 +605,7 @@ int run_sec_mod(main_server_st * s, int *sync_fd)
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);
+		close(sfd[0]);
 		s->sec_mod_pid = pid;
 		set_cloexec_flag (fd[1], 1);
 		set_cloexec_flag (sfd[1], 1);

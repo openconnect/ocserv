@@ -635,6 +635,10 @@ void session_info_send(worker_st * ws)
 		msg.user_agent = ws->req.user_agent;
 	}
 
+	if (ws->req.hostname[0] != 0) {
+		msg.hostname = ws->req.hostname;
+	}
+
 	if (ws->config->listen_proxy_proto) {
 		msg.our_addr.data = (uint8_t*)&ws->our_addr;
 		msg.our_addr.len = ws->our_addr_len;

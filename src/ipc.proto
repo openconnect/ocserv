@@ -155,6 +155,8 @@ message session_info_msg
 	 */
 	optional bytes our_addr = 6;
 	optional bytes remote_addr = 7;
+
+	optional string hostname = 8;
 }
 
 /* WORKER_BAN_IP: sent from worker to main */

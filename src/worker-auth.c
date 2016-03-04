@@ -1394,7 +1394,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			ireq.auth_type |= AUTH_TYPE_CERTIFICATE;
 		}
 
-		ireq.hostname = req->hostname;
 		ireq.ip = ws->remote_ip_str;
 		ireq.our_ip = get_our_ip(ws, our_ip_str);
 		if (req->user_agent[0] != 0)

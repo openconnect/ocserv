@@ -89,8 +89,6 @@ typedef struct client_entry_st {
 
 	unsigned status; /* PS_AUTH_ */
 
-	char hostname[MAX_HOSTNAME_SIZE]; /* the requested hostname */
-
 	uint8_t dtls_session_id[GNUTLS_MAX_SESSION_ID];
 
 	/* The time this client entry was last modified (created or closed) */

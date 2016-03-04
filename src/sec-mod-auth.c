@@ -409,7 +409,6 @@ int handle_sec_auth_session_open(sec_mod_st *sec, int fd, const SecAuthSessionMs
 
 	rep.username = e->acct_info.username;
 	rep.groupname = e->acct_info.groupname;
-	rep.hostname = e->hostname;
 	rep.ip = e->acct_info.remote_ip;
 	rep.tls_auth_ok = e->tls_auth_ok;
 
@@ -705,10 +704,6 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "no module found for auth type %u", (unsigned)req->auth_type);
 		goto cleanup;
-	}
-
-	if (req->hostname != NULL) {
-		strlcpy(e->hostname, req->hostname, sizeof(e->hostname));
 	}
 
 	if (e->module) {

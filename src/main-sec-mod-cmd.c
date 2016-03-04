@@ -465,10 +465,6 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	}
 	strlcpy(proc->username, msg->username, sizeof(proc->username));
 
-	if (msg->hostname)
-		strlcpy(proc->hostname, msg->hostname, sizeof(proc->hostname));
-
-
 	/* override the group name in order to load the correct configuration in
 	 * case his group is specified in the certificate */
 	if (msg->groupname)

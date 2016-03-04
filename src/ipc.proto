@@ -201,7 +201,6 @@ message sec_auth_init_msg
 	optional string group_name = 4; /* selected group name */
 	optional string cert_user_name = 5;
 	repeated string cert_group_names = 6;
-	optional string hostname = 7;
 	required string ip = 8;
 	required uint32 auth_type = 9 [default = 0];
 	optional string our_ip = 10;
@@ -263,7 +262,6 @@ message sec_auth_session_reply_msg
 
 	required string username = 3;
 	required string groupname = 4;
-	required string hostname = 5;
 	required string ip = 6;
 	required uint32 ipv4_seed = 8;
 	required bytes sid = 9;

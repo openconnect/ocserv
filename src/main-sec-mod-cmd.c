@@ -156,6 +156,9 @@ int handle_sec_mod_commands(main_server_st * s)
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
+
+			safe_memset(tmsg->sid.data, 0, tmsg->sid.len);
+			safe_memset(raw, 0, raw_len);
 		}
 
 		break;

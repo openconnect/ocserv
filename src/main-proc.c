@@ -136,6 +136,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 		(*proc->config_usage_count)--;
 	}
 
+	safe_memset(proc->sid, 0, sizeof(proc->sid));
 	talloc_free(proc);
 }
 

@@ -429,10 +429,9 @@ rekey-method = ssl
 
 # Script to call when a client connects and obtains an IP.
 # The following parameters are passed on the environment.
-# REASON, USERNAME, GROUPNAME, HOSTNAME (the hostname selected by client), 
-# DEVICE, IP_REAL (the real IP of the client), IP_REAL_LOCAL (the local
-# interface IP the client connected), IP_LOCAL (the local IP
-# in the P-t-P connection), IP_REMOTE (the VPN IP of the client),
+# REASON, USERNAME, GROUPNAME, DEVICE, IP_REAL (the real IP of the client),
+# IP_REAL_LOCAL (the local interface IP the client connected), IP_LOCAL
+# (the local IP in the P-t-P connection), IP_REMOTE (the VPN IP of the client),
 # IPV6_LOCAL (the IPv6 local address if there are both IPv4 and IPv6
 # assigned), IPV6_REMOTE (the IPv6 remote address), IPV6_PREFIX, and
 # ID (a unique numeric ID); REASON may be "connect" or "disconnect".

@@ -1,10 +1,9 @@
 * Version 0.11.1 (unreleased)
 - Several *BSD compilation fixes. Reported by Björn Ketelaars.
-- The default cookie rekey time was increased to 3 days.
 - The ipv4-network option in user configuration allows for prefix. Reported
   by Frank Rosquin.
 - Simplified the cookie handling code by making it an index to sec-mod's
-  internal state.
+  internal state. This eliminates the need for cookie rekey.
 - Simplified the UDP session (re)forwarding from main to worker. Instead
   of applying time-based heuristics to figure a valid session being
   re-forwarded, attempt to decrypt the first message and keep the new

@@ -408,13 +408,13 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 				    oc_base64_decode((uint8_t*)p, tmplen,
 						  ws->sid, &nlen);
 				if (ret == 0 || nlen != sizeof(ws->sid)) {
-					oclog(ws, LOG_DEBUG,
+					oclog(ws, LOG_SENSITIVE,
 					      "could not decode sid: %.*s",
 					      tmplen, p);
 					ws->sid_set = 0;
 				} else {
 					ws->sid_set = 1;
-					oclog(ws, LOG_DEBUG,
+					oclog(ws, LOG_SENSITIVE,
 					      "received sid: %.*s", tmplen, p);
 				}
 			}

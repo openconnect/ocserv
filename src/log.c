@@ -51,6 +51,11 @@ void __attribute__ ((format(printf, 3, 4)))
                 return;
             else
                 priority = LOG_DEBUG;
+        } else if (priority == LOG_SENSITIVE) {
+	    if (ws->perm_config->debug < DEBUG_SENSITIVE)
+                return;
+            else
+                priority = LOG_DEBUG;
         }
 
 	ip = ws->remote_ip_str;

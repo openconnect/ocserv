@@ -173,6 +173,7 @@ extern int syslog_open;
 
 #define LOG_HTTP_DEBUG 2048
 #define LOG_TRANSFER_DEBUG 2049
+#define LOG_SENSITIVE 2050
 
 /* Allow few seconds prior to cleaning up entries, to avoid any race
  * conditions when session control is enabled.

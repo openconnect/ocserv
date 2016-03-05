@@ -209,7 +209,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		if (ret < 0)
 			return -1;
 
-		oclog(ws, LOG_DEBUG, "sent sid: %s", context);
+		oclog(ws, LOG_SENSITIVE, "sent sid: %s", context);
 	} else {
 		ret =
 		    cstp_puts(ws,
@@ -958,7 +958,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		if (ret < 0)
 			return -1;
 
-		oclog(ws, LOG_DEBUG, "sent sid: %s", context);
+		oclog(ws, LOG_SENSITIVE, "sent sid: %s", context);
 	}
 
 	ret =

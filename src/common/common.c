@@ -65,27 +65,27 @@ const char *cmd_request_to_str(unsigned _cmd)
 	case CMD_BAN_IP_REPLY:
 		return "ban IP reply";
 
-	case SM_CMD_CLI_STATS:
-		return "sm: cli stats";
-	case SM_CMD_AUTH_CLI_STATS:
-		return "sm: auth cli stats";
-	case SM_CMD_AUTH_INIT:
+	case CMD_SEC_CLI_STATS:
+		return "sm: worker cli stats";
+	case CMD_SECM_CLI_STATS:
+		return "sm: main cli stats";
+	case CMD_SEC_AUTH_INIT:
 		return "sm: auth init";
-	case SM_CMD_AUTH_CONT:
+	case CMD_SEC_AUTH_CONT:
 		return "sm: auth cont";
-	case SM_CMD_AUTH_REP:
+	case CMD_SEC_AUTH_REPLY:
 		return "sm: auth rep";
-	case SM_CMD_DECRYPT:
+	case CMD_SEC_DECRYPT:
 		return "sm: decrypt";
-	case SM_CMD_SIGN:
+	case CMD_SEC_SIGN:
 		return "sm: sign";
-	case SM_CMD_AUTH_SESSION_CLOSE:
+	case CMD_SECM_SESSION_CLOSE:
 		return "sm: session close";
-	case SM_CMD_AUTH_SESSION_OPEN:
+	case CMD_SECM_SESSION_OPEN:
 		return "sm: session open";
-	case SM_CMD_AUTH_BAN_IP:
+	case CMD_SECM_BAN_IP:
 		return "sm: ban IP";
-	case SM_CMD_AUTH_BAN_IP_REPLY:
+	case CMD_SECM_BAN_IP_REPLY:
 		return "sm: ban IP reply";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);

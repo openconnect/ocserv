@@ -529,12 +529,12 @@ static int recv_cookie_auth_reply(worker_st * ws)
 {
 	int ret;
 	int socketfd = -1;
-	AuthReplyMsg *msg = NULL;
+	AuthCookieReplyMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
 	ret = recv_socket_msg16(ws, ws->cmd_fd, AUTH_COOKIE_REP, &socketfd,
 			      (void *)&msg,
-			      (unpack_func) auth_reply_msg__unpack,
+			      (unpack_func) auth_cookie_reply_msg__unpack,
 			      DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving auth reply message");
@@ -634,7 +634,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 	if (ret < 0) {
 		/* we only release on error, as the user configuration
 		 * remains. */
-		auth_reply_msg__free_unpacked(msg, &pa);
+		auth_cookie_reply_msg__free_unpacked(msg, &pa);
 		ws->user_config = NULL;
 	}
 	return ret;
@@ -673,7 +673,7 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounte
 	SecAuthReplyMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
-	ret = recv_msg16(ws, sd, SM_CMD_AUTH_REP,
+	ret = recv_msg16(ws, sd, CMD_SEC_AUTH_REPLY,
 		       (void *)&msg, (unpack_func) sec_auth_reply_msg__unpack,
 		       DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
@@ -1406,7 +1406,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			goto auth_fail;
 		}
 
-		ret = send_msg_to_secmod(ws, sd, SM_CMD_AUTH_INIT,
+		ret = send_msg_to_secmod(ws, sd, CMD_SEC_AUTH_INIT,
 					 &ireq, (pack_size_func)
 					 sec_auth_init_msg__get_packed_size,
 					 (pack_func) sec_auth_init_msg__pack);
@@ -1462,7 +1462,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 
 			ret =
-			    send_msg_to_secmod(ws, sd, SM_CMD_AUTH_CONT, &areq,
+			    send_msg_to_secmod(ws, sd, CMD_SEC_AUTH_CONT, &areq,
 					       (pack_size_func)
 					       sec_auth_cont_msg__get_packed_size,
 					       (pack_func)

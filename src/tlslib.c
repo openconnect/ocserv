@@ -681,13 +681,13 @@ static
 int key_cb_sign_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
 	gnutls_datum_t * signature)
 {
-	return key_cb_common_func(key, userdata, raw_data, signature, SM_CMD_SIGN);
+	return key_cb_common_func(key, userdata, raw_data, signature, CMD_SEC_SIGN);
 }
 
 static int key_cb_decrypt_func(gnutls_privkey_t key, void* userdata, const gnutls_datum_t * ciphertext,
 	gnutls_datum_t * plaintext)
 {
-	return key_cb_common_func(key, userdata, ciphertext, plaintext, SM_CMD_DECRYPT);
+	return key_cb_common_func(key, userdata, ciphertext, plaintext, CMD_SEC_DECRYPT);
 }
 
 static void key_cb_deinit_func(gnutls_privkey_t key, void* userdata)

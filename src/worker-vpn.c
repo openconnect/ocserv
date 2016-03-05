@@ -339,7 +339,7 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 		msg.ipv4 = ws->vinfo.ipv4;
 		msg.ipv6 = ws->vinfo.ipv6;
 
-		ret = send_msg_to_secmod(ws, sd, SM_CMD_CLI_STATS, &msg,
+		ret = send_msg_to_secmod(ws, sd, CMD_SEC_CLI_STATS, &msg,
 				 (pack_size_func)cli_stats_msg__get_packed_size,
 				 (pack_func) cli_stats_msg__pack);
 		close(sd);

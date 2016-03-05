@@ -31,7 +31,7 @@
  */
 struct config_mod_st {
 	int (*get_sup_config)(struct cfg_st *perm_config, client_entry_st *entry,
-	                      SecAuthSessionReplyMsg *msg, void *pool);
+	                      SecmSessionReplyMsg *msg, void *pool);
 };
 
 void sup_config_init(sec_mod_st *sec);

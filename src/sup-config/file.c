@@ -158,7 +158,7 @@ static int handle_option(const tOptionValue* val)
  */
 static
 int parse_group_cfg_file(struct cfg_st *global_config,
-			 SecAuthSessionReplyMsg *msg, void *pool,
+			 SecmSessionReplyMsg *msg, void *pool,
 			 const char* file)
 {
 tOptionValue const * pov;
@@ -300,7 +300,7 @@ unsigned j;
 }
 
 static int read_sup_config_file(struct cfg_st *global_config,
-				SecAuthSessionReplyMsg *msg, void *pool,
+				SecmSessionReplyMsg *msg, void *pool,
 				const char *file, const char *fallback, const char *type)
 {
 	int ret;
@@ -326,7 +326,7 @@ static int read_sup_config_file(struct cfg_st *global_config,
 }
 
 static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
-			  SecAuthSessionReplyMsg *msg, void *pool)
+			  SecmSessionReplyMsg *msg, void *pool)
 {
 	char file[_POSIX_PATH_MAX];
 	int ret;

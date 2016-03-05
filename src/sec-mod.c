@@ -215,8 +215,8 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 	data.size = buffer_size;
 
 	switch (cmd) {
-	case SM_CMD_SIGN:
-	case SM_CMD_DECRYPT:
+	case CMD_SEC_SIGN:
+	case CMD_SEC_DECRYPT:
 		op = sec_op_msg__unpack(&pa, data.size, data.data);
 		if (op == NULL) {
 			seclog(sec, LOG_INFO, "error unpacking sec op\n");
@@ -233,7 +233,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 		data.data = op->data.data;
 		data.size = op->data.len;
 
-		if (cmd == SM_CMD_DECRYPT) {
+		if (cmd == CMD_SEC_DECRYPT) {
 			ret =
 			    gnutls_privkey_decrypt_data(sec->key[i], 0, &data,
 							&out);
@@ -262,7 +262,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 
 		return ret;
 
-	case SM_CMD_CLI_STATS:{
+	case CMD_SEC_CLI_STATS:{
 			CliStatsMsg *tmsg;
 
 			tmsg = cli_stats_msg__unpack(&pa, data.size, data.data);
@@ -277,7 +277,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 		}
 		break;
 
-	case SM_CMD_AUTH_INIT:{
+	case CMD_SEC_AUTH_INIT:{
 			SecAuthInitMsg *auth_init;
 
 			auth_init =
@@ -292,7 +292,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 			sec_auth_init_msg__free_unpacked(auth_init, &pa);
 			return ret;
 		}
-	case SM_CMD_AUTH_CONT:{
+	case CMD_SEC_AUTH_CONT:{
 			SecAuthContMsg *auth_cont;
 
 			auth_cont =
@@ -425,7 +425,7 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 	data.size = buffer_size;
 
 	switch (cmd) {
-	case SM_CMD_AUTH_BAN_IP_REPLY:{
+	case CMD_SECM_BAN_IP_REPLY:{
 		BanIpReplyMsg *msg = NULL;
 
 		msg =
@@ -441,20 +441,35 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 
 		return 0;
 	}
-	case SM_CMD_AUTH_SESSION_OPEN:
-	case SM_CMD_AUTH_SESSION_CLOSE:{
-			SecAuthSessionMsg *msg;
+	case CMD_SECM_SESSION_OPEN:{
+			SecmSessionOpenMsg *msg;
 
 			msg =
-			    sec_auth_session_msg__unpack(&pa, data.size,
+			    secm_session_open_msg__unpack(&pa, data.size,
+						      data.data);
+			if (msg == NULL) {
+				seclog(sec, LOG_INFO, "error unpacking session open\n");
+				return ERR_BAD_COMMAND;
+			}
+
+			ret = handle_secm_session_open_cmd(sec, fd, msg);
+			secm_session_open_msg__free_unpacked(msg, &pa);
+
+			return ret;
+		}
+	case CMD_SECM_SESSION_CLOSE:{
+			SecmSessionCloseMsg *msg;
+
+			msg =
+			    secm_session_close_msg__unpack(&pa, data.size,
 						      data.data);
 			if (msg == NULL) {
 				seclog(sec, LOG_INFO, "error unpacking session close\n");
 				return ERR_BAD_COMMAND;
 			}
 
-			ret = handle_sec_auth_session_cmd(sec, fd, msg, cmd);
-			sec_auth_session_msg__free_unpacked(msg, &pa);
+			ret = handle_secm_session_close_cmd(sec, fd, msg);
+			secm_session_close_msg__free_unpacked(msg, &pa);
 
 			return ret;
 		}
@@ -540,7 +555,7 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 	length = l16;
 
 	seclog(sec, LOG_DEBUG, "received request %s", cmd_request_to_str(cmd));
-	if (cmd <= MIN_SM_MAIN_CMD || cmd >= MAX_SM_MAIN_CMD) {
+	if (cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
 		seclog(sec, LOG_ERR, "received invalid message from main of %u bytes (cmd: %u)\n",
 		      (unsigned)length, (unsigned)cmd);
 		return ERR_BAD_COMMAND;

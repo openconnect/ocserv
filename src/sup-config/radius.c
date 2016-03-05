@@ -40,7 +40,7 @@
 #include <auth/radius.h>
 
 static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
-			  SecAuthSessionReplyMsg *msg, void *pool)
+			  SecmSessionReplyMsg *msg, void *pool)
 {
 	struct radius_ctx_st *pctx = entry->auth_ctx;
 	unsigned dns = 0, i;

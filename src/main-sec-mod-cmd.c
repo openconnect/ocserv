@@ -95,7 +95,7 @@ int handle_sec_mod_commands(main_server_st * s)
 		return ERR_BAD_COMMAND;
 	}
 
-	if (ret < 3 || cmd <= MIN_SM_MAIN_CMD || cmd >= MAX_SM_MAIN_CMD) {
+	if (ret < 3 || cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
 		mslog(s, NULL, LOG_ERR, "main received invalid message from sec-mod of %u bytes (cmd: %u)\n",
 		      (unsigned)length, (unsigned)cmd);
 		return ERR_BAD_COMMAND;
@@ -121,7 +121,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	}
 
 	switch (cmd) {
-	case SM_CMD_AUTH_BAN_IP:{
+	case CMD_SECM_BAN_IP:{
 			BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
 
 			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
@@ -144,9 +144,9 @@ int handle_sec_mod_commands(main_server_st * s)
 			reply.sid.len = tmsg->sid.len;
 			reply.has_sid = tmsg->has_sid;
 
-			mslog(s, NULL, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(SM_CMD_AUTH_BAN_IP_REPLY));
+			mslog(s, NULL, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_BAN_IP_REPLY));
 
-			ret = send_msg16(NULL, s->sec_mod_fd, SM_CMD_AUTH_BAN_IP_REPLY,
+			ret = send_msg16(NULL, s->sec_mod_fd, CMD_SECM_BAN_IP_REPLY,
 				&reply, (pack_size_func)ban_ip_reply_msg__get_packed_size,
 				(pack_func)ban_ip_reply_msg__pack);
 			if (ret < 0) {
@@ -405,8 +405,8 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int ret, e;
-	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
-	SecAuthSessionReplyMsg *msg = NULL;
+	SecmSessionOpenMsg ireq = SECM_SESSION_OPEN_MSG__INIT;
+	SecmSessionReplyMsg *msg = NULL;
 	char str_ipv4[MAX_IP_STR];
 	char str_ipv6[MAX_IP_STR];
 	char str_ip[MAX_IP_STR];
@@ -414,12 +414,6 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	if (cookie == NULL || cookie_size != SID_SIZE)
 		return -1;
 
-	ireq.uptime = time(0)-proc->conn_time;
-	ireq.has_uptime = 1;
-	ireq.bytes_in = proc->bytes_in;
-	ireq.has_bytes_in = 1;
-	ireq.bytes_out = proc->bytes_out;
-	ireq.has_bytes_out = 1;
 	ireq.sid.data = (void*)cookie;
 	ireq.sid.len = cookie_size;
 
@@ -435,19 +429,19 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		ireq.ipv6 = str_ipv6;
 	}
 
-	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(SM_CMD_AUTH_SESSION_OPEN));
+	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_OPEN));
 
-	ret = send_msg16(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_SESSION_OPEN,
-		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
-		(pack_func)sec_auth_session_msg__pack);
+	ret = send_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_OPEN,
+		&ireq, (pack_size_func)secm_session_open_msg__get_packed_size,
+		(pack_func)secm_session_open_msg__pack);
 	if (ret < 0) {
 		mslog(s, proc, LOG_ERR,
 		      "error sending message to sec-mod cmd socket");
 		return -1;
 	}
 
-	ret = recv_msg16(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_SESSION_REPLY,
-	       (void *)&msg, (unpack_func) sec_auth_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
+	ret = recv_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
+	       (void *)&msg, (unpack_func) secm_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
 		mslog(s, proc, LOG_ERR, "error receiving auth reply message from sec-mod cmd socket: %s", strerror(e));
@@ -504,7 +498,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 int session_close(main_server_st * s, struct proc_st *proc)
 {
 	int ret, e;
-	SecAuthSessionMsg ireq = SEC_AUTH_SESSION_MSG__INIT;
+	SecmSessionCloseMsg ireq = SECM_SESSION_CLOSE_MSG__INIT;
 	CliStatsMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, proc);
 
@@ -517,18 +511,18 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	ireq.sid.data = proc->sid;
 	ireq.sid.len = sizeof(proc->sid);
 
-	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(SM_CMD_AUTH_SESSION_CLOSE));
+	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_CLOSE));
 
-	ret = send_msg16(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_SESSION_CLOSE,
-		&ireq, (pack_size_func)sec_auth_session_msg__get_packed_size,
-		(pack_func)sec_auth_session_msg__pack);
+	ret = send_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_CLOSE,
+		&ireq, (pack_size_func)secm_session_close_msg__get_packed_size,
+		(pack_func)secm_session_close_msg__pack);
 	if (ret < 0) {
 		mslog(s, proc, LOG_ERR,
 		      "error sending message to sec-mod cmd socket");
 		return -1;
 	}
 
-	ret = recv_msg16(proc, s->sec_mod_fd_sync, SM_CMD_AUTH_CLI_STATS,
+	ret = recv_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
 	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;

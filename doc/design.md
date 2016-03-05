@@ -106,28 +106,28 @@ device and the client. The tasks handled are:
 
 ``` 
   main                 sec-mod                 worker
-   |                      |                      |
-   |                      |  <--SEC_AUTH_INIT--- |
-   |                      |  ---SEC_AUTH_REP---> |
-   |                      |  <--SEC_AUTH_CONT--- |
-   |                      |         .            |
-   |                      |         .            |
-   |                      |         .            |
-   |                      |  ----SEC_AUTH_REP--> |
-   |                      |                      |
-   | <----------AUTH_COOKIE_REQ----------------- |
-   |                      |                      |
-   | ---SESSION_OPEN----> |                      |
-   | <--SESSION_REPLY---- |                      |   #contains additional config for client
-   |                      |                      |
-   | -----------------AUTH_REP-----------------> |   #forwards the additional config for client
-   |                      |                      |
-   | <------------SESSION_INFO------------------ |
-   |                      |                      |
-   |                      | <-- CLI_STATS ------ |
-   |                      |            (disconnect)
-   | ---SESSION_CLOSE---> |
-   | <-- CLI_STATS ------ |
+   |                       |                      |
+   |                       |  <--SEC_AUTH_INIT--- |
+   |                       |  ---SEC_AUTH_REPLY-> |
+   |                       |  <--SEC_AUTH_CONT--- |
+   |                       |         .            |
+   |                       |         .            |
+   |                       |         .            |
+   |                       |  ---SEC_AUTH_REPLY-> |
+   |                       |                      |
+   | <----------AUTH_COOKIE_REQ------------------ |
+   |                       |                      |
+   | --SECM_SESSION_OPEN-> |                      |
+   | <-SECM_SESSION_REPLY- |                      |   #contains additional config for client
+   |                       |                      |
+   | ---------------AUTH_COOKIE_REP-------------> |   #forwards the additional config for client
+   |                       |                      |
+   | <------------SESSION_INFO------------------- |
+   |                       |                      |
+   |                       | <-- SEC_CLI_STATS -- |
+   |                       |            (disconnect)
+   | -SECM_SESSION_CLOSE-> |
+   | <---SECM_CLI_STATS--- |
 
 ```
 

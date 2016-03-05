@@ -101,7 +101,7 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			AUTHREP r)
 {
-	AuthReplyMsg msg = AUTH_REPLY_MSG__INIT;
+	AuthCookieReplyMsg msg = AUTH_COOKIE_REPLY_MSG__INIT;
 	int ret;
 
 	if (r == AUTH__REP__OK && proc->tun_lease.name[0] != 0) {
@@ -142,15 +142,15 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 
 		ret = send_socket_msg_to_worker(s, proc, AUTH_COOKIE_REP, proc->tun_lease.fd,
 			 &msg,
-			 (pack_size_func)auth_reply_msg__get_packed_size,
-			 (pack_func)auth_reply_msg__pack);
+			 (pack_size_func)auth_cookie_reply_msg__get_packed_size,
+			 (pack_func)auth_cookie_reply_msg__pack);
 	} else {
 		msg.reply = AUTH__REP__FAILED;
 
 		ret = send_msg_to_worker(s, proc, AUTH_COOKIE_REP,
 			 &msg,
-			 (pack_size_func)auth_reply_msg__get_packed_size,
-			 (pack_func)auth_reply_msg__pack);
+			 (pack_size_func)auth_cookie_reply_msg__get_packed_size,
+			 (pack_func)auth_cookie_reply_msg__pack);
 	}
 
 	if (ret < 0) {

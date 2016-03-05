@@ -190,7 +190,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	if (req->value.length <= 0)
 		return;
 
-	if (ws->perm_config->debug < DEBUG_SENSITIVE && req->header.length == 6 && strncasecmp((char*)req->header.data, "Cookie", 6) == 0)
+	if (ws->perm_config->debug < DEBUG_SENSITIVE &&
+		((req->header.length == 6 && strncasecmp((char*)req->header.data, "Cookie", 6) == 0) ||
+		(req->header.length == 20 && strncasecmp((char*)req->header.data, "X-DTLS-Master-Secret", 20) == 0)))
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: (censored)", (int)req->header.length,
 		      req->header.data);
 	else

@@ -44,11 +44,12 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include "hex.h"
+#include <vpn.h>
 
 static
 int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);
 static
-int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params);
+int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params, unsigned all);
 
 struct unix_ctx {
 	int fd;
@@ -608,7 +609,9 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 	return ret;
 }
 
-void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, cmd_params_st *params)
+static
+void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, cmd_params_st *params,
+		 unsigned all)
 {
 	unsigned i;
 	const char *groupname, *username;
@@ -618,8 +621,11 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 	char str_since[65];
 
 	if (HAVE_JSON(params)) {
-		cookie_info_cmd(rep, out, params);
+		cookie_info_cmd(rep, out, params, all);
 	} else for (i=0;i<rep->n_cookies;i++) {
+		if (!all && rep->cookies[i]->status != PS_AUTH_COMPLETED)
+			continue;
+
 		username = rep->cookies[i]->username;
 		if (username == NULL || username[0] == 0)
 			username = NO_USER;
@@ -646,7 +652,8 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 	}
 }
 
-int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+static
+int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params, unsigned all)
 {
 	int ret;
 	struct cmd_reply_st raw;
@@ -669,7 +676,7 @@ int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 	if (rep == NULL)
 		goto error;
 
-	cookie_list(ctx, rep, out, params);
+	cookie_list(ctx, rep, out, params, all);
 
 	ret = 0;
 	goto cleanup;
@@ -686,6 +693,16 @@ int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 	pager_stop(out);
 
 	return ret;
+}
+
+int handle_list_valid_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	return handle_list_cookies_cmd(ctx, arg, params, 0);
+}
+
+int handle_list_all_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	return handle_list_cookies_cmd(ctx, arg, params, 1);
 }
 
 int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
@@ -1051,7 +1068,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 }
 
 static
-int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params)
+int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params, unsigned all)
 {
 	char *username = "";
 	char *groupname = "";
@@ -1072,6 +1089,9 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		fprintf(out, "[\n");
 
 	for (i=0;i<args->n_cookies;i++) {
+		if (!all && args->cookies[i]->status != PS_AUTH_COMPLETED)
+			continue;
+
 		if (at_least_one > 0)
 			fprintf(out, "\n");
 

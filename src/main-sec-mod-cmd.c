@@ -59,7 +59,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	struct iovec iov[3];
 	uint8_t cmd;
 	struct msghdr hdr;
-	uint16_t length;
+	uint32_t length;
 	uint8_t *raw;
 	int ret, raw_len, e;
 	void *pool = talloc_new(s);
@@ -73,7 +73,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	iov[0].iov_len = 1;
 
 	iov[1].iov_base = &length;
-	iov[1].iov_len = 2;
+	iov[1].iov_len = 4;
 
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
@@ -95,7 +95,7 @@ int handle_sec_mod_commands(main_server_st * s)
 		return ERR_BAD_COMMAND;
 	}
 
-	if (ret < 3 || cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
+	if (ret < 5 || cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
 		mslog(s, NULL, LOG_ERR, "main received invalid message from sec-mod of %u bytes (cmd: %u)\n",
 		      (unsigned)length, (unsigned)cmd);
 		return ERR_BAD_COMMAND;
@@ -440,7 +440,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		return -1;
 	}
 
-	ret = recv_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
+	ret = recv_msg32(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
 	       (void *)&msg, (unpack_func) secm_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
@@ -522,7 +522,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 		return -1;
 	}
 
-	ret = recv_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
+	ret = recv_msg32(proc, s->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
 	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;

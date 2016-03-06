@@ -93,7 +93,7 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, client_entry_st *e, const char *ip
 		return;
 	}
 
-	ret = send_msg16(lpool, sec->cmd_fd, CMD_SECM_BAN_IP, &msg,
+	ret = send_msg32(lpool, sec->cmd_fd, CMD_SECM_BAN_IP, &msg,
 				(pack_size_func) ban_ip_msg__get_packed_size,
 				(pack_func) ban_ip_msg__pack);
 	if (ret < 0) {
@@ -343,7 +343,7 @@ int send_failed_session_open_reply(sec_mod_st *sec, int fd)
 		return ERR_BAD_COMMAND;
 	}
 
-	ret = send_msg16(lpool, fd, CMD_SECM_SESSION_REPLY, &rep,
+	ret = send_msg32(lpool, fd, CMD_SECM_SESSION_REPLY, &rep,
 			(pack_size_func) secm_session_reply_msg__get_packed_size,
 			(pack_func) secm_session_reply_msg__pack);
 	if (ret < 0) {
@@ -439,7 +439,7 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 		}
 	}
 
-	ret = send_msg16(lpool, fd, CMD_SECM_SESSION_REPLY, &rep,
+	ret = send_msg32(lpool, fd, CMD_SECM_SESSION_REPLY, &rep,
 			(pack_size_func) secm_session_reply_msg__get_packed_size,
 			(pack_func) secm_session_reply_msg__pack);
 	if (ret < 0) {
@@ -472,14 +472,14 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 		char tmp[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
 		oc_base64_encode((char *)req->sid.data, req->sid.len, (char *)tmp, sizeof(tmp));
 		seclog(sec, LOG_INFO, "session close but with non-existing SID: %s", tmp);
-		return send_msg16(e, fd, CMD_SECM_CLI_STATS, &rep,
+		return send_msg32(e, fd, CMD_SECM_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
 		                (pack_func) cli_stats_msg__pack);
 	}
 
 	if (e->status < PS_AUTH_COMPLETED) {
 		seclog(sec, LOG_DEBUG, "session close received in unauthenticated client %s "SESSION_STR"!", e->acct_info.username, e->acct_info.psid);
-		return send_msg16(e, fd, CMD_SECM_CLI_STATS, &rep,
+		return send_msg32(e, fd, CMD_SECM_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
 		                (pack_func) cli_stats_msg__pack);
 	}
@@ -506,7 +506,7 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 	rep.secmod_tlsdb_entries = sec->tls_db.entries;
 	rep.has_secmod_tlsdb_entries = 1;
 
-	ret = send_msg16(e, fd, CMD_SECM_CLI_STATS, &rep,
+	ret = send_msg32(e, fd, CMD_SECM_CLI_STATS, &rep,
 			(pack_size_func) cli_stats_msg__get_packed_size,
 			(pack_func) cli_stats_msg__pack);
 	if (ret < 0) {

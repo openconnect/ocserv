@@ -50,6 +50,14 @@
 
 #define MAX_MSG_SIZE 16*1024
 
+enum {
+	PS_AUTH_INACTIVE, /* no comm with worker */
+	PS_AUTH_FAILED, /* no tried authenticated but failed */
+	PS_AUTH_INIT, /* worker has sent an auth init msg */
+	PS_AUTH_CONT, /* worker has sent an auth cont msg */
+	PS_AUTH_COMPLETED /* successful authentication */
+};
+
 typedef enum {
 	SOCK_TYPE_TCP,
 	SOCK_TYPE_UDP,
@@ -214,6 +222,8 @@ typedef enum {
 	CMD_SECM_BAN_IP,
 	CMD_SECM_BAN_IP_REPLY,
 	CMD_SECM_CLI_STATS,
+	CMD_SECM_LIST_COOKIES,
+	CMD_SECM_LIST_COOKIES_REPLY,
 
 	MAX_SECM_CMD,
 } cmd_request_t;

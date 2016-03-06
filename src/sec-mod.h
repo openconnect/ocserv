@@ -26,7 +26,7 @@
 #include <nettle/base64.h>
 #include <tlslib.h>
 
-#define SESSION_STR "(session: %.5s)"
+#define SESSION_STR "(session: %.6s)"
 
 typedef struct sec_mod_st {
 	struct cfg_st *config;
@@ -130,6 +130,7 @@ void  seclog_hex(const struct sec_mod_st* sec, int priority,
 
 void sec_auth_init(sec_mod_st *sec, struct perm_cfg_st *config);
 
+void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec);
 void handle_sec_auth_ban_ip_reply(sec_mod_st *sec, const BanIpReplyMsg *msg);
 int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req, pid_t pid);
 int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);

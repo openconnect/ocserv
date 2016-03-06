@@ -62,6 +62,8 @@ int send_socket_msg32(void *pool, int fd, uint8_t cmd,
 		      int socketfd,
 		      const void* msg, pack_size_func get_size, pack_func pack);
 
+int forward_msg32(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsigned timeout);
+
 inline static int send_msg16(void *pool, int fd, uint8_t cmd,
 	     const void *msg, pack_size_func get_size, pack_func pack)
 {
@@ -79,6 +81,9 @@ int send_msg32(void *pool, int fd, uint8_t cmd,
 int recv_socket_msg16(void *pool, int fd, uint8_t cmd, 
   	    	      int *socketfd, void** msg, unpack_func, unsigned timeout);
 
+int recv_socket_msg32(void *pool, int fd, uint8_t cmd, 
+  	    	      int *socketfd, void** msg, unpack_func, unsigned timeout);
+
 /* the timeout is in seconds */
 inline static int recv_msg16(void *pool, int fd, uint8_t cmd,
 	     void **msg, unpack_func unpack, unsigned timeout)
@@ -86,6 +91,11 @@ inline static int recv_msg16(void *pool, int fd, uint8_t cmd,
 	return recv_socket_msg16(pool, fd, cmd, NULL, msg, unpack, timeout);
 }
 
+inline static int recv_msg32(void *pool, int fd, uint8_t cmd,
+	     void **msg, unpack_func unpack, unsigned timeout)
+{
+	return recv_socket_msg32(pool, fd, cmd, NULL, msg, unpack, timeout);
+}
 
 
 const char* cmd_request_to_str(unsigned cmd);
@@ -127,6 +137,8 @@ void ms_sleep(unsigned ms)
   
   nanosleep(&tv, NULL);
 }
+
+const char *ps_status_to_str(int status, unsigned cookie);
 
 #ifndef HAVE_STRLCPY
 size_t oc_strlcpy(char *dst, char const *src, size_t siz);

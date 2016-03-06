@@ -67,6 +67,8 @@ static void method_id_info(method_ctx *ctx, int cfd, uint8_t * msg,
 			   unsigned msg_size);
 static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 			   unsigned msg_size);
+static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
+			   unsigned msg_size);
 
 typedef void (*method_func) (method_ctx *ctx, int cfd, uint8_t * msg,
 			     unsigned msg_size);
@@ -91,6 +93,7 @@ static const ctl_method_st methods[] = {
 	ENTRY(CTL_CMD_STOP, method_stop),
 	ENTRY(CTL_CMD_LIST, method_list_users),
 	ENTRY(CTL_CMD_LIST_BANNED, method_list_banned),
+	ENTRY(CTL_CMD_LIST_COOKIES, method_list_cookies),
 	ENTRY(CTL_CMD_USER_INFO, method_user_info),
 	ENTRY(CTL_CMD_ID_INFO, method_id_info),
 	ENTRY(CTL_CMD_UNBAN_IP, method_unban_ip),
@@ -348,17 +351,7 @@ static int append_user_info(method_ctx *ctx,
 	rep->hostname = ctmp->hostname;
 	rep->user_agent = ctmp->user_agent;
 
-	if (ctmp->status == PS_AUTH_COMPLETED)
-		strtmp = "connected";
-	else if (ctmp->status == PS_AUTH_INIT)
-		strtmp = "auth";
-	else if (ctmp->status == PS_AUTH_INACTIVE)
-		strtmp = "pre-auth";
-	else if (ctmp->status == PS_AUTH_FAILED)
-		strtmp = "auth failed";
-	else
-		strtmp = "unknown";
-	rep->status = strtmp;
+	rep->status = (char*)ps_status_to_str(ctmp->status, 0);
 
 	rep->tls_ciphersuite = ctmp->tls_ciphersuite;
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;
@@ -514,6 +507,27 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 
  error:
 	return;
+}
+
+static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
+			      unsigned msg_size)
+{
+	int ret;
+
+	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-cookies");
+
+	ret = send_msg16(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES,
+			 NULL, NULL, NULL);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies to sec-mod!");
+	}
+
+	ret = forward_msg32(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES_REPLY,
+			    cfd, CTL_CMD_LIST_COOKIES_REP, MAIN_SEC_MOD_TIMEOUT);
+	if (ret < 0) {
+		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies reply");
+	}
+
 }
 
 static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,

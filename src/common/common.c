@@ -34,6 +34,29 @@
 
 #include "common.h"
 
+/* Note that meaning slightly changes depending on whether we are
+ * referring to the cookie or the session itself.
+ */
+const char *ps_status_to_str(int status, unsigned cookie)
+{
+	switch (status) {
+		case PS_AUTH_COMPLETED:
+			if (cookie)
+				return "authenticated";
+			else
+				return "connected";
+		case PS_AUTH_INIT:
+		case PS_AUTH_CONT:
+			return "authenticating";
+		case PS_AUTH_INACTIVE:
+			return "pre-auth";
+		case PS_AUTH_FAILED:
+			return "auth failed";
+		default:
+			return "unknown";
+	}
+}
+
 const char *cmd_request_to_str(unsigned _cmd)
 {
 	cmd_request_t cmd = _cmd;
@@ -275,6 +298,91 @@ ssize_t recvmsg_timeout(int sockfd, struct msghdr * msg, int flags,
 	return ret;
 }
 
+int forward_msg32(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsigned timeout)
+{
+	struct iovec iov[3];
+	char data[5];
+	uint32_t length;
+	ssize_t left;
+	uint8_t rcmd;
+	struct msghdr hdr;
+	union {
+		struct cmsghdr cm;
+		char control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	int ret;
+
+	iov[0].iov_base = &rcmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = &length;
+	iov[1].iov_len = 4;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	hdr.msg_control = control_un.control;
+	hdr.msg_controllen = sizeof(control_un.control);
+
+	ret = recvmsg_timeout(ifd, &hdr, 0, timeout);
+	if (ret == -1) {
+		int e = errno;
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		       strerror(e));
+		return ERR_BAD_COMMAND;
+	}
+
+	if (ret == 0) {
+		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
+		       __LINE__);
+		return ERR_PEER_TERMINATED;
+	}
+
+	if (rcmd != icmd) {
+		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
+		       __LINE__, (int)rcmd, (int)icmd);
+		return ERR_BAD_COMMAND;
+	}
+
+	data[0] = ocmd;
+	memcpy(&data[1], &length, 4);
+
+	/* send headers */
+	ret = force_write(ofd, data, 5);
+	if (ret != 5) {
+		syslog(LOG_ERR, "%s:%u: cannot send headers: %s", __FILE__,
+		       __LINE__, strerror(errno));
+		return ERR_BAD_COMMAND;
+	}
+
+	left = length;
+
+	while (left > 0) {
+		char buf[1024];
+
+		ret = recv(ifd, buf, sizeof(buf), 0);
+		if (ret == -1 || ret == 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+			syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
+			       __LINE__, strerror(errno));
+			return ERR_BAD_COMMAND;
+		}
+
+		ret = force_write(ofd, buf, ret);
+		if (ret == -1 || ret == 0) {
+			syslog(LOG_ERR, "%s:%u: cannot send between descriptors: %s", __FILE__,
+			       __LINE__, strerror(errno));
+			return ERR_BAD_COMMAND;
+		}
+
+		left -= ret;
+	}
+
+	return 0;
+}
+
 /* Sends message + socketfd */
 static
 int send_socket_msg(void *pool, int fd, uint8_t cmd,
@@ -300,7 +408,8 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	iov[0].iov_base = &cmd;
 	iov[0].iov_len = 1;
 
-	length = get_size(msg);
+	if (msg)
+		length = get_size(msg);
 
 	if (use_32bit) {
 		if (length >= UINT32_MAX)
@@ -383,12 +492,13 @@ int send_socket_msg32(void *pool, int fd, uint8_t cmd,
 	return send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 1);
 }
 
-int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
+static
+int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		    int *socketfd, void **msg, unpack_func unpack,
-		    unsigned timeout)
+		    unsigned timeout, unsigned use_32bits)
 {
 	struct iovec iov[3];
-	uint16_t length;
+	uint32_t length;
 	uint8_t rcmd;
 	struct msghdr hdr;
 	uint8_t *data = NULL;
@@ -404,7 +514,11 @@ int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
 	iov[0].iov_len = 1;
 
 	iov[1].iov_base = &length;
-	iov[1].iov_len = 2;
+	if (use_32bits) {
+		iov[1].iov_len = 4;
+	} else {
+		iov[1].iov_len = 2;
+	}
 
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
@@ -431,6 +545,12 @@ int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
 		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
 		       __LINE__, (int)rcmd, (int)cmd);
 		return ERR_BAD_COMMAND;
+	}
+
+	if (!use_32bits) {
+		uint16_t l16;
+		memcpy(&l16, &length, 2);
+		length = l16;
 	}
 
 	/* try to receive socket (if any) */
@@ -486,6 +606,21 @@ int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
 	if (ret < 0 && socketfd != NULL && *socketfd != -1)
 		close(*socketfd);
 	return ret;
+}
+
+
+int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
+		    int *socketfd, void **msg, unpack_func unpack,
+		    unsigned timeout)
+{
+	return recv_socket_msg(pool,fd, cmd, socketfd, msg, unpack, timeout, 0);
+}
+
+int recv_socket_msg32(void *pool, int fd, uint8_t cmd,
+		    int *socketfd, void **msg, unpack_func unpack,
+		    unsigned timeout)
+{
+	return recv_socket_msg(pool,fd, cmd, socketfd, msg, unpack, timeout, 1);
 }
 
 void _talloc_free2(void *ctx, void *ptr)

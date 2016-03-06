@@ -279,5 +279,28 @@ message secm_session_reply_msg
 	required bool tls_auth_ok = 10;
 }
 
-/* SEC_BAN_IP: sent from sec-mod to main */
+/* internal struct */
+message cookie_int_msg
+{
+	required bytes sid = 1;
+	required bool session_is_open = 2;
+	required bool tls_auth_ok = 3;
+	required uint32 last_modified = 4;
+	required string username = 5;
+	optional string groupname = 6;
+	required string user_agent = 7;
+	required string remote_ip = 8;
+	required string psid = 9; /* printable form of sid */
+	optional string status = 10; /* printable version of auth status */
+}
+
+/* SECM_LIST_COOKIES - no content */
+/* SECM_LIST_COOKIES_REPLY */
+message secm_list_cookies_reply_msg
+{
+	repeated cookie_int_msg cookies = 1;
+}
+
+
+/* SECM_BAN_IP: sent from sec-mod to main */
 /* same as: ban_ip_msg */

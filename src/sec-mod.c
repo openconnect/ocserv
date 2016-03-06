@@ -425,6 +425,10 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 	data.size = buffer_size;
 
 	switch (cmd) {
+	case CMD_SECM_LIST_COOKIES:
+		handle_secm_list_cookies_reply(pool, fd, sec);
+
+		return 0;
 	case CMD_SECM_BAN_IP_REPLY:{
 		BanIpReplyMsg *msg = NULL;
 

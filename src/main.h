@@ -79,14 +79,6 @@ struct script_wait_st {
 	struct proc_st* proc;
 };
 
-enum {
-	PS_AUTH_INACTIVE, /* no comm with worker */
-	PS_AUTH_FAILED, /* no tried authenticated but failed */
-	PS_AUTH_INIT, /* worker has sent an auth init msg */
-	PS_AUTH_CONT, /* worker has sent an auth cont msg */
-	PS_AUTH_COMPLETED /* successful authentication */
-};
-
 /* Each worker process maps to a unique proc_st structure.
  */
 typedef struct proc_st {

@@ -33,7 +33,6 @@
 #include <common.h>
 #include <c-strcase.h>
 #include <arpa/inet.h>
-
 #include <system.h>
 #include <termios.h>
 #include <unistd.h>
@@ -44,9 +43,12 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include "hex.h"
 
 static
 int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);
+static
+int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params);
 
 struct unix_ctx {
 	int fd;
@@ -59,6 +61,7 @@ static uint8_t msg_map[] = {
         [CTL_CMD_RELOAD] = CTL_CMD_RELOAD_REP,
         [CTL_CMD_STOP] = CTL_CMD_STOP_REP,
         [CTL_CMD_LIST] = CTL_CMD_LIST_REP,
+        [CTL_CMD_LIST_COOKIES] = CTL_CMD_LIST_COOKIES_REP,
         [CTL_CMD_LIST_BANNED] = CTL_CMD_LIST_BANNED_REP,
         [CTL_CMD_USER_INFO] = CTL_CMD_LIST_REP,
         [CTL_CMD_TOP] = CTL_CMD_LIST_REP,
@@ -642,6 +645,86 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 	return ret;
 }
 
+void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, cmd_params_st *params)
+{
+	unsigned i;
+	const char *groupname, *username;
+	char tmpbuf[MAX_TMPSTR_SIZE];
+	time_t t;
+	struct tm *tm;
+	char str_since[65];
+
+	if (HAVE_JSON(params)) {
+		cookie_info_cmd(rep, out, params);
+	} else for (i=0;i<rep->n_cookies;i++) {
+		username = rep->cookies[i]->username;
+		if (username == NULL || username[0] == 0)
+			username = NO_USER;
+
+		/* add header */
+		if (i == 0) {
+			fprintf(out, "%6s %8s %8s %14s %24s %8s %8s\n",
+				"cookie", "user", "group", "ip", "user agent", "updated", "status");
+		}
+
+		t = rep->cookies[i]->last_modified;
+		tm = localtime(&t);
+		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+
+		groupname = rep->cookies[i]->groupname;
+		if (groupname == NULL || groupname[0] == 0)
+			groupname = NO_GROUP;
+
+		print_time_ival7(tmpbuf, time(0), t);
+
+		fprintf(out, "%.6s %8s %8s %14s %.24s %8s %8s\n",
+			rep->cookies[i]->psid, username, groupname, rep->cookies[i]->remote_ip,
+			rep->cookies[i]->user_agent, tmpbuf, rep->cookies[i]->status);
+	}
+}
+
+int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	int ret;
+	struct cmd_reply_st raw;
+	SecmListCookiesReplyMsg *rep = NULL;
+	FILE *out;
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	init_reply(&raw);
+
+	entries_clear();
+
+	out = pager_start(params);
+
+	ret = send_cmd(ctx, CTL_CMD_LIST_COOKIES, NULL, NULL, NULL, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = secm_list_cookies_reply_msg__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	cookie_list(ctx, rep, out, params);
+
+	ret = 0;
+	goto cleanup;
+
+ error:
+	ret = 1;
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+
+ cleanup:
+	if (rep != NULL)
+		secm_list_cookies_reply_msg__free_unpacked(rep, &pa);
+
+	free_reply(&raw);
+	pager_stop(out);
+
+	return ret;
+}
+
 int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
 {
 	int ret;
@@ -992,6 +1075,86 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
  error_parse:
 	fprintf(stderr, "%s: message parsing error\n", __func__);
 	goto cleanup;
+ cleanup:
+	if (at_least_one == 0) {
+		if (NO_JSON(params))
+			fprintf(out, "user or ID not found\n");
+		ret = 2;
+	}
+	if (init_pager)
+		pager_stop(out);
+
+	return ret;
+}
+
+static
+int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params)
+{
+	char *username = "";
+	char *groupname = "";
+	char str_since[65];
+	struct tm *tm;
+	time_t t;
+	unsigned at_least_one = 0;
+	int ret = 1;
+	unsigned i;
+	unsigned init_pager = 0;
+
+	if (out == NULL) {
+		out = pager_start(params);
+		init_pager = 1;
+	}
+
+	if (HAVE_JSON(params))
+		fprintf(out, "[\n");
+
+	for (i=0;i<args->n_cookies;i++) {
+		if (at_least_one > 0)
+			fprintf(out, "\n");
+
+		print_start_block(out, params);
+
+		print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
+		print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
+		print_single_value(out, params, "State", args->cookies[i]->status, 1);
+
+		t = args->cookies[i]->last_modified;
+		tm = localtime(&t);
+		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+
+		username = args->cookies[i]->username;
+		if (username == NULL || username[0] == 0)
+			username = NO_USER;
+
+		groupname = args->cookies[i]->groupname;
+		if (groupname == NULL || groupname[0] == 0)
+			groupname = NO_GROUP;
+
+		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
+		print_single_value(out, params, "User-Agent", args->cookies[i]->user_agent, 1);
+		print_single_value(out, params, "Remote IP", args->cookies[i]->remote_ip, 1);
+
+		print_single_value(out, params, "Last Modified", str_since, 1);
+
+		str_since[0] = 0;
+		hex_encode(args->cookies[i]->sid.data, args->cookies[i]->sid.len, str_since, sizeof(str_since));
+		print_single_value(out, params, "cookie", str_since, 1);
+
+		print_single_value(out, params, "Printable cookie", args->cookies[i]->psid, 1);
+
+		print_single_value(out, params, "Last Modified", str_since, 0);
+
+		print_end_block(out, params, i<(args->n_cookies-1)?1:0);
+
+		at_least_one = 1;
+	}
+
+	if (HAVE_JSON(params))
+		fprintf(out, "]\n");
+
+	ret = 0;
+	goto cleanup;
+
  cleanup:
 	if (at_least_one == 0) {
 		if (NO_JSON(params))

@@ -85,7 +85,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		cookies[msg.n_cookies].user_agent = t->acct_info.user_agent;
 		cookies[msg.n_cookies].remote_ip = t->acct_info.remote_ip;
 		cookies[msg.n_cookies].psid = t->acct_info.psid;
-		cookies[msg.n_cookies].status = (char*)ps_status_to_str(t->status, 1);
+		cookies[msg.n_cookies].status = t->status;
 
 		msg.cookies[msg.n_cookies] = &cookies[msg.n_cookies];
 		msg.n_cookies++;

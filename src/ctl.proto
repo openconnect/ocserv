@@ -32,7 +32,7 @@ message user_info_rep
 	required uint32 conn_time = 10;
 	optional string hostname = 11;
 	optional string user_agent = 12;
-	required string status = 13;
+	required uint32 status = 13; /* PS_ */
 	optional string tls_ciphersuite = 14;
 	optional string dtls_ciphersuite = 15;
 

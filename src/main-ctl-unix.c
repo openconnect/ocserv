@@ -351,7 +351,7 @@ static int append_user_info(method_ctx *ctx,
 	rep->hostname = ctmp->hostname;
 	rep->user_agent = ctmp->user_agent;
 
-	rep->status = (char*)ps_status_to_str(ctmp->status, 0);
+	rep->status = ctmp->status;
 
 	rep->tls_ciphersuite = ctmp->tls_ciphersuite;
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;

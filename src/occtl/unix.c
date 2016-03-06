@@ -560,7 +560,7 @@ void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_par
 
 		dtls_ciphersuite = fix_ciphersuite(rep->user[i]->dtls_ciphersuite);
 
-		fprintf(out, "%s %14s %9s\n", tmpbuf, dtls_ciphersuite, rep->user[i]->status);
+		fprintf(out, "%s %14s %9s\n", tmpbuf, dtls_ciphersuite, ps_status_to_str(rep->user[i]->status, 0));
 
 		entries_add(ctx, username, strlen(username), rep->user[i]->id);
 	}
@@ -642,7 +642,7 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 
 		fprintf(out, "%.6s %8s %8s %14s %.24s %8s %8s\n",
 			rep->cookies[i]->psid, username, groupname, rep->cookies[i]->remote_ip,
-			rep->cookies[i]->user_agent, tmpbuf, rep->cookies[i]->status);
+			rep->cookies[i]->user_agent, tmpbuf, ps_status_to_str(rep->cookies[i]->status, 1));
 	}
 }
 
@@ -946,7 +946,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 			groupname = NO_GROUP;
 
 		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
-		print_single_value(out, params, "State", args->user[i]->status, 1);
+		print_single_value(out, params, "State", ps_status_to_str(args->user[i]->status, 0), 1);
 		if (args->user[i]->has_mtu != 0)
 			print_pair_value(out, params, "Device", args->user[i]->tun, "MTU", int2str(tmpbuf, args->user[i]->mtu), 1);
 		else
@@ -1079,7 +1079,7 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 
 		print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
 		print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
-		print_single_value(out, params, "State", args->cookies[i]->status, 1);
+		print_single_value(out, params, "State", ps_status_to_str(args->cookies[i]->status, 1), 1);
 
 		t = args->cookies[i]->last_modified;
 		tm = localtime(&t);
@@ -1306,10 +1306,6 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 			goto error;
 
 		if (HAVE_JSON(params)) {
-			if (rep2->connected == 0)
-				rep2->user->user[0]->status = talloc_strdup(rep2, "disconnected");
-			else
-				rep2->user->user[0]->status = talloc_strdup(rep2, "connected");
 			common_info_cmd(rep2->user, stdout, params);
 		} else {
 			groupname = rep2->user->user[0]->groupname;

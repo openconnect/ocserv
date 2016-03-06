@@ -48,7 +48,6 @@
 #include <gnutls/crypto.h>
 #include <gnutls/abstract.h>
 
-#define MAX_WAIT_SECS 3
 #define MAX_PIN_SIZE GNUTLS_PKCS11_MAX_PIN_LEN
 #define MAINTAINANCE_TIME 310
 
@@ -189,7 +188,7 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 	msg.data.data = rep;
 	msg.data.len = rep_size;
 
-	ret = send_msg16(pool, cfd, type, &msg,
+	ret = send_msg(pool, cfd, type, &msg,
 		       (pack_size_func) sec_op_msg__get_packed_size,
 		       (pack_func) sec_op_msg__pack);
 	if (ret < 0) {
@@ -386,7 +385,7 @@ int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request
 			}
 
 			ret =
-			    send_msg16(pool, cfd, RESUME_FETCH_REP, &msg,
+			    send_msg(pool, cfd, RESUME_FETCH_REP, &msg,
 					       (pack_size_func)
 					       session_resume_reply_msg__get_packed_size,
 					       (pack_func)
@@ -538,15 +537,13 @@ static
 int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
-	unsigned cmd, length;
-	uint16_t l16;
+	uint8_t cmd;
+	size_t length;
 	void *pool = buffer;
 
 	/* read request */
-	ret = force_read_timeout(fd, buffer, 3, MAIN_SEC_MOD_TIMEOUT);
-	if (ret == 0)
-		goto leave;
-	else if (ret < 3) {
+	ret = recv_msg_headers(fd, &cmd, MAIN_SEC_MOD_TIMEOUT);
+	if (ret == -1) {
 		e = errno;
 		seclog(sec, LOG_ERR, "error receiving msg head: %s",
 		       strerror(e));
@@ -554,9 +551,7 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 		goto leave;
 	}
 
-	cmd = buffer[0];
-	memcpy(&l16, &buffer[1], 2);
-	length = l16;
+	length = ret;
 
 	seclog(sec, LOG_DEBUG, "received request %s", cmd_request_to_str(cmd));
 	if (cmd <= MIN_SECM_CMD || cmd >= MAX_SECM_CMD) {
@@ -565,8 +560,8 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 		return ERR_BAD_COMMAND;
 	}
 
-	if (length > buffer_size - 4) {
-		seclog(sec, LOG_ERR, "received too big message (%d)", length);
+	if (length > buffer_size) {
+		seclog(sec, LOG_ERR, "received too big message (%d)", (int)length);
 		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
@@ -594,28 +589,24 @@ static
 int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, unsigned buffer_size)
 {
 	int ret, e;
-	unsigned cmd, length;
-	uint16_t l16;
+	uint8_t cmd;
+	size_t length;
 	void *pool = buffer;
 
 	/* read request */
-	ret = force_read_timeout(cfd, buffer, 3, MAX_WAIT_SECS);
-	if (ret == 0)
-		goto leave;
-	else if (ret < 3) {
+	ret = recv_msg_headers(cfd, &cmd, MAX_WAIT_SECS);
+	if (ret == -1) {
 		e = errno;
-		seclog(sec, LOG_INFO, "error receiving msg head: %s",
+		seclog(sec, LOG_ERR, "error receiving msg head: %s",
 		       strerror(e));
-		ret = -1;
+		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
 
-	cmd = buffer[0];
-	memcpy(&l16, &buffer[1], 2);
-	length = l16;
+	length = ret;
 
-	if (length > buffer_size - 4) {
-		seclog(sec, LOG_INFO, "too big message (%d)", length);
+	if (length > buffer_size) {
+		seclog(sec, LOG_INFO, "too big message (%d)", (int)length);
 		ret = -1;
 		goto leave;
 	}
@@ -746,8 +737,8 @@ static int load_keys(sec_mod_st *sec, unsigned force)
  *
  * The security module's reply to the worker has the
  * following format:
- * byte[0-1]: length (uint16_t)
- * byte[2-total]: data (signature or decrypted data)
+ * byte[0-5]: length (uint32_t)
+ * byte[5-total]: data (signature or decrypted data)
  *
  * The reason for having this as a separate process
  * is to avoid any bug on the workers to leak the key.

@@ -236,28 +236,14 @@ static int handle_cookie_auth_res(main_server_st *s, struct proc_st *proc,
 
 int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 {
-	struct iovec iov[3];
 	uint8_t cmd;
-	struct msghdr hdr;
 	AuthCookieRequestMsg *auth_cookie_req;
-	uint16_t length;
+	size_t length;
 	uint8_t *raw;
 	int ret, raw_len, e;
 	PROTOBUF_ALLOCATOR(pa, proc);
 
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = &length;
-	iov[1].iov_len = 2;
-
-	memset(&hdr, 0, sizeof(hdr));
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 2;
-
-	do {
-		ret = recvmsg(proc->fd, &hdr, 0);
-	} while (ret == -1 && errno == EINTR);
+	ret = recv_msg_headers(proc->fd, &cmd, MAX_WAIT_SECS);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, proc, LOG_ERR,
@@ -266,15 +252,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		return ERR_BAD_COMMAND;
 	}
 
-	if (ret == 0) {
-		mslog(s, proc, LOG_DEBUG, "command socket closed");
-		return ERR_WORKER_TERMINATED;
-	}
-
-	if (ret < 3) {
-		mslog(s, proc, LOG_ERR, "command error");
-		return ERR_BAD_COMMAND;
-	}
+	length = ret;
 
 	mslog(s, proc, LOG_DEBUG, "main received message '%s' of %u bytes\n",
 	      cmd_request_to_str(cmd), (unsigned)length);
@@ -285,7 +263,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		return ERR_MEM;
 	}
 
-	raw_len = force_read_timeout(proc->fd, raw, length, 2);
+	raw_len = force_read_timeout(proc->fd, raw, length, MAX_WAIT_SECS);
 	if (raw_len != length) {
 		e = errno;
 		mslog(s, proc, LOG_ERR,

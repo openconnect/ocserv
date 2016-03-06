@@ -79,42 +79,18 @@ static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg *tmsg)
 
 int handle_commands_from_main(struct worker_st *ws)
 {
-	struct iovec iov[3];
 	uint8_t cmd;
-	uint16_t length;
-	int e;
-	struct msghdr hdr;
+	size_t length;
 	uint8_t cmd_data[1536];
+	int e;
 	UdpFdMsg *tmsg = NULL;
-	union {
-		struct cmsghdr    cm;
-		char              control[CMSG_SPACE(sizeof(int))];
-	} control_un;
-	struct cmsghdr  *cmptr;
 	int ret;
+	int fd = -1;
 	/*int cmd_data_len;*/
 
 	memset(&cmd_data, 0, sizeof(cmd_data));
 
-	iov[0].iov_base = &cmd;
-	iov[0].iov_len = 1;
-
-	iov[1].iov_base = &length;
-	iov[1].iov_len = 2;
-
-	iov[2].iov_base = cmd_data;
-	iov[2].iov_len = sizeof(cmd_data);
-
-	memset(&hdr, 0, sizeof(hdr));
-	hdr.msg_iov = iov;
-	hdr.msg_iovlen = 3;
-
-	hdr.msg_control = control_un.control;
-	hdr.msg_controllen = sizeof(control_un.control);
-
-	do {
-		ret = recvmsg( ws->cmd_fd, &hdr, 0);
-	} while(ret == -1 && errno == EINTR);
+	ret = recv_msg_data(ws->cmd_fd, &cmd, cmd_data, sizeof(cmd_data), &fd);
 	if (ret == -1) {
 		e = errno;
 		oclog(ws, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
@@ -126,12 +102,9 @@ int handle_commands_from_main(struct worker_st *ws)
 		return ERR_NO_CMD_FD;
 	}
 
-	if (length > ret - 3) {
-		oclog(ws, LOG_DEBUG, "worker received invalid message %s of %u bytes that claims to be %u\n", cmd_request_to_str(cmd), (unsigned)ret-3, (unsigned)length);
-		exit_worker(ws);
-	} else {
-		oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
-	}
+	length = ret;
+
+	oclog(ws, LOG_DEBUG, "worker received message %s of %u bytes\n", cmd_request_to_str(cmd), (unsigned)length);
 
 	/*cmd_data_len = ret - 1;*/
 
@@ -140,7 +113,6 @@ int handle_commands_from_main(struct worker_st *ws)
 			exit_worker(ws);
 		case CMD_UDP_FD: {
 			unsigned has_hello = 1;
-			int fd;
 
 			if (ws->udp_state != UP_WAIT_FD) {
 				oclog(ws, LOG_DEBUG, "received another a UDP fd!");
@@ -151,43 +123,37 @@ int handle_commands_from_main(struct worker_st *ws)
 				has_hello = tmsg->hello;
 			}
 
-			if ( (cmptr = CMSG_FIRSTHDR(&hdr)) != NULL && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
-				if (cmptr->cmsg_level != SOL_SOCKET || cmptr->cmsg_type != SCM_RIGHTS || CMSG_DATA(cmptr) == NULL) {
-					oclog(ws, LOG_ERR, "received UDP fd message of wrong type");
-					goto udp_fd_fail;
-				}
-
-				memcpy(&fd, CMSG_DATA(cmptr), sizeof(int));
-				set_non_block(fd);
-
-				if (has_hello == 0) {
-					/* check if the first packet received is a valid one -
-					 * if not discard the new fd */
-					if (!recv_from_new_fd(ws, fd, tmsg)) {
-						oclog(ws, LOG_INFO, "received UDP fd message but its session has invalid data!");
-						if (tmsg)
-							udp_fd_msg__free_unpacked(tmsg, NULL);
-						close(fd);
-						return 0;
-					}
-				} else { /* received client hello */
-					ws->udp_state = UP_SETUP;
-				}
-
-				if (ws->dtls_tptr.fd != -1)
-					close(ws->dtls_tptr.fd);
-				if (tmsg && ws->dtls_tptr.msg != NULL)
-					udp_fd_msg__free_unpacked(ws->dtls_tptr.msg, NULL);
-
-				ws->dtls_tptr.msg = tmsg;
-				ws->dtls_tptr.fd = fd;
-
-				oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
-				return 0;
-			} else {
-				oclog(ws, LOG_ERR, "could not receive peer's UDP fd");
-				return -1;
+			if (fd == -1) {
+				oclog(ws, LOG_ERR, "received UDP fd message of wrong type");
+				goto udp_fd_fail;
 			}
+
+			set_non_block(fd);
+
+			if (has_hello == 0) {
+				/* check if the first packet received is a valid one -
+				 * if not discard the new fd */
+				if (!recv_from_new_fd(ws, fd, tmsg)) {
+					oclog(ws, LOG_INFO, "received UDP fd message but its session has invalid data!");
+					if (tmsg)
+						udp_fd_msg__free_unpacked(tmsg, NULL);
+					close(fd);
+					return 0;
+				}
+			} else { /* received client hello */
+				ws->udp_state = UP_SETUP;
+			}
+
+			if (ws->dtls_tptr.fd != -1)
+				close(ws->dtls_tptr.fd);
+			if (tmsg && ws->dtls_tptr.msg != NULL)
+				udp_fd_msg__free_unpacked(ws->dtls_tptr.msg, NULL);
+
+			ws->dtls_tptr.msg = tmsg;
+			ws->dtls_tptr.fd = fd;
+
+			oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
+			return 0;
 
 			}
 			break;

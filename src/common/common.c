@@ -298,7 +298,7 @@ ssize_t recvmsg_timeout(int sockfd, struct msghdr * msg, int flags,
 	return ret;
 }
 
-int forward_msg32(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsigned timeout)
+int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsigned timeout)
 {
 	struct iovec iov[3];
 	char data[5];
@@ -306,10 +306,6 @@ int forward_msg32(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsi
 	ssize_t left;
 	uint8_t rcmd;
 	struct msghdr hdr;
-	union {
-		struct cmsghdr cm;
-		char control[CMSG_SPACE(sizeof(int))];
-	} control_un;
 	int ret;
 
 	iov[0].iov_base = &rcmd;
@@ -321,9 +317,6 @@ int forward_msg32(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsi
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
-
-	hdr.msg_control = control_un.control;
-	hdr.msg_controllen = sizeof(control_un.control);
 
 	ret = recvmsg_timeout(ifd, &hdr, 0, timeout);
 	if (ret == -1) {
@@ -384,11 +377,9 @@ int forward_msg32(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsi
 }
 
 /* Sends message + socketfd */
-static
 int send_socket_msg(void *pool, int fd, uint8_t cmd,
 		    int socketfd, const void *msg,
-		    pack_size_func get_size, pack_func pack,
-		    unsigned use_32bit)
+		    pack_size_func get_size, pack_func pack)
 {
 	struct iovec iov[3];
 	struct msghdr hdr;
@@ -398,7 +389,6 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	} control_un;
 	struct cmsghdr *cmptr;
 	void *packed = NULL;
-	uint16_t length16;
 	uint32_t length32;
 	size_t length = 0;
 	int ret;
@@ -411,21 +401,12 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	if (msg)
 		length = get_size(msg);
 
-	if (use_32bit) {
-		if (length >= UINT32_MAX)
-			return -1;
+	if (length >= UINT32_MAX)
+		return -1;
 
-		length32 = length;
-		iov[1].iov_base = &length32;
-		iov[1].iov_len = 4;
-	} else {
-		if (length >= UINT16_MAX)
-			return -1;
-
-		length16 = length;
-		iov[1].iov_base = &length16;
-		iov[1].iov_len = 2;
-	}
+	length32 = length;
+	iov[1].iov_base = &length32;
+	iov[1].iov_len = 4;
 
 	hdr.msg_iov = iov;
 	hdr.msg_iovlen = 2;
@@ -478,24 +459,129 @@ int send_socket_msg(void *pool, int fd, uint8_t cmd,
 	return ret;
 }
 
-int send_socket_msg16(void *pool, int fd, uint8_t cmd,
-		      int socketfd, const void *msg,
-		      pack_size_func get_size, pack_func pack)
+int recv_msg_headers(int fd, uint8_t *cmd, unsigned timeout)
 {
-	return send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 0);
+	struct iovec iov[3];
+	char buffer[5];
+	uint32_t l32;
+	struct msghdr hdr;
+	int ret;
+
+	iov[0].iov_base = buffer;
+	iov[0].iov_len = 5;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 1;
+
+	ret = recvmsg_timeout(fd, &hdr, 0, timeout);
+	if (ret == -1) {
+		int e = errno;
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		       strerror(e));
+		return -1;
+	}
+
+	if (ret == 0) {
+		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
+		       __LINE__);
+		return -1;
+	}
+
+	*cmd = buffer[0];
+	memcpy(&l32, &buffer[1], 4);
+
+	return l32;
 }
 
-int send_socket_msg32(void *pool, int fd, uint8_t cmd,
-		      int socketfd, const void *msg,
-		      pack_size_func get_size, pack_func pack)
+int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
+		  int *received_fd)
 {
-	return send_socket_msg(pool, fd, cmd, socketfd, msg, get_size, pack, 1);
+	struct iovec iov[3];
+	uint32_t l32;
+	struct msghdr hdr;
+	union {
+		struct cmsghdr cm;
+		char control[CMSG_SPACE(sizeof(int))];
+	} control_un;
+	struct cmsghdr *cmptr;
+	int ret;
+
+	iov[0].iov_base = cmd;
+	iov[0].iov_len = 1;
+
+	iov[1].iov_base = &l32;
+	iov[1].iov_len = 4;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = iov;
+	hdr.msg_iovlen = 2;
+
+	hdr.msg_control = control_un.control;
+	hdr.msg_controllen = sizeof(control_un.control);
+
+	ret = recvmsg_timeout(fd, &hdr, 0, MAIN_SEC_MOD_TIMEOUT);
+	if (ret == -1) {
+		int e = errno;
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
+		       strerror(e));
+		return -1;
+	}
+
+	if (ret == 0) {
+		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
+		       __LINE__);
+		return -1;
+	}
+
+	/* try to receive socket (if any) */
+	if (received_fd != NULL) {
+		*received_fd = -1;
+
+		if ((cmptr = CMSG_FIRSTHDR(&hdr)) != NULL
+		    && cmptr->cmsg_len == CMSG_LEN(sizeof(int))) {
+			if (cmptr->cmsg_level != SOL_SOCKET
+			    || cmptr->cmsg_type != SCM_RIGHTS) {
+				syslog(LOG_ERR,
+				       "%s:%u: recvmsg returned invalid msg type",
+				       __FILE__, __LINE__);
+				return ERR_BAD_COMMAND;
+			}
+
+			if (CMSG_DATA(cmptr))
+				memcpy(received_fd, CMSG_DATA(cmptr), sizeof(int));
+		}
+	}
+
+	if (l32 > data_size) {
+		syslog(LOG_ERR, "%s:%u: recv_msg_data: received more data than expected", __FILE__,
+		       __LINE__);
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = force_read_timeout(fd, data, l32, MAIN_SEC_MOD_TIMEOUT);
+	if (ret < l32) {
+		int e = errno;
+		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
+		       __LINE__, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = l32;
+
+ cleanup:
+	if (ret < 0 && received_fd != NULL && *received_fd != -1) {
+		close(*received_fd);
+		*received_fd = -1;
+	}
+	return ret;
 }
 
-static
 int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		    int *socketfd, void **msg, unpack_func unpack,
-		    unsigned timeout, unsigned use_32bits)
+		    unsigned timeout)
 {
 	struct iovec iov[3];
 	uint32_t length;
@@ -514,11 +600,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	iov[0].iov_len = 1;
 
 	iov[1].iov_base = &length;
-	if (use_32bits) {
-		iov[1].iov_len = 4;
-	} else {
-		iov[1].iov_len = 2;
-	}
+	iov[1].iov_len = 4;
 
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.msg_iov = iov;
@@ -545,12 +627,6 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		syslog(LOG_ERR, "%s:%u: expected %d, received %d", __FILE__,
 		       __LINE__, (int)rcmd, (int)cmd);
 		return ERR_BAD_COMMAND;
-	}
-
-	if (!use_32bits) {
-		uint16_t l16;
-		memcpy(&l16, &length, 2);
-		length = l16;
 	}
 
 	/* try to receive socket (if any) */
@@ -603,25 +679,13 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 
  cleanup:
 	talloc_free(data);
-	if (ret < 0 && socketfd != NULL && *socketfd != -1)
+	if (ret < 0 && socketfd != NULL && *socketfd != -1) {
 		close(*socketfd);
+		*socketfd = -1;
+	}
 	return ret;
 }
 
-
-int recv_socket_msg16(void *pool, int fd, uint8_t cmd,
-		    int *socketfd, void **msg, unpack_func unpack,
-		    unsigned timeout)
-{
-	return recv_socket_msg(pool,fd, cmd, socketfd, msg, unpack, timeout, 0);
-}
-
-int recv_socket_msg32(void *pool, int fd, uint8_t cmd,
-		    int *socketfd, void **msg, unpack_func unpack,
-		    unsigned timeout)
-{
-	return recv_socket_msg(pool,fd, cmd, socketfd, msg, unpack, timeout, 1);
-}
 
 void _talloc_free2(void *ctx, void *ptr)
 {

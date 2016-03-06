@@ -117,6 +117,7 @@ inline static const char *proto_to_str(fw_proto_t proto)
 
 /* Timeout (secs) for communication between main and sec-mod */
 #define MAIN_SEC_MOD_TIMEOUT 120
+#define MAX_WAIT_SECS 3
 
 #define DEBUG_BASIC 1
 #define DEBUG_INFO  3

@@ -299,7 +299,7 @@ int send_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t cmd,
 	    const void* msg, pack_size_func get_size, pack_func pack)
 {
 	mslog(s, proc, LOG_DEBUG, "sending message '%s' to worker", cmd_request_to_str(cmd));
-	return send_msg16(proc, proc->fd, cmd, msg, get_size, pack);
+	return send_msg(proc, proc->fd, cmd, msg, get_size, pack);
 }
 
 inline static
@@ -307,7 +307,7 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 		int socketfd, const void* msg, pack_size_func get_size, pack_func pack)
 {
 	mslog(s, proc, LOG_DEBUG, "sending (socket) message %u to worker", (unsigned)cmd);
-	return send_socket_msg16(proc, proc->fd, cmd, socketfd, msg, get_size, pack);
+	return send_socket_msg(proc, proc->fd, cmd, socketfd, msg, get_size, pack);
 }
 
 void request_reload(int signo);

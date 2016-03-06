@@ -94,42 +94,12 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 		 pack_size_func get_size, pack_func pack,
 		 struct cmd_reply_st *rep)
 {
-	uint8_t header[3];
-	struct iovec iov[2];
-	unsigned iov_len = 1;
 	int e, ret;
-	uint16_t rlength = 0;
 	uint32_t length32 = 0;
 	void *packed = NULL;
+	uint8_t rcmd;
 
-	if (get_size)
-		rlength = get_size(data);
-
-	header[0] = cmd;
-	memcpy(&header[1], &rlength, 2);
-
-	iov[0].iov_base = header;
-	iov[0].iov_len = 3;
-
-	if (data != NULL) {
-		packed = talloc_size(ctx, rlength);
-		if (packed == NULL) {
-			fprintf(stderr, "memory error\n");
-			return -1;
-		}
-		iov[1].iov_base = packed;
-		iov[1].iov_len = rlength;
-		
-		ret = pack(data, packed);
-		if (ret == 0) {
-			fprintf(stderr, "data packing error\n");
-			ret = -1;
-			goto fail;
-		}
-		iov_len++;
-	}
-
-	ret = writev(ctx->fd, iov, iov_len);
+	ret = send_msg(ctx, ctx->fd, cmd, data, get_size, pack);
 	if (ret < 0) {
 		e = errno;
 		fprintf(stderr, "writev: %s\n", strerror(e));
@@ -138,7 +108,7 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 	}
 
 	if (rep != NULL) {
-		ret = force_read_timeout(ctx->fd, header, 1+sizeof(length32), DEFAULT_TIMEOUT);
+		ret = recv_msg_headers(ctx->fd, &rcmd, DEFAULT_TIMEOUT);
 		if (ret == -1) {
 			/*e = errno;
 			fprintf(stderr, "read: %s\n", strerror(e));*/
@@ -146,21 +116,14 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 			goto fail;
 		}
 
-		if (ret != 1+sizeof(length32)) {
-			fprintf(stderr, "short read %d\n", ret);
-			ret = -1;
-			goto fail;
-		}
-
-		rep->cmd = header[0];
+		rep->cmd = rcmd;
+		length32 = ret;
 
 		if (msg_map[cmd] != rep->cmd) {
 			fprintf(stderr, "Unexpected message '%d', expected '%d'\n", (int)rep->cmd, (int)msg_map[cmd]);
 			ret = -1;
 			goto fail;
 		}
-
-		memcpy(&length32, &header[1], 4);
 
 		rep->data_size = length32;
 		rep->data = talloc_size(ctx, length32);

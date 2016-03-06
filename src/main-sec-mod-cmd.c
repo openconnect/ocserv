@@ -146,7 +146,7 @@ int handle_sec_mod_commands(main_server_st * s)
 
 			mslog(s, NULL, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_BAN_IP_REPLY));
 
-			ret = send_msg16(NULL, s->sec_mod_fd, CMD_SECM_BAN_IP_REPLY,
+			ret = send_msg(NULL, s->sec_mod_fd, CMD_SECM_BAN_IP_REPLY,
 				&reply, (pack_size_func)ban_ip_reply_msg__get_packed_size,
 				(pack_func)ban_ip_reply_msg__pack);
 			if (ret < 0) {
@@ -431,7 +431,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_OPEN));
 
-	ret = send_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_OPEN,
+	ret = send_msg(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_OPEN,
 		&ireq, (pack_size_func)secm_session_open_msg__get_packed_size,
 		(pack_func)secm_session_open_msg__pack);
 	if (ret < 0) {
@@ -440,7 +440,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 		return -1;
 	}
 
-	ret = recv_msg32(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
+	ret = recv_msg(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
 	       (void *)&msg, (unpack_func) secm_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
@@ -513,7 +513,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_CLOSE));
 
-	ret = send_msg16(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_CLOSE,
+	ret = send_msg(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_CLOSE,
 		&ireq, (pack_size_func)secm_session_close_msg__get_packed_size,
 		(pack_func)secm_session_close_msg__pack);
 	if (ret < 0) {
@@ -522,7 +522,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 		return -1;
 	}
 
-	ret = recv_msg32(proc, s->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
+	ret = recv_msg(proc, s->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
 	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;

@@ -32,7 +32,7 @@ static void send_empty_reply(void *pool, int fd, sec_mod_st *sec)
 	SecmListCookiesReplyMsg msg = SECM_LIST_COOKIES_REPLY_MSG__INIT;
 	int ret;
 	
-	ret = send_msg32(pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
+	ret = send_msg(pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
 		(pack_size_func) secm_list_cookies_reply_msg__get_packed_size,
 		(pack_func) secm_list_cookies_reply_msg__pack);
 	if (ret < 0) {
@@ -53,6 +53,8 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		send_empty_reply(pool, fd, sec);
 		return;
 	}
+
+	seclog(sec, LOG_DEBUG, "sending list cookies reply to main");
 
 	msg.cookies = talloc_size(pool, sizeof(CookieIntMsg*)*db->elems);
 	if (msg.cookies == NULL) {
@@ -91,7 +93,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		t = htable_next(db, &iter);
 	}
 
-	ret = send_msg32(pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
+	ret = send_msg(pool, fd, CMD_SECM_LIST_COOKIES_REPLY, &msg,
 		(pack_size_func) secm_list_cookies_reply_msg__get_packed_size,
 		(pack_func) secm_list_cookies_reply_msg__pack);
 	if (ret < 0) {

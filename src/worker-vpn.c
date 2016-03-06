@@ -282,7 +282,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	msg.ip = ws->remote_ip_str;
 	msg.score = points;
 
-	ret = send_msg16(ws, ws->cmd_fd, CMD_BAN_IP, &msg,
+	ret = send_msg(ws, ws->cmd_fd, CMD_BAN_IP, &msg,
 				(pack_size_func) ban_ip_msg__get_packed_size,
 				(pack_func) ban_ip_msg__pack);
 	if (ret < 0) {
@@ -294,7 +294,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	if (final != 0)
 		return;
 
-	ret = recv_msg16(ws, ws->cmd_fd, CMD_BAN_IP_REPLY,
+	ret = recv_msg(ws, ws->cmd_fd, CMD_BAN_IP_REPLY,
 		       (void *)&reply, (unpack_func) ban_ip_reply_msg__unpack, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving BAN IP reply message");

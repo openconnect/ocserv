@@ -186,7 +186,7 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.stored_tls_sessions = ctx->s->tlsdb_entries;
 	rep.banned_ips = main_ban_db_elems(ctx->s);
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,
 		       (pack_func) status_rep__pack);
 	if (ret < 0) {
@@ -208,7 +208,7 @@ static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	rep.status = 1;
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_RELOAD_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_RELOAD_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -230,7 +230,7 @@ static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	rep.status = 1;
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_STOP_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_STOP_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -420,7 +420,7 @@ static void method_list_users(method_ctx *ctx, int cfd, uint8_t * msg,
 		}
 	}
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
 		       (pack_size_func) user_list_rep__get_packed_size,
 		       (pack_func) user_list_rep__pack);
 	if (ret < 0) {
@@ -498,7 +498,7 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 		e = htable_next(db, &iter);
 	}
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_LIST_BANNED_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_BANNED_REP, &rep,
 		       (pack_size_func) ban_list_rep__get_packed_size,
 		       (pack_func) ban_list_rep__pack);
 	if (ret < 0) {
@@ -516,14 +516,14 @@ static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-cookies");
 
-	ret = send_msg16(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES,
+	ret = send_msg(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES,
 			 NULL, NULL, NULL);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies to sec-mod!");
 	}
 
-	ret = forward_msg32(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES_REPLY,
-			    cfd, CTL_CMD_LIST_COOKIES_REP, MAIN_SEC_MOD_TIMEOUT);
+	ret = forward_msg(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES_REPLY,
+			  cfd, CTL_CMD_LIST_COOKIES_REP, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies reply");
 	}
@@ -575,7 +575,7 @@ static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,
 			mslog(ctx->s, NULL, LOG_INFO, "could not find ID '%u'", id);
 	}
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_REP, &rep,
 		       (pack_size_func) user_list_rep__get_packed_size,
 		       (pack_func) user_list_rep__pack);
 	if (ret < 0) {
@@ -647,7 +647,7 @@ static void method_unban_ip(method_ctx *ctx,
 
 	unban_req__free_unpacked(req, NULL);
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_UNBAN_IP_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_UNBAN_IP_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -686,7 +686,7 @@ static void method_disconnect_user_name(method_ctx *ctx,
 
 	username_req__free_unpacked(req, NULL);
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_NAME_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -726,7 +726,7 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	/* reply */
 	id_req__free_unpacked(req, NULL);
 
-	ret = send_msg32(ctx->pool, cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_DISCONNECT_ID_REP, &rep,
 		       (pack_size_func) bool_msg__get_packed_size,
 		       (pack_func) bool_msg__pack);
 	if (ret < 0) {
@@ -745,9 +745,9 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
 	int ret, e;
-	uint16_t length;
+	size_t length;
+	uint8_t cmd;
 	uint8_t buffer[256];
-	unsigned buffer_size;
 	method_ctx ctx;
 	struct ctl_watcher_st *wst = container_of(w, struct ctl_watcher_st, ctl_cmd_io);
 	unsigned i, indef = 0;
@@ -759,41 +759,24 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 		goto fail;
 
 	/* read request */
-	ret = recv(wst->fd, buffer, sizeof(buffer), 0);
-	if (ret == 0)
-		goto fail;
-
-	if (ret < 3) {
-		if (ret == -1) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "error receiving ctl data: %s",
-			      strerror(e));
-		} else {
-			mslog(s, NULL, LOG_ERR, "received ctl data: %d bytes",
-			      ret);
-		}
-		goto fail;
+	ret = recv_msg_data(wst->fd, &cmd, buffer, sizeof(buffer), NULL);
+	if (ret == -1) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "error receiving ctl data: %s",
+		      strerror(e));
 	}
 
-	memcpy(&length, &buffer[1], 2);
-	buffer_size = ret - 3;
-
-	if (length != buffer_size) {
-		mslog(s, NULL, LOG_ERR,
-		      "received data length doesn't match received data (%d/%d)",
-		      buffer_size, (int)length);
-		goto fail;
-	}
+	length = ret;
 
 	for (i = 0;; i++) {
 		if (methods[i].cmd == 0) {
 			mslog(s, NULL, LOG_INFO,
 			      "unknown unix ctl message: 0x%.1x",
-			      (unsigned)buffer[0]);
+			      (unsigned)cmd);
 			break;
-		} else if (methods[i].cmd == buffer[0]) {
+		} else if (methods[i].cmd == cmd) {
 			indef = methods[i].indefinite;
-			methods[i].func(&ctx, wst->fd, buffer + 3, buffer_size);
+			methods[i].func(&ctx, wst->fd, buffer, length);
 			break;
 		}
 	}
@@ -901,7 +884,7 @@ void ctl_handler_notify (main_server_st* s, struct proc_st *proc, unsigned conne
 	}
 	rep.user = &list;
 
-	ret = send_msg32(pool, s->top_fd, CTL_CMD_TOP_UPDATE_REP, &rep,
+	ret = send_msg(pool, s->top_fd, CTL_CMD_TOP_UPDATE_REP, &rep,
 		       (pack_size_func) top_update_rep__get_packed_size,
 		       (pack_func) top_update_rep__pack);
 	if (ret < 0) {

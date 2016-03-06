@@ -38,7 +38,10 @@ gl/stdlib.h
 gl/sys/stat.h
 gl/sys/time.h
 gl/sys/types.h
-src/ocpasswd
+src/ocpasswd/ocpasswd
+src/ocpasswd/args.c
+src/ocpasswd/args.h
+src/ocpasswd/libcmd-ocpasswd.a
 src/stamp-man
 doc/stamp-man
 doc/ocpasswd.8
@@ -46,9 +49,6 @@ src/pcl/libpcl.a
 src/version.inc
 src/ocserv-args.c
 src/ocserv-args.h
-src/ocpasswd-args.h
-src/ocpasswd-args.c
-src/libcmd-ocpasswd.a
 src/libcmd-ocserv.a
 src/protobuf/libprotobuf.a
 src/common/libcommon.a
@@ -56,7 +56,12 @@ src/common/ctl.pb-c.c
 src/common/ctl.pb-c.h
 src/ipc.pb-c.c
 src/ipc.pb-c.h
-src/occtl
+src/ctl.pb-c.c
+src/ctl.pb-c.h
+src/libipc.a
+src/occtl/occtl
+src/occtl/args.c
+src/occtl/args.h
 .dirstamp
 config.h.in
 doc/occtl.8
@@ -77,3 +82,6 @@ src/http-heads.h
 tests/kkdcp-parsing
 tests/json-escape
 src/ccan/libccan.a
+tests/ban-ips
+tests/human_addr
+tests/port-parsing

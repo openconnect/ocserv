@@ -9,6 +9,8 @@
   re-forwarded, attempt to decrypt the first message and keep the new
   descriptor if succeeded.
 - Added getpid() to seccomp filter of allowed system calls.
+- occtl: Added the show cookies command to allow viewing all existing
+  valid for authentication cookies.
 
 
 * Version 0.11.0 (released 2016-02-19)

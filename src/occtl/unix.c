@@ -1104,6 +1104,7 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		t = args->cookies[i]->last_modified;
 		tm = localtime(&t);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+		print_single_value(out, params, "Last Modified", str_since, 0);
 
 		username = args->cookies[i]->username;
 		if (username == NULL || username[0] == 0)
@@ -1122,10 +1123,8 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		str_since[0] = 0;
 		hex_encode(args->cookies[i]->sid.data, args->cookies[i]->sid.len, str_since, sizeof(str_since));
 		print_single_value(out, params, "cookie", str_since, 1);
-
 		print_single_value(out, params, "Printable cookie", args->cookies[i]->psid, 1);
 
-		print_single_value(out, params, "Last Modified", str_since, 0);
 
 		print_end_block(out, params, i<(args->n_cookies-1)?1:0);
 

@@ -68,6 +68,9 @@ typedef struct common_acct_info_st {
 	unsigned id;
 } common_acct_info_st;
 
+#define IS_CLIENT_ENTRY_EXPIRED_FULL(sec, e, now, clean) (e->time != -1 && (now - e->time) > (sec->config->cookie_timeout + (clean?AUTH_SLACK_TIME:0)) && e->in_use == 0)
+#define IS_CLIENT_ENTRY_EXPIRED(sec, e, now) IS_CLIENT_ENTRY_EXPIRED_FULL(sec, e, now, 0)
+
 typedef struct client_entry_st {
 	/* A unique session identifier used to distinguish sessions
 	 * prior to authentication. It is sent as cookie to the client

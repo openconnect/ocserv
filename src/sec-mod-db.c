@@ -168,8 +168,7 @@ void cleanup_client_entries(sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if (t->time != -1 && (now - t->time) > (sec->config->cookie_timeout + AUTH_SLACK_TIME) && 
-		    t->in_use == 0) {
+		if IS_CLIENT_ENTRY_EXPIRED_FULL(sec, t, now, 1) {
 			htable_delval(db, &iter);
 			clean_entry(sec, t);
 		}

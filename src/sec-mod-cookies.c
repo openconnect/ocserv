@@ -48,6 +48,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 	struct htable_iter iter;
 	CookieIntMsg *cookies;
 	int ret;
+	time_t now = time(0);
 
 	if (db == NULL) {
 		send_empty_reply(pool, fd, sec);
@@ -70,6 +71,9 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
+		if IS_CLIENT_ENTRY_EXPIRED(sec, t, now)
+			continue;
+
 		if (msg.n_cookies >= db->elems)
 			break;
 

@@ -384,7 +384,7 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 		return send_failed_session_open_reply(sec, fd);
 	}
 
-	if (e->time != -1 && time(0) > e->time + sec->config->cookie_timeout) {
+	if IS_CLIENT_ENTRY_EXPIRED(sec, e, time(0)) {
 		seclog(sec, LOG_ERR, "session expired; denied session for user '%s' "SESSION_STR, e->acct_info.username, e->acct_info.psid);
 		e->status = PS_AUTH_FAILED;
 		return send_failed_session_open_reply(sec, fd);

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013, 2014 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
  *
@@ -82,7 +83,6 @@ int handle_commands_from_main(struct worker_st *ws)
 	uint8_t cmd;
 	size_t length;
 	uint8_t cmd_data[1536];
-	int e;
 	UdpFdMsg *tmsg = NULL;
 	int ret;
 	int fd = -1;
@@ -91,9 +91,8 @@ int handle_commands_from_main(struct worker_st *ws)
 	memset(&cmd_data, 0, sizeof(cmd_data));
 
 	ret = recv_msg_data(ws->cmd_fd, &cmd, cmd_data, sizeof(cmd_data), &fd);
-	if (ret == -1) {
-		e = errno;
-		oclog(ws, LOG_ERR, "cannot obtain data from command socket: %s", strerror(e));
+	if (ret < 0) {
+		oclog(ws, LOG_DEBUG, "cannot obtain data from command socket");
 		exit_worker(ws);
 	}
 

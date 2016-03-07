@@ -244,12 +244,10 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 	PROTOBUF_ALLOCATOR(pa, proc);
 
 	ret = recv_msg_headers(proc->fd, &cmd, MAX_WAIT_SECS);
-	if (ret == -1) {
-		e = errno;
-		mslog(s, proc, LOG_ERR,
-		      "cannot obtain metadata from command socket: %s",
-		      strerror(e));
-		return ERR_BAD_COMMAND;
+	if (ret < 0) {
+		mslog(s, proc, LOG_INFO,
+		      "cannot obtain metadata from command socket");
+		return ret;
 	}
 
 	length = ret;

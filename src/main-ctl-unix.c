@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Red Hat
+ * Copyright (C) 2014-2016 Red Hat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -744,7 +744,7 @@ struct ctl_watcher_st {
 static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
-	int ret, e;
+	int ret;
 	size_t length;
 	uint8_t cmd;
 	uint8_t buffer[256];
@@ -760,10 +760,9 @@ static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 
 	/* read request */
 	ret = recv_msg_data(wst->fd, &cmd, buffer, sizeof(buffer), NULL);
-	if (ret == -1) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "error receiving ctl data: %s",
-		      strerror(e));
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "error receiving ctl data");
+		goto fail;
 	}
 
 	length = ret;

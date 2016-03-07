@@ -543,11 +543,8 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 
 	/* read request */
 	ret = recv_msg_headers(fd, &cmd, MAIN_SEC_MOD_TIMEOUT);
-	if (ret == -1) {
-		e = errno;
-		seclog(sec, LOG_ERR, "error receiving msg head: %s",
-		       strerror(e));
-		ret = ERR_BAD_COMMAND;
+	if (ret < 0) {
+		seclog(sec, LOG_ERR, "error receiving msg head from main");
 		goto leave;
 	}
 
@@ -595,11 +592,8 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 
 	/* read request */
 	ret = recv_msg_headers(cfd, &cmd, MAX_WAIT_SECS);
-	if (ret == -1) {
-		e = errno;
-		seclog(sec, LOG_ERR, "error receiving msg head: %s",
-		       strerror(e));
-		ret = ERR_BAD_COMMAND;
+	if (ret < 0) {
+		seclog(sec, LOG_DEBUG, "error receiving msg head from worker");
 		goto leave;
 	}
 

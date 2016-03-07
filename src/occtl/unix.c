@@ -110,7 +110,7 @@ int send_cmd(struct unix_ctx *ctx, unsigned cmd, const void *data,
 
 	if (rep != NULL) {
 		ret = recv_msg_headers(ctx->fd, &rcmd, DEFAULT_TIMEOUT);
-		if (ret == -1) {
+		if (ret < 0) {
 			/*e = errno;
 			fprintf(stderr, "read: %s\n", strerror(e));*/
 			ret = -1;

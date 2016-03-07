@@ -479,13 +479,13 @@ int recv_msg_headers(int fd, uint8_t *cmd, unsigned timeout)
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
 		       strerror(e));
-		return -1;
+		return ERR_BAD_COMMAND;
 	}
 
 	if (ret == 0) {
 		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
 		       __LINE__);
-		return -1;
+		return ERR_PEER_TERMINATED;
 	}
 
 	*cmd = buffer[0];
@@ -525,13 +525,13 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__, __LINE__,
 		       strerror(e));
-		return -1;
+		return ERR_BAD_COMMAND;
 	}
 
 	if (ret == 0) {
 		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
 		       __LINE__);
-		return -1;
+		return ERR_PEER_TERMINATED;
 	}
 
 	/* try to receive socket (if any) */
@@ -556,7 +556,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	if (l32 > data_size) {
 		syslog(LOG_ERR, "%s:%u: recv_msg_data: received more data than expected", __FILE__,
 		       __LINE__);
-		ret = -1;
+		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
 
@@ -565,7 +565,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 		int e = errno;
 		syslog(LOG_ERR, "%s:%u: recvmsg: %s", __FILE__,
 		       __LINE__, strerror(e));
-		ret = -1;
+		ret = ERR_BAD_COMMAND;
 		goto cleanup;
 	}
 
@@ -618,7 +618,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	}
 
 	if (ret == 0) {
-		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
+		syslog(LOG_DEBUG, "%s:%u: recvmsg returned zero", __FILE__,
 		       __LINE__);
 		return ERR_PEER_TERMINATED;
 	}

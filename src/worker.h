@@ -333,6 +333,7 @@ int disable_system_calls(struct worker_st *ws);
 void ocsigaltstack(struct worker_st *ws);
 
 void exit_worker(worker_st * ws);
+void exit_worker_reason(worker_st * ws, unsigned reason);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth);
 void ws_disable_auth(struct worker_st *ws, unsigned auth);

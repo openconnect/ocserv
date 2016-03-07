@@ -93,7 +93,7 @@ int handle_commands_from_main(struct worker_st *ws)
 	ret = recv_msg_data(ws->cmd_fd, &cmd, cmd_data, sizeof(cmd_data), &fd);
 	if (ret < 0) {
 		oclog(ws, LOG_DEBUG, "cannot obtain data from command socket");
-		exit_worker(ws);
+		exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
 	}
 
 	if (ret == 0) {
@@ -109,7 +109,7 @@ int handle_commands_from_main(struct worker_st *ws)
 
 	switch(cmd) {
 		case CMD_TERMINATE:
-			exit_worker(ws);
+			exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
 		case CMD_UDP_FD: {
 			unsigned has_hello = 1;
 
@@ -158,7 +158,7 @@ int handle_commands_from_main(struct worker_st *ws)
 			break;
 		default:
 			oclog(ws, LOG_ERR, "unknown CMD 0x%x", (unsigned)cmd);
-			exit_worker(ws);
+			exit_worker_reason(ws, REASON_ERROR);
 	}
 
 	return 0;

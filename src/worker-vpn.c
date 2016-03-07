@@ -83,8 +83,6 @@ static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
-void exit_worker(worker_st * ws);
-static void exit_worker_reason(worker_st * ws, unsigned reason);
 static int connect_handler(worker_st * ws);
 static void session_info_send(worker_st * ws);
 
@@ -364,7 +362,7 @@ void exit_worker(worker_st * ws)
 	exit_worker_reason(ws, REASON_ANY);
 }
 
-static void exit_worker_reason(worker_st * ws, unsigned reason)
+void exit_worker_reason(worker_st * ws, unsigned reason)
 {
 	/* send statistics to parent */
 	if (ws->auth_state == S_AUTH_COMPLETE) {

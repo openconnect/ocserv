@@ -819,6 +819,7 @@ $ cat << _EOF_ >server.tmpl
 cn = "VPN server"
 dns_name = "www.example.com"
 dns_name = "vpn1.example.com"
+#ip_address = "1.2.3.4"
 organization = "MyCompany"
 expiration_days = -1
 signing_key

@@ -245,7 +245,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 	ret = recv_msg_headers(proc->fd, &cmd, MAX_WAIT_SECS);
 	if (ret < 0) {
-		mslog(s, proc, LOG_INFO,
+		mslog(s, proc, LOG_DEBUG,
 		      "cannot obtain metadata from command socket");
 		return ret;
 	}

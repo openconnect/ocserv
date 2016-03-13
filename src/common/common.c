@@ -327,8 +327,6 @@ int forward_msg(void *pool, int ifd, uint8_t icmd, int ofd, uint8_t ocmd, unsign
 	}
 
 	if (ret == 0) {
-		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
-		       __LINE__);
 		return ERR_PEER_TERMINATED;
 	}
 
@@ -483,8 +481,6 @@ int recv_msg_headers(int fd, uint8_t *cmd, unsigned timeout)
 	}
 
 	if (ret == 0) {
-		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
-		       __LINE__);
 		return ERR_PEER_TERMINATED;
 	}
 
@@ -529,8 +525,6 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size,
 	}
 
 	if (ret == 0) {
-		syslog(LOG_ERR, "%s:%u: recvmsg returned zero", __FILE__,
-		       __LINE__);
 		return ERR_PEER_TERMINATED;
 	}
 
@@ -618,8 +612,6 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 	}
 
 	if (ret == 0) {
-		syslog(LOG_DEBUG, "%s:%u: recvmsg returned zero", __FILE__,
-		       __LINE__);
 		return ERR_PEER_TERMINATED;
 	}
 

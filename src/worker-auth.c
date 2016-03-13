@@ -866,7 +866,7 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 
 	ret = recv_cookie_auth_reply(ws);
 	if (ret < 0) {
-		oclog(ws, LOG_INFO,
+		oclog(ws, LOG_DEBUG,
 		      "error receiving cookie authentication reply");
 		return ret;
 	}

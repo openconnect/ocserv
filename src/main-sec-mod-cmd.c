@@ -449,7 +449,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	}
 
 	if (msg->reply != AUTH__REP__OK) {
-		mslog(s, proc, LOG_INFO, "could not initiate session");
+		mslog(s, proc, LOG_DEBUG, "could not initiate session");
 		return -1;
 	}
 

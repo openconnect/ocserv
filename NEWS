@@ -1,4 +1,4 @@
-* Version 0.11.1 (unreleased)
+* Version 0.11.1 (released 2016-03-19)
 - Several *BSD compilation fixes. Reported by Björn Ketelaars.
 - The ipv4-network option in user configuration allows for prefix. Reported
   by Frank Rosquin.

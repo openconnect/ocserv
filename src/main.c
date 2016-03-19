@@ -705,8 +705,7 @@ int sfd = -1;
 	}
 	buffer_size = ret;
 
-	/* obtain the session id */
-	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
+	if (buffer_size < RECORD_PAYLOAD_POS) {
 		mslog(s, NULL, LOG_INFO, "%s: too short UDP packet",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 		goto fail;
@@ -732,7 +731,7 @@ int sfd = -1;
 		mslog(s, NULL, LOG_DEBUG, "%s: unexpected DTLS content type: %u; possibly a firewall disassociated a UDP session",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)),
 		      (unsigned int)s->msg_buffer[0]);
-		/* Here we received a non-client hello packet. It may be that
+		/* Here we received a non-client-hello packet. It may be that
 		 * the client's NAT changed its UDP source port and the previous
 		 * connection is invalidated. Try to see if we can simply match
 		 * the IP address and forward the socket.
@@ -743,6 +742,14 @@ int sfd = -1;
 		if (s->perm_config->unix_conn_file)
 			goto fail;
 	} else {
+		/* A client hello packet. We can get the session ID and figure
+		 * the associated connection. */
+		if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
+			mslog(s, NULL, LOG_INFO, "%s: too short handshake packet",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
+			goto fail;
+		}
+
 		/* read session_id */
 		session_id_size = s->msg_buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
 		session_id = &s->msg_buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
@@ -797,8 +804,8 @@ int sfd = -1;
 
 		if (match_ip_only != 0) {
 			msg.hello = 0; /* by default this is one */
-		} else {
 		}
+
 		msg.data.data = s->msg_buffer;
 		msg.data.len = buffer_size;
 

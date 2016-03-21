@@ -752,7 +752,7 @@ int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 			}
 
 			for (j=0;j<rep->user[i]->n_iroutes;j++)
-				fprintf(out, "%6d %8s %6s %16s %28s",
+				fprintf(out, "%6d %8s %6s %16s %28s\n",
 					(int)rep->user[i]->id, username, rep->user[i]->tun, vpn_ip, rep->user[i]->iroutes[j]);
 
 		}

@@ -641,7 +641,8 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 			tm = localtime(&t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 		} else {
-			str_since[0] = 0;
+			str_since[0] = '?';
+			str_since[1] = 0;
 		}
 
 		groupname = rep->cookies[i]->groupname;

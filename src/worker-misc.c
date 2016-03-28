@@ -145,7 +145,7 @@ int handle_commands_from_main(struct worker_st *ws)
 
 			if (ws->dtls_tptr.fd != -1)
 				close(ws->dtls_tptr.fd);
-			if (tmsg && ws->dtls_tptr.msg != NULL)
+			if (ws->dtls_tptr.msg != NULL)
 				udp_fd_msg__free_unpacked(ws->dtls_tptr.msg, NULL);
 
 			ws->dtls_tptr.msg = tmsg;

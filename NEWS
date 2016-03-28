@@ -1,4 +1,12 @@
-* Version 0.11.1 (unreleased)
+* Version 0.11.2 (unreleased)
+- radius: replaced experimental Group-Name with Class attribute;
+  the current format of Class "OU=group1;group2" allows to handle
+  multiple groups.
+- Do not require a client hello handshake packet to forward a UDP session;
+  that is, allow any small DPD packets to be sent to the correct
+  worker process.
+- Do not allow to combine radius' groupconfig=true with config-per-user;
+  these options are incompatible with each other.
 - occtl: Fixes in the presentation of iroutes and cookies.
 
 

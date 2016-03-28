@@ -82,6 +82,11 @@ ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
 # a CIDR string)
 ATTRIBUTE	Framed-Route		22	string
 
+# Sets group name using format "OU=group1;group2"
+# Note that the groups sent by the server must be made known
+# to ocserv, via the select-group variable.
+ATTRIBUTE	Class			25	string
+
 # sets DNS servers
 VENDOR Microsoft 311
 
@@ -112,14 +117,4 @@ ATTRIBUTE	DNS-Server-IPv6-Address	169	ipv6addr
 # Sets IPv6 routes
 ATTRIBUTE	Framed-IPv6-Prefix	97	ipv6prefix
 ATTRIBUTE	Route-IPv6-Information	170	ipv6prefix
-
-
-
-############################
-#  Experimental attributes #
-############################
-
-#	Experimental Non Protocol Attributes used by Cistron-Radiusd
-#
-ATTRIBUTE	Group-Name		1030	string
 ```

@@ -77,6 +77,8 @@ inline static void str_reset(str_st * buf)
 	buf->length = 0;
 }
 
+void trim_trailing_whitespace(char *str);
+
 int str_append_printf(str_st *dest, const char *fmt, ...);
 int str_append_str(str_st *, const char *str);
 int str_replace_str(str_st *, const str_rep_tab *tab);

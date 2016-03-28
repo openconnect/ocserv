@@ -30,6 +30,20 @@
 #include <main.h>
 #include "vasprintf.h"
 
+void trim_trailing_whitespace(char *str)
+{
+	unsigned len = strlen(str);
+	char *p;
+
+	if (len > 0) {
+		p = str+len-1;
+		while (c_isspace(*p) && p >= str) {
+			*p = 0;
+			p--;
+		}
+	}
+}
+
 #define MEMSUB(x,y) ((ssize_t)((ptrdiff_t)x-(ptrdiff_t)y))
 
 void str_clear(str_st * str)

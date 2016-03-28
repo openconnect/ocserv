@@ -25,8 +25,10 @@
 
 struct radius_ctx_st {
 	char username[MAX_USERNAME_SIZE*2];
-	char groupname[MAX_GROUPNAME_SIZE];
 	char user_agent[MAX_AGENT_NAME];
+
+	char *groupnames[MAX_GROUPS];
+	unsigned groupnames_size;
 
 	char remote_ip[MAX_IP_STR];
 	char our_ip[MAX_IP_STR];

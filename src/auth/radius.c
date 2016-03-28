@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2014 Red Hat, Inc.
+ * Copyright (C) 2014-2016 Red Hat, Inc.
+ * Copyright (C) 2016 Nikos Mavrogiannopoulos
  *
  * This file is part of ocserv.
  *
@@ -28,6 +29,7 @@
 #include <arpa/inet.h> /* inet_ntop */
 #include "radius.h"
 #include "auth/common.h"
+#include "str.h"
 
 #ifdef HAVE_RADIUS
 
@@ -39,7 +41,7 @@
 # include <radcli/radcli.h>
 #endif
 
-#define RAD_GROUP_NAME 1030
+#define RAD_GROUP_NAME PW_CLASS
 #define RAD_IPV4_DNS1 ((311<<16)|(28))
 #define RAD_IPV4_DNS2 ((311<<16)|(29))
 
@@ -134,13 +136,16 @@ static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 static int radius_auth_group(void *ctx, const char *suggested, char *groupname, int groupname_size)
 {
 	struct radius_ctx_st *pctx = ctx;
+	unsigned i;
 
 	groupname[0] = 0;
 
 	if (suggested != NULL) {
-		if (strcmp(suggested, pctx->groupname) == 0) {
-			strlcpy(groupname, pctx->groupname, groupname_size);
-			return 0;
+		for (i=0;i<pctx->groupnames_size;i++) {
+			if (strcmp(suggested, pctx->groupnames[i]) == 0) {
+				strlcpy(groupname, pctx->groupnames[i], groupname_size);
+				return 0;
+			}
 		}
 
 		syslog(LOG_AUTH,
@@ -149,9 +154,10 @@ static int radius_auth_group(void *ctx, const char *suggested, char *groupname, 
 		return -1;
 	}
 
-	if (pctx->groupname[0] != 0 && groupname[0] == 0) {
-		strlcpy(groupname, pctx->groupname, groupname_size);
+	if (pctx->groupnames_size > 0 && groupname[0] == 0) {
+		strlcpy(groupname, pctx->groupnames[0], groupname_size);
 	}
+
 	return 0;
 }
 
@@ -187,6 +193,39 @@ static void append_route(struct radius_ctx_st *pctx, const char *route, unsigned
 		pctx->routes[i] = talloc_strndup(pctx, route, len);
 		if (pctx->routes[i] != NULL)
 			pctx->routes_size++;
+	}
+}
+
+/* Parses group of format "OU=group1;group2;group3" */
+static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
+{
+	char *p, *p2;
+	unsigned i;
+
+	pctx->groupnames_size = 0;
+
+	if (strncmp(full, "OU=", 3) == 0) {
+		full += 3;
+
+		p = talloc_strdup(pctx, full);
+		if (p == NULL)
+			return;
+
+		i = 0;
+		p2 = strsep(&p, ";");
+		while(p2 != NULL) {
+			pctx->groupnames[i++] = p2;
+			pctx->groupnames_size = i;
+
+			trim_trailing_whitespace(p2);
+
+			p2 = strsep(&p, ";"); 
+		}
+	} else {
+		pctx->groupnames[0] = talloc_strdup(pctx, full);
+		if (pctx->groupnames[0] == NULL)
+			return;
+		pctx->groupnames_size = 1;
 	}
 }
 
@@ -290,7 +329,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 				goto fail;
 			} else if (vp->attribute == RAD_GROUP_NAME && vp->type == PW_TYPE_STRING) {
 				/* Group-Name */
-				strlcpy(pctx->groupname, vp->strvalue, sizeof(pctx->groupname));
+				parse_groupnames(pctx, vp->strvalue);
 			} else if (vp->attribute == PW_FRAMED_IPV6_ADDRESS && vp->type == PW_TYPE_IPV6ADDR) {
 				/* Framed-IPv6-Address */
 				if (inet_ntop(AF_INET6, vp->strvalue, pctx->ipv6, sizeof(pctx->ipv6)) != NULL) {

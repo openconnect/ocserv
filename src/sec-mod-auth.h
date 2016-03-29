@@ -25,7 +25,6 @@
 #include <sec-mod.h>
 
 #define MAX_AUTH_REQS 8
-#define MAX_GROUPS 32
 
 typedef struct passwd_msg_st {
 	char *msg_str;

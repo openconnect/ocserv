@@ -36,6 +36,7 @@
 #include <tlslib.h>
 #include <script-list.h>
 #include <ip-lease.h>
+#include <minmax.h>
 #include "str.h"
 
 #include <vpn.h>
@@ -189,56 +190,99 @@ int send_sec_auth_reply_msg(int cfd, sec_mod_st * sec, client_entry_st * e)
 	return ret;
 }
 
-static int check_user_group_status(sec_mod_st * sec, client_entry_st * e,
-				   int tls_auth_ok, const char *cert_user,
-				   char **cert_groups,
-				   unsigned cert_groups_size)
+static int check_cert_user_group_status(sec_mod_st * sec, client_entry_st * e)
 {
 	unsigned found, i;
 
 	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
-		if (tls_auth_ok == 0) {
+		if (e->tls_auth_ok == 0) {
 			seclog(sec, LOG_INFO, "user %s "SESSION_STR" presented no certificate; rejecting",
 			       e->acct_info.username, e->acct_info.psid);
 			return -1;
 		}
 
-		e->tls_auth_ok = tls_auth_ok;
-		if (tls_auth_ok != 0) {
-			if (e->acct_info.username[0] == 0 && sec->config->cert_user_oid != NULL) {
-				if (cert_user == NULL) {
-					seclog(sec, LOG_INFO, "no username in the certificate; rejecting");
-					return -1;
-				}
+		if (e->acct_info.username[0] == 0 && sec->config->cert_user_oid != NULL) {
+			if (e->cert_user_name[0] == 0) {
+				seclog(sec, LOG_INFO, "no username in the certificate; rejecting");
+				return -1;
+			}
 
-				strlcpy(e->acct_info.username, cert_user, sizeof(e->acct_info.username));
-				if (cert_groups_size > 0 && sec->config->cert_group_oid != NULL && e->acct_info.groupname[0] == 0)
-					strlcpy(e->acct_info.groupname, cert_groups[0], sizeof(e->acct_info.groupname));
-			} else {
-				if (sec->config->cert_user_oid != NULL && cert_user && strcmp(e->acct_info.username, cert_user) != 0) {
+			strlcpy(e->acct_info.username, e->cert_user_name, sizeof(e->acct_info.username));
+			if (e->cert_group_names_size > 0 && sec->config->cert_group_oid != NULL && e->acct_info.groupname[0] == 0)
+				strlcpy(e->acct_info.groupname, e->cert_group_names[0], sizeof(e->acct_info.groupname));
+		} else {
+			if (sec->config->cert_user_oid != NULL && e->cert_user_name[0] && strcmp(e->acct_info.username, e->cert_user_name) != 0) {
+				seclog(sec, LOG_INFO,
+				       "user '%s' "SESSION_STR" presented a certificate which is for user '%s'; rejecting",
+				       e->acct_info.username, e->acct_info.psid, e->cert_user_name);
+				return -1;
+			}
+
+			if (sec->config->cert_group_oid != NULL) {
+				found = 0;
+				for (i=0;i<e->cert_group_names_size;i++) {
+					if (strcmp(e->acct_info.groupname, e->cert_group_names[i]) == 0) {
+						found++;
+						break;
+					}
+				}
+				if (found == 0) {
 					seclog(sec, LOG_INFO,
-					       "user '%s' "SESSION_STR" presented a certificate which is for user '%s'; rejecting",
-					       e->acct_info.username, e->acct_info.psid, cert_user);
-					return -1;
-				}
-
-				if (sec->config->cert_group_oid != NULL) {
-					found = 0;
-					for (i=0;i<cert_groups_size;i++) {
-						if (strcmp(e->acct_info.groupname, cert_groups[i]) == 0) {
-							found++;
-							break;
-						}
-					}
-					if (found == 0) {
-						seclog(sec, LOG_INFO,
-							"user '%s' "SESSION_STR" presented a certificate from group '%s' but he isn't a member of it; rejecting",
-							e->acct_info.username, e->acct_info.psid, e->acct_info.groupname);
-							return -1;
-					}
+						"user '%s' "SESSION_STR" presented a certificate from group '%s' but he isn't a member of it; rejecting",
+						e->acct_info.username, e->acct_info.psid, e->acct_info.groupname);
+						return -1;
 				}
 			}
 		}
+	}
+
+	return 0;
+}
+
+static
+int check_group(sec_mod_st * sec, client_entry_st * e)
+{
+	int ret;
+	const char *req_group = NULL;
+
+	if (e->req_group_name[0] != 0)
+		req_group = e->req_group_name;
+
+	if (e->module && e->module->auth_group) {
+		ret =
+		    e->module->auth_group(e->auth_ctx, req_group, e->acct_info.groupname,
+				          sizeof(e->acct_info.groupname));
+		if (ret != 0) {
+			return -1;
+		}
+		e->acct_info.groupname[sizeof(e->acct_info.groupname) - 1] = 0;
+	}
+
+	/* set group name using the certificate info */
+	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
+		if (e->acct_info.groupname[0] == 0 && req_group != NULL && sec->config->cert_group_oid != NULL) {
+			unsigned i, found = 0;
+
+			for (i=0;i<e->cert_group_names_size;i++) {
+				if (strcmp(req_group, e->cert_group_names[i]) == 0) {
+					strlcpy(e->acct_info.groupname, e->cert_group_names[i], sizeof(e->acct_info.groupname));
+					found = 1;
+					break;
+				}
+			}
+
+			if (found == 0) {
+				seclog(sec, LOG_AUTH, "user '%s' requested group '%s' but is not included on his certificate groups",
+					e->acct_info.username, req_group);
+				return -1;
+			}
+		}
+	}
+
+	ret =
+	    check_cert_user_group_status(sec, e);
+	if (ret < 0) {
+		return -1;
 	}
 
 	return 0;
@@ -282,6 +326,13 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 		}
 		return 0;	/* wait for another command */
 	} else if (result == 0 && e->status != PS_AUTH_FAILED) {
+		ret = check_group(sec, e);
+		if (ret < 0) {
+			e->status = PS_AUTH_FAILED;
+			seclog(sec, LOG_ERR, "could not accept group.");
+			return ret;
+		}
+
 		/* we check status for PS_AUTH_FAILED, because status may
 		 * change async if we receive a message from main that the
 		 * user is banned */
@@ -681,6 +732,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 {
 	int ret = -1;
 	client_entry_st *e;
+	unsigned i;
 	unsigned need_continue = 0;
 
 	e = new_client_entry(sec, req->ip, pid);
@@ -711,16 +763,9 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 		} else if (ret < 0) {
 			goto cleanup;
 		}
-
-		ret =
-		    e->module->auth_group(e->auth_ctx, req->group_name, e->acct_info.groupname,
-				       sizeof(e->acct_info.groupname));
-		if (ret != 0) {
-			ret = -1;
-			goto cleanup;
-		}
-		e->acct_info.groupname[sizeof(e->acct_info.groupname) - 1] = 0;
 	}
+
+	e->tls_auth_ok = req->tls_auth_ok;
 
 	if (req->user_agent != NULL)
 		strlcpy(e->acct_info.user_agent, req->user_agent, sizeof(e->acct_info.user_agent));
@@ -733,33 +778,21 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 		strlcpy(e->acct_info.our_ip, req->our_ip, sizeof(e->acct_info.our_ip));
 	}
 
-	if (e->auth_type & AUTH_TYPE_CERTIFICATE) {
-		if (e->acct_info.groupname[0] == 0 && req->group_name != NULL && sec->config->cert_group_oid != NULL) {
-			unsigned i, found = 0;
-
-			for (i=0;i<req->n_cert_group_names;i++) {
-				if (strcmp(req->group_name, req->cert_group_names[i]) == 0) {
-					strlcpy(e->acct_info.groupname, req->cert_group_names[i], sizeof(e->acct_info.groupname));
-					found = 1;
-					break;
-				}
-			}
-
-			if (found == 0) {
-				seclog(sec, LOG_AUTH, "user '%s' requested group '%s' but is not included on his certificate groups",
-					req->user_name, req->group_name);
-				ret = -1;
-				goto cleanup;
-			}
-		}
+	if (req->group_name != NULL) {
+		strlcpy(e->req_group_name, req->group_name, sizeof(e->req_group_name));
 	}
 
-	ret =
-	    check_user_group_status(sec, e, req->tls_auth_ok,
-				    req->cert_user_name, req->cert_group_names,
-				    req->n_cert_group_names);
-	if (ret < 0) {
-		goto cleanup;
+	if (req->cert_user_name != NULL) {
+		strlcpy(e->cert_user_name, req->cert_user_name, sizeof(e->cert_user_name));
+	}
+
+	e->cert_group_names_size = MIN(MAX_GROUPS,req->n_cert_group_names);
+	for (i=0;i<e->cert_group_names_size;i++) {
+		e->cert_group_names[i] = talloc_strdup(e, req->cert_group_names[i]);
+		if (e->cert_group_names[i] == NULL) {
+			e->cert_group_names_size = 0;
+			break;
+		}
 	}
 
 	e->status = PS_AUTH_INIT;

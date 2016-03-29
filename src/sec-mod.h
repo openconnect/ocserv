@@ -27,6 +27,7 @@
 #include <tlslib.h>
 
 #define SESSION_STR "(session: %.6s)"
+#define MAX_GROUPS 32
 
 typedef struct sec_mod_st {
 	struct cfg_st *config;
@@ -102,6 +103,12 @@ typedef struct client_entry_st {
 	unsigned discon_reason; /* reason for disconnection */
 
 	struct common_acct_info_st acct_info;
+
+	/* saved during authentication; used after successful auth */
+	char req_group_name[MAX_GROUPNAME_SIZE]; /* the requested by the user group */
+	char *cert_group_names[MAX_GROUPS];
+	unsigned cert_group_names_size;
+	char cert_user_name[MAX_USERNAME_SIZE];
 
 	/* the module this entry is using */
 	const struct auth_mod_st *module;

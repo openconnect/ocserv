@@ -83,6 +83,17 @@ test8	Cleartext-Password := "test8"
 	Framed-Routing = Broadcast-Listen,
 	Framed-MTU = 1500
 
+test-class	Cleartext-Password := "test-class"
+	Service-Type = Framed-User,
+	Framed-Protocol = PPP,
+	Framed-Route = 192.168.100.0/24,
+	Framed-Route = 192.168.1.0/8,
+	Framed-IP-Address = 192.168.35.190,
+	Framed-IP-Netmask = 255.255.255.0,
+	Framed-Routing = Broadcast-Listen,
+	Class = "OU=group1;group2",
+	Framed-MTU = 1500
+
 testtime	Cleartext-Password := "test"
 	Service-Type = Framed-User,
 	Framed-Protocol = PPP,

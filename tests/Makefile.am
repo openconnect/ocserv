@@ -23,7 +23,7 @@ dist_check_SCRIPTS = test-iroute test-pass-script \
 	test-cookie-invalidation radius-test-config proxyproto-test \
 	proxyproto-unix-test pam-noauth-test otp-test test-user-config \
 	firewall-test test-append-routes reload-info-test \
-	firewall-neg-test
+	firewall-neg-test radius-group-test
 
 if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \

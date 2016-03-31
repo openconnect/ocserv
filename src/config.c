@@ -1050,6 +1050,14 @@ size_t urlfw_size = 0;
 	READ_STRING("config-per-user", config->per_user_dir);
 	READ_STRING("config-per-group", config->per_group_dir);
 
+	if (config->per_user_dir || config->per_group_dir) {
+		if (perm_config->sup_config_type != SUP_CONFIG_FILE) {
+			fprintf(stderr, "Specified config-per-user or config-per-group but supplemental config is '%s'\n",
+				sup_config_name(perm_config->sup_config_type));
+			exit(1);
+		}
+	}
+
 	if (config->per_user_dir) {
 		READ_TF("expose-iroutes", i, 0);
 		if (i != 0) {
@@ -1059,6 +1067,8 @@ size_t urlfw_size = 0;
 
 	READ_STRING("default-user-config", config->default_user_conf);
 	READ_STRING("default-group-config", config->default_group_conf);
+
+	fprintf(stderr, "Setting '%s' as supplemental config option\n", sup_config_name(perm_config->sup_config_type));
 
 	optionUnloadNested(pov);
 }

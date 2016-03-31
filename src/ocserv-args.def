@@ -105,7 +105,7 @@ An example configuration file follows.
 #
 # radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name]:
 #  The radius option requires specifying freeradius-client configuration
-# file. If the groupconfig option is set, then config-per-user will be overriden,
+# file. If the groupconfig option is set, then config-per-user/group will be overriden,
 # and all configuration will be read from radius. That also includes the
 # Acct-Interim-Interval, and Session-Timeout values.
 #

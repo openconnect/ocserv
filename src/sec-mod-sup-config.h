@@ -26,6 +26,19 @@
 #define SUP_CONFIG_FILE 1
 #define SUP_CONFIG_RADIUS 2
 
+inline static
+const char *sup_config_name(unsigned s)
+{
+	switch(s) {
+		case SUP_CONFIG_FILE:
+			return "file";
+		case SUP_CONFIG_RADIUS:
+			return "radius";
+		default:
+			return "unknown";
+	}
+}
+
 /* The get_sup_config() should read any additional configuration for
  * proc->username/proc->groupname and save it in proc->config.
  */

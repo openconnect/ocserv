@@ -35,7 +35,8 @@ TMPFILE2=${srcdir}/test-user-config-2.tmp
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 
-launch_server -d 1 -f -c ${srcdir}/test-user-config.config & PID=$!
+launch_simple_server -d 1 -f -c ${srcdir}/test-user-config.config
+PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
@@ -78,6 +79,16 @@ sleep 2
 kill $kpid1
 kill $kpid2
 
+echo -n "Checking if proper dns was sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep "X-CSTP-DNS: 8.8.8.8"`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}
+	fail $PID "Expected DNS was not sent"
+fi
+
+echo ok
+
 echo -n "Checking if routes have been sent... "
 
 CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Split-Include|grep 192.168.1.0`
@@ -112,8 +123,7 @@ rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 
 echo -n "Re-connecting to check the ipv4-network... "
-$OPENCONNECT -v localhost:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert-testipnet.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 &
-kpid1=$!
+$OPENCONNECT -v localhost:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert-testipnet.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 & kpid3=$!
 
 echo ok
 sleep 3
@@ -131,7 +141,7 @@ if test -z "$CONTENTS";then
 fi
 
 
-kill $kpid1
+kill $kpid3
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 kill $PID

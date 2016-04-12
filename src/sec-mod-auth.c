@@ -326,6 +326,10 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 		}
 		return 0;	/* wait for another command */
 	} else if (result == 0 && e->status != PS_AUTH_FAILED) {
+		/* we checked status for PS_AUTH_FAILED, because status may
+		 * change async if we receive a message from main that the
+		 * user is banned */
+
 		ret = check_group(sec, e);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;
@@ -333,9 +337,6 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			return ret;
 		}
 
-		/* we check status for PS_AUTH_FAILED, because status may
-		 * change async if we receive a message from main that the
-		 * user is banned */
 		e->status = PS_AUTH_COMPLETED;
 
 		if (e->module) {

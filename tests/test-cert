@@ -48,7 +48,13 @@ echo -n "Connecting to obtain cookie (without certificate)... "
 ( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected without certificate!"
 
-echo ok
+echo "ok (failed as expected)"
+
+echo -n "Connecting to obtain cookie (with invalid certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-invalid.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+	fail $PID "Connected with invalid certificate!"
+
+echo "ok (failed as expected)"
 
 echo -n "Connecting to obtain cookie (with certificate)... "
 ( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
@@ -92,7 +98,7 @@ echo -n "Connecting to obtain cookie (with revoked certificate)... "
 ( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
 	fail $PID "Connected with revoked certificate!"
 
-echo ok
+echo "ok (failed as expected)"
 
 #echo "Normal connection... "
 #( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||

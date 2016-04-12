@@ -11,6 +11,9 @@ Short term items:
 
 * Give each worker a limited number of accesses to the security module.
 
+* Allow overriding client hostnames via group or user configuration.
+
+
 Long term items:
 
 * radius: Consider supporting rfc5176.

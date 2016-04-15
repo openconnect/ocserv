@@ -7,6 +7,8 @@
   worker process.
 - Do not allow to combine radius' groupconfig=true with config-per-user;
   these options are incompatible with each other.
+- Fixed issue in FreeBSD, preventing the server's startup when on
+  background. Reported by Carlos J Puga Medina.
 - occtl: Fixes in the presentation of iroutes and cookies.
 
 

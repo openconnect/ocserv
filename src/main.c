@@ -666,7 +666,7 @@ void clear_lists(main_server_st *s)
 	ev_io_stop (loop, &sec_mod_watcher);
 	ev_child_stop (loop, &child_watcher);
 	ev_timer_stop(loop, &maintainance_watcher);
-	/* free memory by the event loop */
+	/* free memory and descriptors by the event loop */
 	ev_loop_destroy (loop);
 }
 

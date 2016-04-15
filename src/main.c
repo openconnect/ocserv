@@ -1259,13 +1259,17 @@ int main(int argc, char** argv)
 		}
 	}
 
+	/* we don't need them */
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+
 	write_pid_file();
 
 	s->top_fd = -1;
 	s->sec_mod_fd = run_sec_mod(s, &s->sec_mod_fd_sync);
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
-		fprintf(stderr, "Cannot create command handler\n");
+		mslog(s, NULL, LOG_ERR, "Cannot create command handler");
 		exit(1);
 	}
 
@@ -1296,13 +1300,13 @@ int main(int argc, char** argv)
 	/* initialize memory for worker process */
 	worker_pool = talloc_named(main_pool, 0, "worker");
 	if (worker_pool == NULL) {
-		fprintf(stderr, "talloc init error\n");
+		mslog(s, NULL, LOG_ERR, "talloc init error");
 		exit(1);
 	}
 
 	s->ws = talloc_zero(worker_pool, struct worker_st);
 	if (s->ws == NULL) {
-		fprintf(stderr, "memory error\n");
+		mslog(s, NULL, LOG_ERR, "memory error");
 		exit(1);
 	}
 
@@ -1311,15 +1315,11 @@ int main(int argc, char** argv)
 	if (s->config->kkdcp) {
 		ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
 		if (ret != ASN1_SUCCESS) {
-			fprintf(stderr, "KKDCP ASN.1 initialization error\n");
+			mslog(s, NULL, LOG_ERR, "KKDCP ASN.1 initialization error");
 			exit(1);
 		}
 	}
 #endif
-
-	/* we don't need them */
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
 
 	/* increase the number of our allowed file descriptors */
 	update_fd_limits(s, 1);

@@ -63,25 +63,6 @@ SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 	return old_action.sa_handler;
 }
 
-#ifdef HAVE_CWRAP
-static unsigned uid_wrapper_enabled(void)
-{
-	static unsigned int cval = -1;
-	const char *p;
-
-	if (cval == -1) {
-		p = getenv("UID_WRAPPER");
-		if (p != NULL && p[0] == '1')
-			cval = 1;
-		else
-			cval = 0;
-	}
-	return cval;
-}
-#else
-# define uid_wrapper_enabled() 0
-#endif
-
 /* Checks whether the peer in a socket has the expected @uid and @gid.
  * Returns zero on success.
  */
@@ -116,10 +97,6 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 	if (pid)
 		*pid = cr.pid;
 
-	/* To enable testing we use uid_wrapper. That unfortunately cannot handle
-	 * this credential checking, so we disable credential checking when using it */
-	if (uid_wrapper_enabled() != 0) return 0;
-
 	if (cr.uid != 0 && (cr.uid != uid || cr.gid != gid)) {
 		syslog(LOG_ERR,
 		       "%s: received unauthorized request from pid %u and uid %u",
@@ -149,9 +126,6 @@ int check_upeer_id(const char *mod, int debug, int cfd, uid_t uid, uid_t gid, ui
 		syslog(LOG_DEBUG,
 		       "%s: received request from a processes with uid %u",
 		       mod, (unsigned)euid);
-
-	/* see above */
-	if (uid_wrapper_enabled() != 0) return 0;
 
 	if (euid != 0 && (euid != uid || egid != gid)) {
 		syslog(LOG_ERR,

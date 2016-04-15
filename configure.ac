@@ -200,16 +200,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 LIBS="$oldlibs"
 fi
 
-AC_ARG_WITH(all-tests,
-  AS_HELP_STRING([--with-all-tests], [do not include tests which require code in the server]),
-  all_tests=$withval,
-  all_tests=no)
-
-if test "$all_tests" != no;then
 PKG_CHECK_MODULES([CWRAP], [uid_wrapper, socket_wrapper], have_cwrap=yes, have_cwrap=no)
-else
-have_cwrap=no
-fi
 
 if test "$have_cwrap" != no;then
 	AC_DEFINE([HAVE_CWRAP], 1, [Enable testing with cwrap])

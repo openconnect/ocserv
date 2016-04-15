@@ -1,7 +1,7 @@
 Build and Check with separate build dir:
   script:
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure --with-all-tests && make -j4 && make check -j4 && make SKIP_LIBOPTS_CHECK=1 dist
+    ../configure && make -j4 && make check -j4 && make SKIP_LIBOPTS_CHECK=1 dist
   except:
   - tags
 Build with minimal setup:
@@ -13,6 +13,6 @@ Build with minimal setup:
 Build and Check with asan:
   script:
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
-    ./configure --with-all-tests && make -j4 && make check -j4
+    ./configure && make -j4 && make check -j4
   except:
   - tags

@@ -33,7 +33,6 @@
  */
 void setproctitle (const char *fmt, ...)
 {
-#  ifdef PR_SET_NAME
 	char name[16];
 	va_list args;
 
@@ -41,6 +40,7 @@ void setproctitle (const char *fmt, ...)
 	vsnprintf(name, sizeof(name)-1, fmt, args);
 	va_end(args);
 
+#  ifdef PR_SET_NAME
 	prctl (PR_SET_NAME, name);
 #  endif
 	/* Copied systemd's implementation under LGPL by Lennart Poettering */

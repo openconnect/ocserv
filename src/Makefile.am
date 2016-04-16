@@ -1,6 +1,8 @@
 SUBDIRS = ccan common
 
-AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
+include common.mk
+
+AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
 	$(LIBGNUTLS_CFLAGS) -I$(srcdir)/common -I$(builddir)/common \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
@@ -11,24 +13,8 @@ AM_CPPFLAGS = -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c ctl.pb-c.c ctl.pb-c.h
 
-if LOCAL_TALLOC
-AM_CPPFLAGS += -I$(top_srcdir)/src/ccan/talloc
-endif
-
-#AM_CPPFLAGS += -DDEBUG_LEAKS
-
-include common.mk
-
 EXTRA_DIST = version.inc.in version.inc \
 	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw
-
-if LOCAL_HTTP_PARSER
-AM_CPPFLAGS += -I$(srcdir)/http-parser/
-HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
-NEEDED_HTTP_PARSER_LIBS = 
-else
-NEEDED_HTTP_PARSER_LIBS = $(HTTP_PARSER_LIBS)
-endif
 
 sbin_PROGRAMS = ocserv
 bin_SCRIPTS = ocserv-fw
@@ -72,16 +58,21 @@ ocserv_SOURCES += lzs.c lzs.h
 endif
 
 if HAVE_GSSAPI
-ocserv_SOURCES += kkdcp_asn1_tab.c kkdcp.asn 
+ocserv_SOURCES += kkdcp_asn1_tab.c kkdcp.asn
 endif
 
+if LOCAL_HTTP_PARSER
+HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
+endif
+
+ocserv_LDFLAGS = 
 ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a ccan/libccan.a common/libcommon.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
-	$(LIBPROTOBUF_C_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
+	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
 	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
-	$(LIBEV_LIBS) libipc.a
+	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS)
 
 
 if PCL
@@ -94,8 +85,6 @@ endif
 
 if LOCAL_PROTOBUF_C
 SUBDIRS += protobuf
-AM_CPPFLAGS += -I$(srcdir)/protobuf/
-ocserv_LDADD += protobuf/libprotobuf.a
 endif
 
 SUBDIRS += occtl ocpasswd

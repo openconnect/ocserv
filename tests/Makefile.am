@@ -1,3 +1,5 @@
+include ../src/common.mk
+
 EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.config \
 	test1.passwd test-user-cert.config user-cert.pem user-key.pem test3.config test-iroute.config \
 	user-config/test user-config-opt/test test-pass-script.config test-multi-cookie.config \
@@ -31,7 +33,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-enc-key test-sighup-key-change
 endif
 
-AM_CPPFLAGS = \
+AM_CPPFLAGS += \
 	$(LIBOPTS_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) \
 	-I$(top_srcdir)/src/ \
@@ -42,18 +44,6 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/gl/ \
 	-I$(top_srcdir)/ \
 	-I$(top_builddir)/
-
-if LOCAL_TALLOC
-AM_CPPFLAGS += -I$(srcdir)/../src/ccan/talloc
-endif
-
-if LOCAL_HTTP_PARSER
-AM_CPPFLAGS += -I$(srcdir)/../src/http-parser/
-endif
-
-if LOCAL_PROTOBUF_C
-AM_CPPFLAGS += -I$(srcdir)/../src/protobuf/
-endif
 
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
 kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a

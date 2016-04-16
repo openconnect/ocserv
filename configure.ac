@@ -2,7 +2,7 @@ AC_PREREQ(2.61)
 AC_INIT([ocserv], [0.11.2], [nmav@gnutls.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_MACRO_DIR([gl/m4])
+AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([1.11.3 subdir-objects no-dist-gzip dist-xz -Wall -Wno-override])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -20,6 +20,8 @@ fi
 AC_PATH_PROG(CTAGS, ctags, [:])
 AC_PATH_PROG(CSCOPE, cscope, [:])
 AC_CHECK_PROG([AUTOGEN], [autogen], [autogen], [:])
+
+AX_CODE_COVERAGE
 
 if test x"$AUTOGEN" = "x:"; then
 	AC_MSG_WARN([[

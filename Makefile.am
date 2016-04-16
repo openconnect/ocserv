@@ -7,7 +7,9 @@ SUBDIRS += libopts
 endif
 SUBDIRS += src doc tests
 
-ACLOCAL_AMFLAGS = -I gl/m4 -I libopts/m4
+ACLOCAL_AMFLAGS = -I m4 -I gl/m4 -I libopts/m4
+
+@CODE_COVERAGE_RULES@
 
 gl:
 	gnulib-tool --add-import --lgpl=2

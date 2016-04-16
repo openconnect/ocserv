@@ -43,6 +43,7 @@ protobuf-c-compiler/ protobuf-c
 gperf              / gperf
 liblockfile-bin    / lockfile-progs
 nuttcp             / nuttcp
+lcov               / lcov
                    / uid_wrapper
                    / socket_wrapper
                    / gssntlmssp
@@ -56,12 +57,22 @@ dependencies and its configuration.
 To build from a distributed release use:
 
 ```
-$ ./configure && make
+$ ./configure && make && make check
 ```
 
 When cross compiling it may be useful to add the --enable-local-libopts
 option to configure.
 
+
+To test the code coverage of the test suite use the following:
+```
+$ ./configure --enable-code-coverage
+$ make && make check && make code-coverage-capture
+```
+
+
+In addition to the prerequisites listed above, building from git requires
+the following packages: autoconf, automake, autogen, git2cl, and xz.
 
 To build from the git repository use:
 ```
@@ -69,8 +80,6 @@ $ autoreconf -fvi
 $ ./configure && make
 ```
 
-In addition to the prerequisites listed above, building from git requires
-the following packages: autoconf, automake, autogen, git2cl, and xz.
 
 Note that the system's autogen version must match the included libopts
 version on the development system, if the included libopts library is to

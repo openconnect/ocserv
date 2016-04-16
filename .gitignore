@@ -3,6 +3,8 @@ ocserv*.tar.xz*
 *~
 *.log
 *.trs
+*.gcda
+*.gcno
 ocserv
 configure
 autom4te.cache

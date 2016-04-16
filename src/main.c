@@ -70,6 +70,15 @@ extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
 ASN1_TYPE _kkdcp_pkix1_asn = ASN1_TYPE_EMPTY;
 #endif
 
+#if defined(__FreeBSD__)
+/* There is an issue with FreeBSD and the kqueue interface.
+ * When used it causes the sec-mod spawn to fail. It possibly
+ * affects the pipes generated for communication.
+ */
+# undef EV_DEFAULT
+# define EV_DEFAULT ev_default_loop (EVBACKEND_POLL | EVBACKEND_SELECT)
+#endif
+
 int saved_argc = 0;
 char **saved_argv = NULL;
 

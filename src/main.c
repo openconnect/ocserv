@@ -1202,6 +1202,8 @@ int main(int argc, char** argv)
 	s->main_pool = main_pool;
 	s->creds = &creds;
 	s->start_time = time(0);
+	s->top_fd = -1;
+	s->ctl_fd = -1;
 
 	list_head_init(&s->proc_list.head);
 	list_head_init(&s->script_list.head);
@@ -1265,7 +1267,6 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 
-	s->top_fd = -1;
 	s->sec_mod_fd = run_sec_mod(s, &s->sec_mod_fd_sync);
 	ret = ctl_handler_init(s);
 	if (ret < 0) {

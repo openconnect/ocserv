@@ -395,11 +395,11 @@ ban-reset-time = 300
 
 # Cookie timeout (in seconds)
 # Once a client is authenticated he's provided a cookie with
-# which he can reconnect. That cookie will be invalided if not
-# used within this timeout value. On a user disconnection, that
-# cookie will also be active for this time amount prior to be
-# invalid. That should allow a reasonable amount of time for roaming
-# between different networks.
+# which he can reconnect. That cookie will be invalidated if not
+# used within this timeout value. This cookie remains valid, during
+# the user's connected time, and after user disconnection it
+# remains active for this amount of time. That setting should allow a
+# reasonable amount of time for roaming between different networks.
 cookie-timeout = 300
 
 # If this is enabled (not recommended) the cookies will stay

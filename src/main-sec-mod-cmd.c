@@ -589,7 +589,7 @@ int run_sec_mod(main_server_st * s, int *sync_fd)
 		 * the operating system. */
 		malloc_trim(0);
 #endif
-		setproctitle(PACKAGE_NAME "-secmod");
+		setproctitle(PACKAGE_NAME "-sm");
 		close(fd[1]);
 		close(sfd[1]);
 		set_cloexec_flag (fd[0], 1);

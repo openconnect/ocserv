@@ -1315,9 +1315,11 @@ static void set_socket_timeout(worker_st * ws, int fd)
 	ret =
 	    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tval,
 			       sizeof(tval));
-	if (ret == -1)
+	if (ret == -1) {
+		int e = errno;
 		oclog(ws, LOG_DEBUG,
-		      "setsockopt(%s, SO_RCVTIMEO) failed.", (fd==ws->conn_fd)?"ΤCP":"UDP");
+		      "setsockopt(%s, SO_RCVTIMEO) failed: %s", (fd==ws->conn_fd)?"ΤCP":"UDP", strerror(e));
+	}
 }
 
 /* connect_handler:

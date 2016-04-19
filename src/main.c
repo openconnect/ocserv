@@ -675,7 +675,7 @@ void clear_lists(main_server_st *s)
 /* A UDP fd will not be forwarded to worker process before this number of
  * seconds has passed. That is to prevent a duplicate message messing the worker.
  */
-#define UDP_FD_RESEND_TIME 60
+#define UDP_FD_RESEND_TIME 3
 
 #define RECORD_PAYLOAD_POS 13
 #define HANDSHAKE_SESSION_ID_POS 46

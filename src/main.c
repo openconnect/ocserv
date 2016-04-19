@@ -77,7 +77,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents);
 
 int syslog_open = 0;
 sigset_t sig_default_set;
-struct ev_loop *loop;
+struct ev_loop *loop = NULL;
 
 /* EV watchers */
 ev_io ctl_watcher;
@@ -662,12 +662,14 @@ void clear_lists(main_server_st *s)
 	main_ban_db_deinit(s);
 
 	/* clear libev state */
-	ev_io_stop (loop, &ctl_watcher);
-	ev_io_stop (loop, &sec_mod_watcher);
-	ev_child_stop (loop, &child_watcher);
-	ev_timer_stop(loop, &maintainance_watcher);
-	/* free memory and descriptors by the event loop */
-	ev_loop_destroy (loop);
+	if (loop) {
+		ev_io_stop (loop, &ctl_watcher);
+		ev_io_stop (loop, &sec_mod_watcher);
+		ev_child_stop (loop, &child_watcher);
+		ev_timer_stop(loop, &maintainance_watcher);
+		/* free memory and descriptors by the event loop */
+		ev_loop_destroy (loop);
+	}
 }
 
 /* A UDP fd will not be forwarded to worker process before this number of
@@ -1172,12 +1174,6 @@ int main(int argc, char** argv)
 
 	memset(&creds, 0, sizeof(creds));
 
-	loop = EV_DEFAULT;
-	if (loop == NULL) {
-		fprintf(stderr, "could not initialise libev\n");
-		exit(1);
-	}
-
 	/* main pool */
 	main_pool = talloc_init("main");
 	if (main_pool == NULL) {
@@ -1262,6 +1258,12 @@ int main(int argc, char** argv)
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "Cannot create command handler");
+		exit(1);
+	}
+
+	loop = EV_DEFAULT;
+	if (loop == NULL) {
+		mslog(s, NULL, LOG_ERR, "could not initialise libev");
 		exit(1);
 	}
 

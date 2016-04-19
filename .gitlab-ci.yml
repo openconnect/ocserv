@@ -2,17 +2,31 @@ Build and Check with separate build dir:
   script:
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
     ../configure && make -j4 && make check -j4 && make SKIP_LIBOPTS_CHECK=1 dist
+  tags:
+  - linux
   except:
   - tags
 Build with minimal setup:
   script:
   - git submodule update --init && autoreconf -fvi && 
     ./configure --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j4 && make check -j4
+  tags:
+  - linux
   except:
   - tags
 Build and Check with asan:
   script:
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
     ./configure && make -j4 && make check -j4
+  tags:
+  - linux
+  except:
+  - tags
+Build and Check on FreeBSD:
+  script:
+  - git submodule update --init && sh autogen.sh && LIBS="-L/usr/local/lib" ./configure --disable-nls &&
+    gmake -j4 && gmake check -j4
+  tags:
+  - freebsd
   except:
   - tags

@@ -45,7 +45,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-grep -e "\:\!\$5" passwd.out >/dev/null 2>&1
+grep ':!\$' passwd.out >/dev/null 2>&1
 if test $? != 0;then
 	echo "Failed locking user test. The exclamation mark wasn't found"
 	exit 1

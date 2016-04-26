@@ -1,4 +1,4 @@
-[![build status](https://ci.gitlab.com/projects/7712/status.png?ref=master)](https://ci.gitlab.com/projects/7712?ref=master)
+[![build status](https://gitlab.com/ocserv/ocserv/badges/master/build.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
 
 # About
 

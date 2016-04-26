@@ -18,7 +18,7 @@ detail  = "This program is openconnect password (ocpasswd) utility. It allows th
 and handling of a 'plain' password file used by ocserv.";
 
 copyright = {
-    date  = "2013, 2014";
+    date  = "2013-2016";
     owner = "Nikos Mavrogiannopoulos";
     author = "Nikos Mavrogiannopoulos";
     eaddr  = "openconnect-devel@lists.infradead.org";

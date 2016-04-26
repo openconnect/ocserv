@@ -20,7 +20,7 @@ is used by several CISCO routers.
 ";
 
 copyright = {
-    date  = "2013, 2014, 2015";
+    date  = "2013-2016";
     owner = "Nikos Mavrogiannopoulos";
     author = "Nikos Mavrogiannopoulos and others";
     eaddr  = "openconnect-devel@lists.infradead.org";

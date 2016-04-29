@@ -1,8 +1,10 @@
-Build and Check with separate build dir:
+Build and Check with separate build dir and code coverage:
   script:
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure && make -j4 && make check -j4 && make SKIP_LIBOPTS_CHECK=1 dist
+    ../configure --enable-code-coverage && make -j4 && make check -j4 && make code-coverage-capture &&
+    make local-code-coverage-output && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
+  - lcov
   - linux
   except:
   - tags

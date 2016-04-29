@@ -70,6 +70,8 @@ $ ./configure --enable-code-coverage
 $ make && make check && make code-coverage-capture
 ```
 
+Note that the code coverage reported does not currently include tests which
+are run within docker.
 
 In addition to the prerequisites listed above, building from git requires
 the following packages: autoconf, automake, autogen, git2cl, and xz.

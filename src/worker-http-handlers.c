@@ -50,7 +50,6 @@ int response_404(worker_st *ws, unsigned http_ver)
 	return 0;
 }
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
 static int send_headers(worker_st *ws, unsigned http_ver, const char *content_type,
 			unsigned content_length)
 {
@@ -64,7 +63,7 @@ static int send_headers(worker_st *ws, unsigned http_ver, const char *content_ty
 	return 0;
 }
 
-static int send_string(worker_st *ws, unsigned http_ver, const char *content_type,
+static int send_data(worker_st *ws, unsigned http_ver, const char *content_type,
 		       const char *data, int content_length)
 {
 	/* don't bother uncorking on error - the connection will be closed anyway */
@@ -76,6 +75,52 @@ static int send_string(worker_st *ws, unsigned http_ver, const char *content_typ
 	return 0;
 }
 
+int get_cert_handler(worker_st * ws, unsigned http_ver)
+{
+	if (ws->conn_type != SOCK_TYPE_UNIX) { /* we have TLS */
+		const gnutls_datum_t *certs;
+		gnutls_datum_t out = {NULL, 0};
+		int ret;
+
+		oclog(ws, LOG_DEBUG, "requested server certificate");
+
+		certs = gnutls_certificate_get_ours(ws->session);
+		if (certs == NULL) {
+			return -1;
+		}
+
+		ret = gnutls_pem_base64_encode2("CERTIFICATE", &certs[0], &out);
+		if (ret < 0)
+			return -1;
+
+		ret = send_data(ws, http_ver, "application/x-pem-file", (char*)out.data, out.size);
+		gnutls_free(out.data);
+
+		return ret;
+	} else {
+		return -1;
+	}
+}
+
+int get_cert_der_handler(worker_st * ws, unsigned http_ver)
+{
+	if (ws->conn_type != SOCK_TYPE_UNIX) { /* we have TLS */
+		const gnutls_datum_t *certs;
+
+		oclog(ws, LOG_DEBUG, "requested raw server certificate");
+
+		certs = gnutls_certificate_get_ours(ws->session);
+		if (certs == NULL) {
+			return -1;
+		}
+
+		return send_data(ws, http_ver, "application/pkix-cert", (char*)certs[0].data, certs[0].size);
+	} else {
+		return -1;
+	}
+}
+
+#ifdef ANYCONNECT_CLIENT_COMPAT
 int get_config_handler(worker_st *ws, unsigned http_ver)
 {
 	int ret;
@@ -119,10 +164,10 @@ int get_string_handler(worker_st *ws, unsigned http_ver)
 {
 	oclog(ws, LOG_HTTP_DEBUG, "requested fixed string: %s", ws->req.url); 
 	if (!strcmp(ws->req.url, "/1/binaries/update.txt")) {
-		return send_string(ws, http_ver, "text/xml", VPN_VERSION,
+		return send_data(ws, http_ver, "text/xml", VPN_VERSION,
 				   sizeof(VPN_VERSION) - 1);
 	} else {
-		return send_string(ws, http_ver, "text/xml", XML_START,
+		return send_data(ws, http_ver, "text/xml", XML_START,
 				   sizeof(XML_START) - 1);
 	}
 }
@@ -133,7 +178,7 @@ int get_string_handler(worker_st *ws, unsigned http_ver)
 int get_dl_handler(worker_st *ws, unsigned http_ver)
 {
 	oclog(ws, LOG_HTTP_DEBUG, "requested downloader: %s", ws->req.url); 
-	return send_string(ws, http_ver, "application/x-shellscript", SH_SCRIPT,
+	return send_data(ws, http_ver, "application/x-shellscript", SH_SCRIPT,
 			   sizeof(SH_SCRIPT) - 1);
 }
 
@@ -141,7 +186,7 @@ int get_dl_handler(worker_st *ws, unsigned http_ver)
 
 int get_empty_handler(worker_st *ws, unsigned http_ver)
 {
-	return send_string(ws, http_ver, "text/html", EMPTY_MSG,
+	return send_data(ws, http_ver, "text/html", EMPTY_MSG,
 			   sizeof(EMPTY_MSG) - 1);
 }
 

@@ -545,6 +545,7 @@ int serve_request_main(sec_mod_st *sec, int fd, uint8_t *buffer, unsigned buffer
 	ret = recv_msg_headers(fd, &cmd, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		seclog(sec, LOG_ERR, "error receiving msg head from main");
+		ret = ERR_BAD_COMMAND;
 		goto leave;
 	}
 

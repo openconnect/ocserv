@@ -89,7 +89,7 @@ int get_cert_handler(worker_st * ws, unsigned http_ver)
 			return -1;
 		}
 
-		ret = gnutls_pem_base64_encode2("CERTIFICATE", &certs[0], &out);
+		ret = gnutls_pem_base64_encode_alloc("CERTIFICATE", &certs[0], &out);
 		if (ret < 0)
 			return -1;
 

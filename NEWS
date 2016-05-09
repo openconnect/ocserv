@@ -1,5 +1,5 @@
 * Version 0.11.3 (unreleased)
-- ocserv: added '/cert.pem' and '/cert.cer' HTTP handler
+- ocserv: added '/cert.pem' and '/cert.cer' HTTP handlers
 
 
 * Version 0.11.2 (released 2016-04-25)

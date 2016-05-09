@@ -85,6 +85,8 @@ static int parse_dtls_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
 static int connect_handler(worker_st * ws);
 static void session_info_send(worker_st * ws);
+static void set_net_priority(worker_st * ws, int fd, int priority);
+static void set_socket_timeout(worker_st * ws, int fd);
 
 static void handle_alarm(int signo)
 {
@@ -249,6 +251,19 @@ static int setup_dtls_connection(struct worker_st *ws)
 	gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
 	ws->udp_state = UP_HANDSHAKE;
+
+	/* Setup the fd settings */
+	if (ws->config->output_buffer > 0) {
+		int t = MIN(2048, ws->conn_mtu * ws->config->output_buffer);
+		ret = setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_SNDBUF, &t,
+			   sizeof(t));
+		if (ret == -1)
+			oclog(ws, LOG_DEBUG,
+			      "setsockopt(UDP, SO_SNDBUF) to %u, failed.",
+			      t);
+	}
+	set_net_priority(ws, ws->dtls_tptr.fd, ws->user_config->net_priority);
+	set_socket_timeout(ws, ws->dtls_tptr.fd);
 
 	ws->dtls_session = session;
 
@@ -1786,19 +1801,6 @@ static int connect_handler(worker_st * ws)
 		    cstp_printf(ws, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);
 		SEND_ERR(ret);
 		oclog(ws, LOG_INFO, "suggesting DTLS MTU %u", ws->conn_mtu);
-
-		if (ws->config->output_buffer > 0) {
-			t = MIN(2048, ws->conn_mtu * ws->config->output_buffer);
-			setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_SNDBUF, &t,
-				   sizeof(t));
-			if (ret == -1)
-				oclog(ws, LOG_DEBUG,
-				      "setsockopt(UDP, SO_SNDBUF) to %u, failed.",
-				      t);
-		}
-
-		set_net_priority(ws, ws->dtls_tptr.fd, ws->user_config->net_priority);
-		set_socket_timeout(ws, ws->dtls_tptr.fd);
 	}
 
 	/* hack for openconnect. It uses only a single MTU value */

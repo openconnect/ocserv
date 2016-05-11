@@ -139,6 +139,7 @@ int handle_commands_from_main(struct worker_st *ws)
 					close(fd);
 					return 0;
 				}
+				RESET_DTLS_MTU(ws);
 			} else { /* received client hello */
 				ws->udp_state = UP_SETUP;
 			}

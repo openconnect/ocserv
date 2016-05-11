@@ -277,6 +277,10 @@ typedef struct worker_st {
 	void *main_pool; /* to be used only on deinitialization */
 } worker_st;
 
+#define RESET_DTLS_MTU(ws) \
+		ws->conn_mtu = MIN(ws->conn_mtu, \
+			ws->vinfo.mtu - ws->proto_overhead - ws->crypto_overhead)
+
 void vpn_server(struct worker_st* ws);
 
 int auth_cookie(worker_st *ws, void* cookie, size_t cookie_size);

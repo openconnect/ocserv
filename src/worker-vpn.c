@@ -265,6 +265,9 @@ static int setup_dtls_connection(struct worker_st *ws)
 	set_net_priority(ws, ws->dtls_tptr.fd, ws->user_config->net_priority);
 	set_socket_timeout(ws, ws->dtls_tptr.fd);
 
+	/* reset MTU */
+	RESET_DTLS_MTU(ws);
+
 	ws->dtls_session = session;
 
 	return 0;
@@ -1793,9 +1796,7 @@ static int connect_handler(worker_st * ws)
 		/* plaintext MTU is the device MTU minus the overhead
 		 * of the DTLS (+AnyConnect header) protocol.
 		 */
-		ws->conn_mtu =
-		    MIN(ws->conn_mtu,
-			ws->vinfo.mtu - ws->proto_overhead - ws->crypto_overhead);
+		RESET_DTLS_MTU(ws);
 
 		ret =
 		    cstp_printf(ws, "X-DTLS-MTU: %u\r\n", ws->conn_mtu);

@@ -59,7 +59,7 @@
 
 #include <http_parser.h>
 
-#define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:257)
+#define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1281:576)
 
 #define PERIODIC_CHECK_TIME 30
 #define MIN_STATS_INTERVAL 10

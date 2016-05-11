@@ -128,7 +128,6 @@ int handle_commands_from_main(struct worker_st *ws)
 			}
 
 			set_non_block(fd);
-
 			if (has_hello == 0) {
 				/* check if the first packet received is a valid one -
 				 * if not discard the new fd */
@@ -139,7 +138,6 @@ int handle_commands_from_main(struct worker_st *ws)
 					close(fd);
 					return 0;
 				}
-				RESET_DTLS_MTU(ws);
 			} else { /* received client hello */
 				ws->udp_state = UP_SETUP;
 			}
@@ -151,6 +149,9 @@ int handle_commands_from_main(struct worker_st *ws)
 
 			ws->dtls_tptr.msg = tmsg;
 			ws->dtls_tptr.fd = fd;
+
+			if (ws->config->try_mtu == 0)
+				set_mtu_disc(fd, ws->proto, 0);
 
 			oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
 			return 0;
@@ -186,8 +187,8 @@ int complete_vpn_info(worker_st * ws, struct vpn_st *vinfo)
 		return -1;
 	}
 
-	if (ws->config->network.mtu != 0) {
-		vinfo->mtu = ws->config->network.mtu;
+	if (ws->config->default_mtu != 0) {
+		vinfo->mtu = ws->config->default_mtu;
 	} else {
 		fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (fd == -1)

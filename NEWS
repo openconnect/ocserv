@@ -7,6 +7,11 @@
 - ocserv: Do not hard fail when TUNSETGROUP ioctl fails with EINVAL. This
   allows ocserv to operate under older kernels.
 - ocserv: Corrected crash on worker process after client DTLS IP/port change.
+- ocserv: reworked the MTU discovery. Disable MTU discovery when not requested
+  and set the minimum packet size to 1280 for IPv6 and 700 bytes for IPv4. When
+  the MTU discovery fails to calculate an MTU over the minimum then disable MTU
+  discovery and rely on packet fragmentation. Also set the DPD packet size to
+  equal the current MTU, to allow detecting broken DTLS connections.
 
 
 * Version 0.11.3 (released 2016-06-16)

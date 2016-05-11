@@ -27,7 +27,7 @@
 #include <stdio.h>
 
 
-int _bandwidth_update(bandwidth_st* b, size_t bytes, size_t mtu, struct timespec *now)
+int _bandwidth_update(bandwidth_st* b, size_t bytes, struct timespec *now)
 {
 size_t sum;
 ssize_t t, remain;

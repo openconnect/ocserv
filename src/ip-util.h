@@ -27,6 +27,7 @@
 
 #define MAX_IP_STR 46
 
+void set_mtu_disc(int fd, int family, int val);
 int ip_route_sanity_check(void *pool, char **_route);
 
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2);

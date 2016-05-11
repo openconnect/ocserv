@@ -549,8 +549,10 @@ dns = 192.168.1.2
 # IP range for leases.
 ping-leases = false
 
-# Use this option to enforce an MTU value to the incoming
+# Use this option to set a link MTU value to the incoming
 # connections. Unset to use the default MTU of the TUN device.
+# Note that the MTU is negotiated using the value set and the
+# value sent by the peer.
 #mtu = 1420
 
 # Unset to enable bandwidth restrictions (in bytes/sec). The

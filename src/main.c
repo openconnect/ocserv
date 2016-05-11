@@ -114,30 +114,7 @@ static void set_udp_socket_options(struct perm_cfg_st* config, int fd, int famil
 {
 int y;
 	if (config->config->try_mtu) {
-#if defined(IP_DONTFRAG)
-		y = 1;
-		if (setsockopt(fd, SOL_IP, IP_DONTFRAG,
-			       (const void *) &y, sizeof(y)) < 0)
-			perror("setsockopt(IP_DF) failed");
-#elif defined(IP_MTU_DISCOVER)
-		y = IP_PMTUDISC_DO;
-		if (setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
-		       (const void *) &y, sizeof(y)) < 0)
-			perror("setsockopt(IP_DF) failed");
-#endif
-		if (family == AF_INET6) {
-#if defined(IPV6_DONTFRAG)
-			y = 1;
-			if (setsockopt(fd, IPPROTO_IPV6, IPV6_DONTFRAG,
-				       (const void *) &y, sizeof(y)) < 0)
-				perror("setsockopt(IPV6_DF) failed");
-#elif defined(IPV6_MTU_DISCOVER)
-			y = IP_PMTUDISC_DO;
-			if (setsockopt(fd, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
-			       (const void *) &y, sizeof(y)) < 0)
-				perror("setsockopt(IPV6_DF) failed");
-#endif
-		}
+		set_mtu_disc(fd, family, 1);
 	}
 #if defined(IP_PKTINFO)
 	y = 1;
@@ -480,15 +457,7 @@ int y;
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
 
 	if (s->config->try_mtu) {
-#if defined(IP_DONTFRAG)
-		y = 1;
-		setsockopt(fd, IPPROTO_IP, IP_DONTFRAG,
-			       (const void *) &y, sizeof(y));
-#elif defined(IP_MTU_DISCOVER)
-		y = IP_PMTUDISC_DO;
-		setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
-			       (const void *) &y, sizeof(y));
-#endif
+		set_mtu_disc(fd, family, 1);
 	}
 	set_cloexec_flag (fd, 1);
 

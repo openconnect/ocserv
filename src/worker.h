@@ -50,6 +50,7 @@ enum {
 	HEADER_COOKIE = 1,
 	HEADER_MASTER_SECRET,
 	HEADER_HOSTNAME,
+	HEADER_CSTP_MTU,
 	HEADER_CSTP_BASE_MTU,
 	HEADER_CSTP_ATYPE,
 	HEADER_DEVICE_TYPE,
@@ -137,7 +138,8 @@ struct http_req_st {
 
 	unsigned int headers_complete;
 	unsigned int message_complete;
-	unsigned base_mtu;
+	unsigned link_mtu;
+	unsigned tunnel_mtu;
 	
 	unsigned no_ipv4;
 	unsigned no_ipv6;
@@ -157,6 +159,10 @@ typedef struct dtls_transport_ptr {
 #else
 # define gsocklen socklen_t
 #endif
+
+/* Given a base MTU, this macro provides the DTLS plaintext data we can send;
+ * the output value does not include the DTLS header */
+#define DATA_MTU(ws,mtu) (mtu-ws->dtls_crypto_overhead-ws->dtls_proto_overhead)
 
 typedef struct worker_st {
 	struct tls_st *creds;
@@ -224,13 +230,17 @@ typedef struct worker_st {
 	bandwidth_st b_tx;
 	bandwidth_st b_rx;
 
-	/* ws->conn_mtu: The MTU of the plaintext data we can send to the client.
-	 *  It also matches the MTU of the TUN device. Note that this is
-	 *  the same as the 'real' MTU of the connection, minus the IP+UDP+CSTP headers
-	 *  and the DTLS crypto overhead. */
-	unsigned conn_mtu;
-	unsigned crypto_overhead; /* estimated overhead of DTLS ciphersuite + DTLS CSTP HEADER */
-	unsigned proto_overhead; /* UDP + IP header size */
+	/* ws->link_mtu: The MTU of the link of the connecting. The plaintext
+	 *  data we can send to the client (i.e., MTU of the tun device,
+	 *  can be accessed using the DATA_MTU() macro and this value. */
+	unsigned link_mtu;
+	unsigned adv_link_mtu; /* the MTU advertized on connection setup */
+
+	unsigned cstp_crypto_overhead; /* estimated overhead of DTLS ciphersuite + DTLS CSTP HEADER */
+	unsigned cstp_proto_overhead; /* UDP + IP header size */
+
+	unsigned dtls_crypto_overhead; /* estimated overhead of DTLS ciphersuite + DTLS CSTP HEADER */
+	unsigned dtls_proto_overhead; /* UDP + IP header size */
 	
 	/* Indicates whether the new IPv6 headers will
 	 * be sent or the old */
@@ -276,10 +286,6 @@ typedef struct worker_st {
 	
 	void *main_pool; /* to be used only on deinitialization */
 } worker_st;
-
-#define RESET_DTLS_MTU(ws) \
-		ws->conn_mtu = MIN(ws->conn_mtu, \
-			ws->vinfo.mtu - ws->proto_overhead - ws->crypto_overhead)
 
 void vpn_server(struct worker_st* ws);
 

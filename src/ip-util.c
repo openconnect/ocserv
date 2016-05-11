@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
- * Copyright (C) 2015 Red Hat, Inc.
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,12 @@
 #include <talloc.h>
 /* for inet_ntop */
 #include <arpa/inet.h>
+#include <syslog.h>
+
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 int ip_cmp(const struct sockaddr_storage *s1, const struct sockaddr_storage *s2)
 {
@@ -252,4 +258,41 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 
 finish:
 	return save_buf;
+}
+
+void set_mtu_disc(int fd, int family, int val)
+{
+	int y;
+
+	if (family == AF_INET6) {
+		y = val;
+#if defined(IPV6_DONTFRAG)
+		if (setsockopt(fd, IPPROTO_IPV6, IPV6_DONTFRAG,
+			       (const void *) &y, sizeof(y)) < 0)
+			syslog(LOG_INFO, "setsockopt(IPV6_DF) failed");
+#elif defined(IPV6_MTU_DISCOVER)
+		if (val)
+			y = IP_PMTUDISC_DO;
+		else
+			y = IP_PMTUDISC_DONT;
+		if (setsockopt(fd, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+		       (const void *) &y, sizeof(y)) < 0)
+			syslog(LOG_INFO, "setsockopt(IPV6_MTU_DISCOVER) failed");
+#endif
+	} else {
+		y = val;
+#if defined(IP_DONTFRAG)
+		if (setsockopt(fd, IPPROTO_IP, IP_DONTFRAG,
+			       (const void *) &y, sizeof(y)) < 0)
+			syslog(LOG_INFO, "setsockopt(IP_DF) failed");
+#elif defined(IP_MTU_DISCOVER)
+		if (val)
+			y = IP_PMTUDISC_DO;
+		else
+			y = IP_PMTUDISC_DONT;
+		if (setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER,
+		       (const void *) &y, sizeof(y)) < 0)
+			syslog(LOG_INFO, "setsockopt(IP_MTU_DISCOVER) failed");
+#endif
+	}
 }

@@ -80,7 +80,7 @@ AC_DEFUN([gl_FUNC_STRCASESTR],
 #include <string.h> /* for strcasestr */
 #include <stdlib.h> /* for malloc */
 #include <unistd.h> /* for alarm */
-static void quit (int sig) { exit (sig + 128); }
+static void quit (int sig) { _exit (sig + 128); }
 ]], [[
     int result = 0;
     size_t m = 1000000;

@@ -13,7 +13,8 @@ occtl_SOURCES = occtl.c pager.c occtl.h time.c cache.c ip-cache.c \
 	nl.c ctl.h print.c json.c json.h hex.c hex.h
 occtl_LDADD = ../../gl/libgnu.a ../common/libcommon.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(NEEDED_LIBPROTOBUF_LIBS) $(LIBTALLOC_LIBS) ../ccan/libccan.a \
-	../libipc.a $(NEEDED_LIBPROTOBUF_LIBS) $(CODE_COVERAGE_LDFLAGS)
+	../libipc.a $(NEEDED_LIBPROTOBUF_LIBS) $(CODE_COVERAGE_LDFLAGS) \
+	$(LIBNETTLE_LIBS)
 
 occtl_SOURCES += unix.c
 

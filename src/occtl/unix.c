@@ -43,8 +43,10 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <assert.h>
 #include "hex.h"
 #include <vpn.h>
+#include <base64-helper.h>
 
 static
 int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);
@@ -609,6 +611,18 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 	return ret;
 }
 
+static char *cookie_to_str(void *cookie, unsigned cookie_size, unsigned small)
+{
+	static char psid[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+
+	assert(cookie_size == SID_SIZE);
+	oc_base64_encode((char *)cookie, cookie_size, (char *)psid, sizeof(psid));
+
+	if (small)
+		psid[6] = 0;
+	return psid;
+}
+
 static
 void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, cmd_params_st *params,
 		 unsigned all)
@@ -640,19 +654,19 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 		if (t > 0) {
 			tm = localtime(&t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+			print_time_ival7(tmpbuf, time(0), t);
 		} else {
-			str_since[0] = '?';
-			str_since[1] = 0;
+			strlcpy(tmpbuf, "(active)", sizeof(tmpbuf));
 		}
 
 		groupname = rep->cookies[i]->groupname;
 		if (groupname == NULL || groupname[0] == 0)
 			groupname = NO_GROUP;
 
-		print_time_ival7(tmpbuf, time(0), t);
 
 		fprintf(out, "%.6s %8s %8s %14s %.24s %8s %8s\n",
-			rep->cookies[i]->psid, username, groupname, rep->cookies[i]->remote_ip,
+			cookie_to_str(rep->cookies[i]->sid.data, rep->cookies[i]->sid.len, 1),
+			username, groupname, rep->cookies[i]->remote_ip,
 			rep->cookies[i]->user_agent, tmpbuf, ps_status_to_str(rep->cookies[i]->status, 1));
 	}
 }
@@ -968,6 +982,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 			groupname = NO_GROUP;
 
 		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
+
 		print_single_value(out, params, "State", ps_status_to_str(args->user[i]->status, 0), 1);
 		if (args->user[i]->has_mtu != 0)
 			print_pair_value(out, params, "Device", args->user[i]->tun, "MTU", int2str(tmpbuf, args->user[i]->mtu), 1);
@@ -1013,6 +1028,10 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 
 		print_time_ival7(tmpbuf, time(0), t);
 		print_single_value_ex(out, params, "Connected at", str_since, tmpbuf, 1);
+
+		if (HAVE_JSON(params))
+			print_single_value(out, params, "Raw cookie", cookie_to_str(args->user[i]->sid.data, args->user[i]->sid.len, 0), 1);
+		print_single_value(out, params, "Cookie", cookie_to_str(args->user[i]->sid.data, args->user[i]->sid.len, 1), 1);
 
 		print_single_value(out, params, "TLS ciphersuite", args->user[i]->tls_ciphersuite, 1);
 		print_single_value(out, params, "DTLS cipher", args->user[i]->dtls_ciphersuite, 1);
@@ -1105,11 +1124,15 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
 		print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
 		print_single_value(out, params, "State", ps_status_to_str(args->cookies[i]->status, 1), 1);
-
 		t = args->cookies[i]->last_modified;
-		tm = localtime(&t);
-		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
-		print_single_value(out, params, "Last Modified", str_since, 0);
+
+		if (t > 0) {
+			tm = localtime(&t);
+			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
+		} else {
+			strlcpy(str_since, "(active)", sizeof(str_since));
+		}
+		print_single_value(out, params, "Last Modified", str_since, 1);
 
 		username = args->cookies[i]->username;
 		if (username == NULL || username[0] == 0)
@@ -1125,11 +1148,8 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 
 		print_single_value(out, params, "Last Modified", str_since, 1);
 
-		str_since[0] = 0;
-		hex_encode(args->cookies[i]->sid.data, args->cookies[i]->sid.len, str_since, sizeof(str_since));
-		print_single_value(out, params, "cookie", str_since, 1);
-		print_single_value(out, params, "Printable cookie", args->cookies[i]->psid, 1);
-
+		print_single_value(out, params, "Raw cookie", cookie_to_str(args->cookies[i]->sid.data, args->cookies[i]->sid.len, 0), 1);
+		print_single_value(out, params, "Cookie", cookie_to_str(args->cookies[i]->sid.data, args->cookies[i]->sid.len, 1), 1);
 
 		print_end_block(out, params, i<(args->n_cookies-1)?1:0);
 

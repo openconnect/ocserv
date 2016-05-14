@@ -17,7 +17,8 @@ libcmd_ocpasswd_a_SOURCES = args.def args.c args.h
 
 ocpasswd_SOURCES = ocpasswd.c
 ocpasswd_LDADD = ../../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
-ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS)
+ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS) \
+	$(LIBNETTLE_LIBS)
 
 args.c: $(srcdir)/args.def $(builddir)/../version.inc
 	$(AUTOGEN) $<

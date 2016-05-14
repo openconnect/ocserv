@@ -53,6 +53,8 @@ message user_info_rep
 	required uint32 keepalive = 29;
 	required bool restrict_to_routes = 30;
 	repeated fw_port_st fw_ports = 31;
+
+	required bytes sid = 32; /* the cookie */
 }
 
 message user_list_rep

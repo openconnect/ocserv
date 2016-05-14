@@ -356,6 +356,9 @@ static int append_user_info(method_ctx *ctx,
 	rep->tls_ciphersuite = ctmp->tls_ciphersuite;
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;
 
+	rep->sid.data = ctmp->sid;
+	rep->sid.len = sizeof(ctmp->sid);
+
 	rep->cstp_compr = ctmp->cstp_compr;
 	rep->dtls_compr = ctmp->dtls_compr;
 	if (ctmp->mtu > 0) {

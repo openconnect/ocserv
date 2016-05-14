@@ -1,5 +1,8 @@
 * Version 0.11.3 (unreleased)
-- ocserv: added '/cert.pem' and '/cert.cer' HTTP handlers
+- ocserv: added '/cert.pem' and '/cert.cer' HTTP handlers. These provide
+  the server's certificate as PEM and DER files.
+- occtl: Corrected the printing of cookie last modification time.
+- occtl: Print the user's cookie on occtl show user cmd.
 
 
 * Version 0.11.2 (released 2016-04-25)

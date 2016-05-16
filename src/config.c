@@ -912,6 +912,10 @@ size_t urlfw_size = 0;
 	READ_NUMERIC("session-timeout", config->session_timeout);
 
 	READ_NUMERIC("auth-timeout", config->auth_timeout);
+	if (config->auth_timeout == 0) {
+		config->auth_timeout = DEFAULT_AUTH_TIMEOUT_SECS;
+	}
+
 	READ_NUMERIC("idle-timeout", config->idle_timeout);
 
 	config->mobile_idle_timeout = -1;

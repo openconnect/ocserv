@@ -112,6 +112,10 @@ inline static const char *proto_to_str(fw_proto_t proto)
 #define MIN_NO_COMPRESS_LIMIT 64
 #define DEFAULT_NO_COMPRESS_LIMIT 256
 
+/* The time after which a user will be forced to authenticate
+ * or disconnect. */
+#define DEFAULT_AUTH_TIMEOUT_SECS 1800
+
 /* The time after a disconnection the cookie is valid */
 #define DEFAULT_COOKIE_RECON_TIMEOUT 120
 

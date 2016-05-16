@@ -93,7 +93,7 @@ static void handle_alarm(int signo)
 	if (global_ws)
 		exit_worker(global_ws);
 
-	exit(1);
+	_exit(1);
 }
 
 static void handle_term(int signo)
@@ -392,7 +392,7 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 
 	talloc_free(ws->main_pool);
 	closelog();
-	exit(1);
+	_exit(1);
 }
 
 

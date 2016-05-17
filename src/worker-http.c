@@ -58,6 +58,8 @@ const static struct known_urls_st known_urls[] = {
 	LL("/VPN", get_auth_handler, post_auth_handler),
 	LL("/cert.pem", get_cert_handler, NULL),
 	LL("/cert.cer", get_cert_der_handler, NULL),
+	LL("/ca.pem", get_ca_handler, NULL),
+	LL("/ca.cer", get_ca_der_handler, NULL),
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	LL("/1/index.html", get_empty_handler, NULL),
 	LL("/1/Linux", get_empty_handler, NULL),

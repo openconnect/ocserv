@@ -194,6 +194,14 @@ socket-file = /var/run/ocserv-socket
 server-cert = /path/to/cert.pem
 server-key = /path/to/key.pem
 
+# The server provides following URL handlers to obtain the certificates
+# configured above:
+#  /cert.pem   Returns the server's certificate in PEM format
+#  /cert.der   Returns the server's certificate in DER format
+#  /ca.pem     Returns the server's CA certificate in PEM format
+#  /ca.der     Returns the server's CA certificate in DER format
+#
+
 # Diffie-Hellman parameters. Only needed if you require support
 # for the DHE ciphersuites (by default this server supports ECDHE).
 # Can be generated using:

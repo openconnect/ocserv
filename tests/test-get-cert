@@ -60,6 +60,29 @@ fi
 
 echo "ok"
 
+echo -n "Connecting to GET CA PEM certificate... "
+( LD_PRELOAD=libsocket_wrapper.so curl https://$ADDRESS:$PORT/ca.pem --insecure > $TMPFILE 2>/dev/null ) ||
+	fail $PID "Could not get certificate!"
+
+cmp $TMPFILE "${srcdir}/ca.pem"
+if test $? != 0;then
+	fail $PID "failed, certs not match"
+fi
+
+echo "ok"
+
+echo -n "Connecting to GET CA DER certificate... "
+( LD_PRELOAD=libsocket_wrapper.so curl https://$ADDRESS:$PORT/ca.cer --insecure > $TMPFILE 2>/dev/null ) ||
+	fail $PID "Could not get DER certificate!"
+
+certtool --inder -i <"$TMPFILE" >$TMPFILE2
+certtool -i <"${srcdir}/ca.pem" >$TMPFILE
+cmp "$TMPFILE" "$TMPFILE2"
+if test $? != 0;then
+	fail $PID "failed, certs not match"
+fi
+
+echo "ok"
 
 cleanup
 

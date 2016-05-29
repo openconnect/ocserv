@@ -1,0 +1,15 @@
+dist: trusty
+sudo: required
+language: c
+compiler:
+  - gcc
+
+before_script:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq autoconf automake libtool libgnutls28-dev libev-dev libwrap0-dev
+    libpam0g-dev liblz4-dev libseccomp-dev libreadline-dev libnl-route-3-dev libkrb5-dev libtasn1-6-dev
+    libhttp-parser-dev libpcl1-dev libopts25-dev autogen protobuf-c-compiler gperf libprotobuf-c0-dev libtalloc-dev
+    libseccomp-dev libreadline-dev liblockfile-bin lcov nuttcp
+
+script: autoreconf -fvi && ./configure && make && make check
+

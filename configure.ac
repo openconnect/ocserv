@@ -415,7 +415,7 @@ if test "$test_for_gssapi" = yes;then
 PKG_CHECK_MODULES([LIBKRB5], [krb5-gssapi], [
 enable_gssapi=yes
 AC_DEFINE([HAVE_GSSAPI], [], [GSSAPI was found])
-PKG_CHECK_MODULES(LIBTASN1, [libtasn1 >= 3.8])
+PKG_CHECK_MODULES(LIBTASN1, [libtasn1 >= 3.4])
 ],
 [
 	AC_MSG_WARN([[

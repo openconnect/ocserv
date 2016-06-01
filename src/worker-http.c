@@ -261,8 +261,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		oclog(ws, LOG_DEBUG,
 		      "User-agent: '%s'", req->user_agent);
 
-		if (strncasecmp(req->user_agent, "Open Any", 8) == 0) {
-			if (strncmp(req->user_agent, "Open AnyConnect VPN Agent v3", 28) == 0)
+		if (strncasecmp(req->user_agent, "Open AnyConnect VPN Agent v", 27) == 0) {
+			unsigned version = atoi(&req->user_agent[27]);
+			if (version <= 3)
 				req->user_agent_type = AGENT_OPENCONNECT_V3;
 			else
 				req->user_agent_type = AGENT_OPENCONNECT;

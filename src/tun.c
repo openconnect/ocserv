@@ -566,6 +566,30 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
 	}
 
+#if defined(__OpenBSD__)
+	/* enable multicast for tun interface (OpenBSD) */
+	{
+		struct tuninfo inf;
+		ret = ioctl(tunfd, TUNGIFINFO, &inf);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNGIFINFO: %s\n",
+					proc->tun_lease.name, strerror(e));
+			goto fail;
+		}
+
+		inf.flags |= IFF_MULTICAST;
+
+		ret = ioctl(tunfd, TUNSIFINFO, &inf);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNSIFINFO: %s\n",
+					proc->tun_lease.name, strerror(e));
+			goto fail;
+		}
+	}
+#endif
+
 #ifdef TUNSIFHEAD
 	{
 		int i = 1;

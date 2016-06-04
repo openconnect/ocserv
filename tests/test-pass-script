@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2013 Nikos Mavrogiannopoulos
+# Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
 #
 # This file is part of ocserv.
 #
@@ -39,6 +39,7 @@ echo "Connecting to obtain cookie with wrong username... "
 
 rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
+rm -f ${builddir}/host-update.ok
 #test special characters
 
 echo "Connecting to obtain cookie... "
@@ -46,11 +47,7 @@ echo "Connecting to obtain cookie... "
 	fail $PID "Could not receive cookie from server"
 
 echo "Re-connecting to force script run... "
-echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ./bin/true >/dev/null 2>&1 &
-kpid=$!
-
-sleep 2
-kill $kpid
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true #>/dev/null 2>&1
 
 kill $PID
 wait
@@ -62,6 +59,11 @@ if ! test -f ${builddir}/connect.ok;then
 	exit 1
 fi
 
+if ! test -f ${builddir}/host-update.ok;then
+	echo "Host-update script was not run"
+	exit 1
+fi
+
 if ! test -f ${builddir}/disconnect.ok;then
 	echo "Disconnect script was not run properly"
 	exit 1
@@ -69,5 +71,7 @@ fi
 
 rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
+rm -f ${builddir}/host-update.ok
+rm -f $TMPFILE
 
 exit 0

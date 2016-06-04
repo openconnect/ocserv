@@ -22,6 +22,9 @@ case "$REASON" in
 		#fi
 	fi
 	;;
+  "host-update")
+  	echo > host-update.ok
+	;;
 esac
 
 exit 0

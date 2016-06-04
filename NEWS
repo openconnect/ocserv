@@ -5,7 +5,11 @@
   the server's CA certificate as PEM and DER files. The handlers work
   only if the CA is part of the server's certificate chain.
 - ocserv: use the same work around for openconnect v3 clients in
-  earlier versions. Addresses issue #51.
+  earlier versions. This allows very old openconnect clients to connect
+  in ocserv. Addresses issue #51.
+- ocserv: added the host-update-script config option. This option
+  allows to specify a script to run once the hostname of the connected
+  user is known.
 - occtl: Corrected the printing of cookie last modification time.
 - occtl: Print the user's cookie on occtl show user cmd.
 

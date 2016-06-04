@@ -56,6 +56,14 @@
 				exit(1); \
 			}
 
+typedef enum script_type_t {
+	SCRIPT_CONNECT,
+	SCRIPT_HOST_UPDATE,
+	SCRIPT_DISCONNECT
+} script_type_t;
+
+const static char *type_name[] = {"up", "host-update", "down"};
+
 static void export_fw_info(main_server_st *s, struct proc_st* proc)
 {
 	str_st str4;
@@ -238,20 +246,24 @@ static void export_fw_info(main_server_st *s, struct proc_st* proc)
 }
 
 static
-int call_script(main_server_st *s, struct proc_st* proc, unsigned up)
+int call_script(main_server_st *s, struct proc_st* proc, script_type_t type)
 {
 pid_t pid;
 int ret;
 const char* script, *next_script = NULL;
 
-	if (up != 0)
+	if (type == SCRIPT_CONNECT)
 		script = s->config->connect_script;
+	else if (type == SCRIPT_HOST_UPDATE)
+		script = s->config->host_update_script;
 	else
 		script = s->config->disconnect_script;
 
-	if (proc->config->restrict_user_to_routes || proc->config->n_fw_ports > 0) {
-		next_script = script;
-		script = OCSERV_FW_SCRIPT;
+	if (type != SCRIPT_HOST_UPDATE) {
+		if (proc->config->restrict_user_to_routes || proc->config->n_fw_ports > 0) {
+			next_script = script;
+			script = OCSERV_FW_SCRIPT;
+		}
 	}
 
 	if (script == NULL)
@@ -328,9 +340,11 @@ const char* script, *next_script = NULL;
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
 		setenv("DEVICE", proc->tun_lease.name, 1);
-		if (up) {
+		if (type == SCRIPT_CONNECT) {
 			setenv("REASON", "connect", 1);
-		} else {
+		} else if (type == SCRIPT_HOST_UPDATE) {
+			setenv("REASON", "host-update", 1);
+		} else if (type == SCRIPT_DISCONNECT) {
 			/* use remote as temp buffer */
 			snprintf(remote, sizeof(remote), "%lu", (unsigned long)proc->bytes_in);
 			setenv("STATS_BYTES_IN", remote, 1);
@@ -354,9 +368,9 @@ const char* script, *next_script = NULL;
 
 		if (next_script) {
 			setenv("OCSERV_NEXT_SCRIPT", next_script, 1);
-			mslog(s, proc, LOG_DEBUG, "executing script %s %s (next: %s)", up?"up":"down", script, next_script);
+			mslog(s, proc, LOG_DEBUG, "executing script %s %s (next: %s)", type_name[type], script, next_script);
 		} else
-			mslog(s, proc, LOG_DEBUG, "executing script %s %s", up?"up":"down", script);
+			mslog(s, proc, LOG_DEBUG, "executing script %s %s", type_name[type], script);
 
 		ret = execl(script, script, NULL);
 		if (ret == -1) {
@@ -370,8 +384,8 @@ const char* script, *next_script = NULL;
 		return -1;
 	}
 	
-	if (up) {
-		add_to_script_list(s, pid, up, proc);
+	if (type == SCRIPT_CONNECT) {
+		add_to_script_list(s, pid, proc);
 		return ERR_WAIT_FOR_SCRIPT;
 	} else {
 		return 0;
@@ -453,17 +467,25 @@ int ret;
 	ctl_handler_notify(s,proc, 1);
 	add_utmp_entry(s, proc);
 
-	ret = call_script(s, proc, 1);
+	ret = call_script(s, proc, SCRIPT_CONNECT);
 	if (ret < 0)
 		return ret;
 
 	return 0;
 }
 
+void user_hostname_update(main_server_st *s, struct proc_st* proc)
+{
+	if (proc->host_updated != 0)
+		return;
+	call_script(s, proc, SCRIPT_HOST_UPDATE);
+	proc->host_updated = 1;
+}
+
 void user_disconnected(main_server_st *s, struct proc_st* proc)
 {
 	ctl_handler_notify(s,proc, 0);
 	remove_utmp_entry(s, proc);
-	call_script(s, proc, 0);
+	call_script(s, proc, SCRIPT_DISCONNECT);
 }
 

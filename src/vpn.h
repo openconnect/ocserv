@@ -382,6 +382,7 @@ struct cfg_st {
 	char *route_del_cmd;
 
 	char *connect_script;
+	char *host_update_script;
 	char *disconnect_script;
 
 	char *cgroup;

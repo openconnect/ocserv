@@ -110,6 +110,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "cert-user-oid", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "cert-group-oid", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "connect-script", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "host-update-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "disconnect-script", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "pid-file", .type = OPTION_STRING, .mandatory = 0 },
 #ifdef HAVE_GSSAPI
@@ -801,6 +802,7 @@ size_t urlfw_size = 0;
 	READ_STRING("cert-group-oid", config->cert_group_oid);
 
 	READ_STRING("connect-script", config->connect_script);
+	READ_STRING("host-update-script", config->host_update_script);
 	READ_STRING("disconnect-script", config->disconnect_script);
 
 	if (reload == 0 && pid_file[0] == 0)

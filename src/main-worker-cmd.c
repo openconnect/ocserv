@@ -359,9 +359,11 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 			if (tmsg->user_agent)
 				strlcpy(proc->user_agent, tmsg->user_agent,
 					 sizeof(proc->user_agent));
-			if (tmsg->hostname)
+			if (tmsg->hostname) {
 				strlcpy(proc->hostname, tmsg->hostname,
 					 sizeof(proc->hostname));
+				user_hostname_update(s, proc);
+			}
 
 			if (s->config->listen_proxy_proto) {
 				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {

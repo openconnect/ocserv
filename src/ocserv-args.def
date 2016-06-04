@@ -447,7 +447,8 @@ rekey-method = ssl
 # client), OCSERV_NO_ROUTES, OCSERV_DNS (the DNS servers for this client),
 # will contain a space separated list of routes or DNS servers. A version
 # of these variables with the 4 or 6 suffix will contain only the IPv4 or
-# IPv6 values.
+# IPv6 values. Only the exit code of the connect script is considered.
+# An exit code of non-zero results the user being denied access.
 
 # The disconnect script will receive the additional values: STATS_BYTES_IN,
 # STATS_BYTES_OUT, STATS_DURATION that contain a 64-bit counter of the bytes 
@@ -455,6 +456,13 @@ rekey-method = ssl
 
 #connect-script = /usr/bin/myscript
 #disconnect-script = /usr/bin/myscript
+
+# Script to call when the client is connected and provides a hostname. This
+# is called after the connect-script, if a hostname is provided by the user,
+# and in addition to the previously stated variables it provides a HOSTNAME
+# environment variable. REASON variable will be "host-update". The exit code
+# of this script is ignored.
+#host-update-script = /usr/bin/myscript
 
 # UTMP
 # Register the connected clients to utmp. This will allow viewing

@@ -75,7 +75,6 @@ struct script_wait_st {
 	struct list_node list;
 
 	pid_t pid;
-	unsigned int up; /* connect or disconnect script */
 	struct proc_st* proc;
 };
 
@@ -107,6 +106,9 @@ typedef struct proc_st {
 	/* The SID which acts as a cookie */
 	uint8_t sid[SID_SIZE];
 	unsigned active_sid;
+
+	/* whether the host-update script has already been called */
+	unsigned host_updated;
 
 	/* The DTLS session ID associated with the TLS session 
 	 * it is either generated or restored from a cookie.
@@ -221,6 +223,7 @@ int handle_worker_commands(main_server_st *s, struct proc_st* cur);
 int handle_sec_mod_commands(main_server_st *s);
 
 int user_connected(main_server_st *s, struct proc_st* cur);
+void user_hostname_update(main_server_st *s, struct proc_st* cur);
 void user_disconnected(main_server_st *s, struct proc_st* cur);
 
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);

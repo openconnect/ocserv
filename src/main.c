@@ -883,7 +883,7 @@ void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
 		estatus = 1;
 
 	/* check if someone was waiting for that pid */
-	mslog(s, stmp->proc, LOG_DEBUG, "%s-script exit status: %u", stmp->up?"connect":"disconnect", estatus);
+	mslog(s, stmp->proc, LOG_DEBUG, "connect-script exit status: %u", estatus);
 	list_del(&stmp->list);
 	ev_child_stop(loop, &stmp->ev_child);
 

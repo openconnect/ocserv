@@ -307,9 +307,6 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 		return;
 	}
 
-	if (final != 0)
-		return;
-
 	ret = recv_msg(ws, ws->cmd_fd, CMD_BAN_IP_REPLY,
 		       (void *)&reply, (unpack_func) ban_ip_reply_msg__unpack, DEFAULT_SOCKET_TIMEOUT);
 	if (ret < 0) {
@@ -317,7 +314,7 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 		return;
 	}
 
-	if (reply->reply != AUTH__REP__OK) {
+	if (final ==0 && reply->reply != AUTH__REP__OK) {
 		/* we have exceeded the maximum score */
 		exit(1);
 	}
@@ -358,6 +355,8 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 		ret = send_msg_to_secmod(ws, sd, CMD_SEC_CLI_STATS, &msg,
 				 (pack_size_func)cli_stats_msg__get_packed_size,
 				 (pack_func) cli_stats_msg__pack);
+		if (discon_reason) /* wait for sec-mod to close connection to verify data have been accounted */
+			read(sd, buf, sizeof(buf));
 		close(sd);
 
 		if (ret >= 0) {

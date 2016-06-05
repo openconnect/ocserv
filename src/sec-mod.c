@@ -199,7 +199,7 @@ static int handle_op(void *pool, int cfd, sec_mod_st * sec, uint8_t type, uint8_
 }
 
 static
-int process_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request_t cmd,
+int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_request_t cmd,
 		   uint8_t * buffer, size_t buffer_size)
 {
 	unsigned i;
@@ -616,7 +616,7 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 		goto leave;
 	}
 
-	ret = process_packet(pool, cfd, pid, sec, cmd, buffer, ret);
+	ret = process_worker_packet(pool, cfd, pid, sec, cmd, buffer, ret);
 	if (ret < 0) {
 		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}

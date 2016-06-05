@@ -94,6 +94,8 @@ struct proc_st *ctmp;
  */
 void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 {
+	pid_t pid;
+
 	ev_io_stop(EV_A_ &proc->io);
 	ev_child_stop(EV_A_ &proc->ev_child);
 
@@ -114,9 +116,22 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 	mslog(s, proc, LOG_INFO, "user disconnected (reason: %s, rx: %"PRIu64", tx: %"PRIu64")",
 		discon_reason_to_str(proc->discon_reason), proc->bytes_in, proc->bytes_out);
 
-	remove_from_script_list(s, proc);
-	if (proc->status == PS_AUTH_COMPLETED) {
-		user_disconnected(s, proc);
+	pid = remove_from_script_list(s, proc);
+	if (proc->status == PS_AUTH_COMPLETED || pid > 0) {
+		if (pid > 0) {
+			int wstatus;
+			/* we were called during the connect script being run.
+			 * wait for it to finish and if it returns zero run the
+			 * disconnect script */
+			 if (waitpid(pid, &wstatus, 0) > 0) {
+			 	if (WEXITSTATUS(wstatus) == 0)
+					user_disconnected(s, proc);
+			 }
+		} else { /* pid > 0 or status == PS_AUTH_COMPLETED are mutually exclusive
+		          * since PS_AUTH_COMPLETED is set only after a successful script run.
+		          */
+			user_disconnected(s, proc);
+		}
 	}
 
 	/* close the intercomm fd */

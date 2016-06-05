@@ -460,8 +460,9 @@ rekey-method = ssl
 # Script to call when the client is connected and provides a hostname. This
 # is called after the connect-script, if a hostname is provided by the user,
 # and in addition to the previously stated variables it provides a HOSTNAME
-# environment variable. REASON variable will be "host-update". The exit code
-# of this script is ignored.
+# environment variable. That can be used with nsupdate, for example, to
+# register the hostname on a DNS server. The REASON variable will be "host-update".
+# The exit code of this script is ignored.
 #host-update-script = /usr/bin/myscript
 
 # UTMP

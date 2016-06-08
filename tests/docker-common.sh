@@ -111,7 +111,6 @@ $DOCKER rm $IMAGE_NAME >/dev/null 2>&1
 rm -f $DOCKER_DIR/Dockerfile
 if test "$FEDORA" = 1;then
 	echo "Using the fedora image"
-	$DOCKER pull fedora:21
 	if test $? != 0;then
 		echo "Cannot pull docker image"
 		$UNLOCKFILE
@@ -120,7 +119,6 @@ if test "$FEDORA" = 1;then
 	cp $DOCKER_DIR/Dockerfile-fedora-$CONFIG $DOCKER_DIR/Dockerfile
 else #DEBIAN
 	echo "Using the Debian image"
-	$DOCKER pull debian:jessie
 	if test $? != 0;then
 		echo "Cannot pull docker image"
 		$UNLOCKFILE

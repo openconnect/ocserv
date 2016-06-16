@@ -10,6 +10,8 @@
 - ocserv: added the host-update-script config option. This option
   allows to specify a script to run once the hostname of the connected
   user is known.
+- ocserv-fw: fixed the application of rules in the forward chain. Report
+  and patch by Lance LeFlore.
 - occtl: Corrected the printing of cookie last modification time.
 - occtl: Print the user's cookie on occtl show user cmd.
 

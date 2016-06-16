@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # Copyright (C) 2015 Red Hat, Inc.
+# Copyright (C) 2016 Lance LeFlore
 #
 # This file is part of ocserv.
 #
@@ -53,8 +54,8 @@
 PATH=/sbin:/usr/sbin:$PATH
 
 COMMENT="ocserv-fw"
-INPUT_CHAIN="INPUT"
-SEC_INPUT_CHAIN="INPUT-${COMMENT}-${DEVICE}"
+FORWARD_CHAIN="FORWARD"
+SEC_FORWARD_CHAIN="FORWARD-${COMMENT}-${DEVICE}"
 
 if test "$1" = "--removeall";then
 	eval "$(iptables -S | grep "comment ${COMMENT}" | sed -e 's/-A/-D/g' -e 's/^-/iptables -/g')"
@@ -77,14 +78,20 @@ execute_next_script() {
 clean_all_rules() {
 	eval "$(iptables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}" | sed -e 's/-A/-D/g' -e 's/^-/iptables -/g')" 2>/dev/null
 	eval "$(ip6tables -S | grep "comment ${COMMENT}" | grep -e "-[io] ${DEVICE}" | sed -e 's/-A/-D/g' -e 's/^-/ip6tables -/g')" 2>/dev/null
-	iptables -X ${SEC_INPUT_CHAIN} 2>/dev/null
-	ip6tables -X ${SEC_INPUT_CHAIN} 2>/dev/null
+	iptables -X ${SEC_FORWARD_CHAIN} 2>/dev/null
+	ip6tables -X ${SEC_FORWARD_CHAIN} 2>/dev/null
 }
 
 if test "${REASON}" = "connect";then
 	#clear any leftover rules for this device
 	clean_all_rules
-else
+	# assume FORWARD policy is REJECT - allow return traffic
+	# may also need to turn kernel knob to allow forwarding
+	iptables -I ${FORWARD_CHAIN} \
+		-o ${DEVICE} \
+		-m conntrack --ctstate RELATED,ESTABLISHED \
+		-j ACCEPT -m comment --comment "${COMMENT}"
+	else
 	if test "${REASON}" = "disconnect";then
 		clean_all_rules
 		set -e
@@ -99,11 +106,9 @@ fi
 set -e
 
 allow_dns() {
-	"$1" -A ${INPUT_CHAIN} -i ${DEVICE} -p udp -d "$2" --dport 53 -j ACCEPT --match comment --comment "${COMMENT}"
-	"$1" -A OUTPUT -o ${DEVICE} -p udp -s "$2" --sport 53 -j ACCEPT --match comment --comment "${COMMENT}"
+	"$1" -A ${FORWARD_CHAIN} -i ${DEVICE} -p udp -d "$2" --dport 53 -j ACCEPT --match comment --comment "${COMMENT}"
 
-	"$1" -A ${INPUT_CHAIN} -i ${DEVICE} -p tcp -d "$2" --dport 53 -m state --state NEW,ESTABLISHED -j ACCEPT --match comment --comment "${COMMENT}"
-	"$1" -A OUTPUT -o ${DEVICE} -p tcp -s "$2" --sport 53 -m state --state ESTABLISHED -j ACCEPT --match comment --comment "${COMMENT}"
+	"$1" -A ${FORWARD_CHAIN} -i ${DEVICE} -p tcp -d "$2" --dport 53 -m state --state NEW,ESTABLISHED -j ACCEPT --match comment --comment "${COMMENT}"
 }
 
 allow_dns4() {
@@ -115,8 +120,7 @@ allow_dns6() {
 }
 
 allow_route() {
-	"$1" -A ${INPUT_CHAIN} -i ${DEVICE} -s "$2" -j ACCEPT --match comment --comment "${COMMENT}"
-	"$1" -A OUTPUT -o ${DEVICE} -d "$2" -j ACCEPT --match comment --comment "${COMMENT}"
+	"$1" -A ${SEC_FORWARD_CHAIN} -i ${DEVICE} -d "$2" -j ACCEPT --match comment --comment "${COMMENT}"
 }
 
 allow_route4() {
@@ -128,8 +132,7 @@ allow_route6() {
 }
 
 disallow_route() {
-	"$1" -A ${INPUT_CHAIN} -i ${DEVICE} -s "$2" -j DROP --match comment --comment "${COMMENT}"
-	"$1" -A OUTPUT -o ${DEVICE} -d "$2" -j DROP --match comment --comment "${COMMENT}"
+	"$1" -A ${SEC_FORWARD_CHAIN} -i ${DEVICE} -d "$2" -j REJECT --match comment --comment "${COMMENT}"
 }
 
 disallow_route4() {
@@ -141,17 +144,13 @@ disallow_route6() {
 }
 
 disallow_all() {
-	iptables -A ${INPUT_CHAIN} -i ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
-	iptables -A OUTPUT -o ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
-	ip6tables -A ${INPUT_CHAIN} -i ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
-	ip6tables -A OUTPUT -o ${DEVICE} -j DROP --match comment --comment "${COMMENT}"
+	iptables -A ${FORWARD_CHAIN} -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
+	ip6tables -A ${FORWARD_CHAIN} -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
 }
 
 allow_all() {
-	iptables -A ${INPUT_CHAIN} -i ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
-	iptables -A OUTPUT -o ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
-	ip6tables -A ${INPUT_CHAIN} -i ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
-	ip6tables -A OUTPUT -o ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
+	iptables -A ${FORWARD_CHAIN} -i ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
+	ip6tables -A ${FORWARD_CHAIN} -i ${DEVICE} -j ACCEPT --match comment --comment "${COMMENT}"
 }
 
 allow_port() {
@@ -160,14 +159,14 @@ allow_port() {
 
 	case "$proto" in
 		icmp)
-			iptables -A INPUT -i ${DEVICE} -p $proto -j ${INPUT_CHAIN} --match comment --comment "${COMMENT}"
+			iptables -A FORWARD -i ${DEVICE} -p $proto -j ${SEC_FORWARD_CHAIN} --match comment --comment "${COMMENT}"
 			;;
 		icmpv6)
-			ip6tables -A INPUT -i ${DEVICE} -p $proto -j ${INPUT_CHAIN} --match comment --comment "${COMMENT}"
+			ip6tables -A FORWARD -i ${DEVICE} -p $proto -j ${SEC_FORWARD_CHAIN} --match comment --comment "${COMMENT}"
 			;;
 		*)
-			iptables -A INPUT -i ${DEVICE} -p $proto --dport $port -j ${INPUT_CHAIN} --match comment --comment "${COMMENT}"
-			ip6tables -A INPUT -i ${DEVICE} -p $proto --dport $port -j ${INPUT_CHAIN} --match comment --comment "${COMMENT}"
+			iptables -A FORWARD -i ${DEVICE} -p $proto --dport $port -j ${SEC_FORWARD_CHAIN} --match comment --comment "${COMMENT}"
+			ip6tables -A FORWARD -i ${DEVICE} -p $proto --dport $port -j ${SEC_FORWARD_CHAIN} --match comment --comment "${COMMENT}"
 			;;
 	esac
 }
@@ -178,21 +177,21 @@ deny_port() {
 
 	case "$proto" in
 		icmp)
-			iptables -A INPUT -i ${DEVICE} -p $proto -j REJECT --match comment --comment "${COMMENT}"
+			iptables -A ${FORWARD_CHAIN} -i ${DEVICE} -p $proto -j REJECT --match comment --comment "${COMMENT}"
 			;;
 		icmpv6)
-			ip6tables -A INPUT -i ${DEVICE} -p $proto -j REJECT --match comment --comment "${COMMENT}"
+			ip6tables -A ${FORWARD_CHAIN} -i ${DEVICE} -p $proto -j REJECT --match comment --comment "${COMMENT}"
 			;;
 		*)
-			iptables -A INPUT -i ${DEVICE} -p $proto --dport $port -j REJECT --match comment --comment "${COMMENT}"
-			ip6tables -A INPUT -i ${DEVICE} -p $proto --dport $port -j REJECT --match comment --comment "${COMMENT}"
+			iptables -A ${FORWARD_CHAIN} -i ${DEVICE} -p $proto --dport $port -j REJECT --match comment --comment "${COMMENT}"
+			ip6tables -A ${FORWARD_CHAIN} -i ${DEVICE} -p $proto --dport $port -j REJECT --match comment --comment "${COMMENT}"
 			;;
 	esac
 }
 
 disallow_all_ports() {
-	iptables -A INPUT -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
-	ip6tables -A INPUT -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
+	iptables -A FORWARD -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
+	ip6tables -A FORWARD -i ${DEVICE} -j REJECT --match comment --comment "${COMMENT}"
 }
 
 # Allow DNS lookups
@@ -207,9 +206,9 @@ done
 
 # block ports - if needed
 if test -n "${OCSERV_DENY_PORTS}";then
-	INPUT_CHAIN="${SEC_INPUT_CHAIN}"
-	iptables -N "${INPUT_CHAIN}"
-	ip6tables -N "${INPUT_CHAIN}"
+	FORWARD_CHAIN="${SEC_FORWARD_CHAIN}"
+	iptables -N "${FORWARD_CHAIN}"
+	ip6tables -N "${FORWARD_CHAIN}"
 
 	set ${OCSERV_DENY_PORTS}
 	while test $# -gt 1; do
@@ -225,9 +224,9 @@ if test -n "${OCSERV_DENY_PORTS}";then
 	done
 else
 	if test -n "${OCSERV_ALLOW_PORTS}";then
-		INPUT_CHAIN="${SEC_INPUT_CHAIN}"
-		iptables -N "${INPUT_CHAIN}"
-		ip6tables -N "${INPUT_CHAIN}"
+		FORWARD_CHAIN="${SEC_FORWARD_CHAIN}"
+		iptables -N "${FORWARD_CHAIN}"
+		ip6tables -N "${FORWARD_CHAIN}"
 
 		set ${OCSERV_ALLOW_PORTS}
 		while test $# -gt 1; do
@@ -269,6 +268,9 @@ if test "${OCSERV_RESTRICT_TO_ROUTES}" = "1";then
 	else
 		allow_all
 	fi
+else
+	# we still need to allow traffic through if OCSERV_RESTRICT_TO_ROUTES is not true
+	iptables -A ${SEC_FORWARD_CHAIN} -i ${DEVICE} -j ACCEPT -m comment --comment "${COMMENT}"
 fi
 
 execute_next_script

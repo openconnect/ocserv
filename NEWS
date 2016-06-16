@@ -1,4 +1,4 @@
-* Version 0.11.3 (unreleased)
+* Version 0.11.3 (released 2016-06-16)
 - ocserv: added '/cert.pem' and '/cert.cer' HTTP handlers. These provide
   the server's certificate as PEM and DER files.
 - ocserv: added '/ca.pem' and '/ca.cer' HTTP handlers. These provide
@@ -10,8 +10,8 @@
 - ocserv: added the host-update-script config option. This option
   allows to specify a script to run once the hostname of the connected
   user is known.
-- ocserv-fw: fixed the application of rules in the forward chain. Report
-  and patch by Lance LeFlore.
+- ocserv-fw: fixed to correctly apply the rules in the forward chain. Report
+  and fix by Lance LeFlore.
 - occtl: Corrected the printing of cookie last modification time.
 - occtl: Print the user's cookie on occtl show user cmd.
 

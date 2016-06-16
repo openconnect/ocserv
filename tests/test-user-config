@@ -40,20 +40,20 @@ PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( $OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null ) ||
+( $OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Re-connecting to force script run... "
-$OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >/dev/null &
+$OPENCONNECT -q localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >/dev/null &
 kpid1=$!
 echo ok
 
 sleep 2
 
 echo -n "Re-connecting to check the iroutes... "
-$OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 &
+$OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 &
 kpid2=$!
 
 echo ok
@@ -61,7 +61,7 @@ sleep 3
 
 echo -n "Checking if max-same-clients is considered... "
 
-timeout 15s $OPENCONNECT localhost:$PORT --sslkey ${srcdir}/user-key.pem -c ${srcdir}/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE2} 2>&1
+timeout 15s $OPENCONNECT localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE2} 2>&1
 if test $? = 124;then
 	fail $PID "Max-same-clients directive was ignored"
 fi
@@ -123,7 +123,7 @@ rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 
 echo -n "Re-connecting to check the ipv4-network... "
-$OPENCONNECT -v localhost:$PORT --sslkey "${srcdir}/user-key.pem" -c "${srcdir}/user-cert-testipnet.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 & kpid3=$!
+$OPENCONNECT -v localhost:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert-testipnet.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE1} 2>&1 & kpid3=$!
 
 echo ok
 sleep 3

@@ -1,20 +1,23 @@
 include ../src/common.mk
 
-EXTRA_DIST = ca-key.pem ca.pem common.sh server-cert.pem server-key.pem test1.config \
-	test1.passwd test-user-cert.config user-cert.pem user-key.pem test3.config test-iroute.config \
+EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
+	certs/server-key.pem test1.config \
+	test1.passwd test-user-cert.config certs/user-cert.pem certs/user-key.pem \
+	test3.config test-iroute.config \
 	user-config/test user-config-opt/test test-pass-script.config test-multi-cookie.config \
-	test-stress.config user-cert-wrong.pem connect-script test-group.passwd \
-	test-group-pass.config user-group-cert.pem user-group-key.pem test-user-group-cert.config \
+	test-stress.config certs/user-cert-wrong.pem connect-script test-group.passwd \
+	test-group-pass.config certs/user-group-cert.pem certs/user-group-key.pem \
+	test-user-group-cert.config \
 	test-user-group-cert-no-pass.config docker-common.sh test-cookie-timeout.config \
 	test-cookie-timeout-2.config user-config-explicit/test test-explicit-ip.config \
 	test-explicit-ip user-config-explicit/test2 user-config-explicit/test3 \
 	user-config-explicit/test4 test-pass-opt-cert.config test-gssapi.config \
 	test-ban.config test-sighup.config test-gssapi-local-map.config \
 	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
-	server-key-ossl.pem server-key-p8.pem proxyproto-unix-test user-cn.pem \
-	user-cert-testuser.pem test-stress test-user-config.config user-config/testuser \
+	certs/server-key-ossl.pem certs/server-key-p8.pem proxyproto-unix-test certs/user-cn.pem \
+	certs/user-cert-testuser.pem test-stress test-user-config.config user-config/testuser \
 	test-sighup-key-change.config test-sighup-key-change.config user-config/testipnet \
-	user-cert-testipnet.pem user-cert-invalid.pem server-cert-ca.pem
+	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem
 
 SUBDIRS = docker-ocserv docker-kerberos
 

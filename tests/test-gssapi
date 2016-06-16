@@ -44,12 +44,12 @@ launch_server -d 1 -f -c test-gssapi.config & PID=$!
 wait_server $PID
 
 echo "Connecting with curl... "
-curl https://test:testpass@localhost:4449 --cacert ca.pem --negotiate -f -v ||
+curl https://test:testpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v ||
 	fail $PID "Could not connect to server"
 
 export NTLM_USER_FILE=$srcdir/ntlm.pass.wrong
 echo "Connecting with curl and wrong password... "
-curl https://test:wrongpass@localhost:4449 --cacert ca.pem --negotiate -f -v &&
+curl https://test:wrongpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v &&
 	fail $PID "Connected to server with wrong password"
 
 kill $PID
@@ -64,7 +64,7 @@ launch_server -d 1 -f -c test-gssapi-local-map.config & PID=$!
 wait_server $PID
 
 echo "Connecting with curl... "
-curl https://test:testpass@localhost:4449 --cacert ca.pem --negotiate -f -v &&
+curl https://test:testpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v &&
 	fail $PID "Connected to server even when local map was required"
 
 rm -f $srcdir/ntlm.pass

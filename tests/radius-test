@@ -168,7 +168,7 @@ fi
 echo "Trying with certificate"
 rm -f out$TMP.pid
 $DOCKER exec $IMAGE_NAME truncate --size=0 /var/log/radius/radacct/$DIR/$FILE
-$OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=out$TMP.pid
+$OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=out$TMP.pid
 
 sleep 10
 

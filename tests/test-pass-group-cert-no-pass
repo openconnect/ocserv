@@ -38,19 +38,19 @@ LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$POR
 echo ok
 
 echo -n "Connecting to obtain cookie - group1 (with certificate)... "
-LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$PORT --sslkey ${srcdir}/user-group-key.pem -c ${srcdir}/user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group1 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group2 (with certificate)... "
-LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group2 -q $ADDRESS:$PORT --sslkey ${srcdir}/user-group-key.pem -c ${srcdir}/user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group2 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok
 
 echo -n "Connecting to obtain cookie - group3 (hidden) (with certificate)... "
-LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group3 -q $ADDRESS:$PORT --sslkey ${srcdir}/user-group-key.pem -c ${srcdir}/user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
+LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT --authgroup group3 -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-group-key.pem -c ${srcdir}/certs/user-group-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok

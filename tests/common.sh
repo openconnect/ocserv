@@ -52,6 +52,7 @@ update_config() {
 	sed -i 's|@USERNAME@|'${username}'|g' "$file.tmp"
 	sed -i 's|@GROUP@|'${group}'|g' "$file.tmp"
 	sed -i 's|@SRCDIR@|'${srcdir}'|g' "$file.tmp"
+	sed -i 's|@CRLNAME@|'${CRLNAME}'|g' "$file.tmp"
 	CONFIG="$file.tmp"
 }
 

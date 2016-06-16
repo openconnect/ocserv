@@ -57,7 +57,7 @@ fi
 echo ""
 echo "Trying with wrong username"
 echo -e "testuser123\n328482\n" >$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin --sslkey ./user-key.pem -c ./user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < $TMP
+$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin --sslkey ./certs/user-key.pem -c ./certs/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < $TMP
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded! WTF!"
 	stop
@@ -68,7 +68,7 @@ echo "Trying with wrong password"
 #oathtool -w 0 00
 echo -e "xxxxxxxx\n328482\n" >$TMP
 cat $TMP
-$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin --sslkey ./user-key.pem -c ./user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < $TMP &
+$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < $TMP &
 PID=$!
 
 

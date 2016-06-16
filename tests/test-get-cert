@@ -40,7 +40,7 @@ echo -n "Connecting to GET PEM certificate... "
 ( LD_PRELOAD=libsocket_wrapper.so curl https://$ADDRESS:$PORT/cert.pem --insecure > $TMPFILE 2>/dev/null ) ||
 	fail $PID "Could not get certificate!"
 
-cmp $TMPFILE "${srcdir}/server-cert.pem"
+cmp $TMPFILE "${srcdir}/certs/server-cert.pem"
 if test $? != 0;then
 	fail $PID "failed, certs not match"
 fi
@@ -52,7 +52,7 @@ echo -n "Connecting to GET DER certificate... "
 	fail $PID "Could not get DER certificate!"
 
 certtool --inder -i <"$TMPFILE" >$TMPFILE2
-certtool -i <"${srcdir}/server-cert.pem" >$TMPFILE
+certtool -i <"${srcdir}/certs/server-cert.pem" >$TMPFILE
 cmp "$TMPFILE" "$TMPFILE2"
 if test $? != 0;then
 	fail $PID "failed, certs not match"
@@ -64,7 +64,7 @@ echo -n "Connecting to GET CA PEM certificate... "
 ( LD_PRELOAD=libsocket_wrapper.so curl https://$ADDRESS:$PORT/ca.pem --insecure > $TMPFILE 2>/dev/null ) ||
 	fail $PID "Could not get certificate!"
 
-cmp $TMPFILE "${srcdir}/ca.pem"
+cmp $TMPFILE "${srcdir}/certs/ca.pem"
 if test $? != 0;then
 	fail $PID "failed, certs not match"
 fi
@@ -76,7 +76,7 @@ echo -n "Connecting to GET CA DER certificate... "
 	fail $PID "Could not get DER certificate!"
 
 certtool --inder -i <"$TMPFILE" >$TMPFILE2
-certtool -i <"${srcdir}/ca.pem" >$TMPFILE
+certtool -i <"${srcdir}/certs/ca.pem" >$TMPFILE
 cmp "$TMPFILE" "$TMPFILE2"
 if test $? != 0;then
 	fail $PID "failed, certs not match"

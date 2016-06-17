@@ -30,7 +30,7 @@ rm -f ${builddir}/disconnect.ok
 
 echo "Testing local backend with username-password... "
 
-launch_server -d 1 -f -c test-pass-script.config & PID=$!
+launch_server -d 1 -f -c "${srcdir}/data/test-pass-script.config" & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie with wrong username... "

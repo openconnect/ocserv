@@ -39,7 +39,7 @@ run_client() {
 
 echo "Testing local backend with username-password... "
 
-launch_debug_server -f -c test-stress.config & PID=$!
+launch_debug_server -f -c "${srcdir}/data/test-stress.config" & PID=$!
 wait_server $PID
 
 sleep 3

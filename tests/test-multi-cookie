@@ -30,7 +30,7 @@ PIDFILE1="${srcdir}/ci$$-1.pid"
 PIDFILE2="${srcdir}/ci$$-2.pid"
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
-launch_server -d 1 -f -c ${srcdir}/test-multi-cookie.config & PID=$!
+launch_server -d 1 -f -c "${srcdir}/data/test-multi-cookie.config" & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

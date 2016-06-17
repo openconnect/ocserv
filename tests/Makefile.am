@@ -1,22 +1,22 @@
 include ../src/common.mk
 
 EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
-	certs/server-key.pem test1.config \
-	test1.passwd test-user-cert.config certs/user-cert.pem certs/user-key.pem \
-	test3.config test-iroute.config \
-	user-config/test user-config-opt/test test-pass-script.config test-multi-cookie.config \
-	test-stress.config certs/user-cert-wrong.pem connect-script test-group.passwd \
-	test-group-pass.config certs/user-group-cert.pem certs/user-group-key.pem \
-	test-user-group-cert.config \
-	test-user-group-cert-no-pass.config docker-common.sh test-cookie-timeout.config \
-	test-cookie-timeout-2.config user-config-explicit/test test-explicit-ip.config \
+	certs/server-key.pem data/test1.config \
+	test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \
+	data/test3.config data/test-iroute.config \
+	user-config/test user-config-opt/test data/test-pass-script.config data/test-multi-cookie.config \
+	data/test-stress.config certs/user-cert-wrong.pem connect-script test-group.passwd \
+	data/test-group-pass.config certs/user-group-cert.pem certs/user-group-key.pem \
+	data/test-user-group-cert.config \
+	data/test-user-group-cert-no-pass.config docker-common.sh data/test-cookie-timeout.config \
+	data/test-cookie-timeout-2.config user-config-explicit/test data/test-explicit-ip.config \
 	test-explicit-ip user-config-explicit/test2 user-config-explicit/test3 \
-	user-config-explicit/test4 test-pass-opt-cert.config test-gssapi.config \
-	test-ban.config test-sighup.config test-gssapi-local-map.config \
-	test-cookie-invalidation.config test-enc-key2.config test-enc-key.config \
+	user-config-explicit/test4 data/test-pass-opt-cert.config data/test-gssapi.config \
+	data/test-ban.config data/test-sighup.config data/test-gssapi-local-map.config \
+	data/test-cookie-invalidation.config data/test-enc-key2.config data/test-enc-key.config \
 	certs/server-key-ossl.pem certs/server-key-p8.pem proxyproto-unix-test certs/user-cn.pem \
-	certs/user-cert-testuser.pem test-stress test-user-config.config user-config/testuser \
-	test-sighup-key-change.config test-sighup-key-change.config user-config/testipnet \
+	certs/user-cert-testuser.pem test-stress data/test-user-config.config user-config/testuser \
+	data/test-sighup-key-change.config data/test-sighup-key-change.config user-config/testipnet \
 	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem
 
 SUBDIRS = docker-ocserv docker-kerberos

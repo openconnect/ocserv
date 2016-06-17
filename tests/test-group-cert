@@ -27,7 +27,7 @@ PORT=6550
 
 echo "Testing local backend with certificate... "
 
-launch_sr_server -d 1 -f -c test-group-cert.config & PID=$!
+launch_sr_server -d 1 -f -c data/test-group-cert.config & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (without certificate)... "

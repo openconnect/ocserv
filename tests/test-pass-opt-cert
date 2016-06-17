@@ -53,7 +53,7 @@ return 0
 
 echo "Testing local backend with username-password and optional certificate... "
 
-launch_server -d 1 -f -c test-pass-opt-cert.config & PID=$!
+launch_server -d 1 -f -c "${srcdir}/data/test-pass-opt-cert.config" & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (user without certificate)... "

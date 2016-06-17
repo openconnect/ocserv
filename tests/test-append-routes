@@ -33,7 +33,7 @@ TMPFILE1=${srcdir}/test-append-routes.tmp
 
 rm -f ${TMPFILE1}
 
-cp ${srcdir}/test-user-config.config ${CONFFILE}
+cp ${srcdir}/data/test-user-config.config ${CONFFILE}
 echo "append-routes = true" >> ${CONFFILE}
 sed -i 's/= 4512/= 4612/g' ${CONFFILE}
 

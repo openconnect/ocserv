@@ -27,7 +27,7 @@ PORT=4498
 echo "Testing whether cookies will remain valid during the session time... "
 rm -f ${srcdir}/pid.$$
 
-launch_server -d 1 -f -c ${srcdir}/test-cookie-timeout-2.config & PID=$!
+launch_server -d 1 -f -c ${srcdir}/data/test-cookie-timeout-2.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

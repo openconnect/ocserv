@@ -40,7 +40,7 @@ export NTLM_USER_FILE=$srcdir/ntlm.pass
 echo "TEST:test:testpass" >$NTLM_USER_FILE
 echo "TEST:test:wrongpass" >$NTLM_USER_FILE.wrong
 
-launch_server -d 1 -f -c test-gssapi.config & PID=$!
+launch_server -d 1 -f -c data/test-gssapi.config & PID=$!
 wait_server $PID
 
 echo "Connecting with curl... "
@@ -60,7 +60,7 @@ echo "Testing local backend with gssapi and local-map on... "
 sleep 2
 
 # Test whether no-local-map is by default true
-launch_server -d 1 -f -c test-gssapi-local-map.config & PID=$!
+launch_server -d 1 -f -c data/test-gssapi-local-map.config & PID=$!
 wait_server $PID
 
 echo "Connecting with curl... "

@@ -28,7 +28,7 @@ echo "Testing whether cookies will expire as expected... "
 
 PIDFILE="${srcdir}/ct$$.pid"
 
-launch_server -d 1 -f -c ${srcdir}/test-cookie-timeout.config & PID=$!
+launch_server -d 1 -f -c ${srcdir}/data/test-cookie-timeout.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

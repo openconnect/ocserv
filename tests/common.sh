@@ -31,7 +31,7 @@ if test -z "$NO_NEED_ROOT";then
 		exit 77
 	fi
 else
-	SOCKDIR=${srcdir}/sockwrap.$$.tmp
+	SOCKDIR="${srcdir}/tmp/sockwrap.$$.tmp"
 	mkdir -p $SOCKDIR
 	export SOCKET_WRAPPER_DIR=$SOCKDIR
 	export SOCKET_WRAPPER_DEFAULT_IFACE=2
@@ -48,7 +48,7 @@ update_config() {
 	file=$1
 	username=$(whoami)
 	group=$(groups|cut -f 1 -d ' ')
-	cp ${srcdir}/${file} "$file.tmp"
+	cp "${srcdir}/data/${file}" "$file.tmp"
 	sed -i 's|@USERNAME@|'${username}'|g' "$file.tmp"
 	sed -i 's|@GROUP@|'${group}'|g' "$file.tmp"
 	sed -i 's|@SRCDIR@|'${srcdir}'|g' "$file.tmp"

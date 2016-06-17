@@ -29,7 +29,7 @@ PIDFILE2="${srcdir}/ci$$-2.pid"
 echo "Testing whether cookies are being correctly invalidated... "
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
-launch_server -d 1 -f -c ${srcdir}/test-cookie-invalidation.config & PID=$!
+launch_server -d 1 -f -c ${srcdir}/data/test-cookie-invalidation.config & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "

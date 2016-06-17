@@ -26,8 +26,8 @@ PORT=4500
 
 echo "Testing whether cookies are being re-used... "
 
-PIDFILE1="${srcdir}/ci$$-1.pid"
-PIDFILE2="${srcdir}/ci$$-2.pid"
+PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
+PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
 launch_server -d 1 -f -c "${srcdir}/data/test-multi-cookie.config" & PID=$!

@@ -24,8 +24,8 @@ PORT=4502
 
 . `dirname $0`/common.sh
 
-PIDFILE1="${srcdir}/ci$$-1.pid"
-PIDFILE2="${srcdir}/ci$$-2.pid"
+PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
+PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
 echo "Testing whether cookies are being correctly invalidated... "
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 

@@ -31,7 +31,7 @@ CONFIG="reload"
 IMAGE=ocserv-reload-info
 IMAGE_NAME=test_reload_info
 TMP=$IMAGE_NAME.tmp
-PIDFILE="$IMAGE_NAME.$$.pid"
+PIDFILE="$IMAGE_NAME.$$.pid.tmp"
 . ./docker-common.sh
 
 $DOCKER run -e OCCTL_PAGER=cat -P --privileged=true -p 22 --tty=false -d --name $IMAGE_NAME $IMAGE

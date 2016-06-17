@@ -163,17 +163,18 @@ if test -z "$DISC";then
 	echo "No disconnect was detected!"
 	stop
 fi
+PIDFILE=out$TMP.pid.tmp
 
 # do the same with a certificate - test radius accounting with certificate auth
 echo "Trying with certificate"
-rm -f out$TMP.pid
+rm -f "$PIDFILE"
 $DOCKER exec $IMAGE_NAME truncate --size=0 /var/log/radius/radacct/$DIR/$FILE
-$OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=out$TMP.pid
+$OPENCONNECT $IP:$PORT_OCSERV -b --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file="$PIDFILE"
 
 sleep 10
 
-if test -f out$TMP.pid;then
-	PID=`cat out$TMP.pid`
+if test -f "$PIDFILE";then
+	PID=`cat "$PIDFILE"`
 else
 	echo "Cannot determine PID of client"
 	stop

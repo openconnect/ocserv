@@ -2,10 +2,10 @@ include ../src/common.mk
 
 EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/server-key.pem data/test1.config \
-	test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \
+	data/test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \
 	data/test3.config data/test-iroute.config \
 	user-config/test user-config-opt/test data/test-pass-script.config data/test-multi-cookie.config \
-	data/test-stress.config certs/user-cert-wrong.pem connect-script test-group.passwd \
+	data/test-stress.config certs/user-cert-wrong.pem connect-script data/test-group.passwd \
 	data/test-group-pass.config certs/user-group-cert.pem certs/user-group-key.pem \
 	data/test-user-group-cert.config \
 	data/test-user-group-cert-no-pass.config docker-common.sh data/test-cookie-timeout.config \

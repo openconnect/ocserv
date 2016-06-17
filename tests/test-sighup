@@ -50,7 +50,7 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 echo ok
 
 sed -i 's/^auth = "certificate"/#auth = "certificate"/g' ${CONFIG}
-sed -i 's/^#auth = "plain[.\/test1.passwd]"/auth = "plain[.\/test1.passwd]"/g' ${CONFIG}
+sed -i 's|^#auth = "plain[.\/data/test1.passwd]"|auth = "plain[.\/data/test1.passwd]"|g' ${CONFIG}
 sleep 10
 echo "Reloading server"
 kill -HUP $PID

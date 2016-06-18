@@ -293,12 +293,14 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
 			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
-					if (ciphersuites[i].txt_version != NULL && gnutls_check_version(ciphersuites[i].txt_version) == NULL)
+					if (ciphersuites[i].txt_version != NULL && gnutls_check_version(ciphersuites[i].txt_version) == NULL) {
 						continue; /* not supported */
+					}
 
 					if (cand == NULL ||
-					    cand->server_prio <
-					    ciphersuites[i].server_prio) {
+					    cand->server_prio < ciphersuites[i].server_prio ||
+					    (want_cipher != -1 && want_cipher == ciphersuites[i].gnutls_cipher &&
+					     want_mac == ciphersuites[i].gnutls_mac)) {
 						cand =
 						    &ciphersuites[i];
 
@@ -307,13 +309,14 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 						if (want_cipher != -1) {
 							if (want_cipher == cand->gnutls_cipher &&
 							    want_mac == cand->gnutls_mac)
-							    break;
+							    goto ciphersuite_finish;
 						}
 					}
 				}
 			}
 			str = NULL;
 		}
+ ciphersuite_finish:
 	        req->selected_ciphersuite = cand;
 
 		break;

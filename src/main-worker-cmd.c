@@ -366,6 +366,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 			if (tmsg->hostname) {
 				strlcpy(proc->hostname, tmsg->hostname,
 					 sizeof(proc->hostname));
+				mslog(s, proc, LOG_DEBUG, "setting worker hostname to '%s'", proc->hostname);
 				user_hostname_update(s, proc);
 			}
 

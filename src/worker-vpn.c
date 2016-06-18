@@ -1404,6 +1404,9 @@ static int connect_handler(worker_st * ws)
 		return -1;
 	}
 
+	if (ws->user_config->hostname)
+		strlcpy(ws->req.hostname, ws->user_config->hostname, sizeof(ws->req.hostname));
+
 	FUZZ(ws->user_config->interim_update_secs, 5, rnd);
 	FUZZ(ws->config->rekey_time, 30, rnd);
 

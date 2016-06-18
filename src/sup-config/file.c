@@ -65,6 +65,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ipv6-subnet-prefix", .type = OPTION_NUMERIC },
 	{ .name = "explicit-ipv4", .type = OPTION_STRING },
 	{ .name = "explicit-ipv6", .type = OPTION_STRING },
+	{ .name = "hostname", .type = OPTION_STRING },
 	{ .name = "restrict-user-to-ports", .type = OPTION_STRING },
 	{ .name = "rx-data-per-sec", .type = OPTION_NUMERIC },
 	{ .name = "tx-data-per-sec", .type = OPTION_NUMERIC },
@@ -259,6 +260,8 @@ unsigned j;
 			syslog(LOG_ERR, "unknown ipv6-prefix '%u' in %s", prefix, file);
 		}
 	}
+
+	READ_RAW_STRING("hostname", msg->config->hostname);
 
 	READ_RAW_NUMERIC("rx-data-per-sec", msg->config->rx_per_sec, msg->config->has_rx_per_sec);
 	READ_RAW_NUMERIC("tx-data-per-sec", msg->config->tx_per_sec, msg->config->has_tx_per_sec);

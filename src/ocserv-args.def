@@ -636,14 +636,15 @@ no-route = 192.168.5.0/255.255.255.0
 #  keepalive, dpd, mobile-dpd, max-same-clients, tunnel-all-dns,
 #  restrict-user-to-routes, user-profile, cgroup, stats-report-time,
 #  mtu, idle-timeout, mobile-idle-timeout, restrict-user-to-ports,
-#  and session-timeout.
+#  hostname, and session-timeout.
 #
 # Note that the 'iroute' option allows to add routes on the server
 # based on a user or group. The syntax depends on the input accepted
 # by the commands route-add-cmd and route-del-cmd (see below). The no-udp
 # is a boolean option (e.g., no-udp = true), and will prevent a UDP session
-# for that specific user or group. Note also, that, any routes, no-routes, 
-# DNS or NBNS servers present will overwrite the global ones.
+# for that specific user or group. The hostname option will set a
+# hostname to override any proposed by the user. Note also, that, any 
+# routes, no-routes, DNS or NBNS servers present will overwrite the global ones.
 #
 # Also explicit addresses, are only allowed when they are odd. In that
 # case the next even address will be used as the remote address (in PtP).

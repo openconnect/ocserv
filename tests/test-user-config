@@ -119,6 +119,16 @@ fi
 
 echo ok
 
+echo -n "Checking if user-specific hostname has been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Hostname|grep xxxx`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Hostname
+	fail $PID "Temporary file contents are not correct; hostname was not the expected (xxxx)"
+fi
+
+echo ok
+
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 

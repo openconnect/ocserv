@@ -3,3 +3,4 @@ mobile-dpd = 880
 keepalive = 14400
 max-same-clients = 1
 dns = 8.8.8.8
+hostname = xxxx

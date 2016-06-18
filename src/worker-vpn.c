@@ -1518,12 +1518,12 @@ static int connect_handler(worker_st * ws)
 	}
 
 	if (ws->vinfo.ipv6 && req->no_ipv6 == 0 && ws->user_config->ipv6_prefix != 0) {
-		oclog(ws, LOG_INFO, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->user_config->ipv6_prefix);
-		if (ws->full_ipv6 && ws->user_config->ipv6_prefix) {
+		oclog(ws, LOG_INFO, "sending IPv6 %s/%u", ws->vinfo.ipv6, ws->user_config->ipv6_subnet_prefix);
+		if (ws->full_ipv6 && ws->user_config->ipv6_subnet_prefix) {
 			ret =
 			    cstp_printf(ws,
 				       "X-CSTP-Address-IP6: %s/%u\r\n",
-				       ws->vinfo.ipv6, ws->user_config->ipv6_prefix);
+				       ws->vinfo.ipv6, ws->user_config->ipv6_subnet_prefix);
 			SEND_ERR(ret);
 		} else {
 			const char *net;
@@ -1539,7 +1539,7 @@ static int connect_handler(worker_st * ws)
 
 			ret =
 			    cstp_printf(ws, "X-CSTP-Netmask: %s/%u\r\n",
-				        net, ws->user_config->ipv6_prefix);
+				        net, ws->user_config->ipv6_subnet_prefix);
 			SEND_ERR(ret);
 		}
 	}

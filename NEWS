@@ -1,3 +1,8 @@
+* Version 0.11.4 (unreleased)
+- ocserv: corrected the IPv6 address advertisement to client. Instead of
+  using the server's address prefix use the prefix assigned to client.
+
+
 * Version 0.11.3 (released 2016-06-16)
 - ocserv: added '/cert.pem' and '/cert.cer' HTTP handlers. These provide
   the server's certificate as PEM and DER files.

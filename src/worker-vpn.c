@@ -1404,8 +1404,10 @@ static int connect_handler(worker_st * ws)
 		return -1;
 	}
 
-	if (ws->user_config->hostname)
+	/* override any hostname sent by the peer if we have one already configured */
+	if (ws->user_config->hostname) {
 		strlcpy(ws->req.hostname, ws->user_config->hostname, sizeof(ws->req.hostname));
+	}
 
 	FUZZ(ws->user_config->interim_update_secs, 5, rnd);
 	FUZZ(ws->config->rekey_time, 30, rnd);
@@ -1428,6 +1430,12 @@ static int connect_handler(worker_st * ws)
 	if (req->is_mobile) {
 		ws->user_config->dpd = ws->user_config->mobile_dpd;
 		ws->config->idle_timeout = ws->config->mobile_idle_timeout;
+	}
+
+	/* Notify back the client about the accepted hostname */
+	if (ws->req.hostname[0] != 0) {
+		ret = cstp_printf(ws, "X-CSTP-Hostname: %s\r\n", ws->req.hostname);
+		SEND_ERR(ret);
 	}
 
 	oclog(ws, LOG_INFO, "suggesting DPD of %d secs", ws->user_config->dpd);

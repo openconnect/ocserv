@@ -48,7 +48,7 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	worker-bandwidth.c worker-bandwidth.h main-ctl.h \
 	vasprintf.c vasprintf.h worker-proxyproto.c config-ports.c \
 	proc-search.c proc-search.h http-heads.h ip-util.c ip-util.h \
-	main-ban.c main-ban.h common-config.h \
+	main-ban.c main-ban.h common-config.h valid-hostname.c \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	sec-mod-acct.h setproctitle.c setproctitle.h sec-mod-resume.h \
 	sec-mod-cookies.c

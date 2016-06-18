@@ -176,7 +176,6 @@ struct compression_method_st comp_methods[] = {
 };
 #endif
 
-
 static
 void header_value_check(struct worker_st *ws, struct http_req_st *req)
 {
@@ -234,6 +233,13 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 		memcpy(req->hostname, value, value_length);
 		req->hostname[value_length] = 0;
+
+		/* check validity */
+		if (!valid_hostname(req->hostname)) {
+			oclog(ws, LOG_HTTP_DEBUG, "Skipping invalid hostname '%s'", req->hostname);
+			req->hostname[0] = 0;
+		}
+
 		break;
 	case HEADER_DEVICE_TYPE:
 		req->is_mobile = 1;

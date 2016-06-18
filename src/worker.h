@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -328,6 +328,8 @@ int http_body_cb(http_parser * parser, const char *at, size_t length);
 void http_req_deinit(worker_st * ws);
 void http_req_reset(worker_st * ws);
 void http_req_init(worker_st * ws);
+
+unsigned valid_hostname(const char *host);
 
 url_handler_fn http_get_url_handler(const char *url);
 url_handler_fn http_post_url_handler(worker_st * ws, const char *url);

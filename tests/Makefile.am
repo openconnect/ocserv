@@ -77,7 +77,7 @@ human_addr_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 port_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
-	port-parsing human_addr
+	port-parsing human_addr valid-hostname
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
 

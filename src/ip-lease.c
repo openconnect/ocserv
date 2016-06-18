@@ -198,9 +198,6 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
        	((struct sockaddr_in*)&network)->sin_port = 0;
 
 	if (proc->config->explicit_ipv4) {
-		/* if an explicit IP is given for that client, then
-		 * do implicit IP accounting. Require the address
-		 * to be odd, so we use the next even address as PtP. */
 		ret =
 		    inet_pton(AF_INET, proc->config->explicit_ipv4, SA_IN_P(&tmp));
 
@@ -371,9 +368,7 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 
 	if (proc->config->explicit_ipv6) {
-		/* if an explicit IP is given for that client, then
-		 * do implicit IP accounting. Require the address
-		 * to be odd, so we use the next even address as PtP. */
+		memset(&tmp, 0, sizeof(tmp));
 		ret =
 		    inet_pton(AF_INET6, proc->config->explicit_ipv6, SA_IN6_P(&tmp));
 
@@ -387,7 +382,6 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 			return ERR_MEM;
 
         	((struct sockaddr_in6*)&tmp)->sin6_family = AF_INET6;
-        	((struct sockaddr_in6*)&tmp)->sin6_port = 0;
 		memcpy(&proc->ipv6->rip, &tmp, sizeof(struct sockaddr_in6));
        		proc->ipv6->rip_len = sizeof(struct sockaddr_in6);
 

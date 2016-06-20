@@ -107,7 +107,7 @@ static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
 		return;
 	}
 
-	uout = stats->bytes_in / 4294967296;
+	uout = stats->bytes_out / 4294967296;
 	if (rc_avpair_add(rh, send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0) == NULL) {
 		return;
 	}

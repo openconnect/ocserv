@@ -80,11 +80,14 @@ static const char login_msg_user[] =
 #define LOGIN_MSG_PASSWORD_CTR \
     "<input type=\"password\" name=\"secondary_password\" label=\"Password%d:\" />\n"
 
-#define OCV3_LOGIN_MSG_START \
+#define _OCV3_LOGIN_MSG_START(x) \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
-    "<auth id=\"main\">\n" \
+    "<auth id=\""x"\">\n" \
     "<message>%s</message>\n" \
     "<form method=\"post\" action=\"/auth\">\n"
+
+#define OCV3_LOGIN_MSG_START _OCV3_LOGIN_MSG_START("main")
+#define OCV3_PASSWD_MSG_START _OCV3_LOGIN_MSG_START("passwd")
 
 static const char ocv3_login_msg_end[] =
     "</form></auth>\n";
@@ -175,7 +178,12 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	const char *login_msg_end;
 
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
-		login_msg_start = OCV3_LOGIN_MSG_START;
+		/* certain v2.x modified clients require a different auth_id
+		 * when password is being requested, rather than username */
+		if (ws->auth_state == S_AUTH_REQ)
+			login_msg_start = OCV3_PASSWD_MSG_START;
+		else
+			login_msg_start = OCV3_LOGIN_MSG_START;
 		login_msg_end = ocv3_login_msg_end;
 	} else {
 		login_msg_start = OC_LOGIN_MSG_START;

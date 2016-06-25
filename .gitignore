@@ -85,5 +85,14 @@ tests/kkdcp-parsing
 tests/json-escape
 src/ccan/libccan.a
 tests/ban-ips
+tests/valid-hostname
 tests/human_addr
 tests/port-parsing
+tests/str-test2
+tests/data/pam/nss-group
+tests/data/pam/nss-passwd
+tests/data/pam/passdb
+tests/data/pam/ocserv
+tests/data/pam/users.oath
+tests/data/pam-single/passdb
+tests/data/pam-single/ocserv

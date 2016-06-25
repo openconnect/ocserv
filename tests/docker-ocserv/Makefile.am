@@ -2,12 +2,12 @@ EXTRA_DIST = passwd ocserv.conf Dockerfile-debian-tcp dev-tun.tgz myscript key.p
 	Dockerfile-debian-unix ocserv-unix.conf haproxy.cfg combo.pem Dockerfile-fedora-unix \
 	Dockerfile-fedora-tcp freeradius-users Dockerfile-debian-radius Dockerfile-fedora-radius \
 	freeradius-users ocserv-radius.conf radiusclient.conf radius-clients.conf \
-	radiusclient-servers pam-ocserv ocserv-pam.conf ca.pem ocserv-radius-config.conf \
+	radiusclient-servers ca.pem ocserv-radius-config.conf \
 	Dockerfile-fedora-radius-config radius-dictionary Dockerfile-debian-radius-config \
 	ocserv-proxyproto.conf Dockerfile-fedora-proxyproto haproxy-proxyproto.cfg \
 	haproxy-proxyproto-unix.cfg Dockerfile-fedora-proxyproto-unix ocserv-proxyproto-unix.conf \
-	proxy-connectscript ocserv-pam-noauth.conf Dockerfile-fedora-pam-noauth \
-	pam-acct-ocserv Dockerfile-fedora-otp ocserv-otp.conf users2.oath Dockerfile-fedora-reload \
+	proxy-connectscript \
+	Dockerfile-fedora-otp ocserv-otp.conf users2.oath Dockerfile-fedora-reload \
 	ocserv-reload.conf Dockerfile-fedora-fw-neg ocserv-fw-neg.conf radiusclient-debian.conf \
 	ocserv-radius-group.conf Dockerfile-fedora-radius-group
 

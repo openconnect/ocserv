@@ -1,0 +1,5 @@
+#%PAM-1.0
+auth       required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam-single/passdb
+account    required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam-single/passdb
+account    required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam-single/passdb
+session    required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam-single/passdb

@@ -1,13 +1,14 @@
 include ../src/common.mk
 
 EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
-	certs/server-key.pem data/test1.config \
+	certs/server-key.pem data/test1.config data/pam/nss-group.in data/pam/nss-passwd.in \
+	data/pam/users.oath.templ data/test-pam-noauth.config data/test-pam.passwd \
 	data/test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \
-	data/test3.config data/test-iroute.config \
+	data/test3.config data/test-iroute.config data/test-pam.config \
 	user-config/test user-config-opt/test data/test-pass-script.config data/test-multi-cookie.config \
 	data/test-stress.config certs/user-cert-wrong.pem connect-script data/test-group.passwd \
 	data/test-group-pass.config certs/user-group-cert.pem certs/user-group-key.pem \
-	data/test-user-group-cert.config \
+	data/test-user-group-cert.config data/pam/ocserv.in data/pam/passdb.templ data/pam-single/passdb.templ \
 	data/test-user-group-cert-no-pass.config docker-common.sh data/test-cookie-timeout.config \
 	data/test-cookie-timeout-2.config user-config-explicit/test data/test-explicit-ip.config \
 	test-explicit-ip user-config-explicit/test2 user-config-explicit/test3 \
@@ -24,9 +25,9 @@ SUBDIRS = docker-ocserv docker-kerberos
 dist_check_SCRIPTS = test-iroute test-pass-script \
 	test-multi-cookie full-test ocpasswd-test unix-test test-pass-opt-cert \
 	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
-	radius-test test-gssapi kerberos-test pam-test test-ban \
+	radius-test test-gssapi kerberos-test test-ban \
 	test-cookie-invalidation radius-test-config proxyproto-test \
-	proxyproto-unix-test pam-noauth-test otp-test test-user-config \
+	proxyproto-unix-test otp-test test-user-config \
 	firewall-test test-append-routes reload-info-test \
 	firewall-neg-test radius-group-test
 
@@ -34,7 +35,13 @@ if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
 	test-enc-key test-sighup-key-change test-get-cert
+
+if HAVE_CWRAP_PAM
+dist_check_SCRIPTS += test-pam test-pam-noauth
 endif
+
+endif
+
 
 AM_CPPFLAGS += \
 	$(LIBOPTS_CFLAGS) \
@@ -78,6 +85,7 @@ port_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
 	port-parsing human_addr valid-hostname
+
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
 

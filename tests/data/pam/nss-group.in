@@ -1,0 +1,3 @@
+root:x:@ROOTUID@:
+group1:x:5000:
+group2:x:5001:

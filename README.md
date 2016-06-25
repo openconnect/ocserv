@@ -53,8 +53,10 @@ liblockfile-bin    / lockfile-progs
 nuttcp             / nuttcp
 lcov               / lcov
                    / uid_wrapper
+                   / pam_wrapper
                    / socket_wrapper
                    / gssntlmssp
+pam-oath           / pam_oath
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

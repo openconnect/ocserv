@@ -203,12 +203,13 @@ LIBS="$oldlibs"
 fi
 
 PKG_CHECK_MODULES([CWRAP], [uid_wrapper, socket_wrapper], have_cwrap=yes, have_cwrap=no)
+PKG_CHECK_MODULES([CWRAP_PAM], [pam_wrapper], have_cwrap_pam=yes, have_cwrap_pam=no)
 
 if test "$have_cwrap" != no;then
 	AC_DEFINE([HAVE_CWRAP], 1, [Enable testing with cwrap])
 fi
-
 AM_CONDITIONAL(HAVE_CWRAP, test "x$have_cwrap" != xno)
+AM_CONDITIONAL(HAVE_CWRAP_PAM, test "x$have_cwrap_pam" != xno)
 
 AC_ARG_WITH(radius,
   AS_HELP_STRING([--without-radius], [do not include Radius support]),
@@ -465,6 +466,26 @@ LIBS="$oldlibs"
 fi
 AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
+if test -f /usr/lib64/pam_wrapper/pam_matrix.so;then
+	AC_SUBST([PAMWRAPDIR], [/usr/lib64/pam_wrapper])
+elif test -f /usr/lib/pam_wrapper/pam_matrix.so;then
+	AC_SUBST([PAMWRAPDIR], [/usr/lib/pam_wrapper])
+else
+	AC_SUBST([PAMWRAPDIR], [/usr/lib/pam_wrapper])
+fi
+
+if test -f /usr/lib64/security/pam_oath.so;then
+	AC_SUBST([PAMDIR], [/usr/lib64/security])
+elif test -f /usr/lib/security/pam_oath.so;then
+	AC_SUBST([PAMDIR], [/usr/lib/security])
+else
+	AC_SUBST([PAMDIR], [/usr/lib/security])
+fi
+
+uid=$(id -u)
+gid=$(id -g)
+AC_SUBST([ROOTUID], [$uid])
+AC_SUBST([ROOTGID], [$gid])
 
 LIBOPTS_CHECK([libopts])
 if test "$NEED_LIBOPTS_DIR" = "true";then
@@ -496,6 +517,10 @@ AC_CONFIG_FILES([
 	gl/Makefile
 	tests/docker-ocserv/Makefile
 	tests/docker-kerberos/Makefile
+	tests/data/pam/ocserv
+	tests/data/pam-single/ocserv
+	tests/data/pam/nss-passwd
+	tests/data/pam/nss-group
 	tests/Makefile
 ])
 AC_OUTPUT
@@ -508,6 +533,7 @@ Summary of build options:
   Compiler:             ${CC}
   CFlags:               ${CFLAGS}
   CWrap testing:        ${have_cwrap}
+  CWrap PAM testing:    ${have_cwrap_pam}
   
   PAM auth backend:     ${pam_enabled}
   Radius auth backend:  ${radius_enabled}

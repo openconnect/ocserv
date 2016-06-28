@@ -241,7 +241,7 @@ int set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	ifr6.ifra_dstaddr.sin6_len = sizeof(struct sockaddr_in6);
 	ifr6.ifra_dstaddr.sin6_family = AF_INET6;
 
-	ret = ipv6_prefix_to_mask(&ifr6.ifra_prefixmask.sin6_addr, proc->config->ipv6_prefix);
+	ret = ipv6_prefix_to_mask(&ifr6.ifra_prefixmask.sin6_addr, proc->ipv6->prefix);
 	if (ret == 0) {
 		memset(&ifr6.ifra_prefixmask.sin6_addr, 0xff, sizeof(struct in6_addr));
 	}

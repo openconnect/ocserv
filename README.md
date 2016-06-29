@@ -54,6 +54,7 @@ nuttcp             / nuttcp
 lcov               / lcov
                    / uid_wrapper
                    / pam_wrapper
+                   / nss_wrapper
                    / socket_wrapper
                    / gssntlmssp
 pam-oath           / pam_oath

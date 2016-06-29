@@ -209,7 +209,7 @@ if test "$have_cwrap" != no;then
 	AC_DEFINE([HAVE_CWRAP], 1, [Enable testing with cwrap])
 fi
 AM_CONDITIONAL(HAVE_CWRAP, test "x$have_cwrap" != xno)
-AM_CONDITIONAL(HAVE_CWRAP_PAM, test "x$have_cwrap_pam" != xno)
+AM_CONDITIONAL(HAVE_CWRAP_PAM, test "x$have_cwrap_pam" != xno && test "$have_liboath" = yes && test "$pam_enabled" = yes)
 
 AC_ARG_WITH(radius,
   AS_HELP_STRING([--without-radius], [do not include Radius support]),

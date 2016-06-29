@@ -89,13 +89,13 @@ launch_sr_server() {
 }
 
 launch_sr_pam_server() {
-       mkdir -p data/$PAMDIR/
-       test -f "${srcdir}/data/$PAMDIR/users.oath.templ" && cp "${srcdir}/data/$PAMDIR/users.oath.templ" data/$PAMDIR/users.oath
-       test -f "${srcdir}/data/$PAMDIR/passdb.templ" && cp "${srcdir}/data/$PAMDIR/passdb.templ" data/$PAMDIR/passdb
+       mkdir -p "data/$PAMDIR/"
+       test -f "${srcdir}/data/$PAMDIR/users.oath.templ" && cp "${srcdir}/data/$PAMDIR/users.oath.templ" "data/$PAMDIR/users.oath"
+       test -f "${srcdir}/data/$PAMDIR/passdb.templ" && cp "${srcdir}/data/$PAMDIR/passdb.templ" "data/$PAMDIR/passdb"
 
        export NSS_WRAPPER_PASSWD=./data/pam/nss-passwd
        export NSS_WRAPPER_GROUP=./data/pam/nss-group
-       LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="${srcdir}/data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* & #>/dev/null 2>&1 &
+       LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* & #>/dev/null 2>&1 &
        LOCALPID="$!";
        unset NSS_WRAPPER_PASSWD
        unset NSS_WRAPPER_GROUP

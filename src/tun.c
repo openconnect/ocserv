@@ -533,7 +533,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	}
 #ifdef TUNSETGROUP
 	if (s->perm_config->gid != -1) {
-		t = s->perm_config->uid;
+		t = s->perm_config->gid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
 		if (ret < 0) {
 			e = errno;

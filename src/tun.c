@@ -434,10 +434,10 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 #include <ccan/hash/hash.h>
 
 #ifndef __linux__
-static int bsd_open_tun(void)
+static int bsd_open_tun(main_server_st * s)
 {
 	int fd;
-	int s;
+	int sock;
 	char tun_name[80];
 	struct ifreq ifr;
 	int unit_nr = 0;
@@ -451,21 +451,57 @@ static int bsd_open_tun(void)
 # ifdef SIOCIFCREATE
 			if (fd == -1) {
 				/* cannot open tunXX, try creating it */
-				s = socket(AF_INET, SOCK_DGRAM, 0);
-				if (s < 0)
+				sock = socket(AF_INET, SOCK_DGRAM, 0);
+				if (sock < 0)
 					return -1;
 
 				memset(&ifr, 0, sizeof(ifr));
 				strncpy(ifr.ifr_name, tun_name + 5, sizeof(ifr.ifr_name) - 1);
-				if (!ioctl(s, SIOCIFCREATE, &ifr))
+				if (!ioctl(sock, SIOCIFCREATE, &ifr))
 					fd = open(tun_name, O_RDWR);
-				close(s);
+				close(sock);
 			}
 # endif
 			if (fd >= 0)
 				break;
 		}
 	}
+
+	if (fd >= 0) {
+		int i, e, ret;
+#if defined(__OpenBSD__)
+		/* enable multicast for tun interface (OpenBSD) */
+		struct tuninfo inf;
+		ret = ioctl(fd, TUNGIFINFO, &inf);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNGIFINFO: %s\n",
+					tun_name, strerror(e));
+		} else {
+			inf.flags |= IFF_MULTICAST;
+
+			ret = ioctl(fd, TUNSIFINFO, &inf);
+			if (ret < 0) {
+				e = errno;
+				mslog(s, NULL, LOG_ERR, "%s: TUNSIFINFO: %s\n",
+						tun_name, strerror(e));
+			}
+		}
+#endif
+
+#ifdef TUNSIFHEAD
+		i = 1;
+
+		ret = ioctl(fd, TUNSIFHEAD, &i);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNSIFHEAD: %s\n",
+			      tun_name, strerror(e));
+		}
+#endif /* TUNSIFHEAD */
+
+	}
+
 
 	return fd;
 }
@@ -544,7 +580,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	}
 #endif
 #else				/* freebsd */
-	tunfd = bsd_open_tun();
+	tunfd = bsd_open_tun(s);
 	if (tunfd < 0) {
 		int e = errno;
 		mslog(s, NULL, LOG_ERR, "Can't open /dev/tun: %s\n",
@@ -565,44 +601,6 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 
 		strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
 	}
-
-#if defined(__OpenBSD__)
-	/* enable multicast for tun interface (OpenBSD) */
-	{
-		struct tuninfo inf;
-		ret = ioctl(tunfd, TUNGIFINFO, &inf);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: TUNGIFINFO: %s\n",
-					proc->tun_lease.name, strerror(e));
-			goto fail;
-		}
-
-		inf.flags |= IFF_MULTICAST;
-
-		ret = ioctl(tunfd, TUNSIFINFO, &inf);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: TUNSIFINFO: %s\n",
-					proc->tun_lease.name, strerror(e));
-			goto fail;
-		}
-	}
-#endif
-
-#ifdef TUNSIFHEAD
-	{
-		int i = 1;
-
-		ret = ioctl(tunfd, TUNSIFHEAD, &i);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "%s: TUNSIFHEAD: %s\n",
-			      proc->tun_lease.name, strerror(e));
-			goto fail;
-		}
-	}
-#endif /* TUNSIFHEAD */
 
 	set_cloexec_flag(tunfd, 1);
 #endif

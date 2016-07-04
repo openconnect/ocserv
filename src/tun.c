@@ -487,6 +487,23 @@ static int bsd_open_tun(main_server_st * s)
 						tun_name, strerror(e));
 			}
 		}
+#else /* FreeBSD + NetBSD */
+		i = IFF_POINTOPOINT | IFF_MULTICAST;
+		ret = ioctl(fd, TUNSIFMODE, &i);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNSIFMODE: %s\n",
+			      tun_name, strerror(e));
+		}
+
+		/* link layer mode off */
+		i = 0;
+		ret = ioctl(fd, TUNSLMODE, &i);
+		if (ret < 0) {
+			e = errno;
+			mslog(s, NULL, LOG_ERR, "%s: TUNSLMODE: %s\n",
+			      tun_name, strerror(e));
+		}
 #endif
 
 #ifdef TUNSIFHEAD

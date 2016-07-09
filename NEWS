@@ -1,9 +1,11 @@
 * Version 0.11.4 (unreleased)
-- ocserv: corrected the IPv6 address advertisement to client. Instead of
+- ocserv: Corrected the IPv6 address advertisement to client. Instead of
   using the server's address prefix use the prefix assigned to client.
 - ocserv: Added per-user-configuration option hostname.
 - ocserv: Corrected the assignment of the tun device group membership in
   Linux.
+- ocserv: Do not hard fail when TUNSETGROUP ioctl fails with EINVAL. This
+  allows ocserv to operate under older kernels.
 
 
 * Version 0.11.3 (released 2016-06-16)

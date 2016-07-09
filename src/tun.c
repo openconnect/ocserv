@@ -592,7 +592,11 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNSETGROUP: %s\n",
 			      proc->tun_lease.name, strerror(e));
-			goto fail;
+			/* kernels prior to 2.6.23 do not have this ioctl()
+			 * and return this error. In that case we ignore the
+			 * error. */
+			if (e != EINVAL)
+				goto fail;
 		}
 	}
 #endif

@@ -39,5 +39,6 @@ void proc_table_deinit(main_server_st *s);
 int proc_table_add(main_server_st *s, struct proc_st *proc);
 void proc_table_del(main_server_st *s, struct proc_st *proc);
 int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size);
+int proc_table_update_dtls_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size);
 
 #endif

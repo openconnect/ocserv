@@ -880,6 +880,9 @@ int sfd = -1;
 
 		if (match_ip_only != 0) {
 			msg.hello = 0; /* by default this is one */
+		} else {
+			/* a new DTLS session, store the DTLS IPs into proc and add it into hash table */
+			proc_table_update_dtls_ip(s, proc_to_send, &cli_addr, cli_addr_size);
 		}
 
 		msg.data.data = s->msg_buffer;

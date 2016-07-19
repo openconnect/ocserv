@@ -82,15 +82,14 @@ int handle_commands_from_main(struct worker_st *ws)
 {
 	uint8_t cmd;
 	size_t length;
-	uint8_t cmd_data[1536];
 	UdpFdMsg *tmsg = NULL;
 	int ret;
 	int fd = -1;
 	/*int cmd_data_len;*/
 
-	memset(&cmd_data, 0, sizeof(cmd_data));
+	memset(&ws->buffer, 0, sizeof(ws->buffer));
 
-	ret = recv_msg_data(ws->cmd_fd, &cmd, cmd_data, sizeof(cmd_data), &fd);
+	ret = recv_msg_data(ws->cmd_fd, &cmd, ws->buffer, sizeof(ws->buffer), &fd);
 	if (ret < 0) {
 		oclog(ws, LOG_DEBUG, "cannot obtain data from command socket");
 		exit_worker_reason(ws, REASON_SERVER_DISCONNECT);
@@ -117,7 +116,7 @@ int handle_commands_from_main(struct worker_st *ws)
 				oclog(ws, LOG_DEBUG, "received another a UDP fd!");
 			}
 
-			tmsg = udp_fd_msg__unpack(NULL, length, cmd_data);
+			tmsg = udp_fd_msg__unpack(NULL, length, ws->buffer);
 			if (tmsg) {
 				has_hello = tmsg->hello;
 			}

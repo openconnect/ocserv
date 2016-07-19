@@ -6,6 +6,7 @@
   Linux.
 - ocserv: Do not hard fail when TUNSETGROUP ioctl fails with EINVAL. This
   allows ocserv to operate under older kernels.
+- ocserv: Corrected crash on worker process after client DTLS IP/port change.
 
 
 * Version 0.11.3 (released 2016-06-16)

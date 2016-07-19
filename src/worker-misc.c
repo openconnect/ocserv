@@ -49,7 +49,7 @@
 #endif
 
 /* recv from the new file descriptor and make sure we have a valid packet */
-static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg **tmsg)
+static unsigned recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg **tmsg)
 {
 	int saved_fd, ret;
 	UdpFdMsg *saved_tmsg;

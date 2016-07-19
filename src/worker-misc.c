@@ -49,7 +49,7 @@
 #endif
 
 /* recv from the new file descriptor and make sure we have a valid packet */
-static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg *tmsg)
+static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg **tmsg)
 {
 	int saved_fd, ret;
 	UdpFdMsg *saved_tmsg;
@@ -61,7 +61,7 @@ static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg *tmsg)
 	saved_fd = ws->dtls_tptr.fd;
 	saved_tmsg = ws->dtls_tptr.msg;
 
-	ws->dtls_tptr.msg = tmsg;
+	ws->dtls_tptr.msg = *tmsg;
 	ws->dtls_tptr.fd = fd;
 
 	ret = gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
@@ -73,6 +73,7 @@ static int recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg *tmsg)
 
 	ret = 0;
  revert:
+ 	*tmsg = ws->dtls_tptr.msg;
  	ws->dtls_tptr.fd = saved_fd;
  	ws->dtls_tptr.msg = saved_tmsg;
  	return ret;
@@ -131,7 +132,7 @@ int handle_commands_from_main(struct worker_st *ws)
 			if (has_hello == 0) {
 				/* check if the first packet received is a valid one -
 				 * if not discard the new fd */
-				if (!recv_from_new_fd(ws, fd, tmsg)) {
+				if (!recv_from_new_fd(ws, fd, &tmsg)) {
 					oclog(ws, LOG_INFO, "received UDP fd message but its session has invalid data!");
 					if (tmsg)
 						udp_fd_msg__free_unpacked(tmsg, NULL);

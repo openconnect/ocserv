@@ -54,7 +54,9 @@ void pr_set_undumpable(const char *mod)
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler)
 {
 	struct sigaction new_action, old_action;
-	
+
+	memset(&new_action, 0, sizeof(new_action));
+
 	new_action.sa_handler = handler;
 	sigemptyset (&new_action.sa_mask);
 	new_action.sa_flags = 0;

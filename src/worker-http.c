@@ -213,6 +213,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 	switch (req->next_header) {
 	case HEADER_MASTER_SECRET:
+		if (req->use_psk) /* ignored */
+			break;
+
 		if (value_length < TLS_MASTER_SIZE * 2) {
 			req->master_secret_set = 0;
 			goto cleanup;
@@ -277,6 +280,17 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
+		req->selected_ciphersuite = NULL;
+		str = (char *)value;
+
+		p = strstr(str, "PSK");
+		if (p != NULL && (p[3] == 0 || p[3] == ':')) {
+			/* OpenConnect DTLS setup was detected. */
+			req->use_psk = 1;
+			req->master_secret_set = 1; /* we don't need it */
+			break;
+		}
+
 		if (ws->session != NULL) {
 			want_mac = gnutls_mac_get(ws->session);
 			want_cipher = gnutls_cipher_get(ws->session);
@@ -285,9 +299,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			want_cipher = -1;
 		}
 
-		req->selected_ciphersuite = NULL;
-
-		str = (char *)value;
 		while ((token = strtok(str, ":")) != NULL) {
 			for (i = 0;
 			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);

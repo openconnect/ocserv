@@ -516,6 +516,9 @@ int ret;
 	ret = gnutls_global_init();
 	GNUTLS_FATAL_ERR(ret);
 
+	ret = gnutls_psk_allocate_server_credentials(&creds->pskcred);
+	GNUTLS_FATAL_ERR(ret);
+
 	return;
 }
 
@@ -523,6 +526,8 @@ void tls_global_deinit(tls_st *creds)
 {
 	if (creds->xcred != NULL)
 		gnutls_certificate_free_credentials(creds->xcred);
+	if (creds->pskcred != NULL)
+		gnutls_psk_free_server_credentials(creds->pskcred);
 	if (creds->cprio != NULL)
 		gnutls_priority_deinit(creds->cprio);
 

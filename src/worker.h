@@ -135,6 +135,7 @@ struct http_req_st {
 	unsigned int body_length;
 
 	const dtls_ciphersuite_st *selected_ciphersuite;
+	unsigned use_psk; /* i.e., ignore selected_ciphersuite */
 
 	unsigned int headers_complete;
 	unsigned int message_complete;

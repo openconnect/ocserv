@@ -506,7 +506,7 @@ static const char *fix_ciphersuite(char *txt)
 {
 	if (txt != NULL && txt[0] != 0) {
 		if (strlen(txt) > 16 && strncmp(txt, "(DTLS", 5) == 0 &&
-		    strncmp(&txt[8], ")-(RSA)-", 8) == 0) {
+		    (strncmp(&txt[8], ")-(RSA)-", 8) == 0 || strncmp(&txt[8], ")-(PSK)-", 8) == 0)) {
 			return txt + 16;
 		}
 	}

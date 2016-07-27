@@ -183,27 +183,86 @@ ssize_t dtls_push(gnutls_transport_ptr_t ptr, const void *data, size_t size)
 	return send(p->fd, data, size, 0);
 }
 
-static int setup_dtls_connection(struct worker_st *ws)
+int get_psk_key(gnutls_session_t session,
+		const char *username, gnutls_datum_t *key)
+{
+	struct worker_st *ws = gnutls_session_get_ptr(session);
+
+	key->data = gnutls_malloc(PSK_KEY_SIZE);
+	if (key->data == NULL)
+		return GNUTLS_E_MEMORY_ERROR;
+
+	memcpy(key->data, ws->master_secret, PSK_KEY_SIZE);
+	key->size = PSK_KEY_SIZE;
+
+	return 0;
+}
+
+#define PSK_LABEL "EXPORTER-openconnect-psk"
+#define PSK_LABEL_SIZE sizeof(PSK_LABEL)-1
+/* We initial a PSK connection with ciphers and MAC matching the TLS negotiated
+ * ciphers and MAC. The key is 32-bytes generated from gnutls_prf_rfc5705()
+ * with label being the PSK_LABEL.
+ */
+static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 {
 	int ret;
-	gnutls_session_t session;
+	char prio_string[256];
+	gnutls_mac_algorithm_t mac;
+	gnutls_cipher_algorithm_t cipher;
+
+	if (ws->session) {
+		cipher = gnutls_cipher_get(ws->session);
+		mac = gnutls_mac_get(ws->session);
+
+		snprintf(prio_string, sizeof(prio_string), "%s:-VERS-ALL:-CIPHER-ALL:-MAC-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL:+%s:+%s",
+			 ws->config->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
+	} else {
+		/* if we haven't an associated session, enable all ciphers we would have enabled
+		 * otherwise for TLS. */
+		snprintf(prio_string, sizeof(prio_string), "%s:-VERS-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL",
+			 ws->config->priorities);
+	}
+
+	ret =
+	    gnutls_priority_set_direct(session, prio_string, NULL);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "could not set TLS priority: '%s': %s",
+		      prio_string, gnutls_strerror(ret));
+		return ret;
+	}
+
+	/* we should have used gnutls_prf_rfc5705() but since we don't use
+	 * the RFC5705 context, the output is identical with gnutls_prf(). The
+	 * latter is available in much earlier versions of gnutls. */
+	ret = gnutls_prf(ws->session, PSK_LABEL_SIZE, PSK_LABEL, 0, 0, 0, PSK_KEY_SIZE,	(char*)ws->master_secret);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "error in PSK key generation: %s",
+		      gnutls_strerror(ret));
+		return ret;
+	}
+
+	ret =
+	    gnutls_credentials_set(session, GNUTLS_CRD_PSK,
+				   ws->creds->pskcred);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "could not set TLS PSK credentials: %s",
+		      gnutls_strerror(ret));
+		return ret;
+	}
+
+	return 0;
+}
+
+static int setup_dtls0_9_keys(gnutls_session_t session, struct worker_st *ws)
+{
+	int ret;
 	gnutls_datum_t master =
 	    { ws->master_secret, sizeof(ws->master_secret) };
 	gnutls_datum_t sid = { ws->session_id, sizeof(ws->session_id) };
 
 	if (ws->req.selected_ciphersuite == NULL) {
 		oclog(ws, LOG_ERR, "no DTLS ciphersuite negotiated");
-		return -1;
-	}
-
-	oclog(ws, LOG_DEBUG, "setting up DTLS connection");
-	/* DTLS cookie verified.
-	 * Initialize session.
-	 */
-	ret = gnutls_init(&session, GNUTLS_SERVER|GNUTLS_DATAGRAM|GNUTLS_NONBLOCK);
-	if (ret < 0) {
-		oclog(ws, LOG_ERR, "could not initialize TLS session: %s",
-		      gnutls_strerror(ret));
 		return -1;
 	}
 
@@ -214,7 +273,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS priority: %s",
 		      gnutls_strerror(ret));
-		goto fail;
+		return ret;
 	}
 
 	ret = gnutls_session_set_premaster(session, GNUTLS_SERVER,
@@ -230,8 +289,10 @@ static int setup_dtls_connection(struct worker_st *ws)
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS premaster: %s",
 		      gnutls_strerror(ret));
-		goto fail;
+		return ret;
 	}
+
+	gnutls_certificate_server_set_request(session, GNUTLS_CERT_IGNORE);
 
 	ret =
 	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
@@ -239,6 +300,38 @@ static int setup_dtls_connection(struct worker_st *ws)
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS credentials: %s",
 		      gnutls_strerror(ret));
+		return ret;
+	}
+
+	return 0;
+}
+
+static int setup_dtls_connection(struct worker_st *ws)
+{
+	int ret;
+	gnutls_session_t session;
+
+	/* DTLS cookie verified.
+	 * Initialize session.
+	 */
+	ret = gnutls_init(&session, GNUTLS_SERVER|GNUTLS_DATAGRAM|GNUTLS_NONBLOCK);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "could not initialize TLS session: %s",
+		      gnutls_strerror(ret));
+		return -1;
+	}
+
+	gnutls_session_set_ptr(session, ws);
+
+	if (ws->req.use_psk) {
+		oclog(ws, LOG_INFO, "setting up DTLS-PSK connection");
+		ret = setup_dtls_psk_keys(session, ws);
+	} else {
+		oclog(ws, LOG_INFO, "setting up DTLS-0.9 connection");
+		ret = setup_dtls0_9_keys(session, ws);
+	}
+
+	if (ret < 0) {
 		goto fail;
 	}
 
@@ -246,9 +339,6 @@ static int setup_dtls_connection(struct worker_st *ws)
 	gnutls_transport_set_pull_function(session, dtls_pull);
 	gnutls_transport_set_pull_timeout_function(session, dtls_pull_timeout);
 	gnutls_transport_set_ptr(session, &ws->dtls_tptr);
-
-	gnutls_session_set_ptr(session, ws);
-	gnutls_certificate_server_set_request(session, GNUTLS_CERT_IGNORE);
 
 	gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
@@ -444,6 +534,8 @@ void vpn_server(struct worker_st *ws)
 		}
 	}
 	ws->session_start_time = time(0);
+
+	gnutls_psk_set_server_credentials_function(ws->creds->pskcred, get_psk_key);
 
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
 		ws->proto = AF_INET;
@@ -1378,7 +1470,6 @@ static void set_socket_timeout(worker_st * ws, int fd)
 
 /* wild but conservative guess; this ciphersuite has the largest overhead */
 #define MAX_CSTP_CRYPTO_OVERHEAD (CSTP_OVERHEAD+tls_get_overhead(GNUTLS_TLS1_0, GNUTLS_CIPHER_AES_128_CBC, GNUTLS_MAC_SHA1))
-/* wild but conservative guess; this ciphersuite has the largest overhead */
 #define MAX_DTLS_CRYPTO_OVERHEAD (CSTP_DTLS_OVERHEAD+tls_get_overhead(GNUTLS_DTLS1_0, GNUTLS_CIPHER_AES_128_CBC, GNUTLS_MAC_SHA1))
 #define MAX_DTLS_PROTO_OVERHEAD(ws) ((ws->proto == AF_INET)?(IP_HEADER_SIZE+UDP_HEADER_SIZE):(IPV6_HEADER_SIZE+UDP_HEADER_SIZE))
 
@@ -1411,12 +1502,23 @@ static void calc_mtu_values(worker_st * ws)
 
 	if (ws->udp_state != UP_DISABLED) {
 		/* crypto overhead for DTLS */
-		ws->dtls_crypto_overhead =
-		    tls_get_overhead(ws->req.
-				     selected_ciphersuite->gnutls_version,
-				     ws->req.
-				     selected_ciphersuite->gnutls_cipher,
-				     ws->req.selected_ciphersuite->gnutls_mac);
+		if (ws->req.use_psk) {
+			if (ws->session == NULL) {
+				ws->dtls_crypto_overhead = MAX_DTLS_CRYPTO_OVERHEAD;
+			} else {
+				ws->dtls_crypto_overhead = tls_get_overhead(
+						GNUTLS_DTLS1_0,
+						gnutls_cipher_get(ws->session),
+						gnutls_mac_get(ws->session));
+			}
+		} else {
+			ws->dtls_crypto_overhead =
+			    tls_get_overhead(ws->req.
+					     selected_ciphersuite->gnutls_version,
+					     ws->req.
+					     selected_ciphersuite->gnutls_cipher,
+					     ws->req.selected_ciphersuite->gnutls_mac);
+		}
 		ws->dtls_crypto_overhead += CSTP_DTLS_OVERHEAD;
 
 		oclog(ws, LOG_DEBUG,
@@ -1543,7 +1645,7 @@ static int connect_handler(worker_st * ws)
 	}
 
 	ws->udp_state = UP_DISABLED;
-	if (ws->perm_config->udp_port != 0 && req->master_secret_set != 0 && ws->req.selected_ciphersuite != NULL) {
+	if (ws->perm_config->udp_port != 0 && req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
 	} else {
@@ -1856,11 +1958,17 @@ static int connect_handler(worker_st * ws)
 			       ws->user_config->keepalive);
 		SEND_ERR(ret);
 
-		oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
-		      ws->req.selected_ciphersuite->oc_name);
-		ret =
-		    cstp_printf(ws, "X-DTLS-CipherSuite: %s\r\n",
-			       ws->req.selected_ciphersuite->oc_name);
+		if (ws->req.use_psk) {
+			oclog(ws, LOG_INFO, "DTLS ciphersuite: PSK");
+			ret =
+			    cstp_printf(ws, "X-DTLS-CipherSuite: PSK\r\n");
+		} else {
+			oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
+			      ws->req.selected_ciphersuite->oc_name);
+			ret =
+			    cstp_printf(ws, "X-DTLS-CipherSuite: %s\r\n",
+				       ws->req.selected_ciphersuite->oc_name);
+		}
 		SEND_ERR(ret);
 
 		ret =

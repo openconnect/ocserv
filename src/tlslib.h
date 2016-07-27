@@ -36,6 +36,11 @@
 #  define ZERO_COPY
 # endif
 
+#define PSK_KEY_SIZE 32
+#if TLS_MASTER_SIZE < PSK_KEY_SIZE
+# error
+#endif
+
 typedef struct 
 {
 	struct htable *ht;
@@ -44,6 +49,7 @@ typedef struct
 
 typedef struct tls_st {
 	gnutls_certificate_credentials_t xcred;
+	gnutls_psk_server_credentials_t pskcred;
 	gnutls_priority_t cprio;
 	gnutls_dh_params_t dh_params;
 } tls_st;

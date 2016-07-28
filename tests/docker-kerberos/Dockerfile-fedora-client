@@ -1,5 +1,5 @@
 # Clone from the Fedora 22 image
-FROM fedora:23
+FROM fedora:24
 
 RUN yum install -y krb5-libs krb5-workstation libev
 RUN yum install -y gnutls gnutls-utils iproute systemd

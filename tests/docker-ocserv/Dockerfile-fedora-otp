@@ -1,4 +1,4 @@
-FROM fedora:23
+FROM fedora:24
 
 RUN yum install -y gnutls gnutls-utils protobuf-c iproute pcllib http-parser tcp_wrappers pam systemd libseccomp
 RUN yum install -y libnl3 libtalloc freeradius-client lz4 radcli liboauth oathtool procps-ng iputils krb5-libs less bash openssh-server nuttcp libev

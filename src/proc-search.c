@@ -108,6 +108,23 @@ int proc_table_add(main_server_st *s, struct proc_st *proc)
 	return 0;
 }
 
+int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size)
+{
+	size_t ip_hash = rehash_ip(proc, NULL);
+
+	htable_del(s->proc_table.db_ip, ip_hash, proc);
+
+	memcpy(&proc->remote_addr, addr, addr_size);
+	proc->remote_addr_len = addr_size;
+
+	ip_hash = rehash_ip(proc, NULL);
+	if (htable_add(s->proc_table.db_ip, ip_hash, proc) == 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
 void proc_table_del(main_server_st *s, struct proc_st *proc)
 {
 	htable_del(s->proc_table.db_ip, rehash_ip(proc, NULL), proc);

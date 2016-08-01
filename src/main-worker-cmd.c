@@ -372,8 +372,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 			if (s->config->listen_proxy_proto) {
 				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {
-					memcpy(&proc->remote_addr, tmsg->remote_addr.data, tmsg->remote_addr.len);
-					proc->remote_addr_len = tmsg->remote_addr.len;
+					proc_table_update_ip(s, proc, (struct sockaddr_storage*)tmsg->remote_addr.data, tmsg->remote_addr.len);
 
 					/* If the address is in the BAN list, terminate it */
 					if (check_if_banned(s, &proc->remote_addr, proc->remote_addr_len) != 0) {

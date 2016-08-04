@@ -59,7 +59,7 @@ typedef struct pam_cfg_st {
 	int gid_min;
 } pam_cfg_st;
 
-#define CHECK_TRUE(str) (str != NULL && (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0))?1:0
+#define CHECK_TRUE(str) ((str != NULL && (c_strcasecmp(str, "true") == 0 || c_strcasecmp(str, "yes") == 0))?1:0)
 
 struct perm_cfg_st;
 

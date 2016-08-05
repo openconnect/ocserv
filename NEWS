@@ -12,6 +12,9 @@
   the MTU discovery fails to calculate an MTU over the minimum then disable MTU
   discovery and rely on packet fragmentation. Also set the DPD packet size to
   equal the current MTU, to allow detecting broken DTLS connections.
+- ocserv: updated the DTLS negotiation to conform to the latest openconnect
+  protocol draft. This keeps the previous anyconnect DTLS negotiation based on
+  resumption as legacy, but adds a new negotiation based on DTLS with PSK.
 
 
 * Version 0.11.3 (released 2016-06-16)

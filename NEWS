@@ -1,4 +1,4 @@
-* Version 0.11.4 (unreleased)
+* Version 0.11.4 (released 2016-08-05)
 - ocserv: Corrected the IPv6 address advertisement to client. Instead of
   using the server's address prefix use the prefix assigned to client.
 - ocserv: Added per-user-configuration option hostname.

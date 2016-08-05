@@ -37,19 +37,19 @@ fi
 echo "Testing local backend with gssapi... "
 
 export NTLM_USER_FILE=$srcdir/ntlm.pass
-echo "TEST:test:testpass" >$NTLM_USER_FILE
-echo "TEST:test:wrongpass" >$NTLM_USER_FILE.wrong
+echo "TESTINVALID:testinvalid:testpass" >$NTLM_USER_FILE
+echo "TESTINVALID:testinvalid:wrongpass" >$NTLM_USER_FILE.wrong
 
 launch_server -d 1 -f -c data/test-gssapi.config & PID=$!
 wait_server $PID
 
 echo "Connecting with curl... "
-curl https://test:testpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v ||
+curl https://testinvalid:testpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v ||
 	fail $PID "Could not connect to server"
 
 export NTLM_USER_FILE=$srcdir/ntlm.pass.wrong
 echo "Connecting with curl and wrong password... "
-curl https://test:wrongpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v &&
+curl https://testinvalid:wrongpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v &&
 	fail $PID "Connected to server with wrong password"
 
 kill $PID
@@ -64,7 +64,7 @@ launch_server -d 1 -f -c data/test-gssapi-local-map.config & PID=$!
 wait_server $PID
 
 echo "Connecting with curl... "
-curl https://test:testpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v &&
+curl https://testinvalid:testpass@localhost:4449 --cacert ${srcdir}/certs/ca.pem --negotiate -f -v &&
 	fail $PID "Connected to server even when local map was required"
 
 rm -f $srcdir/ntlm.pass

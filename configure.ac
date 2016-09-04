@@ -91,6 +91,13 @@ else
 ***]])
 fi
 
+AC_ARG_WITH(root-tests,
+  AS_HELP_STRING([--without-root-tests], [disable any tests requiring root/docker]),
+  root_tests=$withval,
+  root_tests=yes)
+
+AM_CONDITIONAL(ENABLE_ROOT_TESTS, test "x$root_tests" = xyes)
+
 AC_ARG_WITH(local-talloc,
   AS_HELP_STRING([--with-local-talloc], [use the included talloc library]),
   no_test_for_talloc=$withval,

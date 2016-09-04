@@ -22,14 +22,19 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 
 SUBDIRS = docker-ocserv docker-kerberos
 
-dist_check_SCRIPTS = test-iroute test-pass-script \
-	test-multi-cookie full-test ocpasswd-test unix-test test-pass-opt-cert \
-	test-cookie-timeout test-cookie-timeout-2 radius-test test-explicit-ip \
-	radius-test test-gssapi kerberos-test test-ban \
-	test-cookie-invalidation radius-test-config proxyproto-test \
-	proxyproto-unix-test otp-test test-user-config \
-	firewall-test test-append-routes reload-info-test \
-	firewall-neg-test radius-group-test
+dist_check_SCRIPTS =  ocpasswd-test
+
+if ENABLE_ROOT_TESTS
+#docker tests
+dist_check_SCRIPTS += radius-test full-test unix-test kerberos-test radius-test-config \
+	proxyproto-test proxyproto-unix-test otp-test firewall-test firewall-neg-test \
+	reload-info-test radius-group-test
+
+#other root requiring tests
+dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script test-pass-opt-cert \
+	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip test-gssapi \
+	test-cookie-invalidation test-user-config test-append-routes test-ban
+endif
 
 if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \

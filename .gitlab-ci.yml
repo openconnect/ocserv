@@ -1,34 +1,81 @@
-Build and Check with separate build dir and code coverage:
+image: centos:7
+
+Build and Check with separate build dir and code coverage (Centos 7):
   script:
+  - yum install -y epel-release
+  - yum install -y openconnect git which xz autoconf libtool automake gettext-devel  gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure --enable-code-coverage && make -j4 && make check -j4 && make code-coverage-capture &&
+    ../configure --without-root-tests --enable-code-coverage && make -j4 && make check -j4 && make code-coverage-capture &&
     make local-code-coverage-output && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
-  - lcov
-  - linux
+  - shared
   except:
   - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - build/tests/*.log
+
+Build and Check with separate build dir and code coverage (Fedora):
+  image: fedora:24
+  script:
+  - dnf install -y openconnect git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
+  - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
+    ../configure --without-root-tests --enable-code-coverage && make -j4 && make check -j4 && make code-coverage-capture &&
+    make local-code-coverage-output && make SKIP_LIBOPTS_CHECK=1 dist
+  tags:
+  - shared
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - build/tests/*.log
+
 Build with minimal setup:
   script:
+  - yum install -y epel-release
+  - yum install -y openconnect git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && 
-    ./configure --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j4 && make check -j4
+    ./configure --without-root-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j4 && make check -j4
   tags:
-  - linux
+  - shared
   except:
   - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - tests/*.log
+
 Build and Check with asan:
   script:
+  - yum install -y epel-release
+  - yum install -y openconnect git which xz autoconf libtool automake gettext-devel libasan-static libasan gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
-    ./configure && make -j4 && make check -j4
+    ./configure --without-root-tests && make -j4 && make check -j4
   tags:
-  - linux
+  - shared
   except:
   - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - tests/*.log
+
 Build and Check on FreeBSD:
   script:
-  - git submodule update --init && sh autogen.sh && LIBS="-L/usr/local/lib" ./configure --disable-nls &&
+  - git submodule update --init && sh autogen.sh && LIBS="-L/usr/local/lib" ./configure --disable-nls --without-root-tests &&
     gmake -j4 && gmake check -j4
   tags:
   - freebsd
   except:
   - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - tests/*.log

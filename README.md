@@ -1,6 +1,7 @@
 Gitlab CI [![Build status](https://gitlab.com/ocserv/ocserv/badges/master/build.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
  Travis [![Build Status](https://travis-ci.org/openconnect/ocserv.svg?branch=master)](https://travis-ci.org/openconnect/ocserv)
 
+[![coverage report](https://gitlab.com/ocserv/ocserv/badges/master/coverage.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
 
 # About
 

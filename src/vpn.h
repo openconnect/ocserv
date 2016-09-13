@@ -49,6 +49,7 @@
 #endif
 
 #define MAX_MSG_SIZE 16*1024
+#define DTLS_PROTO_INDICATOR "PSK-NEGOTIATE"
 
 enum {
 	PS_AUTH_INACTIVE, /* no comm with worker */

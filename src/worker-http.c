@@ -269,8 +269,8 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		req->selected_ciphersuite = NULL;
 		str = (char *)value;
 
-		p = strstr(str, "PSK-NEGOTIATE");
-		if (p != NULL && (p[3] == 0 || p[3] == ':')) {
+		p = strstr(str, DTLS_PROTO_INDICATOR);
+		if (p != NULL && (p[sizeof(DTLS_PROTO_INDICATOR)-1] == 0 || p[sizeof(DTLS_PROTO_INDICATOR)-1] == ':')) {
 			/* OpenConnect DTLS setup was detected. */
 			req->use_psk = 1;
 			req->master_secret_set = 1; /* we don't need it */

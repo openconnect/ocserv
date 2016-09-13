@@ -1969,9 +1969,9 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 
 		if (ws->req.use_psk || !ws->config->cisco_client_compat) {
-			oclog(ws, LOG_INFO, "DTLS ciphersuite: PSK");
+			oclog(ws, LOG_INFO, "DTLS ciphersuite: PSK-NEGOTIATE");
 			ret =
-			    cstp_printf(ws, "X-DTLS-CipherSuite: PSK\r\n");
+			    cstp_printf(ws, "X-DTLS-CipherSuite: PSK-NEGOTIATE\r\n");
 		} else {
 			oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
 			      ws->req.selected_ciphersuite->oc_name);

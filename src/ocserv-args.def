@@ -361,6 +361,14 @@ tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-VERS-SSL3.0"
 # on the main channel.
 #tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0:-ARCFOUR-128"
 
+# That option requires the established DTLS channel to use the same
+# cipher as the primary TLS channel. This cannot be combined with
+# listen-clear-file since the ciphersuite information is not available
+# in that configuration. Note also, that this option implies that
+# cisco-client-compat is false; this protection cannot be enforced
+# in the legacy/compat protocol.
+#match-tls-and-dtls-ciphers = true
+
 # The time (in seconds) that a client is allowed to stay connected prior
 # to authentication
 auth-timeout = 240
@@ -696,11 +704,10 @@ no-route = 192.168.5.0/255.255.255.0
 # The following options are for (experimental) AnyConnect client 
 # compatibility. 
 
-# This option must be set to true to support legacy CISCO clients.
-# A side effect of this option is that it will no longer be required 
-# for clients to present their certificate on every connection.
-# That is they may resume a cookie without presenting a certificate
-# (when certificate authentication is used).
+# This option will enable the pre-draft-DTLS version of DTLS, and
+# will not require clients to present their certificate on every TLS
+# connection. It must be set to true to support legacy CISCO clients
+# and openconnect clients < 7.08.
 cisco-client-compat = true
 
 # Client profile xml. A sample file exists in doc/profile.xml.

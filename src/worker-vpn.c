@@ -211,13 +211,18 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 	gnutls_mac_algorithm_t mac;
 	gnutls_cipher_algorithm_t cipher;
 
-	if (ws->session) {
+	if (ws->session && ws->config->match_dtls_and_tls) {
 		cipher = gnutls_cipher_get(ws->session);
 		mac = gnutls_mac_get(ws->session);
 
 		snprintf(prio_string, sizeof(prio_string), "%s:-VERS-ALL:-CIPHER-ALL:-MAC-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL:+%s:+%s",
 			 ws->config->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
 	} else {
+		if (ws->config->match_dtls_and_tls) {
+			oclog(ws, LOG_ERR, "cannot determine ciphersuite from CSTP channel (unset match-tls-and-dtls-ciphers)");
+			return -1;
+		}
+
 		/* if we haven't an associated session, enable all ciphers we would have enabled
 		 * otherwise for TLS. */
 		snprintf(prio_string, sizeof(prio_string), "%s:-VERS-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL",
@@ -327,6 +332,11 @@ static int setup_dtls_connection(struct worker_st *ws)
 		oclog(ws, LOG_INFO, "setting up DTLS-PSK connection");
 		ret = setup_dtls_psk_keys(session, ws);
 	} else {
+		if (!ws->config->cisco_client_compat) {
+			oclog(ws, LOG_INFO, "CISCO client compatibility is disabled; will not setup a legacy DTLS session");
+			ret = -1;
+			goto fail;
+		}
 		oclog(ws, LOG_INFO, "setting up DTLS-0.9 connection");
 		ret = setup_dtls0_9_keys(session, ws);
 	}
@@ -1958,7 +1968,7 @@ static int connect_handler(worker_st * ws)
 			       ws->user_config->keepalive);
 		SEND_ERR(ret);
 
-		if (ws->req.use_psk) {
+		if (ws->req.use_psk || !ws->config->cisco_client_compat) {
 			oclog(ws, LOG_INFO, "DTLS ciphersuite: PSK");
 			ret =
 			    cstp_printf(ws, "X-DTLS-CipherSuite: PSK\r\n");

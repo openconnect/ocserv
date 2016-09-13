@@ -346,6 +346,10 @@ struct cfg_st {
 	unsigned ban_points_connect;
 	unsigned ban_points_kkdcp;
 
+	/* when using the new PSK DTLS negotiation make sure that
+	 * the negotiated DTLS cipher/mac matches the TLS cipher/mac. */
+	unsigned match_dtls_and_tls;
+
 	unsigned isolate; /* whether seccomp should be enabled or not */
 
 	unsigned auth_timeout; /* timeout of HTTP auth */

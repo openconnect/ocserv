@@ -185,6 +185,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "config-per-group", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "default-user-config", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "default-group-config", .type = OPTION_STRING, .mandatory = 0 },
+	{ .name = "match-tls-and-dtls-ciphers", .type = OPTION_BOOLEAN, .mandatory = 0 },
 };
 
 static const tOptionValue* get_option(const char* name, unsigned * mand)
@@ -815,11 +816,20 @@ size_t urlfw_size = 0;
 	}
 
 	READ_STRING("banner", config->banner);
+
 	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);
 	READ_TF("always-require-cert", force_cert_auth, 1);
 	if (force_cert_auth == 0) {
 		fprintf(stderr, "note that 'always-require-cert' was replaced by 'cisco-client-compat'\n");
 		config->cisco_client_compat = 1;
+	}
+
+	READ_TF("match-tls-and-dtls-ciphers", config->match_dtls_and_tls, 0);
+	if (config->match_dtls_and_tls) {
+		if (config->cisco_client_compat) {
+			fprintf(stderr, "note that 'match-tls-and-dtls-ciphers' cannot be applied when 'cisco-client-compat' is on; disabling\n");
+		}
+		config->cisco_client_compat = 0;
 	}
 
 	READ_TF("compression", config->enable_compression, 0);

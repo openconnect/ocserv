@@ -199,7 +199,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 	switch (req->next_header) {
 	case HEADER_MASTER_SECRET:
-		if (req->use_psk) /* ignored */
+		if (req->use_psk || !ws->config->cisco_client_compat) /* ignored */
 			break;
 
 		if (value_length < TLS_MASTER_SIZE * 2) {

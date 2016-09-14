@@ -3,7 +3,7 @@ include ../common.mk
 AM_CPPFLAGS += -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
 	-I$(srcdir)/ -I$(srcdir)/../ -I$(builddir)/../../ \
 	-I$(builddir) $(LIBTALLOC_CFLAGS) $(LIBOPTS_CFLAGS) \
-	$(CODE_COVERAGE_CFLAGS)
+	$(CODE_COVERAGE_CFLAGS) $(LIBGNUTLS_CFLAGS)
 
 
 EXTRA_DIST = args.def

@@ -1978,13 +1978,17 @@ static int connect_handler(worker_st * ws)
 			ret =
 			    cstp_printf(ws, "X-DTLS-CipherSuite: %s\r\n",
 				       ws->req.selected_ciphersuite->oc_name);
+
+			/* only send the X-DTLS-MTU in the legacy protocol, as there
+			 * the DTLS ciphersuite/version is negotiated and we cannot predict
+			 * the actual tunnel size */
+			ret =
+			    cstp_printf(ws, "X-DTLS-MTU: %u\r\n", DATA_MTU(ws, ws->link_mtu));
+			SEND_ERR(ret);
+			oclog(ws, LOG_INFO, "DTLS data MTU %u", DATA_MTU(ws, ws->link_mtu));
 		}
 		SEND_ERR(ret);
 
-		ret =
-		    cstp_printf(ws, "X-DTLS-MTU: %u\r\n", DATA_MTU(ws, ws->link_mtu));
-		SEND_ERR(ret);
-		oclog(ws, LOG_INFO, "DTLS data MTU %u", DATA_MTU(ws, ws->link_mtu));
 	}
 
 	/* hack for openconnect. It uses only a single MTU value */

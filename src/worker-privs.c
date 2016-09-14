@@ -61,6 +61,7 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(alarm, 0);
 	ADD_SYSCALL(getpid, 0);
 	ADD_SYSCALL(brk, 0);
+	ADD_SYSCALL(getrandom, 0); /* used by gnutls 3.5.x */
 
 	ADD_SYSCALL(recvmsg, 0);
 	ADD_SYSCALL(sendmsg, 0);

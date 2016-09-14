@@ -86,6 +86,8 @@ human_addr_CPPFLAGS = $(AM_CPPFLAGS)
 human_addr_SOURCES = human_addr.c
 human_addr_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
+valid_hostname_LDADD = ../gl/libgnu.a
+
 port_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \

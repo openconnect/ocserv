@@ -4,6 +4,8 @@
   config option 'match-tls-and-dtls-ciphers' for this purpose.
 - The 'cisco-client-compat' config option, when disabled it will disable the
   legacy pre-draft-DTLS negotiation.
+- Added getrandom() to the accepted list of seccomp calls. This allows ocserv
+  to run with gnutls 3.5.x under recent kernels.
 
 
 * Version 0.11.4 (released 2016-08-05)

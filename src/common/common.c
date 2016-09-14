@@ -23,7 +23,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
-#include <vpn.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 /* for recvmsg */
@@ -33,6 +32,7 @@
 #include <limits.h>
 
 #include "common.h"
+#include "defs.h"
 
 /* Note that meaning slightly changes depending on whether we are
  * referring to the cookie or the session itself.

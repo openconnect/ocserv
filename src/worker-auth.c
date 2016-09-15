@@ -681,9 +681,12 @@ static int recv_auth_reply(worker_st * ws, int sd, char **txt, unsigned *pcounte
 	SecAuthReplyMsg *msg = NULL;
 	PROTOBUF_ALLOCATOR(pa, ws);
 
+	/* We don't use the default socket timeout here, but rather the
+	 * longer ws->config->auth_timeout to allow for authentication
+	 * methods which require the user input prior to returning a reply */
 	ret = recv_msg(ws, sd, CMD_SEC_AUTH_REPLY,
 		       (void *)&msg, (unpack_func) sec_auth_reply_msg__unpack,
-		       DEFAULT_SOCKET_TIMEOUT);
+		       ws->config->auth_timeout);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving auth reply message");
 		return ret;

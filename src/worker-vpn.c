@@ -1926,15 +1926,6 @@ static int connect_handler(worker_st * ws)
 
 	if (ws->udp_state != UP_DISABLED) {
 
-		p = (char *)ws->buffer;
-		for (i = 0; i < sizeof(ws->session_id); i++) {
-			sprintf(p, "%.2x", (unsigned int)ws->session_id[i]);
-			p += 2;
-		}
-		ret =
-		    cstp_printf(ws, "X-DTLS-Session-ID: %s\r\n",
-			       ws->buffer);
-		SEND_ERR(ret);
 
 		if (ws->user_config->dpd > 0) {
 			ret =
@@ -1968,11 +1959,27 @@ static int connect_handler(worker_st * ws)
 			       ws->user_config->keepalive);
 		SEND_ERR(ret);
 
+		p = (char *)ws->buffer;
+		for (i = 0; i < sizeof(ws->session_id); i++) {
+			sprintf(p, "%.2x", (unsigned int)ws->session_id[i]);
+			p += 2;
+		}
+
 		if (ws->req.use_psk || !ws->config->cisco_client_compat) {
+			ret =
+			    cstp_printf(ws, "X-DTLS-App-ID: %s\r\n",
+				       ws->buffer);
+			SEND_ERR(ret);
+
 			oclog(ws, LOG_INFO, "DTLS ciphersuite: "DTLS_PROTO_INDICATOR);
 			ret =
 			    cstp_printf(ws, "X-DTLS-CipherSuite: "DTLS_PROTO_INDICATOR"\r\n");
 		} else {
+			ret =
+			    cstp_printf(ws, "X-DTLS-Session-ID: %s\r\n",
+				       ws->buffer);
+			SEND_ERR(ret);
+
 			oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
 			      ws->req.selected_ciphersuite->oc_name);
 			ret =

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013-2015 Nikos Mavrogiannopoulos
- * Copyright (C) 2015 Red Hat, Inc.
+ * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -641,13 +641,121 @@ void clear_lists(main_server_st *s)
 	}
 }
 
+#define SKIP16(pos, total) { \
+	uint16_t _s; \
+	if (pos+2 > total) goto fallback; \
+	_s = (buffer[pos] << 8) | buffer[pos+1]; \
+	if (pos+2+_s > total) goto fallback; \
+	pos += 2+_s; \
+	}
+
+#define SKIP8(pos, total) { \
+	uint8_t _s; \
+	if (pos+1 > total) goto fallback; \
+	_s = buffer[pos]; \
+	if (pos+1+_s > total) goto fallback; \
+	pos += 1+_s; \
+	}
+
+#define TLS_EXT_APP_ID 48018
+#define RECORD_PAYLOAD_POS 13
+#define HANDSHAKE_SESSION_ID_POS 46
+
+/* This returns either the application-specific ID extension contents,
+ * or the session ID contents. The former is used on the new protocol,
+ * while the latter on the legacy protocol.
+ *
+ * Extension ID: 48018
+ * opaque ApplicationID<1..2^8-1>;
+ *
+ * struct {
+ *          ExtensionType extension_type;
+ *          opaque extension_data<0..2^16-1>;
+ *      } Extension;
+ *
+ *      struct {
+ *          ProtocolVersion server_version;
+ *          Random random;
+ *          SessionID session_id;
+ *          opaque cookie<0..2^8-1>;
+ *          CipherSuite cipher_suite;
+ *          CompressionMethod compression_method;
+ *          Extension server_hello_extension_list<0..2^16-1>;
+ *      } ServerHello;
+ */
+static
+unsigned get_session_id(uint8_t *buffer, size_t buffer_size, uint8_t **id, int *id_size)
+{
+	size_t pos;
+
+	/* A client hello packet. We can get the session ID and figure
+	 * the associated connection. */
+	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
+		return 0;
+	}
+
+	/* try to read the extension data */
+	pos = RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS;
+	SKIP8(pos, buffer_size);
+
+	/* Cookie */
+	SKIP8(pos, buffer_size);
+
+	/* CipherSuite */
+	SKIP16(pos, buffer_size);
+
+	/* CompressionMethod */
+
+	SKIP8(pos, buffer_size);
+
+	if (pos+2 > buffer_size)
+		goto fallback;
+	pos+=2;
+
+	/* Extension(s) */
+	while (pos < buffer_size) {
+		uint16_t type;
+		uint16_t s;
+
+		if (pos+4 > buffer_size)
+			goto fallback;
+
+		type = (buffer[pos] << 8) | buffer[pos+1];
+		pos+=2;
+		if (type != TLS_EXT_APP_ID) {
+			SKIP16(pos, buffer_size);
+		} else { /* found */
+			if (pos+2 > buffer_size)
+				return 0; /* invalid format */
+
+			s = (buffer[pos] << 8) | buffer[pos+1];
+			if (pos+2+s > buffer_size)
+				return 0; /* invalid format */
+			pos+=2;
+
+			s = buffer[pos];
+			if (pos+1+s > buffer_size)
+				return 0; /* invalid format */
+			pos++;
+			*id_size = s;
+			*id = &buffer[pos];
+			return 1;
+		}
+	}
+
+ fallback:
+	/* read session_id */
+	*id_size = buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
+	*id = &buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
+
+	return 1;
+}
+
 /* A UDP fd will not be forwarded to worker process before this number of
  * seconds has passed. That is to prevent a duplicate message messing the worker.
  */
 #define UDP_FD_RESEND_TIME 3
 
-#define RECORD_PAYLOAD_POS 13
-#define HANDSHAKE_SESSION_ID_POS 46
 static int forward_udp_to_owner(main_server_st* s, struct listener_st *listener)
 {
 int ret, e;
@@ -713,17 +821,11 @@ int sfd = -1;
 		if (s->perm_config->unix_conn_file)
 			goto fail;
 	} else {
-		/* A client hello packet. We can get the session ID and figure
-		 * the associated connection. */
-		if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
+		if (!get_session_id(s->msg_buffer, buffer_size, &session_id, &session_id_size)) {
 			mslog(s, NULL, LOG_INFO, "%s: too short handshake packet",
 			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 			goto fail;
 		}
-
-		/* read session_id */
-		session_id_size = s->msg_buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS];
-		session_id = &s->msg_buffer[RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+1];
 	}
 
 	/* search for the IP and the session ID in all procs */

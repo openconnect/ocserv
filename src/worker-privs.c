@@ -19,11 +19,16 @@
 
 #include <config.h>
 #include <worker.h>
-#include <sys/ioctl.h>
 
 #ifdef HAVE_LIBSECCOMP
 
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
+#include <unistd.h>
+#include <sys/syscall.h>
 #include <seccomp.h>
+#include <sys/ioctl.h>
 #include <errno.h>
 
 int disable_system_calls(struct worker_st *ws)
@@ -61,8 +66,9 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(alarm, 0);
 	ADD_SYSCALL(getpid, 0);
 	ADD_SYSCALL(brk, 0);
+#ifdef __NR_getrandom
 	ADD_SYSCALL(getrandom, 0); /* used by gnutls 3.5.x */
-
+#endif
 	ADD_SYSCALL(recvmsg, 0);
 	ADD_SYSCALL(sendmsg, 0);
 

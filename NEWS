@@ -1,4 +1,6 @@
 * Version 0.11.5 (unreleased)
+- ocserv: added config option 'dtls-psk'; this option allows to disable
+  the DTLS-PSK protocol and utilize only the legacy version.
 - ocserv: relaxed the restrictions for DTLS-PSK negotiation. No longer
   require that the cipher/mac combination of TLS match the DTLS one. Introduced
   config option 'match-tls-and-dtls-ciphers' for this purpose.

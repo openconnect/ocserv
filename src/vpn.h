@@ -271,6 +271,7 @@ struct cfg_st {
 	 * the negotiated DTLS cipher/mac matches the TLS cipher/mac. */
 	unsigned match_dtls_and_tls;
 	unsigned dtls_psk; /* whether to enable DTLS-PSK */
+	unsigned dtls_legacy; /* whether to enable DTLS-LEGACY */
 
 	unsigned isolate; /* whether seccomp should be enabled or not */
 

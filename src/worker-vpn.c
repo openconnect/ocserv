@@ -332,8 +332,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 		oclog(ws, LOG_INFO, "setting up DTLS-PSK connection");
 		ret = setup_dtls_psk_keys(session, ws);
 	} else {
-		if (!ws->config->cisco_client_compat) {
-			oclog(ws, LOG_INFO, "CISCO client compatibility is disabled; will not setup a legacy DTLS session");
+		if (!ws->config->dtls_legacy) {
+			oclog(ws, LOG_INFO, "CISCO client compatibility (dtls-legacy) is disabled; will not setup a DTLS session");
 			ret = -1;
 			goto fail;
 		}
@@ -1964,7 +1964,7 @@ static int connect_handler(worker_st * ws)
 			p += 2;
 		}
 
-		if (ws->req.use_psk || !ws->config->cisco_client_compat) {
+		if (ws->req.use_psk || !ws->config->dtls_legacy) {
 			ret =
 			    cstp_printf(ws, "X-DTLS-App-ID: %s\r\n",
 				       ws->buffer);

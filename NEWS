@@ -1,13 +1,13 @@
 * Version 0.11.5 (unreleased)
-- ocserv: added config option 'dtls-psk'; this option allows to disable
-  the DTLS-PSK protocol and utilize only the legacy version.
+- Added getrandom() to the accepted list of seccomp calls. This allows ocserv
+  to run with gnutls 3.5.x under recent kernels.
 - ocserv: relaxed the restrictions for DTLS-PSK negotiation. No longer
   require that the cipher/mac combination of TLS match the DTLS one. Introduced
   config option 'match-tls-dtls-ciphers' for this purpose.
-- The 'cisco-client-compat' config option, when disabled it will disable the
+- ocserv: added the config option 'dtls-psk'; this option allows to disable
+  the DTLS-PSK protocol and utilize only the legacy version.
+- ocserv: added the config option 'dtls-legacy'. When disabled it will disable the
   legacy pre-draft-DTLS negotiation.
-- Added getrandom() to the accepted list of seccomp calls. This allows ocserv
-  to run with gnutls 3.5.x under recent kernels.
 
 
 * Version 0.11.4 (released 2016-08-05)

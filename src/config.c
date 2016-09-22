@@ -83,6 +83,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "dtls-psk", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "dtls-legacy", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "listen-proxy-proto", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -818,7 +819,15 @@ size_t urlfw_size = 0;
 
 	READ_STRING("banner", config->banner);
 
+	READ_TF("dtls-legacy", config->dtls_legacy, 1);
 	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);
+	if (config->cisco_client_compat) {
+		if (!config->dtls_legacy) {
+			fprintf(stderr, "The cisco-client-compat option implies dtls-legacy = true; enabling\n");
+		}
+		config->dtls_legacy = 1;
+	}
+
 	READ_TF("always-require-cert", force_cert_auth, 1);
 	if (force_cert_auth == 0) {
 		fprintf(stderr, "note that 'always-require-cert' was replaced by 'cisco-client-compat'\n");
@@ -828,11 +837,10 @@ size_t urlfw_size = 0;
 	READ_TF("dtls-psk", config->dtls_psk, 1);
 	READ_TF("match-tls-dtls-ciphers", config->match_dtls_and_tls, 0);
 	if (config->match_dtls_and_tls) {
-		if (config->cisco_client_compat) {
-			fprintf(stderr, "error: 'match-tls-dtls-ciphers' cannot be applied when 'cisco-client-compat' is on\n");
+		if (config->dtls_legacy) {
+			fprintf(stderr, "error: 'match-tls-dtls-ciphers' cannot be applied when 'dtls-legacy' or 'cisco-client-compat' is on\n");
 			exit(1);
 		}
-		config->cisco_client_compat = 0;
 	}
 
 	READ_TF("compression", config->enable_compression, 0);

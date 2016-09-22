@@ -365,7 +365,7 @@ tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-VERS-SSL3.0"
 # cipher as the primary TLS channel. This cannot be combined with
 # listen-clear-file since the ciphersuite information is not available
 # in that configuration. Note also, that this option implies that
-# cisco-client-compat is false; this option cannot be enforced
+# dtls-legacy option is false; this option cannot be enforced
 # in the legacy/compat protocol.
 #match-tls-dtls-ciphers = true
 
@@ -707,14 +707,21 @@ no-route = 192.168.5.0/255.255.255.0
 # This option will enable the pre-draft-DTLS version of DTLS, and
 # will not require clients to present their certificate on every TLS
 # connection. It must be set to true to support legacy CISCO clients
-# and openconnect clients < 7.08.
+# and openconnect clients < 7.08. When set to true, it implies dtls-legacy = true.
 cisco-client-compat = true
 
-# This option will disable the DTLS-PSK negotiation (enabled by default).
+# This option allows to disable the DTLS-PSK negotiation (enabled by default).
 # The DTLS-PSK negotiation was introduced in ocserv 0.11.5 to deprecate
 # the pre-draft-DTLS negotiation inherited from AnyConnect. It allows the
 # DTLS channel to negotiate its ciphers and the DTLS protocol version.
 #dtls-psk = false
+
+# This option allows to disable the legacy DTLS negotiation (enabled by default,
+# but that may change in the future).
+# The legacy DTLS uses a pre-draft version of the DTLS protocol and was
+# from AnyConnect protocol. It has several limitations, that are addressed
+# by the dtls-psk protocol supported by openconnect 7.08+.
+dtls-legacy = true
 
 # Client profile xml. A sample file exists in doc/profile.xml.
 # It is required by some of the CISCO clients.

@@ -69,6 +69,10 @@ struct cfg_options {
 	const tOptionValue* val;
 };
 
+#define ERRSTR "error: "
+#define WARNSTR "warning: "
+#define NOTESTR "note: "
+
 static struct cfg_options available_options[] = {
 	{ .name = "auth", .type = OPTION_MULTI_LINE, .mandatory = 1 },
 	{ .name = "enable-auth", .type = OPTION_MULTI_LINE, .mandatory = 0 },
@@ -209,11 +213,11 @@ unsigned j;
 	val = get_option(name, &mand); \
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) { \
 		if (add_multi_line_val(config, name, &s_name, &num, pov, val) < 0) { \
-			fprintf(stderr, "memory error\n"); \
+			fprintf(stderr, ERRSTR"memory\n"); \
 			exit(1); \
 		} \
 	} else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		fprintf(stderr, ERRSTR"configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
 
@@ -225,7 +229,7 @@ unsigned j;
 			s_name = talloc_size(config, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
 			s_name2 = talloc_size(config, sizeof(char*)*DEFAULT_CONFIG_ENTRIES); \
 			if (s_name == NULL || s_name2 == NULL) { \
-				fprintf(stderr, "memory error\n"); \
+				fprintf(stderr, ERRSTR"memory\n"); \
 				exit(1); \
 			} \
 		} \
@@ -243,7 +247,7 @@ unsigned j;
 	      s_name[num] = NULL; \
 	      s_name2[num] = NULL; \
 	} else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		fprintf(stderr, ERRSTR"configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
 
@@ -255,7 +259,7 @@ unsigned j;
 			len--; \
 		s_name = talloc_strndup(pool, val->v.strVal, len); \
 	} else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		fprintf(stderr, ERRSTR"configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
 
@@ -267,7 +271,7 @@ unsigned j;
 	if (val != NULL && val->valType == OPARG_TYPE_STRING) \
 		strlcpy(s_name, val->v.strVal, sizeof(s_name)); \
 	else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		fprintf(stderr, ERRSTR"configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
 
@@ -292,7 +296,7 @@ unsigned j;
 		else if (val->valType == OPARG_TYPE_STRING) \
 			s_name = atoi(val->v.strVal); \
 	} else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		fprintf(stderr, ERRSTR"configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
 
@@ -309,7 +313,7 @@ unsigned j;
 			} \
 		} \
 	} else if (mand != 0) { \
-		fprintf(stderr, "Configuration option %s is mandatory.\n", name); \
+		fprintf(stderr, ERRSTR"configuration option %s is mandatory.\n", name); \
 		exit(1); \
 	}}
 
@@ -404,7 +408,7 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 						config->auth[0].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
 
 					if (config->auth[0].amod != NULL && avail_auth_types[i].mod != NULL) {
-						fprintf(stderr, "%s: You cannot mix multiple authentication methods of this type\n", auth[j]);
+						fprintf(stderr, ERRSTR"%s: you cannot mix multiple authentication methods of this type\n", auth[j]);
 						exit(1);
 					}
 
@@ -427,12 +431,12 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 			}
 
 			if (found == 0) {
-				fprintf(stderr, "Unknown or unsupported auth method: %s\n", auth[j]);
+				fprintf(stderr, ERRSTR"unknown or unsupported auth method: %s\n", auth[j]);
 				exit(1);
 			}
 			talloc_free(auth[j]);
 		}
-		fprintf(stderr, "Setting '%s' as primary authentication method\n", config->auth[0].name);
+		fprintf(stderr, NOTESTR"setting '%s' as primary authentication method\n", config->auth[0].name);
 	} else {
 		unsigned x = config->auth_methods;
 		/* Append authentication methods (alternative options) */
@@ -444,7 +448,7 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 						config->auth[x].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
 				
 					config->auth[x].name = talloc_strdup(config, avail_auth_types[i].name);
-					fprintf(stderr, "Enabling '%s' as authentication method\n", avail_auth_types[i].name);
+					fprintf(stderr, NOTESTR"enabling '%s' as authentication method\n", avail_auth_types[i].name);
 
 					config->auth[x].amod = avail_auth_types[i].mod;
 					config->auth[x].type |= avail_auth_types[i].type;
@@ -452,7 +456,7 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 					found = 1;
 					x++;
 					if (x >= MAX_AUTH_METHODS) {
-						fprintf(stderr, "You cannot enable more than %d authentication methods\n", x);
+						fprintf(stderr, ERRSTR"you cannot enable more than %d authentication methods\n", x);
 						exit(1);
 					}
 					break;
@@ -460,7 +464,7 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 			}
 
 			if (found == 0) {
-				fprintf(stderr, "Unknown or unsupported auth method: %s\n", auth[j]);
+				fprintf(stderr, ERRSTR"unknown or unsupported auth method: %s\n", auth[j]);
 				exit(1);
 			}
 			talloc_free(auth[j]);
@@ -502,7 +506,7 @@ static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
 				config->acct.additional = avail_acct_types[i].get_brackets_string(config, acct+avail_acct_types[i].name_size);
 
 			if ((avail_acct_types[i].mod->auth_types & config->auth[0].type) == 0) {
-				fprintf(stderr, "You cannot mix the '%s' accounting method with the '%s' authentication method\n", acct, config->auth[0].name);
+				fprintf(stderr, ERRSTR"you cannot mix the '%s' accounting method with the '%s' authentication method\n", acct, config->auth[0].name);
 				exit(1);
 			}
 
@@ -514,10 +518,10 @@ static void figure_acct_funcs(struct perm_cfg_st *config, const char *acct)
 	}
 
 	if (found == 0) {
-		fprintf(stderr, "Unknown or unsupported accounting method: %s\n", acct);
+		fprintf(stderr, ERRSTR"unknown or unsupported accounting method: %s\n", acct);
 		exit(1);
 	}
-	fprintf(stderr, "Setting '%s' as accounting method\n", config->acct.name);
+	fprintf(stderr, NOTESTR"setting '%s' as accounting method\n", config->acct.name);
 }
 
 #ifdef HAVE_GSSAPI
@@ -532,7 +536,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 
 	config->kkdcp = talloc_zero_size(config, urlfw_size*sizeof(kkdcp_st));
 	if (config->kkdcp == NULL) {
-		fprintf(stderr, "memory error\n");
+		fprintf(stderr, ERRSTR"memory\n");
 		exit(1);
 	}
 
@@ -545,7 +549,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 
 		ret = getaddrinfo(server, port, &hints, &res);
 		if (ret != 0) {
-			fprintf(stderr, "getaddrinfo(%s) failed: %s\n", server,
+			fprintf(stderr, ERRSTR"getaddrinfo(%s) failed: %s\n", server,
 				gai_strerror(ret));
 			exit(1);
 		}
@@ -565,7 +569,7 @@ static void parse_kkdcp(struct cfg_st *config, char **urlfw, unsigned urlfw_size
 		}
 
 		if (kkdcp->realms_size >= MAX_KRB_REALMS) {
-			fprintf(stderr, "reached maximum number (%d) of realms per URL\n", MAX_KRB_REALMS);
+			fprintf(stderr, ERRSTR"reached maximum number (%d) of realms per URL\n", MAX_KRB_REALMS);
 			exit(1);
 		}
 
@@ -605,7 +609,7 @@ static void append_iroutes_from_file(struct cfg_st *config, const char *file)
 	ret = add_multi_line_val(config, "iroute", &config->known_iroutes,
 				 &config->known_iroutes_size, pov, val);
 	if (ret < 0) {
-		fprintf(stderr, "Error loading iroute from %s\n", file);
+		fprintf(stderr, ERRSTR"cannot load iroute from %s\n", file);
 	}
 
 	for (j=0;j<config->known_iroutes_size;j++) {
@@ -663,7 +667,7 @@ size_t urlfw_size = 0;
 		pov = configFileLoad(OLD_DEFAULT_CFG_FILE);
 
 	if (pov == NULL) {
-		fprintf(stderr, "Error loading config file %s\n", file);
+		fprintf(stderr, ERRSTR"cannot load config file %s\n", file);
 		exit(1);
 	}
 
@@ -671,13 +675,13 @@ size_t urlfw_size = 0;
 
 	val = optionGetValue(pov, NULL);
 	if (val == NULL) {
-		fprintf(stderr, "No configuration directives found.\n");
+		fprintf(stderr, ERRSTR"no configuration directives found.\n");
 		exit(1);
 	}
 
 	do {
 		if (handle_option(val) == 0) {
-			fprintf(stderr, "Skipping unknown option '%s'\n", val->pzName);
+			fprintf(stderr, WARNSTR"skipping unknown option '%s'\n", val->pzName);
 		}
 		prev = val;
 	} while((val = optionNextValue(pov, prev)) != NULL);
@@ -696,7 +700,7 @@ size_t urlfw_size = 0;
 		auth_size = 0;
 
 		if (perm_config->auth[0].enabled == 0) {
-			fprintf(stderr, "No authentication method was specified!\n");
+			fprintf(stderr, ERRSTR"no authentication method was specified!\n");
 			exit(1);
 		}
 
@@ -716,7 +720,7 @@ size_t urlfw_size = 0;
 		if (val != NULL && val->valType == OPARG_TYPE_STRING) {
 			const struct passwd* pwd = getpwnam(val->v.strVal);
 			if (pwd == NULL) {
-				fprintf(stderr, "Unknown user: %s\n", val->v.strVal);
+				fprintf(stderr, ERRSTR"unknown user: %s\n", val->v.strVal);
 				exit(1);
 			}
 			perm_config->uid = pwd->pw_uid;
@@ -726,7 +730,7 @@ size_t urlfw_size = 0;
 		if (val != NULL && val->valType == OPARG_TYPE_STRING) {
 			const struct group *grp = getgrnam(val->v.strVal);
 			if (grp == NULL) {
-				fprintf(stderr, "Unknown group: %s\n", val->v.strVal);
+				fprintf(stderr, ERRSTR"unknown group: %s\n", val->v.strVal);
 				exit(1);
 			}
 			perm_config->gid = grp->gr_gid;
@@ -761,7 +765,7 @@ size_t urlfw_size = 0;
 
 	config->usage_count = talloc_zero(config, int);
 	if (config->usage_count == NULL) {
-		fprintf(stderr, "memory error\n");
+		fprintf(stderr, ERRSTR"memory\n");
 		exit(1);
 	}
 
@@ -814,7 +818,7 @@ size_t urlfw_size = 0;
 
 	val = get_option("session-control", NULL);
 	if (val != NULL) {
-		fprintf(stderr, "The option 'session-control' is deprecated\n");
+		fprintf(stderr, WARNSTR"the option 'session-control' is deprecated\n");
 	}
 
 	READ_STRING("banner", config->banner);
@@ -823,14 +827,14 @@ size_t urlfw_size = 0;
 	READ_TF("cisco-client-compat", config->cisco_client_compat, 0);
 	if (config->cisco_client_compat) {
 		if (!config->dtls_legacy) {
-			fprintf(stderr, "The cisco-client-compat option implies dtls-legacy = true; enabling\n");
+			fprintf(stderr, NOTESTR"the cisco-client-compat option implies dtls-legacy = true; enabling\n");
 		}
 		config->dtls_legacy = 1;
 	}
 
 	READ_TF("always-require-cert", force_cert_auth, 1);
 	if (force_cert_auth == 0) {
-		fprintf(stderr, "note that 'always-require-cert' was replaced by 'cisco-client-compat'\n");
+		fprintf(stderr, NOTESTR"'always-require-cert' was replaced by 'cisco-client-compat'\n");
 		config->cisco_client_compat = 1;
 	}
 
@@ -838,7 +842,7 @@ size_t urlfw_size = 0;
 	READ_TF("match-tls-dtls-ciphers", config->match_dtls_and_tls, 0);
 	if (config->match_dtls_and_tls) {
 		if (config->dtls_legacy) {
-			fprintf(stderr, "error: 'match-tls-dtls-ciphers' cannot be applied when 'dtls-legacy' or 'cisco-client-compat' is on\n");
+			fprintf(stderr, ERRSTR"'match-tls-dtls-ciphers' cannot be applied when 'dtls-legacy' or 'cisco-client-compat' is on\n");
 			exit(1);
 		}
 	}
@@ -852,13 +856,13 @@ size_t urlfw_size = 0;
 
 	READ_TF("use-seccomp", config->isolate, 0);
 	if (config->isolate) {
-		fprintf(stderr, "note that 'use-seccomp' was replaced by 'isolate-workers'\n");
+		fprintf(stderr, NOTESTR"'use-seccomp' was replaced by 'isolate-workers'\n");
 	} else {
 		READ_TF("isolate-workers", config->isolate, 0);
 	}
 #if !defined(HAVE_LIBSECCOMP)
 	if (config->isolate != 0) {
-		fprintf(stderr, "error: 'isolate-workers' is set to true, but not compiled with seccomp or Linux namespaces support\n");
+		fprintf(stderr, ERRSTR"'isolate-workers' is set to true, but not compiled with seccomp or Linux namespaces support\n");
 	}
 #endif
 
@@ -866,7 +870,7 @@ size_t urlfw_size = 0;
 	READ_TF("use-utmp", config->use_utmp, 1);
 	READ_TF("use-dbus", config->use_dbus, 0);
 	if (config->use_dbus != 0) {
-		fprintf(stderr, "note that 'use-dbus' was replaced by 'use-occtl'\n");
+		fprintf(stderr, NOTESTR"'use-dbus' was replaced by 'use-occtl'\n");
 		config->use_occtl = config->use_dbus;
 	} else {
 		READ_TF("use-occtl", config->use_occtl, 0);
@@ -886,7 +890,7 @@ size_t urlfw_size = 0;
 	if (tmp) {
 		ret = cfg_parse_ports(pool, &config->fw_ports, &config->n_fw_ports, tmp);
 		if (ret < 0) {
-			fprintf(stderr, "error parsing restrict-user-to-ports\n");
+			fprintf(stderr, ERRSTR"cannot parse restrict-user-to-ports\n");
 			exit(1);
 		}
 		talloc_free(tmp);
@@ -922,7 +926,7 @@ size_t urlfw_size = 0;
 	else if (strcmp(tmp, "new-tunnel") == 0)
 		config->rekey_method = REKEY_METHOD_NEW_TUNNEL;
 	else {
-		fprintf(stderr, "Unknown rekey method '%s'\n", tmp);
+		fprintf(stderr, ERRSTR"unknown rekey method '%s'\n", tmp);
 		exit(1);
 	}
 	talloc_free(tmp); tmp = NULL;
@@ -987,7 +991,7 @@ size_t urlfw_size = 0;
 		config->network.ipv6_subnet_prefix = prefix;
 
 		if (valid_ipv6_prefix(prefix) == 0) {
-			fprintf(stderr, "invalid IPv6 subnet prefix: %u\n", prefix);
+			fprintf(stderr, ERRSTR"invalid IPv6 subnet prefix: %u\n", prefix);
 			exit(1);
 		}
 	}
@@ -1002,7 +1006,7 @@ size_t urlfw_size = 0;
 		config->network.ipv6_prefix = prefix;
 
 		if (valid_ipv6_prefix(prefix) == 0) {
-			fprintf(stderr, "invalid IPv6 prefix: %u\n", prefix);
+			fprintf(stderr, ERRSTR"invalid IPv6 prefix: %u\n", prefix);
 			exit(1);
 		}
 	}
@@ -1010,7 +1014,7 @@ size_t urlfw_size = 0;
 	if (config->network.ipv6_subnet_prefix == 0) {
 		config->network.ipv6_subnet_prefix = 128;
 	} else if (config->network.ipv6_prefix >= config->network.ipv6_subnet_prefix) {
-		fprintf(stderr, "The subnet prefix (%u) cannot be smaller or equal to network's (%u)\n", 
+		fprintf(stderr, ERRSTR"the subnet prefix (%u) cannot be smaller or equal to network's (%u)\n", 
 				config->network.ipv6_subnet_prefix, config->network.ipv6_prefix);
 		exit(1);
 	}
@@ -1060,7 +1064,7 @@ size_t urlfw_size = 0;
 
 	for (j=0;j<config->network.dns_size;j++) {
 		if (strcmp(config->network.dns[j], "local") == 0) {
-			fprintf(stderr, "The 'local' DNS keyword is no longer supported.\n");
+			fprintf(stderr, ERRSTR"the 'local' DNS keyword is no longer supported.\n");
 			exit(1);
 		}
 	}
@@ -1079,7 +1083,7 @@ size_t urlfw_size = 0;
 
 	if (config->per_user_dir || config->per_group_dir) {
 		if (perm_config->sup_config_type != SUP_CONFIG_FILE) {
-			fprintf(stderr, "Specified config-per-user or config-per-group but supplemental config is '%s'\n",
+			fprintf(stderr, ERRSTR"specified config-per-user or config-per-group but supplemental config is '%s'\n",
 				sup_config_name(perm_config->sup_config_type));
 			exit(1);
 		}
@@ -1095,7 +1099,7 @@ size_t urlfw_size = 0;
 	READ_STRING("default-user-config", config->default_user_conf);
 	READ_STRING("default-group-config", config->default_group_conf);
 
-	fprintf(stderr, "Setting '%s' as supplemental config option\n", sup_config_name(perm_config->sup_config_type));
+	fprintf(stderr, NOTESTR"setting '%s' as supplemental config option\n", sup_config_name(perm_config->sup_config_type));
 
 	optionUnloadNested(pov);
 }
@@ -1105,27 +1109,27 @@ size_t urlfw_size = 0;
 static void check_cfg(struct perm_cfg_st *perm_config)
 {
 	if (perm_config->config->network.ipv4 == NULL && perm_config->config->network.ipv6 == NULL) {
-		fprintf(stderr, "No ipv4-network or ipv6-network options set.\n");
+		fprintf(stderr, ERRSTR"no ipv4-network or ipv6-network options set.\n");
 		exit(1);
 	}
 
 	if (perm_config->config->network.ipv4 != NULL && perm_config->config->network.ipv4_netmask == NULL) {
-		fprintf(stderr, "No mask found for IPv4 network.\n");
+		fprintf(stderr, ERRSTR"no mask found for IPv4 network.\n");
 		exit(1);
 	}
 
 	if (perm_config->config->network.ipv6 != NULL && perm_config->config->network.ipv6_prefix == 0) {
-		fprintf(stderr, "No prefix found for IPv6 network.\n");
+		fprintf(stderr, ERRSTR"no prefix found for IPv6 network.\n");
 		exit(1);
 	}
 
 	if (perm_config->config->banner && strlen(perm_config->config->banner) > MAX_BANNER_SIZE) {
-		fprintf(stderr, "Banner size is too long\n");
+		fprintf(stderr, ERRSTR"banner size is too long\n");
 		exit(1);
 	}
 
 	if (perm_config->cert_size != perm_config->key_size) {
-		fprintf(stderr, "The specified number of keys doesn't match the certificates\n");
+		fprintf(stderr, ERRSTR"the specified number of keys doesn't match the certificates\n");
 		exit(1);
 	}
 
@@ -1145,13 +1149,13 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 	}
 
 	if (perm_config->config->cert_req != 0 && perm_config->config->cert_user_oid == NULL) {
-		fprintf(stderr, "A certificate is requested by the option 'cert-user-oid' is not set\n");
+		fprintf(stderr, ERRSTR"a certificate is requested by the option 'cert-user-oid' is not set\n");
 		exit(1);
 	}
 
 	if (perm_config->unix_conn_file != NULL && (perm_config->config->cert_req != 0)) {
 		if (perm_config->config->listen_proxy_proto == 0) {
-			fprintf(stderr, "The option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
+			fprintf(stderr, ERRSTR"the option 'listen-clear-file' cannot be combined with 'auth=certificate'\n");
 			exit(1);
 		}
 	}
@@ -1170,12 +1174,12 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 			perm_config->config->xml_config_hash = calc_sha1_hash(perm_config->config, path, 0);
 
 			if (perm_config->config->xml_config_hash == NULL) {
-				fprintf(stderr, "Cannot open file '%s'\n", path);
+				fprintf(stderr, ERRSTR"cannot open file '%s'\n", path);
 				exit(1);
 			}
 		}
 		if (perm_config->config->xml_config_hash == NULL) {
-			fprintf(stderr, "Cannot open file '%s'\n", perm_config->config->xml_config_file);
+			fprintf(stderr, ERRSTR"cannot open file '%s'\n", perm_config->config->xml_config_file);
 			exit(1);
 		}
 	}
@@ -1331,7 +1335,7 @@ FILE* fp;
 
 	fp = fopen(pid_file, "w");
 	if (fp == NULL) {
-		fprintf(stderr, "Cannot open pid file '%s'\n", pid_file);
+		fprintf(stderr, ERRSTR"cannot open pid file '%s'\n", pid_file);
 		exit(1);
 	}
 

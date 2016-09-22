@@ -645,7 +645,7 @@ void clear_lists(main_server_st *s)
 	uint16_t _s; \
 	if (pos+2 > total) goto fallback; \
 	_s = (buffer[pos] << 8) | buffer[pos+1]; \
-	if (pos+2+_s > total) goto fallback; \
+	if ((size_t)(pos+2+_s) > total) goto fallback; \
 	pos += 2+_s; \
 	}
 
@@ -653,7 +653,7 @@ void clear_lists(main_server_st *s)
 	uint8_t _s; \
 	if (pos+1 > total) goto fallback; \
 	_s = buffer[pos]; \
-	if (pos+1+_s > total) goto fallback; \
+	if ((size_t)(pos+1+_s) > total) goto fallback; \
 	pos += 1+_s; \
 	}
 
@@ -732,12 +732,12 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 				return 0; /* invalid format */
 
 			s = (buffer[pos] << 8) | buffer[pos+1];
-			if (pos+2+s > buffer_size)
+			if ((size_t)(pos+2+s) > buffer_size)
 				return 0; /* invalid format */
 			pos+=2;
 
 			s = buffer[pos];
-			if (pos+1+s > buffer_size)
+			if ((size_t)(pos+1+s) > buffer_size)
 				return 0; /* invalid format */
 			pos++;
 			*id_size = s;

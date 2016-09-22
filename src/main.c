@@ -684,7 +684,7 @@ void clear_lists(main_server_st *s)
  *      } ServerHello;
  */
 static
-unsigned get_session_id(uint8_t *buffer, size_t buffer_size, uint8_t **id, int *id_size)
+unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, uint8_t **id, int *id_size)
 {
 	size_t pos;
 
@@ -693,6 +693,9 @@ unsigned get_session_id(uint8_t *buffer, size_t buffer_size, uint8_t **id, int *
 	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS+GNUTLS_MAX_SESSION_ID+2) {
 		return 0;
 	}
+
+	if (!s->config->dtls_psk)
+		goto fallback;
 
 	/* try to read the extension data */
 	pos = RECORD_PAYLOAD_POS+HANDSHAKE_SESSION_ID_POS;
@@ -821,7 +824,7 @@ int sfd = -1;
 		if (s->perm_config->unix_conn_file)
 			goto fail;
 	} else {
-		if (!get_session_id(s->msg_buffer, buffer_size, &session_id, &session_id_size)) {
+		if (!get_session_id(s, s->msg_buffer, buffer_size, &session_id, &session_id_size)) {
 			mslog(s, NULL, LOG_INFO, "%s: too short handshake packet",
 			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
 			goto fail;

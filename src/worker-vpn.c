@@ -1926,7 +1926,6 @@ static int connect_handler(worker_st * ws)
 
 	if (ws->udp_state != UP_DISABLED) {
 
-
 		if (ws->user_config->dpd > 0) {
 			ret =
 			    cstp_printf(ws, "X-DTLS-DPD: %u\r\n",

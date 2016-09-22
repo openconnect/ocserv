@@ -270,6 +270,7 @@ struct cfg_st {
 	/* when using the new PSK DTLS negotiation make sure that
 	 * the negotiated DTLS cipher/mac matches the TLS cipher/mac. */
 	unsigned match_dtls_and_tls;
+	unsigned dtls_psk; /* whether to enable DTLS-PSK */
 
 	unsigned isolate; /* whether seccomp should be enabled or not */
 

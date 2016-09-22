@@ -710,6 +710,12 @@ no-route = 192.168.5.0/255.255.255.0
 # and openconnect clients < 7.08.
 cisco-client-compat = true
 
+# This option will disable the DTLS-PSK negotiation (enabled by default).
+# The DTLS-PSK negotiation was introduced in ocserv 0.11.5 to deprecate
+# the pre-draft-DTLS negotiation inherited from AnyConnect. It allows the
+# DTLS channel to negotiate its ciphers and the DTLS protocol version.
+#dtls-psk = false
+
 # Client profile xml. A sample file exists in doc/profile.xml.
 # It is required by some of the CISCO clients.
 # This file must be accessible from inside the worker's chroot.

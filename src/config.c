@@ -82,6 +82,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "acct", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "listen-host-is-dyndns", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "dtls-psk", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "listen-proxy-proto", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "compression", .type = OPTION_BOOLEAN, .mandatory = 0 },
 	{ .name = "no-compress-limit", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -824,6 +825,7 @@ size_t urlfw_size = 0;
 		config->cisco_client_compat = 1;
 	}
 
+	READ_TF("dtls-psk", config->dtls_psk, 1);
 	READ_TF("match-tls-and-dtls-ciphers", config->match_dtls_and_tls, 0);
 	if (config->match_dtls_and_tls) {
 		if (config->cisco_client_compat) {

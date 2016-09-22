@@ -3,7 +3,7 @@
   the DTLS-PSK protocol and utilize only the legacy version.
 - ocserv: relaxed the restrictions for DTLS-PSK negotiation. No longer
   require that the cipher/mac combination of TLS match the DTLS one. Introduced
-  config option 'match-tls-and-dtls-ciphers' for this purpose.
+  config option 'match-tls-dtls-ciphers' for this purpose.
 - The 'cisco-client-compat' config option, when disabled it will disable the
   legacy pre-draft-DTLS negotiation.
 - Added getrandom() to the accepted list of seccomp calls. This allows ocserv

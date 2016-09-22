@@ -219,7 +219,7 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 			 ws->config->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
 	} else {
 		if (ws->config->match_dtls_and_tls) {
-			oclog(ws, LOG_ERR, "cannot determine ciphersuite from CSTP channel (unset match-tls-and-dtls-ciphers)");
+			oclog(ws, LOG_ERR, "cannot determine ciphersuite from CSTP channel (unset match-tls-dtls-ciphers)");
 			return -1;
 		}
 

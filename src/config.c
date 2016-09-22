@@ -186,7 +186,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "config-per-group", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "default-user-config", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "default-group-config", .type = OPTION_STRING, .mandatory = 0 },
-	{ .name = "match-tls-and-dtls-ciphers", .type = OPTION_BOOLEAN, .mandatory = 0 },
+	{ .name = "match-tls-dtls-ciphers", .type = OPTION_BOOLEAN, .mandatory = 0 },
 };
 
 static const tOptionValue* get_option(const char* name, unsigned * mand)
@@ -826,10 +826,11 @@ size_t urlfw_size = 0;
 	}
 
 	READ_TF("dtls-psk", config->dtls_psk, 1);
-	READ_TF("match-tls-and-dtls-ciphers", config->match_dtls_and_tls, 0);
+	READ_TF("match-tls-dtls-ciphers", config->match_dtls_and_tls, 0);
 	if (config->match_dtls_and_tls) {
 		if (config->cisco_client_compat) {
-			fprintf(stderr, "note that 'match-tls-and-dtls-ciphers' cannot be applied when 'cisco-client-compat' is on; disabling\n");
+			fprintf(stderr, "error: 'match-tls-dtls-ciphers' cannot be applied when 'cisco-client-compat' is on\n");
+			exit(1);
 		}
 		config->cisco_client_compat = 0;
 	}

@@ -278,6 +278,7 @@ struct cfg_st {
 	unsigned auth_timeout; /* timeout of HTTP auth */
 	unsigned idle_timeout; /* timeout when idle */
 	unsigned mobile_idle_timeout; /* timeout when a mobile is idle */
+	unsigned switch_to_tcp_timeout; /* length of no traffic period to automatically switch to TCP */
 	unsigned keepalive;
 	unsigned dpd;
 	unsigned mobile_dpd;

@@ -1313,6 +1313,14 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	cstp_to_send.data = ws->buffer;
 	cstp_to_send.size = l;
 
+	if (ws->config->switch_to_tcp_timeout &&
+	    ws->udp_state == UP_ACTIVE &&
+	    tnow->tv_sec > ws->udp_recv_time + ws->config->switch_to_tcp_timeout) {
+		oclog(ws, LOG_DEBUG, "No UDP data received for %li seconds, using TCP instead\n",
+				tnow->tv_sec - ws->udp_recv_time);
+		ws->udp_state = UP_INACTIVE;
+	}
+
 	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > ws->config->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);

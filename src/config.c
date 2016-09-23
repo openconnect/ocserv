@@ -98,6 +98,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "ban-points-kkdcp", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "udp-port", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "keepalive", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "switch-to-tcp-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "mobile-dpd", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rate-limit-ms", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -787,6 +788,7 @@ size_t urlfw_size = 0;
 	READ_TF("tunnel-all-dns", config->tunnel_all_dns, 0);
 
 	READ_NUMERIC("keepalive", config->keepalive);
+	READ_NUMERIC("switch-to-tcp-timeout", config->switch_to_tcp_timeout);
 	READ_NUMERIC("dpd", config->dpd);
 	if (config->dpd == 0)
 		config->dpd = DEFAULT_DPD_TIME;

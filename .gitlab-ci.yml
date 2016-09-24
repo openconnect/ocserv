@@ -72,6 +72,8 @@ Build and Check on FreeBSD:
     gmake -j4 && gmake check -j4
   tags:
   - freebsd
+  only:
+  - branches@ocserv/ocserv
   except:
   - tags
   artifacts:

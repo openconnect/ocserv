@@ -231,7 +231,27 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 		break;
 	case HEADER_DEVICE_TYPE:
-		req->is_mobile = 1;
+		if (value_length + 1 > sizeof(req->devtype)) {
+			req->devtype[0] = 0;
+			goto cleanup;
+		}
+		memcpy(req->devtype, value, value_length);
+		req->devtype[value_length] = 0;
+
+		oclog(ws, LOG_DEBUG,
+		      "Device-type: '%s'", value);
+		break;
+	case HEADER_PLATFORM:
+		if (strncasecmp(value, "apple-ios", 9) == 0 ||
+		    strncasecmp(value, "android", 7) == 0) {
+
+			oclog(ws, LOG_DEBUG,
+			      "Platform: '%s' (mobile)", value);
+			req->is_mobile = 1;
+		} else {
+			oclog(ws, LOG_DEBUG,
+			      "Platform: '%s'", value);
+		}
 		break;
 	case HEADER_SUPPORT_SPNEGO:
 		ws_switch_auth_to(ws, AUTH_TYPE_GSSAPI);

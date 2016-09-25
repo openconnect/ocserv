@@ -754,6 +754,10 @@ void session_info_send(worker_st * ws)
 		msg.user_agent = ws->req.user_agent;
 	}
 
+	if (ws->req.devtype[0] != 0) {
+		msg.device_type = ws->req.devtype;
+	}
+
 	if (ws->req.hostname[0] != 0) {
 		msg.hostname = ws->req.hostname;
 	}

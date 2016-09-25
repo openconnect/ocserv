@@ -54,6 +54,7 @@ enum {
 	HEADER_CSTP_BASE_MTU,
 	HEADER_CSTP_ATYPE,
 	HEADER_DEVICE_TYPE,
+	HEADER_PLATFORM,
 	HEADER_DTLS_CIPHERSUITE,
 	HEADER_CONNECTION,
 	HEADER_FULL_IPV6,
@@ -119,6 +120,7 @@ struct http_req_st {
 	str_st value;
 	unsigned int header_state;
 
+	char devtype[MAX_AGENT_NAME]; /* Device-Type */
 	char hostname[MAX_HOSTNAME_SIZE];
 	char user_agent[MAX_AGENT_NAME];
 	unsigned user_agent_type;

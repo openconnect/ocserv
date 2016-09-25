@@ -294,7 +294,7 @@ dpd = 90
 # be higher to prevent such clients being awaken too 
 # often by the DPD messages, and save battery.
 # The mobile clients are distinguished from the header
-# 'X-AnyConnect-Identifier-DeviceType'.
+# 'X-AnyConnect-Identifier-Platform'.
 mobile-dpd = 1800
 
 # MTU discovery (DPD must be enabled)

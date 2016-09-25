@@ -18,5 +18,6 @@ X-CSTP-Address-Type, HEADER_CSTP_ATYPE
 X-CSTP-Hostname, HEADER_HOSTNAME
 X-CSTP-Full-IPv6-Capability, HEADER_FULL_IPV6
 X-AnyConnect-Identifier-DeviceType, HEADER_DEVICE_TYPE
+X-AnyConnect-Identifier-Platform, HEADER_PLATFORM
 X-Support-HTTP-Auth, HEADER_SUPPORT_SPNEGO
 Authorization, HEADER_AUTHORIZATION

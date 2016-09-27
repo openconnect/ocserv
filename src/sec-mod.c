@@ -270,7 +270,7 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_
 				return -1;
 			}
 
-			ret = handle_sec_auth_stats_cmd(sec, tmsg);
+			ret = handle_sec_auth_stats_cmd(sec, tmsg, pid);
 			cli_stats_msg__free_unpacked(tmsg, &pa);
 			return ret;
 		}

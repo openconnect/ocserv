@@ -597,7 +597,7 @@ void handle_sec_auth_ban_ip_reply(sec_mod_st *sec, const BanIpReplyMsg *msg)
 	return;
 }
 
-int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
+int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req, pid_t pid)
 {
 	client_entry_st *e;
 	stats_st totals;
@@ -632,6 +632,9 @@ int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req)
 	if (req->has_discon_reason && req->discon_reason != 0) {
 		e->discon_reason = req->discon_reason;
 	}
+
+	/* update PID */
+	e->acct_info.id = pid;
 
 	if (sec->perm_config->acct.amod == NULL || sec->perm_config->acct.amod->session_stats == NULL)
 		return 0;

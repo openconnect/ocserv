@@ -146,7 +146,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg * req, p
 int handle_sec_auth_cont(int cfd, sec_mod_st *sec, const SecAuthContMsg * req);
 int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenMsg *req);
 int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionCloseMsg *req);
-int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req);
+int handle_sec_auth_stats_cmd(sec_mod_st * sec, const CliStatsMsg * req, pid_t pid);
 void sec_auth_user_deinit(sec_mod_st * sec, client_entry_st * e);
 
 void sec_mod_server(void *main_pool, struct perm_cfg_st *config, const char *socket_file,

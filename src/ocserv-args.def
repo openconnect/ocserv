@@ -109,10 +109,7 @@ An example configuration file follows.
 # and all configuration will be read from radius. That also includes the
 # Acct-Interim-Interval, and Session-Timeout values.
 #
-# The supported atributes for radius configuration are:
-# Group-Name, Framed-IPv6-Address, Framed-IPv6-Prefix, DNS-Server-IPv6-Address,
-# Framed-IP-Address, Framed-IP-Netmask, MS-Primary-DNS-Server, MS-Secondary-DNS-Server,
-# Acct-Interim-Interval.
+# See doc/README-radius.md for the supported radius configuration atributes.
 #
 # gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=900,gid-min=1000]
 #  The gssapi option allows to use authentication methods supported by GSSAPI,

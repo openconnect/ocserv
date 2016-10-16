@@ -19,12 +19,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <common.h>
 #include <c-strcase.h>
 #include <c-ctype.h>
+#include <wchar.h>
 
 #include "html.h"
 
@@ -39,6 +41,10 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 		return NULL;
 
 	for (i = pos = 0; i < len;) {
+		if (len-pos < 1) {
+			goto fail;
+		}
+
 		if (html[i] == '&') {
 			if (!c_strncasecmp(&html[i], "&lt;", 4)) {
 				msg[pos++] = '<';
@@ -58,6 +64,33 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 			} else if (!c_strncasecmp(&html[i], "&apos;", 6)) {
 				msg[pos++] = '\'';
 				i += 6;
+			} else if (!strncmp(&html[i], "&#x", 3)) {
+				const char *p = &html[i];
+				char *endptr = NULL;
+				long val;
+
+				p+=3;
+				val = strtol(p, &endptr, 16);
+				if (endptr == NULL || *endptr != ';' || val > WCHAR_MAX) {
+					/* skip */
+					msg[pos++] = html[i++];
+				} else {
+					char tmpmb[MB_CUR_MAX];
+					wchar_t ch = val;
+					mbstate_t ps;
+					memset(&ps, 0, sizeof(ps));
+
+					i += (ptrdiff_t)(1+endptr-(&html[i]));
+					val = wcrtomb(tmpmb, ch, &ps);
+
+					if (val == -1)
+						goto fail;
+					if (len-pos > val)
+						memcpy(&msg[pos], tmpmb, val);
+					else
+						goto fail;
+					pos += val;
+				}
 			} else
 				msg[pos++] = html[i++];
 		} else
@@ -69,6 +102,9 @@ char *unescape_html(void *pool, const char *html, unsigned len, unsigned *out_le
 		*out_len = pos;
 
 	return msg;
+ fail:
+ 	talloc_free(msg);
+ 	return NULL;
 }
 
 char *unescape_url(void *pool, const char *url, unsigned len, unsigned *out_len)

@@ -66,6 +66,9 @@ kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 json_escape_SOURCES = json-escape.c
 json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
+url_escape_SOURCES = url-escape.c
+url_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+
 ipv4_prefix_SOURCES = ipv4-prefix.c
 ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
@@ -91,7 +94,7 @@ valid_hostname_LDADD = ../gl/libgnu.a
 port_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
-	port-parsing human_addr valid-hostname
+	port-parsing human_addr valid-hostname url-escape
 
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)

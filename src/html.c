@@ -123,11 +123,10 @@ char *escape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 		if (c_isalpha(url[i])) {
 			msg[pos++] = url[i++];
 		} else {
-			snprintf(&msg[pos], 3, "%%%02x", (unsigned)url[i++]);
+			snprintf(&msg[pos], 4, "%%%02X", (unsigned)url[i++]);
 			pos+=3;
 		}
 	}
-
 	msg[pos] = 0;
 	if (out_len)
 		*out_len = pos;

@@ -1,5 +1,11 @@
 * Version 0.11.6 (unreleased)
 - ocserv: Improved detection of mobile clients (for android and ios clients)
+- ocserv: Update the worker's ID on Radius accounting messages.
+  That is, even if we initially advertize the ID of the worker
+  handling the client as NAS-Port, the client may eventually end-up
+  being served by another process with different ID. In that case we make
+  sure that the radius server is notified on the next accounting message.
+  See doc/README.radius.md about NAS-Port.
 
 
 * Version 0.11.5 (released 2016-09-23)

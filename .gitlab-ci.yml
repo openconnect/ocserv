@@ -34,6 +34,24 @@ Build and Check with separate build dir and code coverage (Fedora):
     paths:
       - build/tests/*.log
 
+Build and Check with separate build dir (Centos 6):
+  image: centos:6
+  script:
+  - yum install -y epel-release
+  - yum install -y openconnect git which xz autoconf libtool automake gettext-devel gnutls30-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel protobuf-c gperf lockfile-progs nuttcp uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
+  - sed -i 's/AM_PROG_AR//g' configure.ac
+  - git submodule update --init && autoreconf -fvi && mkdir -p build
+  - cd build && CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ../configure --disable-systemd --enable-local-libopts --without-root-tests && make && make check -j4
+  tags:
+  - shared
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - build/tests/*.log
+
 Build with minimal setup:
   script:
   - yum install -y epel-release

@@ -9,6 +9,8 @@
 - ocserv: Added config option 'switch-to-tcp-timeout'. That allows an
   automatic switch to TCP in case of no received UDP traffic (Patch
   by Andrew Patrikalakis).
+- ocserv: Pre-load the OCSP response file; that way worker processes can
+  serve it, even if they have no access to it.
 
 
 * Version 0.11.5 (released 2016-09-23)

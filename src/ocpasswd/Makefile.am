@@ -21,6 +21,15 @@ ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS) \
 	$(LIBNETTLE_LIBS)
 
 args.c: $(srcdir)/args.def $(builddir)/../version.inc
-	$(AUTOGEN) $<
+	if test "$(AUTOGEN)" = ":";then \
+		rm -f $(builddir)/args.c; \
+		rm -f $(builddir)/args.h; \
+		cp $(srcdir)/../autogen/ocpasswd-args.c $(builddir)/args.c; \
+		cp $(srcdir)/../autogen/ocpasswd-args.h $(builddir)/args.h; \
+	else \
+		$(AUTOGEN) $<; \
+		cp $(builddir)/args.c $(srcdir)/../autogen/ocpasswd-args.c; \
+		cp $(builddir)/args.h $(srcdir)/../autogen/ocpasswd-args.h; \
+	fi
 args.h: args.c
 

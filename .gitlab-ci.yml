@@ -15,7 +15,7 @@ Build and Check with separate build dir and code coverage (Centos 7):
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/tests/*.log
+      - build/
 
 Build and Check with separate build dir and code coverage (Fedora):
   image: fedora:24

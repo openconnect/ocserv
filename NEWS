@@ -12,6 +12,8 @@
   certain time (Patch by Andrew Patrikalakis).
 - ocserv: Pre-load the OCSP response file; that way worker processes can
   serve it, even if they have no access to it.
+- ocserv: When compiled with GnuTLS 3.5.6 automatically set DH
+  parameters from the known set.
 
 
 * Version 0.11.5 (released 2016-09-23)

@@ -571,8 +571,10 @@ unsigned usage;
 			if (!(usage & GNUTLS_KEY_KEY_ENCIPHERMENT)) {
 				mslog(s, NULL, LOG_WARNING, "server certificate key usage prevents key encipherment; unable to support the RSA ciphersuites; "
 					"if that is not intentional, regenerate the server certificate with the key usage flag 'key encipherment' set.");
-				if (s->perm_config->dh_params_file != NULL)
+#if GNUTLS_VERSION_NUMBER < 0x030506
+				if (s->perm_config->dh_params_file == NULL)
 					mslog(s, NULL, LOG_WARNING, "no DH-params file specified; server will be limited to ECDHE ciphersuites\n");
+#endif
 			}
 		}
 	}
@@ -602,6 +604,11 @@ int ret;
 		gnutls_free(data.data);
 
 		gnutls_certificate_set_dh_params(creds->xcred, creds->dh_params);
+	} else {
+#if GNUTLS_VERSION_NUMBER >= 0x030506
+		/* use pre-generated parameters */
+		gnutls_certificate_set_known_dh_params(creds->xcred, GNUTLS_SEC_PARAM_MEDIUM);
+#endif
 	}
 }
 

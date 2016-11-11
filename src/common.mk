@@ -1,7 +1,7 @@
 AM_CPPFLAGS = 
 
 if NEED_LIBOPTS
-NEEDED_LIBOPTS = $(top_srcdir)/libopts/libopts.a
+NEEDED_LIBOPTS = $(top_builddir)/libopts/libopts.a
 else
 NEEDED_LIBOPTS = $(LIBOPTS_LDADD)
 endif
@@ -18,8 +18,8 @@ NEEDED_HTTP_PARSER_LIBS = $(HTTP_PARSER_LIBS)
 endif
 
 if LOCAL_PROTOBUF_C
-AM_CPPFLAGS += -I$(top_srcdir)/src/protobuf/
-NEEDED_LIBPROTOBUF_LIBS = $(top_srcdir)/src/protobuf/libprotobuf.a
+AM_CPPFLAGS += -I$(top_builddir)/src/protobuf/
+NEEDED_LIBPROTOBUF_LIBS = $(top_builddir)/src/protobuf/libprotobuf.a
 else
 NEEDED_LIBPROTOBUF_LIBS = $(LIBPROTOBUF_C_LIBS)
 endif

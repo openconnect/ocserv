@@ -5,10 +5,11 @@
   handling the client as NAS-Port, the client may eventually end-up
   being served by another process with different ID. In that case we make
   sure that the radius server is notified on the next accounting message.
-  See doc/README.radius.md about NAS-Port.
+  If you are using radius see doc/README.radius.md about NAS-Port, since
+  that behavior may cause issues in freeradius installations.
 - ocserv: Added config option 'switch-to-tcp-timeout'. That allows an
-  automatic switch to TCP in case of no received UDP traffic (Patch
-  by Andrew Patrikalakis).
+  automatic switch to TCP in case of no received UDP traffic for
+  certain time (Patch by Andrew Patrikalakis).
 - ocserv: Pre-load the OCSP response file; that way worker processes can
   serve it, even if they have no access to it.
 

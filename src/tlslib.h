@@ -52,6 +52,7 @@ typedef struct tls_st {
 	gnutls_psk_server_credentials_t pskcred;
 	gnutls_priority_t cprio;
 	gnutls_dh_params_t dh_params;
+	gnutls_datum_t ocsp_response;
 } tls_st;
 
 void tls_reload_crl(struct main_server_st* s, struct tls_st *creds, unsigned force);

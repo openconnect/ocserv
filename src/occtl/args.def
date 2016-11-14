@@ -71,6 +71,24 @@ _EOT_;
 };
 
 doc-section = {
+  ds-type = 'EXAMPLES';
+  ds-format = 'texi';
+  ds-text   = <<-_EOT_
+The tool can be run interactively when run with no arguments. When
+arguments are given they are interpreted as commands. For example:
+@example
+$ occtl show users
+@end example
+
+Any command line arguments to be used as options must preceed the
+command (if any), as shown below.
+@example
+$ occtl --json show users
+@end example
+_EOT_;
+};
+
+doc-section = {
   ds-type = 'IMPLEMENTATION NOTES';
   ds-format = 'texi';
   ds-text   = <<-_EOT_

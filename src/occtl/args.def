@@ -37,7 +37,7 @@ flag = {
     name      = json;
     value     = j;
     descrip   = "Output will be JSON formatted";
-    doc   = "";
+    doc   = "This option can only be used with non-interactive output, e.g., 'occtl --json show users'.";
 };
 
 flag = {

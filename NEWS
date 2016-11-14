@@ -1,4 +1,4 @@
-* Version 0.11.6 (unreleased)
+* Version 0.11.6 (released 2016-11-14)
 - ocserv: Improved detection of mobile clients (for android and ios clients)
 - ocserv: Update the worker's ID on Radius accounting messages.
   That is, even if we initially advertize the ID of the worker

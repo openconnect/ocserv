@@ -6,7 +6,7 @@ AM_CPPFLAGS += -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
 	$(CODE_COVERAGE_CFLAGS) $(LIBGNUTLS_CFLAGS)
 
 
-EXTRA_DIST = args.def
+EXTRA_DIST = args.def args.c.in args.h.in
 
 BUILT_SOURCES = args.c args.h
 

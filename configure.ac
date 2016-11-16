@@ -497,12 +497,10 @@ AC_SUBST([ROOTGID], [$gid])
 LIBOPTS_CHECK([libopts])
 if test "$NEED_LIBOPTS_DIR" = "true";then
 	dnl create libopts-generated files
-	for i in ${srcdir}/src/*args.c.bak ${srcdir}/src/*args.h.bak ${srcdir}/src/occtl/*args.c.bak ${srcdir}/src/occtl/*args.h.bak; do
-		nam=`echo $i|sed 's/.bak//g'`
-		if test -f "$i";then
-			cp -f $i $nam
-		fi
-	done
+        AC_CONFIG_LINKS([src/ocpasswd/args.c:src/ocpasswd/args.c.in
+			 src/ocpasswd/args.h:src/ocpasswd/args.h.in
+			 src/ocserv-args.c:src/ocserv-args.c.in
+			 src/ocserv-args.h:src/ocserv-args.h.in])
 	AC_SUBST([AUTOGEN], [:])
 	enable_local_libopts=yes
 else

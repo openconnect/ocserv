@@ -13,7 +13,7 @@ AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c ctl.pb-c.c ctl.pb-c.h
 
-EXTRA_DIST = version.inc.in version.inc \
+EXTRA_DIST = version.inc.in version.inc ocserv-args.c.in ocserv-args.h.in \
 	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw
 
 sbin_PROGRAMS = ocserv

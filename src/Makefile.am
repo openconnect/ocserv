@@ -23,16 +23,7 @@ noinst_LIBRARIES = libcmd-ocserv.a libipc.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
 
 ocserv-args.c: $(srcdir)/ocserv-args.def $(builddir)/version.inc
-	if test "$(AUTOGEN)" = ":";then \
-		rm -f $(builddir)/ocserv-args.c; \
-		rm -f $(builddir)/ocserv-args.h; \
-		cp $(srcdir)/autogen/ocserv-args.c $(builddir)/; \
-		cp $(srcdir)/autogen/ocserv-args.h $(builddir)/; \
-	else \
-		$(AUTOGEN) $<; \
-		cp $(builddir)/ocserv-args.c $(srcdir)/autogen; \
-		cp $(builddir)/ocserv-args.h $(srcdir)/autogen; \
-	fi
+	$(AUTOGEN) $<
 ocserv-args.h: ocserv-args.c
 
 # Authentication module sources

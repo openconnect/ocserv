@@ -6,7 +6,7 @@ Build/Centos7:
   - yum install -y openconnect git which xz autoconf libtool automake gettext-devel  gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
     ../configure --without-root-tests --enable-code-coverage && make -j4 && make check -j4 && make code-coverage-capture &&
-    make local-code-coverage-output && make SKIP_LIBOPTS_CHECK=1 dist
+    make local-code-coverage-output && make files-update && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
   - shared
   except:
@@ -24,7 +24,7 @@ Build/Fedora24:
   - dnf install -y openconnect git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
     ../configure --without-root-tests --enable-code-coverage && make -j4 && make check -j4 && make code-coverage-capture &&
-    make local-code-coverage-output && make SKIP_LIBOPTS_CHECK=1 dist
+    make local-code-coverage-output && make files-update && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
   - shared
   except:

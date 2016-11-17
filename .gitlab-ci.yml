@@ -1,6 +1,6 @@
 image: centos:7
 
-Build and Check with separate build dir and code coverage (Centos 7):
+Build/Centos7:
   script:
   - yum install -y epel-release
   - yum install -y openconnect git which xz autoconf libtool automake gettext-devel  gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
@@ -15,9 +15,10 @@ Build and Check with separate build dir and code coverage (Centos 7):
     expire_in: 1 week
     when: on_failure
     paths:
+      - build/*.log
       - build/tests/*.log
 
-Build and Check with separate build dir and code coverage (Fedora):
+Build/Fedora24:
   image: fedora:24
   script:
   - dnf install -y openconnect git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
@@ -32,9 +33,10 @@ Build and Check with separate build dir and code coverage (Fedora):
     expire_in: 1 week
     when: on_failure
     paths:
+      - build/*.log
       - build/tests/*.log
 
-Build and Check with separate build dir (Centos 6):
+Build/Centos6:
   image: centos:6
   script:
   - yum install -y epel-release
@@ -50,9 +52,10 @@ Build and Check with separate build dir (Centos 6):
     expire_in: 1 week
     when: on_failure
     paths:
+      - build/*.log
       - build/tests/*.log
 
-Build with minimal setup:
+Build/minimal:
   script:
   - yum install -y epel-release
   - yum install -y openconnect git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
@@ -66,9 +69,10 @@ Build with minimal setup:
     expire_in: 1 week
     when: on_failure
     paths:
+      - ./*.log
       - tests/*.log
 
-Build and Check with asan:
+Build/asan:
   script:
   - yum install -y epel-release
   - yum install -y openconnect git which xz autoconf libtool automake gettext-devel libasan-static libasan gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
@@ -82,9 +86,10 @@ Build and Check with asan:
     expire_in: 1 week
     when: on_failure
     paths:
+      - ./*.log
       - tests/*.log
 
-Build and Check on FreeBSD:
+Build/FreeBSD:
   script:
   - git submodule update --init && sh autogen.sh && LIBS="-L/usr/local/lib" ./configure --disable-nls --without-root-tests &&
     gmake -j4 && gmake check -j4
@@ -98,4 +103,5 @@ Build and Check on FreeBSD:
     expire_in: 1 week
     when: on_failure
     paths:
+      - ./*.log
       - tests/*.log

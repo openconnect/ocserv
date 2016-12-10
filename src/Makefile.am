@@ -22,9 +22,11 @@ bin_SCRIPTS = ocserv-fw
 noinst_LIBRARIES = libcmd-ocserv.a libipc.a
 libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
 
-ocserv-args.c: $(srcdir)/ocserv-args.def $(builddir)/version.inc
+ocserv-args.stamp: $(srcdir)/ocserv-args.def $(builddir)/version.inc
 	$(AUTOGEN) $<
-ocserv-args.h: ocserv-args.c
+	touch $@
+ocserv-args.h: ocserv-args.stamp
+ocserv-args.c: ocserv-args.stamp
 
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
@@ -116,3 +118,6 @@ common/libcommon.a:
 	cd common && $(MAKE) $(AM_MAKEFLAGS) libcommon.a
 
 .PHONY: ccan/libccan.a common/libcommon.a
+
+clean-local:
+	rm -f *.stamp

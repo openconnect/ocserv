@@ -20,7 +20,11 @@ ocpasswd_LDADD = ../../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS) \
 	$(LIBNETTLE_LIBS)
 
-args.c: $(srcdir)/args.def $(builddir)/../version.inc
+args.stamp: $(srcdir)/args.def $(builddir)/../version.inc
 	$(AUTOGEN) $<
-args.h: args.c
+	touch $@
+args.h: args.stamp
+args.c: args.stamp
 
+clean-local:
+	rm -f args.stamp

@@ -52,7 +52,7 @@ seconds), that accounting information should be reported.
 stats-report-time = 360
 ```
 
-That value will be overriden by Acct-Interim-Interval if sent
+That value will be overridden by Acct-Interim-Interval if sent
 by the server.
 
 

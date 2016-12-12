@@ -99,20 +99,20 @@ An example configuration file follows.
 # entries of the following format.
 # "username:groupname1,groupname2:encoded-password"
 # One entry must be listed per line, and 'ocpasswd' should be used
-# to generate password entries. The 'otp' suboption allows to specify
+# to generate password entries. The 'otp' suboption allows one to specify
 # an oath password file to be used for one time passwords; the format of
 # the file is described in https://code.google.com/p/mod-authn-otp/wiki/UsersFile
 #
 # radius[config=/etc/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=name]:
 #  The radius option requires specifying freeradius-client configuration
-# file. If the groupconfig option is set, then config-per-user/group will be overriden,
+# file. If the groupconfig option is set, then config-per-user/group will be overridden,
 # and all configuration will be read from radius. That also includes the
 # Acct-Interim-Interval, and Session-Timeout values.
 #
 # See doc/README-radius.md for the supported radius configuration atributes.
 #
 # gssapi[keytab=/etc/key.tab,require-local-user-map=false,tgt-freshness-time=900,gid-min=1000]
-#  The gssapi option allows to use authentication methods supported by GSSAPI,
+#  The gssapi option allows one to use authentication methods supported by GSSAPI,
 # such as Kerberos tickets with ocserv. It should be best used as an alternative
 # to PAM (i.e., have pam in auth and gssapi in enable-auth), to allow users with
 # tickets and without tickets to login. The default value for require-local-user-map
@@ -488,7 +488,7 @@ rekey-method = ssl
 # or via a unix socket).
 use-occtl = true
 
-# PID file. It can be overriden in the command line.
+# PID file. It can be overridden in the command line.
 pid-file = /var/run/ocserv.pid
 
 # Set the protocol-defined priority (SO_PRIORITY) for packets to
@@ -654,7 +654,7 @@ no-route = 192.168.5.0/255.255.255.0
 #  mtu, idle-timeout, mobile-idle-timeout, restrict-user-to-ports,
 #  hostname, and session-timeout.
 #
-# Note that the 'iroute' option allows to add routes on the server
+# Note that the 'iroute' option allows one to add routes on the server
 # based on a user or group. The syntax depends on the input accepted
 # by the commands route-add-cmd and route-del-cmd (see below). The no-udp
 # is a boolean option (e.g., no-udp = true), and will prevent a UDP session
@@ -682,7 +682,7 @@ no-route = 192.168.5.0/255.255.255.0
 #route-add-cmd = "ip route add %{R} dev %{D}"
 #route-del-cmd = "ip route delete %{R} dev %{D}"
 
-# This option allows to forward a proxy. The special keywords '%{U}'
+# This option allows one to forward a proxy. The special keywords '%{U}'
 # and '%{G}', if present will be replaced by the username and group name.
 #proxy-url = http://example.com/
 #proxy-url = http://example.com/%{U}/
@@ -715,13 +715,13 @@ no-route = 192.168.5.0/255.255.255.0
 # and openconnect clients < 7.08. When set to true, it implies dtls-legacy = true.
 cisco-client-compat = true
 
-# This option allows to disable the DTLS-PSK negotiation (enabled by default).
+# This option allows one to disable the DTLS-PSK negotiation (enabled by default).
 # The DTLS-PSK negotiation was introduced in ocserv 0.11.5 to deprecate
 # the pre-draft-DTLS negotiation inherited from AnyConnect. It allows the
 # DTLS channel to negotiate its ciphers and the DTLS protocol version.
 #dtls-psk = false
 
-# This option allows to disable the legacy DTLS negotiation (enabled by default,
+# This option allows one to disable the legacy DTLS negotiation (enabled by default,
 # but that may change in the future).
 # The legacy DTLS uses a pre-draft version of the DTLS protocol and was
 # from AnyConnect protocol. It has several limitations, that are addressed

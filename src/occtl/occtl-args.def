@@ -80,7 +80,7 @@ arguments are given they are interpreted as commands. For example:
 $ occtl show users
 @end example
 
-Any command line arguments to be used as options must preceed the
+Any command line arguments to be used as options must precede the
 command (if any), as shown below.
 @example
 $ occtl --json show users

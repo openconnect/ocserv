@@ -12,7 +12,7 @@ and is believed to be compatible with CISCO's AnyConnect SSL VPN.
 
 The program consists of:
  1. ocserv, the main server application
- 2. occtl, the server's control tool. A tool which allows to query the
+ 2. occtl, the server's control tool. A tool which allows one to query the
    server for information.
  3. ocpasswd, a tool to administer simple password files.
 

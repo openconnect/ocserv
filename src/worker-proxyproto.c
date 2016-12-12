@@ -30,7 +30,7 @@
 /* This file implements the Proxy Protocol v2, as described in:
  * http://www.haproxy.org/download/1.6/doc/proxy-protocol.txt
  *
- * That allows to obtain the detailed peer information even when
+ * That allows one to obtain the detailed peer information even when
  * the session is received by a proxy.
  */
 

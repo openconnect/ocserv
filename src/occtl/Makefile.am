@@ -5,7 +5,7 @@ AM_CPPFLAGS += -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
 	$(LIBNL3_CFLAGS) $(LIBPROTOBUF_C_CFLAGS) $(LIBTALLOC_CFLAGS) \
 	-I$(srcdir)/../common/ -I$(builddir)/../common/ $(CODE_COVERAGE_CFLAGS)
 
-EXTRA_DIST = args.def
+EXTRA_DIST = occtl-args.def
 
 bin_PROGRAMS = occtl
 

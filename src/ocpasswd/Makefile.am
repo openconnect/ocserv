@@ -6,25 +6,25 @@ AM_CPPFLAGS += -I$(srcdir)/../../gl/ -I$(builddir)/../../gl/ \
 	$(CODE_COVERAGE_CFLAGS) $(LIBGNUTLS_CFLAGS)
 
 
-EXTRA_DIST = args.def args.c.in args.h.in
+EXTRA_DIST = ocpasswd-args.def ocpasswd-args.c.in ocpasswd-args.h.in
 
-BUILT_SOURCES = args.c args.h
+BUILT_SOURCES = ocpasswd-args.c ocpasswd-args.h
 
 bin_PROGRAMS = ocpasswd
 
 noinst_LIBRARIES = libcmd-ocpasswd.a
-libcmd_ocpasswd_a_SOURCES = args.def args.c args.h
+libcmd_ocpasswd_a_SOURCES = ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
 
 ocpasswd_SOURCES = ocpasswd.c
 ocpasswd_LDADD = ../../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
 ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS) \
 	$(LIBNETTLE_LIBS)
 
-args.stamp: $(srcdir)/args.def $(builddir)/../version.inc
+ocpasswd-args.stamp: $(srcdir)/ocpasswd-args.def $(builddir)/../version.inc
 	$(AUTOGEN) $<
 	touch $@
-args.h: args.stamp
-args.c: args.stamp
+ocpasswd-args.h: ocpasswd-args.stamp
+ocpasswd-args.c: ocpasswd-args.stamp
 
 clean-local:
-	rm -f args.stamp
+	rm -f ocpasswd-args.stamp

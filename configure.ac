@@ -497,8 +497,8 @@ AC_SUBST([ROOTGID], [$gid])
 LIBOPTS_CHECK([libopts])
 if test "$NEED_LIBOPTS_DIR" = "true";then
 	dnl create libopts-generated files
-        AC_CONFIG_LINKS([src/ocpasswd/ocpasswd-args.c:src/ocpasswd/ocpasswd-args.c.in
-			 src/ocpasswd/ocpasswd-args.h:src/ocpasswd/ocpasswd-args.h.in
+        AC_CONFIG_LINKS([src/ocpasswd-args.c:src/ocpasswd/ocpasswd-args.c.in
+			 src/ocpasswd-args.h:src/ocpasswd/ocpasswd-args.h.in
 			 src/ocserv-args.c:src/ocserv-args.c.in
 			 src/ocserv-args.h:src/ocserv-args.h.in])
 	AC_SUBST([AUTOGEN], [:])
@@ -512,12 +512,6 @@ AC_CONFIG_FILES([
 	Makefile
 	src/version.inc
 	src/Makefile
-	src/occtl/Makefile
-	src/ocpasswd/Makefile
-	src/ccan/Makefile
-	src/common/Makefile
-	src/pcl/Makefile
-	src/protobuf/Makefile
 	doc/Makefile
 	gl/Makefile
 	tests/docker-ocserv/Makefile

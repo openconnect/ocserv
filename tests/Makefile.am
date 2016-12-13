@@ -51,6 +51,7 @@ endif
 AM_CPPFLAGS += \
 	$(LIBOPTS_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) \
+	$(CODE_COVERAGE_CFLAGS) \
 	-I$(top_srcdir)/src/ \
 	-I$(top_builddir)/src/ \
 	-I$(top_srcdir)/src/common/ \
@@ -60,41 +61,43 @@ AM_CPPFLAGS += \
 	-I$(top_srcdir)/ \
 	-I$(top_builddir)/
 
+LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/libccan.a $(CODE_COVERAGE_LDFLAGS)
+
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
-kkdcp_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+kkdcp_parsing_LDADD = $(LDADD)
 
 json_escape_SOURCES = json-escape.c
-json_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+json_escape_LDADD = $(LDADD)
 
 url_escape_SOURCES = url-escape.c
-url_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+url_escape_LDADD = $(LDADD)
 
 html_escape_SOURCES = html-escape.c
-html_escape_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+html_escape_LDADD = $(LDADD)
 
 ipv4_prefix_SOURCES = ipv4-prefix.c
-ipv4_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+ipv4_prefix_LDADD = $(LDADD)
 
 ban_ips_CPPFLAGS = $(AM_CPPFLAGS) -DDISABLE_LOGS
 ban_ips_SOURCES = ban-ips.c
-ban_ips_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+ban_ips_LDADD = $(LDADD)
 
 str_test_SOURCES = str-test.c
-str_test_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+str_test_LDADD = $(LDADD)
 
 str_test2_SOURCES = str-test2.c
-str_test2_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+str_test2_LDADD = $(LDADD)
 
 ipv6_prefix_SOURCES = ipv6-prefix.c
-ipv6_prefix_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+ipv6_prefix_LDADD = $(LDADD)
 
 human_addr_CPPFLAGS = $(AM_CPPFLAGS) 
 human_addr_SOURCES = human_addr.c
-human_addr_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+human_addr_LDADD = $(LDADD)
 
-valid_hostname_LDADD = ../gl/libgnu.a
+valid_hostname_LDADD = $(LDADD)
 
-port_parsing_LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/ccan/libccan.a
+port_parsing_LDADD = $(LDADD)
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
 	port-parsing human_addr valid-hostname url-escape html-escape

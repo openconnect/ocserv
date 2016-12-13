@@ -19,7 +19,7 @@ endif
 
 if LOCAL_PROTOBUF_C
 AM_CPPFLAGS += -I$(top_builddir)/src/protobuf/
-NEEDED_LIBPROTOBUF_LIBS = $(top_builddir)/src/protobuf/libprotobuf.a
+NEEDED_LIBPROTOBUF_LIBS = libprotobuf.a
 else
 NEEDED_LIBPROTOBUF_LIBS = $(LIBPROTOBUF_C_LIBS)
 endif

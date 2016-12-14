@@ -53,12 +53,12 @@ gperf              / gperf
 liblockfile-bin    / lockfile-progs
 nuttcp             / nuttcp
 lcov               / lcov
-                   / uid_wrapper
-                   / pam_wrapper
-                   / nss_wrapper
-                   / socket_wrapper
-                   / gssntlmssp
-pam-oath           / pam_oath
+libuid-wrapper     / uid_wrapper
+libpam-wrapper     / pam_wrapper
+libnss-wrapper     / nss_wrapper
+libsocket-wrapper  / socket_wrapper
+gss-ntlmssp        / gssntlmssp
+libpam-oath        / pam_oath
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

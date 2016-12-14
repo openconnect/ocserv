@@ -473,20 +473,26 @@ LIBS="$oldlibs"
 fi
 AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
-if test -f /usr/lib64/pam_wrapper/pam_matrix.so;then
-	AC_SUBST([PAMWRAPDIR], [/usr/lib64/pam_wrapper])
-elif test -f /usr/lib/pam_wrapper/pam_matrix.so;then
-	AC_SUBST([PAMWRAPDIR], [/usr/lib/pam_wrapper])
-else
-	AC_SUBST([PAMWRAPDIR], [/usr/lib/pam_wrapper])
-fi
+if test "$have_cwrap_pam" = yes; then
+	m4_ifdef([PKG_CHECK_VAR], [PKG_CHECK_VAR([CWRAP_PAM_MODULES], [pam_wrapper], [modules])])
 
-if test -f /usr/lib64/security/pam_oath.so;then
-	AC_SUBST([PAMDIR], [/usr/lib64/security])
-elif test -f /usr/lib/security/pam_oath.so;then
-	AC_SUBST([PAMDIR], [/usr/lib/security])
-else
-	AC_SUBST([PAMDIR], [/usr/lib/security])
+	if test -f $CWRAP_PAM_MODULES/pam_matrix.so;then
+		AC_SUBST([PAMWRAPDIR], [$CWRAP_PAM_MODULES])
+	elif test -f /usr/lib64/pam_wrapper/pam_matrix.so;then
+		AC_SUBST([PAMWRAPDIR], [/usr/lib64/pam_wrapper])
+	elif test -f /usr/lib/pam_wrapper/pam_matrix.so;then
+		AC_SUBST([PAMWRAPDIR], [/usr/lib/pam_wrapper])
+	else
+		AC_SUBST([PAMWRAPDIR], [/usr/lib/pam_wrapper])
+	fi
+
+	if test -f /usr/lib64/security/pam_oath.so;then
+		AC_SUBST([PAMDIR], [/usr/lib64/security])
+	elif test -f /usr/lib/security/pam_oath.so;then
+		AC_SUBST([PAMDIR], [/usr/lib/security])
+	else
+		AC_SUBST([PAMDIR], [/usr/lib/security])
+	fi
 fi
 
 uid=$(id -u)

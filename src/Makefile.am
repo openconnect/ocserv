@@ -7,7 +7,6 @@ AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBREADLINE_CFLAGS) $(CODE_COVERAGE_CFLAGS) \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
 	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS)
-	$(LIBNL3_CFLAGS)/
 
 BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c ctl.pb-c.c ctl.pb-c.h
@@ -104,7 +103,7 @@ clean-local:
 
 bin_PROGRAMS = occtl/occtl
 
-occtl_occtl_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/occtl $(LIBNL3_CFLAGS)/
+occtl_occtl_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/occtl $(LIBNL3_CFLAGS)
 occtl_occtl_SOURCES = occtl/occtl.c occtl/pager.c occtl/occtl.h occtl/time.c occtl/cache.c \
 	occtl/ip-cache.c occtl/nl.c occtl/ctl.h occtl/print.c occtl/json.c occtl/json.h \
 	occtl/hex.c occtl/hex.h occtl/unix.c

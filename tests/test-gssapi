@@ -22,7 +22,13 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PORT=4449
 
-if test ! -f /etc/gss/mech.d/ntlmssp.conf;then
+if test -f /etc/gss/mech.d/mech.ntlmssp.conf;then
+	NTLMSSP_CONF=/etc/gss/mech.d/mech.ntlmssp.conf
+else
+	NTLMSSP_CONF=/etc/gss/mech.d/ntlmssp.conf
+fi
+
+if test ! -f $NTLMSSP_CONF;then
 	echo "GSS NTLM SSP was not found"
 	exit 77
 fi

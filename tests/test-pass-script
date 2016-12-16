@@ -43,11 +43,11 @@ rm -f ${builddir}/host-update.ok
 #test special characters
 
 echo "Connecting to obtain cookie... "
-( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u sp@c/al --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo "Re-connecting to force script run... "
-echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true #>/dev/null 2>&1
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true #>/dev/null 2>&1
 
 kill $PID
 wait

@@ -4,7 +4,7 @@ Build/Debian:
   image: debian:stretch
   script:
   - apt-get update
-  - apt-get install -y openconnect libuid-wrapper libpam-wrapper libnss-wrapper libsocket-wrapper gss-ntlmssp git-core make autoconf libtool autopoint gettext automake nettle-dev libwrap0-dev libpam0g-dev liblz4-dev libseccomp-dev libreadline-dev libnl-route-3-dev libkrb5-dev liboath-dev libradcli-dev libprotobuf-c0-dev libtalloc-dev libhttp-parser-dev libpcl1-dev libopts25-dev autogen protobuf-c-compiler gperf liblockfile-bin nuttcp libpam-oath libev-dev libgnutls28-dev
+  - apt-get install -y openconnect libuid-wrapper libpam-wrapper libnss-wrapper libsocket-wrapper gss-ntlmssp git-core make autoconf libtool autopoint gettext automake nettle-dev libwrap0-dev libpam0g-dev liblz4-dev libseccomp-dev libreadline-dev libnl-route-3-dev libkrb5-dev liboath-dev libradcli-dev libprotobuf-c0-dev libtalloc-dev libhttp-parser-dev libpcl1-dev libopts25-dev autogen protobuf-c-compiler gperf liblockfile-bin nuttcp libpam-oath libev-dev libgnutls28-dev gnutls-bin
   - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
     ../configure --without-root-tests && make -j$(nproc) && make check -j$(nproc)
   tags:

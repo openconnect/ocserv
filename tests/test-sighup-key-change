@@ -77,12 +77,19 @@ sleep 10
 certtool --generate-privkey --outfile "${SERVER_KEY}" 2>/dev/null
 certtool --generate-self-signed --load-privkey "${SERVER_KEY}" --template "${TEMPLATE}" --outfile "${SERVER_CERT}" 2>/dev/null
 
+CERTARG=`certtool --key-id < "${SERVER_CERT}" 2>/dev/null | grep -v '^Invalid option'`
+if test -n "$CERTARG";then
+	CERTARG="sha1:${CERTARG}"
+else
+	CERTARG=`certtool -i < "${SERVER_CERT}" 2>/dev/null | sed -n '/SHA-*1 fingerprint:/{x;N;s/.*\s\([0-9a-f]\+\).*/\1/;p}'`
+fi
+
 echo "Reloading server with new key/cert pair"
 kill -HUP $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "
-( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --no-cert-check --cookieonly </dev/null >/dev/null 2>&1 ) ||
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert="${CERTARG}" --cookieonly </dev/null >/dev/null 2>&1 ) ||
 	fail $PID "Could not connect with certificate!"
 
 echo ok

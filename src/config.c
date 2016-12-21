@@ -1271,35 +1271,47 @@ void clear_cfg(struct perm_cfg_st* perm_config)
 	return;
 }
 
+static void append(const char *option)
+{
+	static int have_previous_val = 0;
+
+	if (have_previous_val == 0) {
+		have_previous_val = 1;
+	} else {
+		fprintf(stderr, ", ");
+	}
+	fprintf(stderr, "%s", option);
+}
+
 void print_version(tOptions *opts, tOptDesc *desc)
 {
 	const char *p;
 
 	fputs(OCSERV_FULL_VERSION, stderr);
-	fprintf(stderr, "\n\nCompiled with ");
+	fprintf(stderr, "\n\nCompiled with: ");
 #ifdef HAVE_LIBSECCOMP
-	fprintf(stderr, "seccomp, ");
+	append("seccomp");
 #endif
 #ifdef HAVE_LIBWRAP
-	fprintf(stderr, "tcp-wrappers, ");
+	append("tcp-wrappers");
 #endif
 #ifdef HAVE_LIBOATH
-	fprintf(stderr, "oath, ");
+	append("oath");
 #endif
 #ifdef HAVE_RADIUS
-	fprintf(stderr, "radius, ");
+	append("radius");
 #endif
 #ifdef HAVE_GSSAPI
-	fprintf(stderr, "gssapi, ");
+	append("gssapi");
 #endif
 #ifdef HAVE_PAM
-	fprintf(stderr, "PAM, ");
+	append("PAM");
 #endif
 #ifdef HAVE_PKCS11
-	fprintf(stderr, "PKCS#11, ");
+	append("PKCS#11");
 #endif
 #ifdef ANYCONNECT_CLIENT_COMPAT
-	fprintf(stderr, "AnyConnect, ");
+	append("AnyConnect");
 #endif
 	fprintf(stderr, "\n");
 

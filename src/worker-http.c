@@ -59,6 +59,7 @@ const static struct known_urls_st known_urls[] = {
 	LL("/cert.cer", get_cert_der_handler, NULL),
 	LL("/ca.pem", get_ca_handler, NULL),
 	LL("/ca.cer", get_ca_der_handler, NULL),
+	LL_DIR("/profiles", get_config_handler, NULL),
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	LL("/1/index.html", get_empty_handler, NULL),
 	LL("/1/Linux", get_empty_handler, NULL),
@@ -69,7 +70,6 @@ const static struct known_urls_st known_urls[] = {
 	LL("/1/VPNManifest.xml", get_string_handler, NULL),
 	LL("/1/binaries/update.txt", get_string_handler, NULL),
 
-	LL_DIR("/profiles", get_config_handler, NULL),
 	LL("/+CSCOT+/", get_string_handler, NULL),
 	LL("/logout", get_empty_handler, NULL),
 #endif

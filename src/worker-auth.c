@@ -52,7 +52,20 @@ static const char oc_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-
                         "<auth id=\"success\">\n"
                         "<title>SSL VPN Service</title>";
 
-static const char oc_success_msg_foot[] = "</auth></config-auth>\n";
+#define OC_SUCCESS_MSG_FOOT "</auth></config-auth>\n"
+#define OC_SUCCESS_MSG_FOOT_PROFILE \
+			"</auth>\n" \
+			"<config client=\"vpn\" type=\"private\">" \
+				"<vpn-profile-manifest>" \
+				"<vpn rev=\"1.0\">" \
+				"<file type=\"profile\" service-type=\"user\">" \
+				"<uri>/profiles/%s</uri>" \
+				"<hash type=\"sha1\">%s</hash>" \
+				"</file>" \
+				"</vpn>" \
+				"</vpn-profile-manifest>\n" \
+			"</config>" \
+			"</config-auth>"
 
 static const char ocv3_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                         "<auth id=\"success\">\n"
@@ -892,20 +905,30 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	size_t str_cookie_size = sizeof(str_cookie);
 	char msg[MAX_BANNER_SIZE + 32];
 	const char *success_msg_head;
-	const char *success_msg_foot;
+	char *success_msg_foot;
 	unsigned success_msg_head_size;
 	unsigned success_msg_foot_size;
 
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
 		success_msg_head = ocv3_success_msg_head;
-		success_msg_foot = ocv3_success_msg_foot;
+		success_msg_foot = talloc_strdup(ws, ocv3_success_msg_foot);
 		success_msg_head_size = sizeof(ocv3_success_msg_head)-1;
-		success_msg_foot_size = sizeof(ocv3_success_msg_foot)-1;
+		success_msg_foot_size = strlen(success_msg_foot);
 	} else {
 		success_msg_head = oc_success_msg_head;
-		success_msg_foot = oc_success_msg_foot;
+		success_msg_foot = OC_SUCCESS_MSG_FOOT;
+		if (ws->config->xml_config_file) {
+			success_msg_foot = talloc_asprintf(ws, OC_SUCCESS_MSG_FOOT_PROFILE,
+				ws->config->xml_config_file, ws->config->xml_config_hash);
+		} else {
+			success_msg_foot = talloc_strdup(ws, OC_SUCCESS_MSG_FOOT);
+		}
+
+		if (success_msg_foot == NULL)
+			return -1;
+
 		success_msg_head_size = sizeof(oc_success_msg_head)-1;
-		success_msg_foot_size = sizeof(oc_success_msg_foot)-1;
+		success_msg_foot_size = strlen(success_msg_foot);
 	}
 
 	oc_base64_encode((char *)ws->cookie, sizeof(ws->cookie),
@@ -917,28 +940,28 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	cstp_cork(ws);
 	ret = cstp_printf(ws, "HTTP/1.%u 200 OK\r\n", http_ver);
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	ret = cstp_puts(ws, "Connection: Keep-Alive\r\n");
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && imsg != NULL && imsg[0] != 0) {
 		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", imsg);
 		if (ret < 0)
-			return -1;
+			goto fail;
 	}
 
 	ret = cstp_puts(ws, "Content-Type: text/xml\r\n");
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	if (ws->config->banner) {
 		size =
 		    snprintf(msg, sizeof(msg), "<banner>%s</banner>",
 			     ws->config->banner);
 		if (size <= 0)
-			return -1;
+			goto fail;
 		/* snprintf() returns not a very useful value, so we need to recalculate */
 		size = strlen(msg);
 	} else {
@@ -950,11 +973,11 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 
 	ret = cstp_printf(ws, "Content-Length: %u\r\n", (unsigned)size);
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	ret = cstp_puts(ws, "X-Transcend-Version: 1\r\n");
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	if (ws->sid_set != 0) {
 		char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
@@ -967,7 +990,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 			       "Set-Cookie: webvpncontext=%s; Secure\r\n",
 			       context);
 		if (ret < 0)
-			return -1;
+			goto fail;
 
 		oclog(ws, LOG_SENSITIVE, "sent sid: %s", context);
 	}
@@ -977,14 +1000,13 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		       "Set-Cookie: webvpn=%s; Secure\r\n",
 		       str_cookie);
 	if (ret < 0)
-		return -1;
+		goto fail;
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
 	ret =
 	    cstp_puts(ws,
 		     "Set-Cookie: webvpnc=; expires=Thu, 01 Jan 1970 22:00:00 GMT; path=/; Secure\r\n");
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	if (ws->config->xml_config_file) {
 		ret =
@@ -1001,20 +1023,23 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	}
 
 	if (ret < 0)
-		return -1;
-#endif
+		goto fail;
 
 	ret =
 	    cstp_printf(ws,
 		       "\r\n%s%s%s", success_msg_head, msg, success_msg_foot);
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	ret = cstp_uncork(ws);
 	if (ret < 0)
-		return -1;
+		goto fail;
 
 	return 0;
+
+ fail:
+	talloc_free(success_msg_foot);
+	return -1;
 }
 
 /* Returns the contents of the password field in a newly allocated

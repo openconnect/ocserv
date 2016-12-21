@@ -801,9 +801,7 @@ size_t urlfw_size = 0;
 
 	READ_STRING("ocsp-response", config->ocsp_response);
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
 	READ_STRING("user-profile", config->xml_config_file);
-#endif
 
 	READ_STRING("default-domain", config->default_domain);
 	READ_STRING("crl", config->crl);
@@ -1162,7 +1160,6 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 		}
 	}
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
 	if (perm_config->cert && perm_config->cert_hash == NULL) {
 		perm_config->cert_hash = calc_sha1_hash(perm_config, perm_config->cert[0], 1);
 	}
@@ -1185,7 +1182,6 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 			exit(1);
 		}
 	}
-#endif
 
 	if (perm_config->config->keepalive == 0)
 		perm_config->config->keepalive = 3600;

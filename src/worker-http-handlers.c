@@ -220,7 +220,6 @@ int get_ca_der_handler(worker_st * ws, unsigned http_ver)
 	return ca_handler(ws, http_ver, 1);
 }
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
 int get_config_handler(worker_st *ws, unsigned http_ver)
 {
 	int ret;
@@ -257,6 +256,7 @@ int get_config_handler(worker_st *ws, unsigned http_ver)
 	return 0;
 }
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 #define VPN_VERSION "0,0,0000\n"
 #define XML_START "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<vpn rev=\"1.0\">\n</vpn>\n"
 

@@ -316,10 +316,8 @@ struct cfg_st {
 	char *cgroup;
 	char *proxy_url;
 
-#ifdef ANYCONNECT_CLIENT_COMPAT
 	char *xml_config_file;
 	char *xml_config_hash;
-#endif
 
 	/* additional configuration files */
 	char *per_group_dir;

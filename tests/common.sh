@@ -23,7 +23,12 @@
 
 #this test can only be run as root
 
-OPENCONNECT=/usr/sbin/openconnect
+OPENCONNECT=${OPENCONNECT:-/usr/sbin/openconnect}
+
+if ! test -x ${OPENCONNECT};then
+	echo "You need openconnect to run this test"
+	exit 77
+fi
 
 if test -z "$NO_NEED_ROOT";then
 	id|grep root >/dev/null 2>&1
@@ -36,12 +41,7 @@ else
 	export SOCKET_WRAPPER_DIR=$SOCKDIR
 	export SOCKET_WRAPPER_DEFAULT_IFACE=2
 	ADDRESS=127.0.0.$SOCKET_WRAPPER_DEFAULT_IFACE
-	OPENCONNECT="eval LD_PRELOAD=libsocket_wrapper.so /usr/sbin/openconnect"
-fi
-
-if ! test -x /usr/sbin/openconnect;then
-	echo "You need openconnect to run this test"
-	exit 77
+	OPENCONNECT="eval LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT}"
 fi
 
 update_config() {

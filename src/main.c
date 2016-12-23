@@ -498,7 +498,7 @@ static void update_fd_limits(main_server_st *s, unsigned main)
 		/* set limits for worker processes */
 		ret = setrlimit(RLIMIT_NOFILE, &def_set);
 		if (ret < 0) {
-			fprintf(stderr, "error in setrlimit(%u): %s\n", (unsigned)def_set.rlim_cur, strerror(errno));
+			mslog(s, NULL, LOG_INFO, "cannot update file limit(%u): %s\n", (unsigned)def_set.rlim_cur, strerror(errno));
 		}
 	}
 #endif

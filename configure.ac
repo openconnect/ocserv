@@ -191,6 +191,7 @@ AC_ARG_WITH(pam,
 pam_enabled=no
 
 if test "$test_for_pam" = yes;then
+oldlibs=$LIBS
 LIBS="$oldlibs -lpam"
 AC_MSG_CHECKING([for pam library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -229,6 +230,7 @@ if test "$test_for_radius" = yes;then
 	PKG_CHECK_MODULES([RADCLI], [radcli >= 1.2.5], radius_enabled=radcli, radius_enabled=no)
 
 	if test "$radius_enabled" = no;then
+		oldlibs=$LIBS
 		LIBS="$oldlibs -lfreeradius-client"
 		AC_MSG_CHECKING([for freeradius client library])
 		AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -360,6 +362,7 @@ dnl Test for http_parser library
 with_local_http_parser=yes
 
 if test "$test_for_http_parser" = yes;then
+oldlibs=$LIBS
 LIBS="$oldlibs -lhttp_parser"
 AC_MSG_CHECKING([for http_parser library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([
@@ -454,6 +457,7 @@ dnl Test for PCL library
 with_local_pcl=yes
 
 if test "$test_for_pcl_lib" = yes;then
+oldlibs=$LIBS
 LIBS="$oldlibs -lpcl"
 AC_MSG_CHECKING([for pcl library])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([

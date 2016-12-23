@@ -488,7 +488,7 @@ static void update_fd_limits(main_server_st *s, unsigned main)
 
 		if (max > def_set.rlim_cur) {
 			new_set.rlim_cur = max;
-			new_set.rlim_max = new_set.rlim_cur;
+			new_set.rlim_max = def_set.rlim_max;
 			ret = setrlimit(RLIMIT_NOFILE, &new_set);
 			if (ret < 0) {
 				fprintf(stderr, "error in setrlimit(%u): %s (cur: %u)\n", max, strerror(errno), (unsigned)def_set.rlim_cur);

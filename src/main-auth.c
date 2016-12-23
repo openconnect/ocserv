@@ -241,21 +241,21 @@ struct proc_st *ctmp = NULL, *cpos;
 unsigned int entries = 1; /* that one */
 unsigned max;
 
-	if (proc->config->max_same_clients == 0)
+	max = proc->config->max_same_clients;
+
+	if (max == 0)
 		return 0;
 
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp != proc && ctmp->pid != -1) {
 			if (strcmp(proc->username, ctmp->username) == 0) {
 				entries++;
+
+				if (entries > max)
+					return -1;
 			}
 		}
 	}
-
-	max = proc->config->max_same_clients;
-
-	if (max && entries > max)
-		return -1;
 
 	return 0;
 }

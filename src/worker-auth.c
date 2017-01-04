@@ -556,7 +556,7 @@ static int recv_cookie_auth_reply(worker_st * ws)
 	ret = recv_socket_msg(ws, ws->cmd_fd, AUTH_COOKIE_REP, &socketfd,
 			      (void *)&msg,
 			      (unpack_func) auth_cookie_reply_msg__unpack,
-			      DEFAULT_SOCKET_TIMEOUT);
+			      ws->config->auth_timeout);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "error receiving auth reply message");
 		return ret;

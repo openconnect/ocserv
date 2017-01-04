@@ -1,5 +1,7 @@
 * Version 0.11.7 (unreleased)
-- fixed compilation issue related to autogen file re-use
+- Fixed compilation issue related to autogen file re-use
+- Send the "vpn-profile-manifest" fields after successful authentication.
+  This enables openconnect to retrieve the XML configuration.
 
 
 * Version 0.11.6 (released 2016-11-14)

@@ -270,6 +270,10 @@ else
 	iptables -A ${SEC_FORWARD_CHAIN} -i ${DEVICE} -j ACCEPT -m comment --comment "${COMMENT}"
 fi
 
+# send traffic to the route chain
+iptables  -A FORWARD -i ${DEVICE} -j ${SEC_FORWARD_CHAIN} --match comment --comment "${COMMENT}"
+ip6tables -A FORWARD -i ${DEVICE} -j ${SEC_FORWARD_CHAIN} --match comment --comment "${COMMENT}"
+
 execute_next_script
 
 exit 0

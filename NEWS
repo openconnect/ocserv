@@ -2,6 +2,9 @@
 - Fixed compilation issue related to autogen file re-use
 - Send the "vpn-profile-manifest" fields after successful authentication.
   This enables openconnect to retrieve the XML configuration.
+- ocserv-fw: Fixed chain creation when only restrict-user-to-routes is set,
+  and end all traffic to the device-specific forwarding chain. Patch by
+  John Thiltges.
 
 
 * Version 0.11.6 (released 2016-11-14)

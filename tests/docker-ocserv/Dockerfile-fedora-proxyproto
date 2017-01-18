@@ -1,4 +1,4 @@
-FROM fedora:24
+FROM fedora:25
 
 RUN yum install -y gnutls gnutls-utils protobuf-c iproute pcllib http-parser tcp_wrappers pam systemd libseccomp
 RUN yum install -y bash openssh-server nuttcp

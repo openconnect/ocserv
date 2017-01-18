@@ -20,9 +20,7 @@
 
 srcdir=${srcdir:-.}
 
-PORT=10500
-PORT2=10501
-PORT_OCSERV=10522
+PORT_OCSERV=443
 #this test can only be run as root
 id|grep root >/dev/null 2>&1
 if [ $? != 0 ];then
@@ -33,6 +31,7 @@ CONFIG="radius"
 IMAGE=ocserv-radius-test
 IMAGE_NAME=test_ocserv_radius
 TMP=$IMAGE_NAME.tmp
+TMPFILE=$IMAGE_NAME-tmp.tmp
 . ./docker-common.sh
 
 $DOCKER run -e OCCTL_PAGER=cat -P --privileged=true --tty=false -d --name $IMAGE_NAME $IMAGE
@@ -56,21 +55,49 @@ if test ! -z "$QUIT_ON_INIT";then
 	exit 0
 fi
 
+echo ""
 $ECHO_E "testuser" >pass-radius$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
 if test $? = 0;then
 	echo "Authentication with wrong password succeeded!"
 	stop
 fi
 
+echo ""
 $ECHO_E "test" >pass-radius$TMP
-$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -u testuser --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly < pass-radius$TMP
 if test $? = 0;then
 	echo "Authentication with wrong username succeeded!"
 	stop
 fi
 
-echo "Trying with correct password"
+echo ""
+echo "Trying with correct password and special IP"
+$ECHO_E "test-arb" >pass-radius$TMP
+$OPENCONNECT $IP:$PORT_OCSERV -v -u test-arb --passwd-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP >$TMPFILE &
+PID=$!
+
+sleep 5
+
+grep 'X-CSTP-Address: 192.168.55.' $TMPFILE
+if test $? != 0;then
+	kill -INT $PID
+	echo "Unexpected address was assigned"
+	stop
+fi
+
+ping -w 3 192.168.55.1
+if test $? != 0;then
+	kill -INT $PID
+	echo "Cannot ping ocserv"
+	stop
+fi
+
+kill -INT $PID
+
+sleep 3
+
+echo "Trying with correct password and normal IP"
 $ECHO_E "test" >pass-radius$TMP
 $OPENCONNECT $IP:$PORT_OCSERV -u test --passwd-on-stdin -v --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 < pass-radius$TMP &
 PID=$!
@@ -238,6 +265,6 @@ fi
 $DOCKER stop $IMAGE_NAME
 $DOCKER rm $IMAGE_NAME
 
-rm -f out$TMP
+rm -f out$TMP $TMPFILE
 
 exit $ret

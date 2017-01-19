@@ -618,7 +618,7 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 
 	ret = process_worker_packet(pool, cfd, pid, sec, cmd, buffer, ret);
 	if (ret < 0) {
-		seclog(sec, LOG_INFO, "error processing data for '%s' command (%d)", cmd_request_to_str(cmd), ret);
+		seclog(sec, LOG_DEBUG, "error processing '%s' command (%d)", cmd_request_to_str(cmd), ret);
 	}
 	
  leave:

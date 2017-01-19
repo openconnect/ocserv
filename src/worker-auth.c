@@ -839,9 +839,7 @@ void cookie_authenticate_or_exit(worker_st *ws)
 		oclog(ws, LOG_WARNING, "failed cookie authentication attempt");
 		if (ret == ERR_AUTH_FAIL) {
 			cstp_puts(ws,
-				 "HTTP/1.1 401 Unauthorized\r\n\r\n");
-			cstp_puts(ws,
-				 "X-Reason: Cookie is not acceptable\r\n\r\n");
+				 "HTTP/1.1 401 Cookie is not acceptable\r\n\r\n");
 		} else {
 			cstp_puts(ws,
 				 "HTTP/1.1 503 Service Unavailable\r\n\r\n");
@@ -1574,7 +1572,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		close(sd);
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
 	cstp_printf(ws,
-		   "HTTP/1.%d 401 Unauthorized\r\nContent-Length: 0\r\nX-Reason: %s\r\n\r\n",
+		   "HTTP/1.%d 401 %s\r\nContent-Length: 0\r\n\r\n",
 		   http_ver, reason);
 	cstp_fatal_close(ws, GNUTLS_A_ACCESS_DENIED);
 	talloc_free(msg);

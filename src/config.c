@@ -447,7 +447,7 @@ static void figure_auth_funcs(struct perm_cfg_st *config, char **auth, unsigned 
 				if (c_strncasecmp(auth[j], avail_auth_types[i].name, avail_auth_types[i].name_size) == 0) {
 					if (avail_auth_types[i].get_brackets_string)
 						config->auth[x].additional = avail_auth_types[i].get_brackets_string(config, auth[j]+avail_auth_types[i].name_size);
-				
+
 					config->auth[x].name = talloc_strdup(config, avail_auth_types[i].name);
 					fprintf(stderr, NOTESTR"enabling '%s' as authentication method\n", avail_auth_types[i].name);
 
@@ -1151,6 +1151,13 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 	if (perm_config->config->cert_req != 0 && perm_config->config->cert_user_oid == NULL) {
 		fprintf(stderr, ERRSTR"a certificate is requested by the option 'cert-user-oid' is not set\n");
 		exit(1);
+	}
+
+	if (perm_config->config->cert_req != 0 && perm_config->config->cert_user_oid != NULL) {
+		if (!c_isdigit(perm_config->config->cert_user_oid[0]) && strcmp(perm_config->config->cert_user_oid, "SAN(rfc822name)") != 0) {
+			fprintf(stderr, ERRSTR"the option 'cert-user-oid' has a unsupported value\n");
+			exit(1);
+		}
 	}
 
 	if (perm_config->unix_conn_file != NULL && (perm_config->config->cert_req != 0)) {

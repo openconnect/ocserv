@@ -154,7 +154,7 @@ static void append_acct_standard(rc_handle *rh, const common_acct_info_st *ai, V
 #endif
 
 	rc_avpair_add(rh, send, PW_CALLING_STATION_ID, ai->remote_ip, -1, 0);
-	rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, ai->psid, -1, 0);
+	rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, ai->safe_id, -1, 0);
 
 	i = PW_RADIUS;
 	rc_avpair_add(rh, send, PW_ACCT_AUTHENTIC, &i, -1, 0);
@@ -208,7 +208,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 		return -1;
 	}
 
-	syslog(LOG_DEBUG, "radius-auth: opening session %s", ai->psid);
+	syslog(LOG_DEBUG, "radius-auth: opening session %s", ai->safe_id);
 
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
 		ret = -1;

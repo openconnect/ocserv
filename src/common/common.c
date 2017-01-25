@@ -30,9 +30,31 @@
 #include <netinet/ip.h>
 #include <poll.h>
 #include <limits.h>
-
+#include <nettle/sha1.h>
 #include "common.h"
 #include "defs.h"
+#include "common/base64-helper.h"
+
+/* A hash of the input, to a 20-byte output. The goal is one-wayness.
+ */
+static void safe_hash(const uint8_t *data, unsigned data_size, uint8_t output[20])
+{
+	struct sha1_ctx ctx;
+
+	sha1_init(&ctx);
+
+	sha1_update(&ctx, data_size, data);
+	sha1_digest(&ctx, 20, output);
+}
+
+
+void calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size)
+{
+	uint8_t safe_id[20];
+
+	safe_hash(data, size, safe_id);
+	oc_base64_encode((char*)safe_id, 20, output, output_size);
+}
 
 /* Note that meaning slightly changes depending on whether we are
  * referring to the cookie or the session itself.

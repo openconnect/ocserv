@@ -78,8 +78,8 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 			break;
 
 		cookie_int_msg__init(&cookies[msg.n_cookies]);
-		cookies[msg.n_cookies].sid.data = t->sid;
-		cookies[msg.n_cookies].sid.len = sizeof(t->sid);
+		cookies[msg.n_cookies].safe_id.data = (void*)t->acct_info.safe_id;
+		cookies[msg.n_cookies].safe_id.len = sizeof(t->acct_info.safe_id);
 
 		cookies[msg.n_cookies].session_is_open = t->session_is_open;
 		cookies[msg.n_cookies].tls_auth_ok = t->tls_auth_ok;

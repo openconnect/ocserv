@@ -154,5 +154,6 @@ ssize_t dtls_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
 
 /* Helper functions */
 unsigned need_file_reload(const char *file, time_t last_access);
+void safe_hash(const uint8_t *data, unsigned data_size, uint8_t output[20]);
 
 #endif

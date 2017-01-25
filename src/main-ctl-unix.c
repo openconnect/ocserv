@@ -249,6 +249,7 @@ static int append_user_info(method_ctx *ctx,
 	char *ipbuf;
 	char *strtmp;
 	UserInfoRep *rep;
+	char *safe_id;
 
 	list->user =
 	    talloc_realloc(ctx->pool, list->user, UserInfoRep *, (1 + list->n_user));
@@ -257,6 +258,10 @@ static int append_user_info(method_ctx *ctx,
 
 	rep = talloc(ctx->pool, UserInfoRep);
 	if (rep == NULL)
+		return -1;
+
+	safe_id = talloc_size(ctx->pool, SAFE_ID_SIZE);
+	if (safe_id == NULL)
 		return -1;
 
 	list->user[list->n_user] = rep;
@@ -356,8 +361,9 @@ static int append_user_info(method_ctx *ctx,
 	rep->tls_ciphersuite = ctmp->tls_ciphersuite;
 	rep->dtls_ciphersuite = ctmp->dtls_ciphersuite;
 
-	rep->sid.data = ctmp->sid;
-	rep->sid.len = sizeof(ctmp->sid);
+	calc_safe_id(ctmp->sid, sizeof(ctmp->sid), safe_id, SAFE_ID_SIZE);
+	rep->safe_id.data = (unsigned char*)safe_id;
+	rep->safe_id.len = SAFE_ID_SIZE;
 
 	rep->cstp_compr = ctmp->cstp_compr;
 	rep->dtls_compr = ctmp->dtls_compr;

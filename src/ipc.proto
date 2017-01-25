@@ -284,7 +284,7 @@ message secm_session_reply_msg
 /* internal struct */
 message cookie_int_msg
 {
-	required bytes sid = 1;
+	required bytes safe_id = 1;
 	required bool session_is_open = 2;
 	required bool tls_auth_ok = 3;
 	required uint32 last_modified = 4;

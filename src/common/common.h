@@ -28,6 +28,7 @@
 #include <talloc.h>
 #include <time.h>
 #include <string.h>
+#include <nettle/base64.h>
 
 void _talloc_free2(void *ctx, void *ptr);
 void *_talloc_size2(void *ctx, size_t size);
@@ -126,5 +127,8 @@ const char *ps_status_to_str(int status, unsigned cookie);
 size_t oc_strlcpy(char *dst, char const *src, size_t siz);
 # define strlcpy oc_strlcpy
 #endif
+
+#define SAFE_ID_SIZE (BASE64_ENCODE_RAW_LENGTH(20)+1)
+void calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size);
 
 #endif

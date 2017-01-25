@@ -25,6 +25,7 @@
 #include <ccan/htable/htable.h>
 #include <nettle/base64.h>
 #include <tlslib.h>
+#include "common/common.h"
 
 #define SESSION_STR "(session: %.6s)"
 #define MAX_GROUPS 32
@@ -60,7 +61,7 @@ typedef struct common_auth_init_st {
 typedef struct common_acct_info_st {
 	char username[MAX_USERNAME_SIZE*2];
 	char groupname[MAX_GROUPNAME_SIZE]; /* the owner's group */
-	char psid[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1]; /* printable */
+	char safe_id[SAFE_ID_SIZE]; /* an ID to be sent to external apps - printable */
 	char remote_ip[MAX_IP_STR];
 	char user_agent[MAX_AGENT_NAME];
 	char our_ip[MAX_IP_STR];

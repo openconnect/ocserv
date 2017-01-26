@@ -86,31 +86,20 @@ static void append_stats(rc_handle *rh, VALUE_PAIR **send, stats_st *stats)
 
 	if (stats->uptime) {
 		uin = stats->uptime;
-		if (rc_avpair_add(rh, send, PW_ACCT_SESSION_TIME, &uin, -1, 0) == NULL) {
-			return;
-		}
+		rc_avpair_add(rh, send, PW_ACCT_SESSION_TIME, &uin, -1, 0);
 	}
 
 	uin = stats->bytes_in;
 	uout = stats->bytes_out;
 
-	if (rc_avpair_add(rh, send, PW_ACCT_INPUT_OCTETS, &uin, -1, 0) == NULL) {
-		return;
-	}
-
-	if (rc_avpair_add(rh, send, PW_ACCT_OUTPUT_OCTETS, &uout, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_ACCT_INPUT_OCTETS, &uin, -1, 0);
+	rc_avpair_add(rh, send, PW_ACCT_OUTPUT_OCTETS, &uout, -1, 0);
 
 	uin = stats->bytes_in / 4294967296;
-	if (rc_avpair_add(rh, send, PW_ACCT_INPUT_GIGAWORDS, &uin, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_ACCT_INPUT_GIGAWORDS, &uin, -1, 0);
 
 	uout = stats->bytes_out / 4294967296;
-	if (rc_avpair_add(rh, send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_ACCT_OUTPUT_GIGAWORDS, &uout, -1, 0);
 
 	return;
 }
@@ -120,9 +109,7 @@ static void append_acct_standard(rc_handle *rh, const common_acct_info_st *ai, V
 	uint32_t i;
 
 	if (nas_identifier[0] != 0) {
-		if (rc_avpair_add(rh, send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0) == NULL) {
-			return;
-		}
+		rc_avpair_add(rh, send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0);
 	}
 
 	if (ai->our_ip[0] != 0) {
@@ -137,19 +124,13 @@ static void append_acct_standard(rc_handle *rh, const common_acct_info_st *ai, V
 		}
 	}
 
-	if (rc_avpair_add(rh, send, PW_USER_NAME, ai->username, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_USER_NAME, ai->username, -1, 0);
 
 	i = PW_FRAMED;
-	if (rc_avpair_add(rh, send, PW_SERVICE_TYPE, &i, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_SERVICE_TYPE, &i, -1, 0);
 
 	i = PW_PPP;
-	if (rc_avpair_add(rh, send, PW_FRAMED_PROTOCOL, &i, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_FRAMED_PROTOCOL, &i, -1, 0);
 
 	if (ai->ipv4[0] != 0) {
 		struct in_addr in;
@@ -172,18 +153,11 @@ static void append_acct_standard(rc_handle *rh, const common_acct_info_st *ai, V
 	}
 #endif
 
-	if (rc_avpair_add(rh, send, PW_CALLING_STATION_ID, ai->remote_ip, -1, 0) == NULL) {
-		return;
-	}
-
-	if (rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, ai->psid, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_CALLING_STATION_ID, ai->remote_ip, -1, 0);
+	rc_avpair_add(rh, send, PW_ACCT_SESSION_ID, ai->psid, -1, 0);
 
 	i = PW_RADIUS;
-	if (rc_avpair_add(rh, send, PW_ACCT_AUTHENTIC, &i, -1, 0) == NULL) {
-		return;
-	}
+	rc_avpair_add(rh, send, PW_ACCT_AUTHENTIC, &i, -1, 0);
 
 	return;
 }
@@ -242,10 +216,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	}
 
 	if (ai->user_agent[0] != 0) {
-		if (rc_avpair_add(rh, &send, PW_CONNECT_INFO, ai->user_agent, -1, 0) == NULL) {
-			ret = -1;
-			goto cleanup;
-		}
+		rc_avpair_add(rh, &send, PW_CONNECT_INFO, ai->user_agent, -1, 0);
 	}
 
 	append_acct_standard(rh, ai, &send);
@@ -293,9 +264,7 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 		ret = PW_USER_ERROR;
 	else
 		ret = PW_LOST_SERVICE;
-	if (rc_avpair_add(rh, &send, PW_ACCT_TERMINATE_CAUSE, &ret, -1, 0) == NULL) {
-		goto cleanup;
-	}
+	rc_avpair_add(rh, &send, PW_ACCT_TERMINATE_CAUSE, &ret, -1, 0);
 
 	append_acct_standard(rh, ai, &send);
 	append_stats(rh, &send, stats);

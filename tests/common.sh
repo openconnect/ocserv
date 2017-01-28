@@ -65,67 +65,87 @@ fail() {
 }
 
 launch_server() {
-       $SERV $* >/dev/null 2>&1 &
-       LOCALPID="$!";
-       trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
-       wait "${LOCALPID}"
-       LOCALRET="$?"
-       if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
-               # Houston, we'v got a problem...
-               exit 1
-       fi
+	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
+	    $SERV $* &
+	else
+	    $SERV $* >/dev/null 2>&1 &
+	fi
+	LOCALPID="$!";
+	trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
+	wait "${LOCALPID}"
+	LOCALRET="$?"
+	if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
+		 # Houston, we'v got a problem...
+		 exit 1
+	fi
 }
 
 launch_sr_server() {
-       LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &#>/dev/null 2>&1 &
-       LOCALPID="$!";
-       trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
-       wait "${LOCALPID}"
-       LOCALRET="$?"
-       if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
-               # Houston, we'v got a problem...
-               exit 1
-       fi
+	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
+		LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
+	else
+		LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+	fi
+	LOCALPID="$!";
+	trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
+	wait "${LOCALPID}"
+	LOCALRET="$?"
+	if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
+		 # Houston, we'v got a problem...
+		 exit 1
+	fi
 }
 
 launch_sr_pam_server() {
-       mkdir -p "data/$PAMDIR/"
-       test -f "${srcdir}/data/$PAMDIR/users.oath.templ" && cp "${srcdir}/data/$PAMDIR/users.oath.templ" "data/$PAMDIR/users.oath"
-       test -f "${srcdir}/data/$PAMDIR/passdb.templ" && cp "${srcdir}/data/$PAMDIR/passdb.templ" "data/$PAMDIR/passdb"
+	mkdir -p "data/$PAMDIR/"
+	test -f "${srcdir}/data/$PAMDIR/users.oath.templ" && cp "${srcdir}/data/$PAMDIR/users.oath.templ" "data/$PAMDIR/users.oath"
+	test -f "${srcdir}/data/$PAMDIR/passdb.templ" && cp "${srcdir}/data/$PAMDIR/passdb.templ" "data/$PAMDIR/passdb"
 
-       export NSS_WRAPPER_PASSWD=./data/pam/nss-passwd
-       export NSS_WRAPPER_GROUP=./data/pam/nss-group
-       LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* & #>/dev/null 2>&1 &
-       LOCALPID="$!";
-       unset NSS_WRAPPER_PASSWD
-       unset NSS_WRAPPER_GROUP
-       trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
-       wait "${LOCALPID}"
-       LOCALRET="$?"
-       if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
-               # Houston, we'v got a problem...
-               exit 1
-       fi
+	export NSS_WRAPPER_PASSWD=./data/pam/nss-passwd
+	export NSS_WRAPPER_GROUP=./data/pam/nss-group
+	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
+		LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
+	else
+		LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+	fi
+	LOCALPID="$!";
+	unset NSS_WRAPPER_PASSWD
+	unset NSS_WRAPPER_GROUP
+	trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
+	wait "${LOCALPID}"
+	LOCALRET="$?"
+	if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
+		 # Houston, we'v got a problem...
+		 exit 1
+	fi
 }
 
 launch_simple_sr_server() {
-       LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
+		LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
+	else
+		LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+	fi
 }
 
 launch_simple_server() {
-       $PRELOAD_CMD $SERV $* >/dev/null 2>&1 &
+	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
+		$PRELOAD_CMD $SERV $* &
+	else
+		$PRELOAD_CMD $SERV $* >/dev/null 2>&1 &
+	fi
 }
 
 launch_debug_server() {
-       valgrind --leak-check=full $SERV $* >out.txt 2>&1 &
-       LOCALPID="$!";
-       trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
-       wait "${LOCALPID}"
-       LOCALRET="$?"
-       if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
-               # Houston, we'v got a problem...
-               exit 1
-       fi
+	valgrind --leak-check=full $SERV $* >out.txt 2>&1 &
+	LOCALPID="$!";
+	trap "[ ! -z \"${LOCALPID}\" ] && kill ${LOCALPID};" 15
+	wait "${LOCALPID}"
+	LOCALRET="$?"
+	if [ "${LOCALRET}" != "0" ] && [ "${LOCALRET}" != "143" ] ; then
+		 # Houston, we'v got a problem...
+		 exit 1
+	fi
 }
 
 wait_server() {

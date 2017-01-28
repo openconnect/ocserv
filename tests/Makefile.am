@@ -18,7 +18,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/server-key-ossl.pem certs/server-key-p8.pem proxyproto-unix-test certs/user-cn.pem \
 	certs/user-cert-testuser.pem test-stress data/test-user-config.config user-config/testuser \
 	data/test-sighup-key-change.config data/test-sighup-key-change.config user-config/testipnet \
-	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem
+	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem \
+	data/test-san-cert.config
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -39,7 +40,7 @@ endif
 if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
-	test-enc-key test-sighup-key-change test-get-cert
+	test-enc-key test-sighup-key-change test-get-cert test-san-cert
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

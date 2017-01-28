@@ -1,0 +1,80 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+CRLNAME=crl.pem.$$.tmp
+CRLTMPLNAME=crl.tmpl.$$.tmp
+
+. `dirname $0`/common.sh
+
+echo "Testing ocserv with certificates... "
+
+rm -f "${CRLNAME}" "${CRLTMPLNAME}"
+echo crl_next_update = 999 >"${CRLTMPLNAME}"
+echo crl_number = 1 >>"${CRLTMPLNAME}"
+
+certtool --generate-crl --load-ca-privkey "${srcdir}/certs/ca-key.pem" --load-ca-certificate "${srcdir}/certs/ca.pem" \
+	--outfile "${CRLNAME}" --template "${CRLTMPLNAME}" >/dev/null 2>&1
+if test $? != 0;then
+	kill $PID
+	exit 77
+fi
+
+update_config test-san-cert.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+	fail $PID "Connected without certificate!"
+
+echo "ok (failed as expected)"
+
+echo -n "Connecting to obtain cookie (with invalid certificate)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert-invalid.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+	fail $PID "Connected with invalid certificate!"
+
+echo "ok (failed as expected)"
+
+echo -n "Connecting to obtain cookie (with certificate - no SAN)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-cert.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) &&
+	fail $PID "Connected with invalid certificate!"
+
+echo "ok (failed as expected)"
+
+echo -n "Connecting to obtain cookie (with certificate - SAN)... "
+( LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS --sslkey "${srcdir}/certs/user-key.pem" -c "${srcdir}/certs/user-san-cert.pem" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly </dev/null >/dev/null 2>&1 ) ||
+	fail $PID "Failed to connect with certificate!"
+
+echo ok
+
+rm -f "${CRLNAME}" "${CRLTMPLNAME}"
+
+cleanup
+if test $? != 0;then
+	exit 1
+fi
+
+exit 0

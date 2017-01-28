@@ -2,6 +2,9 @@
 - Fixed compilation issue related to autogen file re-use
 - Send the "vpn-profile-manifest" fields after successful authentication.
   This enables openconnect to retrieve the XML configuration.
+- Enhanced the cert-user-oid config option to read the SAN(rfc822name) value.
+  In that case, the username will be read from the subject alternative
+  name of the certificate rather than the DN. Based on patch by Johannes Sjøkvist.
 - radius: Handle the special Framed-IP-Address values 255.255.255.254 and
   255.255.255.255. They are currently handled as if the Framed-IP-Address
   field was not present; in both cases the server assigns the address.

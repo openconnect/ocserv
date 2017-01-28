@@ -54,6 +54,9 @@
 # endif
 #endif
 
+#if RADCLI_VERSION_NUMBER < 0x010207
+# define CHALLENGE_RC 3
+#endif
 
 static rc_handle *rh = NULL;
 static char nas_identifier[64];
@@ -113,7 +116,7 @@ static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 	if (info->our_ip)
 		strlcpy(pctx->our_ip, info->our_ip, sizeof(pctx->our_ip));
 
-	pctx->pass_msg = NULL;
+	pctx->pass_msg[0] = 0;
 
 	default_realm = rc_conf_str(rh, "default_realm");
 
@@ -238,6 +241,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	uint32_t service;
 	char route[64];
 	char txt[64];
+	VALUE_PAIR *vp;
 	int ret;
 
 	/* send Access-Request */
@@ -315,12 +319,15 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		goto cleanup;
 	}
 
-	ret = rc_aaa(rh, pctx->id, send, &recvd, NULL, 1, PW_ACCESS_REQUEST);
+	pctx->pass_msg[0] = 0;
+	ret = rc_aaa(rh, pctx->id, send, &recvd, pctx->pass_msg, 1, PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {
-		VALUE_PAIR *vp = recvd;
 		uint32_t ipv4;
 		uint8_t ipv6[16];
+
+		vp = recvd;
+
 		while(vp != NULL) {
 			if (vp->attribute == PW_SERVICE_TYPE && vp->lvalue != PW_FRAMED) {
 				syslog(LOG_ERR,
@@ -401,39 +408,37 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		}
 
 		ret = 0;
- cleanup:
-		rc_avpair_free(send);
-		if (recvd != NULL)
-			rc_avpair_free(recvd);
-		return ret;
+		goto cleanup;
 	} else {
  fail:
-		if (send != NULL)
-			rc_avpair_free(send);
+		if (pctx->pass_msg[0] == 0)
+			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
 
-		if (recvd != NULL)
-			rc_avpair_free(recvd);
-
-		if (ret == PW_ACCESS_CHALLENGE) {
-			pctx->pass_msg = pass_msg_second;
-			return ERR_AUTH_CONTINUE;
-		} else if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
-			pctx->pass_msg = pass_msg_failed;
-			return ERR_AUTH_CONTINUE;
-		} else {
-			syslog(LOG_AUTH,
-			       "radius-auth: error authenticating user '%s'",
-			       pctx->username);
-			return ERR_AUTH_FAIL;
+		if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
+			ret = ERR_AUTH_CONTINUE;
+			goto cleanup;
 		}
+
+		syslog(LOG_AUTH,
+		       "radius-auth: error authenticating user '%s' (code %d)",
+		       pctx->username, ret);
+		ret = ERR_AUTH_FAIL;
+		goto cleanup;
 	}
+
+ cleanup:
+	if (send != NULL)
+		rc_avpair_free(send);
+	if (recvd != NULL)
+		rc_avpair_free(recvd);
+	return ret;
 }
 
 static int radius_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct radius_ctx_st *pctx = ctx;
 
-	if (pctx->pass_msg)
+	if (pctx->pass_msg[0] != 0)
 		pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
 
 	/* use default prompt */

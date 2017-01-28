@@ -19,9 +19,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 #ifndef RADIUS_H
-#define RADIUS_H
+# define RADIUS_H
 
-#include <sec-mod-auth.h>
+# include <sec-mod-auth.h>
+
+# ifdef HAVE_RADIUS
+
+#  ifdef LEGACY_RADIUS
+#   include <freeradius-client.h>
+#  else
+#   include <radcli/radcli.h>
+#  endif
 
 struct radius_ctx_st {
 	char username[MAX_USERNAME_SIZE*2];
@@ -50,11 +58,12 @@ struct radius_ctx_st {
 	char **routes;
 	unsigned routes_size;
 
-	const char *pass_msg;
+	char pass_msg[PW_MAX_MSG_SIZE];
 	unsigned retries;
 	unsigned id;
 };
 
 extern const struct auth_mod_st radius_auth_funcs;
 
+# endif
 #endif

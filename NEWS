@@ -8,6 +8,9 @@
 - radius: Handle the special Framed-IP-Address values 255.255.255.254 and
   255.255.255.255. They are currently handled as if the Framed-IP-Address
   field was not present; in both cases the server assigns the address.
+- radius: on wrong password, forward any message received by radius server
+  to the client as prompt. That utilizes the Reply-Message field as sent
+  by the server.
 - ocserv-fw: Fixed chain creation when only restrict-user-to-routes is set,
   and end all traffic to the device-specific forwarding chain. Patch by
   John Thiltges.

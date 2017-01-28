@@ -67,6 +67,8 @@ unsigned i;
 	if (msg_size == 0)
 		return PAM_SUCCESS;
 
+	str_reset(&pctx->msg);
+
 	pctx->replies = calloc(1, msg_size*sizeof(*pctx->replies));
 	if (pctx->replies == NULL)
 		return PAM_BUF_ERR;
@@ -101,7 +103,8 @@ unsigned i;
 				co_resume();
 				pctx->state = PAM_S_INIT;
 
-				pctx->replies[i].resp = strdup(pctx->password);
+				if (pctx->password)
+					pctx->replies[i].resp = strdup(pctx->password);
 				pctx->sent_msg = 0;
 				break;
                 }
@@ -121,7 +124,7 @@ int pret;
 
 	pret = pam_authenticate(pctx->ph, 0);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_INFO, "PAM authenticate error: %s", pam_strerror(pctx->ph, pret));
+		syslog(LOG_INFO, "PAM authenticate error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
@@ -136,7 +139,7 @@ int pret;
 	}
 	
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_INFO, "PAM acct-mgmt error: %s", pam_strerror(pctx->ph, pret));
+		syslog(LOG_INFO, "PAM acct-mgmt error for '%s': %s", pctx->username, pam_strerror(pctx->ph, pret));
 		pctx->cr_ret = pret;
 		goto wait;
 	}
@@ -144,7 +147,8 @@ int pret;
 	pctx->state = PAM_S_COMPLETE;
 	pctx->cr_ret = PAM_SUCCESS;
 
-wait:
+ wait:
+	/* give control back to the main process */
 	while(1) {
 		co_resume();
 	}
@@ -250,7 +254,7 @@ struct pam_ctx_st * pctx = ctx;
 		return -1;
 
 	if (pctx->state != PAM_S_WAIT_FOR_PASS) {
-		syslog(LOG_AUTH, "PAM auth: conversation in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
+		syslog(LOG_AUTH, "PAM auth: conversation left in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
 		return ERR_AUTH_FAIL;
 	}
 

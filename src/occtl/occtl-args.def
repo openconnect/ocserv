@@ -16,7 +16,7 @@ detail  = "Openconnect VPN server control (occtl) is a tool to control
 the ocserv VPN server.";
 
 copyright = {
-    date  = "2014-2016";
+    date  = "2014-2017";
     owner = "Red Hat";
     author = "Nikos Mavrogiannopoulos";
     eaddr  = "openconnect-devel@lists.infradead.org";

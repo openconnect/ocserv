@@ -5,6 +5,9 @@
 - Enhanced the cert-user-oid config option to read the SAN(rfc822name) value.
   In that case, the username will be read from the subject alternative
   name of the certificate rather than the DN. Based on patch by Johannes Sjøkvist.
+- Do not log the real internal session ID as part of occtl or radius, 
+  but instead log a masked value. That ensures that access to log files or
+  radius is not sufficient to access an existing session.
 - radius: Handle the special Framed-IP-Address values 255.255.255.254 and
   255.255.255.255. They are currently handled as if the Framed-IP-Address
   field was not present; in both cases the server assigns the address.

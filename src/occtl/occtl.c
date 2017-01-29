@@ -65,10 +65,10 @@ static const commands_st commands[] = {
 	      "Prints all the known IP addresses which have points", 1, 1),
 	ENTRY("show iroutes", NULL, handle_list_iroutes_cmd,
 	      "Prints the routes provided by users of the server", 1, 1),
-	ENTRY("show cookies all", NULL, handle_list_all_cookies_cmd,
-	      "Prints all the cookies", 1, 1),
-	ENTRY("show cookies valid", NULL, handle_list_valid_cookies_cmd,
-	      "Prints all the valid for reconnection cookies", 1, 1),
+	ENTRY("show sessions all", NULL, handle_list_all_cookies_cmd,
+	      "Prints all the session IDs", 1, 1),
+	ENTRY("show sessions valid", NULL, handle_list_valid_cookies_cmd,
+	      "Prints all the valid for reconnection sessions", 1, 1),
 	ENTRY("show user", "[NAME]", handle_show_user_cmd,
 	      "Prints information on the specified user", 1, 1),
 	ENTRY("show id", "[ID]", handle_show_id_cmd,
@@ -84,6 +84,10 @@ static const commands_st commands[] = {
 	/* hidden options */
 	ENTRY("?", NULL, handle_help_cmd, "Prints this help", -1, 0),
 	ENTRY("quit", NULL, handle_exit_cmd, "Exits this application", -1, 0),
+	ENTRY("show cookies all", NULL, handle_list_all_cookies_cmd,
+	      "Alias for show sessions all", -1, 1),
+	ENTRY("show cookies valid", NULL, handle_list_valid_cookies_cmd,
+	      "Alias for show sessions valid", -1, 1),
 	{NULL, 0, NULL, NULL}
 };
 

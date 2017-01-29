@@ -650,7 +650,7 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 		/* add header */
 		if (i == 0) {
 			fprintf(out, "%6s %8s %8s %14s %24s %8s %8s\n",
-				"cookie", "user", "group", "ip", "user agent", "updated", "status");
+				"session", "user", "group", "ip", "user agent", "updated", "status");
 		}
 
 		t = rep->cookies[i]->last_modified;
@@ -1033,8 +1033,8 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		print_single_value_ex(out, params, "Connected at", str_since, tmpbuf, 1);
 
 		if (HAVE_JSON(params))
-			print_single_value(out, params, "Full cookie", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 0), 1);
-		print_single_value(out, params, "Cookie", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 1), 1);
+			print_single_value(out, params, "Full session", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 0), 1);
+		print_single_value(out, params, "Session", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 1), 1);
 
 		print_single_value(out, params, "TLS ciphersuite", args->user[i]->tls_ciphersuite, 1);
 		print_single_value(out, params, "DTLS cipher", args->user[i]->dtls_ciphersuite, 1);
@@ -1151,8 +1151,8 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 
 		print_single_value(out, params, "Last Modified", str_since, 1);
 
-		print_single_value(out, params, "Full cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
-		print_single_value(out, params, "Cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
+		print_single_value(out, params, "Full session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
+		print_single_value(out, params, "Session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
 
 		print_end_block(out, params, i<(args->n_cookies-1)?1:0);
 

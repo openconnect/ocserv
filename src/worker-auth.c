@@ -220,6 +220,8 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 
 
 	if (ws->sid_set != 0) {
+		char safe_id[SAFE_ID_SIZE];
+
 		oc_base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
 			      sizeof(context));
 
@@ -230,7 +232,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		if (ret < 0)
 			return -1;
 
-		oclog(ws, LOG_SENSITIVE, "sent sid: %s", context);
+		oclog(ws, LOG_SENSITIVE, "sent session id: %s", calc_safe_id(ws->sid, sizeof(ws->sid), safe_id, sizeof(safe_id)));
 	} else {
 		ret =
 		    cstp_puts(ws,
@@ -1000,6 +1002,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 
 	if (ws->sid_set != 0) {
 		char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
+		char safe_id[SAFE_ID_SIZE];
 
 		oc_base64_encode((char *)ws->sid, sizeof(ws->sid), (char *)context,
 			         sizeof(context));
@@ -1011,7 +1014,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		if (ret < 0)
 			goto fail;
 
-		oclog(ws, LOG_SENSITIVE, "sent sid: %s", context);
+		oclog(ws, LOG_SENSITIVE, "sent session id: %s", calc_safe_id(ws->sid, sizeof(ws->sid), safe_id, sizeof(safe_id)));
 	}
 
 	ret =

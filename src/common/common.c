@@ -48,12 +48,14 @@ static void safe_hash(const uint8_t *data, unsigned data_size, uint8_t output[20
 }
 
 
-void calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size)
+char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size)
 {
 	uint8_t safe_id[20];
 
 	safe_hash(data, size, safe_id);
 	oc_base64_encode((char*)safe_id, 20, output, output_size);
+
+	return output;
 }
 
 /* Note that meaning slightly changes depending on whether we are

@@ -129,6 +129,6 @@ size_t oc_strlcpy(char *dst, char const *src, size_t siz);
 #endif
 
 #define SAFE_ID_SIZE (BASE64_ENCODE_RAW_LENGTH(20)+1)
-void calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size);
+char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size);
 
 #endif

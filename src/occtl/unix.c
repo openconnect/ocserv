@@ -48,6 +48,10 @@
 #include <vpn.h>
 #include <base64-helper.h>
 
+/* In JSON output include fields which were no longer available after 0.11.7
+ */
+#define OCSERV_0_11_6_COMPAT 1
+
 static
 int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);
 static
@@ -1032,8 +1036,14 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		print_time_ival7(tmpbuf, time(0), t);
 		print_single_value_ex(out, params, "Connected at", str_since, tmpbuf, 1);
 
-		if (HAVE_JSON(params))
+		if (HAVE_JSON(params)) {
 			print_single_value(out, params, "Full session", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 0), 1);
+#ifdef OCSERV_0_11_6_COMPAT
+			/* compat with previous versions */
+			print_single_value(out, params, "Raw cookie", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 0), 1);
+			print_single_value(out, params, "Cookie", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 1), 1);
+#endif
+		}
 		print_single_value(out, params, "Session", shorten(args->user[i]->safe_id.data, args->user[i]->safe_id.len, 1), 1);
 
 		print_single_value(out, params, "TLS ciphersuite", args->user[i]->tls_ciphersuite, 1);
@@ -1151,6 +1161,13 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 
 		print_single_value(out, params, "Last Modified", str_since, 1);
 
+#ifdef OCSERV_0_11_6_COMPAT
+		if (HAVE_JSON(params)) {
+			/* compat with previous versions */
+			print_single_value(out, params, "Raw cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
+			print_single_value(out, params, "Cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
+		}
+#endif
 		print_single_value(out, params, "Full session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
 		print_single_value(out, params, "Session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
 

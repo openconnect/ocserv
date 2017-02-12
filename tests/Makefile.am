@@ -19,7 +19,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/user-cert-testuser.pem test-stress data/test-user-config.config user-config/testuser \
 	data/test-sighup-key-change.config data/test-sighup-key-change.config user-config/testipnet \
 	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem \
-	data/test-san-cert.config
+	data/test-san-cert.config certs/user-san-cert.pem
 
 SUBDIRS = docker-ocserv docker-kerberos
 

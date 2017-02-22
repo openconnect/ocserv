@@ -74,6 +74,13 @@
 #define CSTP_DTLS_OVERHEAD 1
 #define CSTP_OVERHEAD 8
 
+#define IP_HEADER_SIZE 20
+#define IPV6_HEADER_SIZE 40
+#define TCP_HEADER_SIZE 20
+#define UDP_HEADER_SIZE 8
+
+#define MSS_ADJUST(x) x += TCP_HEADER_SIZE + ((ws->proto == AF_INET)?(IP_HEADER_SIZE):(IPV6_HEADER_SIZE))
+
 struct worker_st *global_ws = NULL;
 
 static int terminate = 0;
@@ -1036,7 +1043,7 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 			oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
 			      strerror(e));
 		} else {
-			max -= 13;
+			MSS_ADJUST(max);
 			/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max); */
 			if (max > 0 && max < ws->link_mtu) {
 				oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u",
@@ -1485,11 +1492,6 @@ static void set_socket_timeout(worker_st * ws, int fd)
 	}
 }
 
-#define IP_HEADER_SIZE 20
-#define IPV6_HEADER_SIZE 40
-#define TCP_HEADER_SIZE 8
-#define UDP_HEADER_SIZE 8
-
 /* wild but conservative guess; this ciphersuite has the largest overhead */
 #define MAX_CSTP_CRYPTO_OVERHEAD (CSTP_OVERHEAD+tls_get_overhead(GNUTLS_TLS1_0, GNUTLS_CIPHER_AES_128_CBC, GNUTLS_MAC_SHA1))
 #define MAX_DTLS_CRYPTO_OVERHEAD (CSTP_DTLS_OVERHEAD+tls_get_overhead(GNUTLS_DTLS1_0, GNUTLS_CIPHER_AES_128_CBC, GNUTLS_MAC_SHA1))
@@ -1698,7 +1700,7 @@ static int connect_handler(worker_st * ws)
 			oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
 			      strerror(e));
 		} else {
-			max -= 13;
+			MSS_ADJUST(max);
 			if (max > 0 && max < ws->vinfo.mtu) {
 				oclog(ws, LOG_INFO,
 				      "reducing MTU due to TCP MSS to %u (from %u)", max, ws->vinfo.mtu);

@@ -48,7 +48,7 @@
 #include <signal.h>
 #include <poll.h>
 
-#if defined(__linux__) &&!defined(IPV6_PATHMTU)
+#if defined(__linux__) && !defined(IPV6_PATHMTU)
 # define IPV6_PATHMTU 61
 #endif
 
@@ -942,11 +942,45 @@ void mtu_ok(worker_st * ws)
 			x += r % diff; \
 		}
 
+int get_pmtu_approx(worker_st *ws)
+{
+	socklen_t sl;
+	int ret, e;
+
+#if defined(__linux__) && defined(TCP_INFO)
+	struct tcp_info ti;
+	sl = sizeof(ti);
+
+	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_INFO, &ti, &sl);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_INFO, "error in getting TCP_INFO: %s",
+		      strerror(e));
+		return -1; 
+	} else {
+		return ti.tcpi_pmtu;
+	}
+#else
+	int max = -1;
+
+	sl = sizeof(max);
+	ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
+	if (ret == -1) {
+		e = errno;
+		oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
+		      strerror(e));
+		return -1;
+	} else {
+		MSS_ADJUST(max);
+		return max;
+	}
+#endif
+}
+
 static
 int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 {
-	socklen_t sl;
-	int max, e, ret;
+	int max, ret;
 	time_t now = tnow->tv_sec;
 	time_t periodic_check_time = PERIODIC_CHECK_TIME;
 
@@ -1036,20 +1070,11 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 	}
 
 	if (ws->conn_type != SOCK_TYPE_UNIX && ws->udp_state != UP_DISABLED) {
-		sl = sizeof(max);
-		ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
-		if (ret == -1) {
-			e = errno;
-			oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
-			      strerror(e));
-		} else {
-			MSS_ADJUST(max);
-			/*oclog(ws, LOG_DEBUG, "TCP MSS is %u", max); */
-			if (max > 0 && max < ws->link_mtu) {
-				oclog(ws, LOG_DEBUG, "reducing MTU due to TCP MSS to %u",
-				      max);
-				link_mtu_set(ws, max);
-			}
+		max = get_pmtu_approx(ws);
+		if (max > 0 && max < ws->link_mtu) {
+			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP/PMTU to %u",
+			      max);
+			link_mtu_set(ws, max);
 		}
 	}
 
@@ -1571,7 +1596,7 @@ static int connect_handler(worker_st * ws)
 	struct http_req_st *req = &ws->req;
 	struct pollfd pfd[4];
 	unsigned pfd_size;
-	int e, max, ret, t;
+	int max, ret, t;
 	char *p;
 	unsigned rnd;
 #ifdef HAVE_PPOLL
@@ -1580,7 +1605,6 @@ static int connect_handler(worker_st * ws)
 	unsigned tls_pending, dtls_pending = 0, i;
 	struct timespec tnow;
 	unsigned ip6;
-	socklen_t sl;
 	sigset_t emptyset, blockset;
 
 	sigemptyset(&blockset);
@@ -1693,19 +1717,11 @@ static int connect_handler(worker_st * ws)
 	/* Attempt to use the TCP connection maximum segment size to set a more
 	 * precise MTU. */
 	if (ws->conn_type != SOCK_TYPE_UNIX) {
-		sl = sizeof(max);
-		ret = getsockopt(ws->conn_fd, IPPROTO_TCP, TCP_MAXSEG, &max, &sl);
-		if (ret == -1) {
-			e = errno;
-			oclog(ws, LOG_INFO, "error in getting TCP_MAXSEG: %s",
-			      strerror(e));
-		} else {
-			MSS_ADJUST(max);
-			if (max > 0 && max < ws->vinfo.mtu) {
-				oclog(ws, LOG_INFO,
-				      "reducing MTU due to TCP MSS to %u (from %u)", max, ws->vinfo.mtu);
-				ws->vinfo.mtu = max;
-			}
+		max = get_pmtu_approx(ws);
+		if (max > 0 && max < ws->vinfo.mtu) {
+			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP/PMTU to %u",
+			      max);
+			link_mtu_set(ws, max);
 		}
 	}
 

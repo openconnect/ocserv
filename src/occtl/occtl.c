@@ -57,6 +57,8 @@ static const commands_st commands[] = {
 	      "Reloads the server configuration", 1, 1),
 	ENTRY("show status", NULL, handle_status_cmd,
 	      "Prints the status of the server", 1, 1),
+	ENTRY("show stats", NULL, handle_stats_cmd,
+	      "Prints statistics of the server operation", 1, 1),
 	ENTRY("show users", NULL, handle_list_users_cmd,
 	      "Prints the connected users", 1, 1),
 	ENTRY("show ip bans", NULL, handle_list_banned_ips_cmd,
@@ -168,6 +170,7 @@ void usage(void)
 	printf("occtl: [OPTIONS...] {COMMAND}\n\n");
 	printf("  -s --socket-file       Specify the server's occtl socket file\n");
 	printf("  -h --help              Show this help\n");
+	printf("     --debug             Enable more verbose information in some commands\n");
 	printf("  -v --version           Show the program's version\n");
 	printf("  -j --json              Use JSON formatting for output\n");
 	printf("\n");
@@ -180,7 +183,7 @@ void version(void)
 {
 	fprintf(stderr,
 		"OpenConnect server control (occtl) version %s\n", VERSION);
-	fprintf(stderr, "Copyright (C) 2014-2016 Red Hat and others.\n");
+	fprintf(stderr, "Copyright (C) 2014-2017 Red Hat and others.\n");
 	fprintf(stderr,
 		"ocserv comes with ABSOLUTELY NO WARRANTY. This is free software,\n");
 	fprintf(stderr,
@@ -555,14 +558,22 @@ int main(int argc, char **argv)
 
 				argv += 1;
 				argc -= 1;
-
 			} else if (argv[1][1] == 'n'
 			    || (argv[1][1] == '-' && argv[1][2] == 'n')) {
 				params.no_pager = 1;
 
 				argv += 1;
 				argc -= 1;
+			} else if (argv[1][1] == '-' && argv[1][2] == 'd') {
+				params.debug = 1;
 
+				argv += 1;
+				argc -= 1;
+
+				if (argc == 1) {
+					params.json = 0;
+					goto interactive;
+				}
 			} else if (argv[1][1] == 'v'
 			    || (argv[1][1] == '-' && argv[1][2] == 'v')) {
 				version();
@@ -572,6 +583,7 @@ int main(int argc, char **argv)
 				file = talloc_strdup(gl_pool, argv[2]);
 
 				if (argc == 3) {
+					params.json = 0;
 					goto interactive;
 				}
 
@@ -598,7 +610,7 @@ int main(int argc, char **argv)
 		if (line == NULL)
 			return 0;
 
-		handle_cmd(conn, line, 0);
+		handle_cmd(conn, line, &params);
 	}
 
 	conn_close(conn);

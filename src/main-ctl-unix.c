@@ -186,6 +186,20 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.stored_tls_sessions = ctx->s->stats.tlsdb_entries;
 	rep.banned_ips = main_ban_db_elems(ctx->s);
 
+	rep.session_timeouts = ctx->s->stats.session_timeouts;
+	rep.session_idle_timeouts = ctx->s->stats.session_idle_timeouts;
+	rep.session_errors = ctx->s->stats.session_errors;
+	rep.sessions_closed = ctx->s->stats.sessions_closed;
+	rep.kbytes_in = ctx->s->stats.kbytes_in;
+	rep.kbytes_out = ctx->s->stats.kbytes_out;
+	rep.min_mtu = ctx->s->stats.min_mtu;
+	rep.max_mtu = ctx->s->stats.max_mtu;
+	rep.last_reset = ctx->s->stats.last_reset;
+	rep.avg_auth_time = ctx->s->stats.avg_auth_time;
+	rep.avg_session_mins = ctx->s->stats.avg_session_mins;
+	rep.max_auth_time = ctx->s->stats.max_auth_time;
+	rep.max_session_mins = ctx->s->stats.max_session_mins;
+
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,
 		       (pack_func) status_rep__pack);

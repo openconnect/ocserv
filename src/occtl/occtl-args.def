@@ -47,6 +47,12 @@ flag = {
     doc   = "";
 };
 
+flag = {
+    name      = debug;
+    descrip   = "Provide more verbose information in some commands";
+    doc   = "";
+};
+
 
 doc-section = {
   ds-type = 'SYNOPSIS';

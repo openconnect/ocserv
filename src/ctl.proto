@@ -13,6 +13,20 @@ message status_rep
 	required uint32 stored_tls_sessions = 7;
 	required uint32 banned_ips = 8;
 	required uint32 secmod_client_entries = 9;
+
+	required uint64 session_timeouts = 10;
+	required uint64 session_idle_timeouts = 11;
+	required uint64 session_errors = 12;
+	required uint64 sessions_closed = 13;
+	required uint64 kbytes_in = 14;
+	required uint64 kbytes_out = 15;
+	required uint32 min_mtu = 16;
+	required uint32 max_mtu = 17;
+	required uint32 last_reset = 18;
+	required uint32 avg_auth_time = 19;
+	required uint32 avg_session_mins = 20;
+	required uint32 max_auth_time = 21;
+	required uint32 max_session_mins = 22;
 }
 
 message bool_msg

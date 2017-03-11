@@ -92,6 +92,7 @@ typedef enum {
 	CMD_SECM_CLI_STATS,
 	CMD_SECM_LIST_COOKIES,
 	CMD_SECM_LIST_COOKIES_REPLY,
+	CMD_SECM_STATS, /* sent periodically */
 
 	MAX_SECM_CMD,
 } cmd_request_t;

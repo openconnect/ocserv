@@ -117,6 +117,7 @@ static void update_auth_time_stats(sec_mod_st * sec, time_t secs)
 	sec->total_authentications++;
 	if (sec->total_authentications == 0) { /* reset stats */
 		sec->avg_auth_time = 0;
+		sec->max_auth_time = 0;
 		return;
 	}
 
@@ -567,21 +568,8 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 	/* send reply */
 	rep.bytes_in = e->stats.bytes_in;
 	rep.bytes_out = e->stats.bytes_out;
-	rep.has_secmod_client_entries = 1;
 	rep.has_discon_reason = 1;
 	rep.discon_reason = e->discon_reason;
-	rep.secmod_client_entries = sec_mod_client_db_elems(sec);
-
-	rep.secmod_tlsdb_entries = sec->tls_db.entries;
-	rep.has_secmod_tlsdb_entries = 1;
-
-	rep.secmod_auth_failures = sec->auth_failures;
-	rep.has_secmod_auth_failures = 1;
-	sec->auth_failures = 0;
-	rep.secmod_avg_auth_time = sec->avg_auth_time;
-	rep.secmod_max_auth_time = sec->max_auth_time;
-	rep.has_secmod_avg_auth_time = 1;
-	rep.has_secmod_max_auth_time = 1;
 
 	ret = send_msg(e, fd, CMD_SECM_CLI_STATS, &rep,
 			(pack_size_func) cli_stats_msg__get_packed_size,

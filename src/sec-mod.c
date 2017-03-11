@@ -499,6 +499,29 @@ static void handle_sigterm(int signo)
 	need_exit = 1;
 }
 
+static void send_stats_to_main(sec_mod_st *sec)
+{
+	int ret;
+	SecmStatsMsg msg = SECM_STATS_MSG__INIT;
+
+	msg.secmod_client_entries = sec_mod_client_db_elems(sec);
+	msg.secmod_tlsdb_entries = sec->tls_db.entries;
+	msg.secmod_auth_failures = sec->auth_failures;
+	msg.secmod_avg_auth_time = sec->avg_auth_time;
+	msg.secmod_max_auth_time = sec->max_auth_time;
+	sec->auth_failures = 0;
+
+	ret = send_msg(sec, sec->cmd_fd, CMD_SECM_STATS, &msg,
+			(pack_size_func) secm_stats_msg__get_packed_size,
+			(pack_func) secm_stats_msg__pack);
+	if (ret < 0) {
+		seclog(sec, LOG_ERR, "error in sending statistics to main");
+		return;
+	}
+
+	return;
+}
+
 static void check_other_work(sec_mod_st *sec)
 {
 	if (need_exit) {
@@ -526,6 +549,7 @@ static void check_other_work(sec_mod_st *sec)
 		seclog(sec, LOG_DEBUG, "performing maintenance");
 		cleanup_client_entries(sec);
 		expire_tls_sessions(sec);
+		send_stats_to_main(sec);
 		seclog(sec, LOG_DEBUG, "active sessions %d", 
 			sec_mod_client_db_elems(sec));
 		alarm(MAINTAINANCE_TIME);

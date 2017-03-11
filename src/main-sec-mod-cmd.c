@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Red Hat, Inc.
+ * Copyright (C) 2015-2017 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +54,16 @@
 #ifdef HAVE_MALLOC_TRIM
 # include <malloc.h>
 #endif
+
+static void update_auth_failures(main_server_st * s, uint64_t auth_failures)
+{
+	if (s->stats.auth_failures + auth_failures < s->stats.auth_failures) {
+		mslog(s, NULL, LOG_INFO, "overflow on updating authentication failures; resetting");
+		s->stats.auth_failures = 0;
+		return;
+	}
+	s->stats.auth_failures += auth_failures;
+}
 
 int handle_sec_mod_commands(main_server_st * s)
 {
@@ -159,6 +170,25 @@ int handle_sec_mod_commands(main_server_st * s)
 
 			safe_memset(tmsg->sid.data, 0, tmsg->sid.len);
 			safe_memset(raw, 0, raw_len);
+		}
+
+		break;
+	case CMD_SECM_STATS:{
+			SecmStatsMsg *smsg = NULL;
+
+			smsg = secm_stats_msg__unpack(&pa, raw_len, raw);
+			if (smsg == NULL) {
+				mslog(s, NULL, LOG_ERR, "error unpacking sec-mod data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
+			s->stats.secmod_client_entries = smsg->secmod_client_entries;
+			s->stats.tlsdb_entries = smsg->secmod_tlsdb_entries;
+			s->stats.max_auth_time = smsg->secmod_max_auth_time;
+			s->stats.avg_auth_time = smsg->secmod_avg_auth_time;
+			update_auth_failures(s, smsg->secmod_auth_failures);
+
 		}
 
 		break;
@@ -402,16 +432,6 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 	(*proc->config_usage_count)++;
 }
 
-static void update_auth_failures(main_server_st * s, uint64_t auth_failures)
-{
-	if (s->stats.auth_failures + auth_failures < s->stats.auth_failures) {
-		mslog(s, NULL, LOG_INFO, "overflow on updating authentication failures; resetting");
-		s->stats.auth_failures = 0;
-		return;
-	}
-	s->stats.auth_failures += auth_failures;
-}
-
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int ret, e;
@@ -506,7 +526,7 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	return 0;
 }
 
-static void update_main_stats(main_server_st * s, struct proc_st *proc, uint64_t auth_failures, uint32_t avg_auth_time, uint32_t max_auth_time)
+static void update_main_stats(main_server_st * s, struct proc_st *proc)
 {
 	uint64_t kb_in, kb_out;
 	time_t now = time(0), stime;
@@ -532,8 +552,6 @@ static void update_main_stats(main_server_st * s, struct proc_st *proc, uint64_t
 	if (s->stats.kbytes_out + kb_out <  s->stats.kbytes_out)
 		goto reset;
 
-	update_auth_failures(s, auth_failures);
-
 	s->stats.kbytes_in += kb_in;
 	s->stats.kbytes_out += kb_out;
 
@@ -549,9 +567,6 @@ static void update_main_stats(main_server_st * s, struct proc_st *proc, uint64_t
 		if (stime > s->stats.max_session_mins)
 			s->stats.max_session_mins = stime;
 	}
-
-	s->stats.avg_auth_time = avg_auth_time;
-	s->stats.max_auth_time = max_auth_time;
 
 	return;
  reset:
@@ -601,15 +616,11 @@ int session_close(main_server_st * s, struct proc_st *proc)
 
 	proc->bytes_in = msg->bytes_in;
 	proc->bytes_out = msg->bytes_out;
-	if (msg->has_secmod_client_entries)
-		s->stats.secmod_client_entries = msg->secmod_client_entries;
-	if (msg->has_secmod_tlsdb_entries)
-		s->stats.tlsdb_entries = msg->secmod_tlsdb_entries;
 	if (msg->has_discon_reason) {
 		proc->discon_reason = msg->discon_reason;
 	}
 
-	update_main_stats(s, proc, msg->secmod_auth_failures, msg->secmod_avg_auth_time, msg->secmod_max_auth_time);
+	update_main_stats(s, proc);
 
 	cli_stats_msg__free_unpacked(msg, &pa);
 

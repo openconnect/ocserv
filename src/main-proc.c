@@ -85,7 +85,7 @@ struct proc_st *ctmp;
 
 	list_add(&s->proc_list.head, &(ctmp->list));
 	put_into_cgroup(s, s->config->cgroup, pid);
-	s->active_clients++;
+	s->stats.active_clients++;
 
 	return ctmp;
 }
@@ -100,7 +100,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 	ev_child_stop(EV_A_ &proc->ev_child);
 
 	list_del(&proc->list);
-	s->active_clients--;
+	s->stats.active_clients--;
 
 	if ((flags&RPROC_KILL) && proc->pid != -1 && proc->pid != 0)
 		kill(proc->pid, SIGTERM);

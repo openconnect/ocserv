@@ -40,6 +40,10 @@ typedef struct sec_mod_st {
 	int cmd_fd_sync;
 
 	tls_sess_db_st tls_db;
+	uint64_t auth_failures; /* auth failures since the last update (SECM_CLI_STATS) we sent to main */
+	uint32_t max_auth_time; /* the maximum time spent in (sucessful) authentication */
+	uint32_t avg_auth_time; /* the average time spent in (sucessful) authentication */
+	uint32_t total_authentications; /* successful authentications: to calculate the average above */
 
 	struct config_mod_st *config_module;
 } sec_mod_st;

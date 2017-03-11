@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2017 Nikos Mavrogiannopoulos
  * Copyright (C) 2014-2016 Red Hat
  *
  * This program is free software; you can redistribute it and/or modify
@@ -109,6 +109,22 @@ void sec_mod_add_score_to_ip(sec_mod_st *sec, client_entry_st *e, const char *ip
 	return;
 }
 
+static void update_auth_time_stats(sec_mod_st * sec, time_t secs)
+{
+	if (secs < 0)
+		return;
+
+	sec->total_authentications++;
+	if (sec->total_authentications == 0) { /* reset stats */
+		sec->avg_auth_time = 0;
+		return;
+	}
+
+	if (secs > sec->max_auth_time)
+		sec->max_auth_time = secs;
+	sec->avg_auth_time = (sec->avg_auth_time*(sec->total_authentications-1)+secs) / sec->total_authentications;
+}
+
 static
 int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTHREP r)
 {
@@ -125,6 +141,9 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 			msg.msg = entry->msg_str;
 		}
 
+		/* calculate time in auth for this client */
+		update_auth_time_stats(sec, time(0) - entry->time);
+
 		msg.has_sid = 1;
 		msg.sid.data = entry->sid;
 		msg.sid.len = sizeof(entry->sid);
@@ -139,6 +158,8 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 			       sec_auth_reply_msg__get_packed_size,
 			       (pack_func) sec_auth_reply_msg__pack);
 	} else {
+		sec->auth_failures++;
+
 		msg.reply = AUTH__REP__FAILED;
 
 		ret = send_msg(entry, cfd, CMD_SEC_AUTH_REPLY,
@@ -553,6 +574,14 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 
 	rep.secmod_tlsdb_entries = sec->tls_db.entries;
 	rep.has_secmod_tlsdb_entries = 1;
+
+	rep.secmod_auth_failures = sec->auth_failures;
+	rep.has_secmod_auth_failures = 1;
+	sec->auth_failures = 0;
+	rep.secmod_avg_auth_time = sec->avg_auth_time;
+	rep.secmod_max_auth_time = sec->max_auth_time;
+	rep.has_secmod_avg_auth_time = 1;
+	rep.has_secmod_max_auth_time = 1;
 
 	ret = send_msg(e, fd, CMD_SECM_CLI_STATS, &rep,
 			(pack_size_func) cli_stats_msg__get_packed_size,

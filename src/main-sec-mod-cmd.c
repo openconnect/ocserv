@@ -402,6 +402,16 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 	(*proc->config_usage_count)++;
 }
 
+static void update_auth_failures(main_server_st * s, uint64_t auth_failures)
+{
+	if (s->stats.auth_failures + auth_failures < s->stats.auth_failures) {
+		mslog(s, NULL, LOG_INFO, "overflow on updating authentication failures; resetting");
+		s->stats.auth_failures = 0;
+		return;
+	}
+	s->stats.auth_failures += auth_failures;
+}
+
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int ret, e;
@@ -449,7 +459,8 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	}
 
 	if (msg->reply != AUTH__REP__OK) {
-		mslog(s, proc, LOG_DEBUG, "could not initiate session");
+		mslog(s, proc, LOG_DEBUG, "session initiation was rejected");
+		update_auth_failures(s, 1);
 		return -1;
 	}
 
@@ -495,6 +506,64 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	return 0;
 }
 
+static void update_main_stats(main_server_st * s, struct proc_st *proc, uint64_t auth_failures, uint32_t avg_auth_time, uint32_t max_auth_time)
+{
+	uint64_t kb_in, kb_out;
+	time_t now = time(0), stime;
+
+	if (proc->discon_reason == REASON_IDLE_TIMEOUT)
+		s->stats.session_idle_timeouts++;
+	else if (proc->discon_reason == REASON_SESSION_TIMEOUT)
+		s->stats.session_timeouts++;
+	else if (proc->discon_reason == REASON_ERROR)
+		s->stats.session_errors++;
+
+	s->stats.sessions_closed++;
+	if (s->stats.sessions_closed == 0) { /* overflow */
+		goto reset;
+	}
+
+	kb_in = proc->bytes_in/1000;
+	kb_out = proc->bytes_out/1000;
+
+	if (s->stats.kbytes_in + kb_in <  s->stats.kbytes_in)
+		goto reset;
+
+	if (s->stats.kbytes_out + kb_out <  s->stats.kbytes_out)
+		goto reset;
+
+	update_auth_failures(s, auth_failures);
+
+	s->stats.kbytes_in += kb_in;
+	s->stats.kbytes_out += kb_out;
+
+	if (s->stats.min_mtu == 0 || proc->mtu < s->stats.min_mtu)
+		s->stats.min_mtu = proc->mtu;
+	if (s->stats.max_mtu == 0 || proc->mtu > s->stats.min_mtu)
+		s->stats.max_mtu = proc->mtu;
+
+	/* connection time in minutes */
+	stime = (now - proc->conn_time)/60;
+	if (stime > 0) {
+		s->stats.avg_session_mins = ((s->stats.sessions_closed-1) * s->stats.avg_session_mins + stime) / s->stats.sessions_closed;
+		if (stime > s->stats.max_session_mins)
+			s->stats.max_session_mins = stime;
+	}
+
+	s->stats.avg_auth_time = avg_auth_time;
+	s->stats.max_auth_time = max_auth_time;
+
+	return;
+ reset:
+	mslog(s, NULL, LOG_INFO, "overflow on updating server statistics, resetting stats");
+	s->stats.session_idle_timeouts = 0;
+	s->stats.session_timeouts = 0;
+	s->stats.session_errors = 0;
+	s->stats.last_reset = now;
+	s->stats.kbytes_in = 0;
+	s->stats.kbytes_out = 0;
+}
+
 int session_close(main_server_st * s, struct proc_st *proc)
 {
 	int ret, e;
@@ -533,11 +602,14 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	proc->bytes_in = msg->bytes_in;
 	proc->bytes_out = msg->bytes_out;
 	if (msg->has_secmod_client_entries)
-		s->secmod_client_entries = msg->secmod_client_entries;
+		s->stats.secmod_client_entries = msg->secmod_client_entries;
 	if (msg->has_secmod_tlsdb_entries)
-		s->tlsdb_entries = msg->secmod_tlsdb_entries;
-	if (msg->has_discon_reason)
+		s->stats.tlsdb_entries = msg->secmod_tlsdb_entries;
+	if (msg->has_discon_reason) {
 		proc->discon_reason = msg->discon_reason;
+	}
+
+	update_main_stats(s, proc, msg->secmod_auth_failures, msg->secmod_avg_auth_time, msg->secmod_max_auth_time);
 
 	cli_stats_msg__free_unpacked(msg, &pa);
 

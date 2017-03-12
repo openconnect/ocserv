@@ -372,6 +372,7 @@ struct perm_cfg_st {
 	char *cert_hash;
 #endif
 
+	unsigned int stats_reset_time;
 	unsigned foreground;
 	unsigned debug;
 

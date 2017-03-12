@@ -502,14 +502,28 @@ static void handle_sigterm(int signo)
 static void send_stats_to_main(sec_mod_st *sec)
 {
 	int ret;
+	time_t now = time(0);
 	SecmStatsMsg msg = SECM_STATS_MSG__INIT;
+
+	if (sec->perm_config->stats_reset_time != 0 &&
+	    now - sec->last_stats_reset > sec->perm_config->stats_reset_time) {
+		sec->auth_failures = 0;
+		sec->avg_auth_time = 0;
+		sec->max_auth_time = 0;
+		sec->last_stats_reset = now;
+	}
 
 	msg.secmod_client_entries = sec_mod_client_db_elems(sec);
 	msg.secmod_tlsdb_entries = sec->tls_db.entries;
 	msg.secmod_auth_failures = sec->auth_failures;
 	msg.secmod_avg_auth_time = sec->avg_auth_time;
 	msg.secmod_max_auth_time = sec->max_auth_time;
+	/* we only report the number of failures since last call */
 	sec->auth_failures = 0;
+
+	/* the following two are not resettable */
+	msg.secmod_client_entries = sec_mod_client_db_elems(sec);
+	msg.secmod_tlsdb_entries = sec->tls_db.entries;
 
 	ret = send_msg(sec, sec->cmd_fd, CMD_SECM_STATS, &msg,
 			(pack_size_func) secm_stats_msg__get_packed_size,

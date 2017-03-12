@@ -175,7 +175,7 @@ struct main_stats_st {
 	uint64_t session_timeouts; /* sessions with timeout */
 	uint64_t session_idle_timeouts; /* sessions with idle timeout */
 	uint64_t session_errors; /* sessions closed with error */
-	uint64_t sessions_closed; /* sessions closed */
+	uint64_t sessions_closed; /* sessions closed since last reset */
 	uint64_t kbytes_in;
 	uint64_t kbytes_out;
 	unsigned min_mtu;
@@ -189,12 +189,15 @@ struct main_stats_st {
 	time_t start_time;
 	time_t last_reset;
 
-	uint64_t auth_failures; /* authentication failures */
 	uint32_t avg_auth_time; /* in seconds */
 	uint32_t max_auth_time; /* in seconds */
 	uint32_t avg_session_mins; /* in minutes */
 	uint32_t max_session_mins;
+	uint64_t auth_failures; /* authentication failures */
 
+	/* These are counted since start time */
+	uint64_t total_auth_failures; /* authentication failures since start_time */
+	uint64_t total_sessions_closed; /* sessions closed since start_time */
 };
 
 typedef struct main_server_st {

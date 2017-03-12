@@ -291,6 +291,12 @@ max-same-clients = 2
 # radius is in use.
 #stats-report-time = 360
 
+# Stats reset time. The period of time statistics kept by main/sec-mod
+# processes will be reset. These are the statistics shown by cmd
+# 'occtl show stats'. For daily: 86400, weekly: 604800
+# This is unrelated to stats-report-time.
+server-stats-reset-time = 604800
+
 # Keepalive in seconds
 keepalive = 32400
 

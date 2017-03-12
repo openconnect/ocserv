@@ -44,6 +44,7 @@ typedef struct sec_mod_st {
 	uint32_t max_auth_time; /* the maximum time spent in (sucessful) authentication */
 	uint32_t avg_auth_time; /* the average time spent in (sucessful) authentication */
 	uint32_t total_authentications; /* successful authentications: to calculate the average above */
+	time_t last_stats_reset;
 
 	struct config_mod_st *config_module;
 } sec_mod_st;

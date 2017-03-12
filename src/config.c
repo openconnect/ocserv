@@ -155,6 +155,7 @@ static struct cfg_options available_options[] = {
 	{ .name = "cookie-rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "session-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "stats-report-time", .type = OPTION_NUMERIC, .mandatory = 0 },
+	{ .name = "server-stats-reset-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-time", .type = OPTION_NUMERIC, .mandatory = 0 },
 	{ .name = "rekey-method", .type = OPTION_STRING, .mandatory = 0 },
 	{ .name = "auth-timeout", .type = OPTION_NUMERIC, .mandatory = 0 },
@@ -754,7 +755,15 @@ size_t urlfw_size = 0;
 
 		PREAD_STRING(perm_config, "chroot-dir", perm_config->chroot_dir);
 
+		/* cannot be modified as it would require sec-mod to
+		 * re-read configuration too */
+		READ_NUMERIC("server-stats-reset-time", perm_config->stats_reset_time);
+		if (perm_config->stats_reset_time <= 0) {
+			perm_config->stats_reset_time = 24*60*60*7; /* weekly */
+		}
+
 		list_head_init(&perm_config->attic);
+
 	}
 
 	perm_config->config = talloc_zero(perm_config, struct cfg_st);

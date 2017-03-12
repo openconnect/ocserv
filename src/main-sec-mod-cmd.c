@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Red Hat, Inc.
+ * Copyright (C) 2015-2017 Red Hat, Inc.
  * Copyright (C) 2015-2017 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
@@ -63,6 +63,7 @@ static void update_auth_failures(main_server_st * s, uint64_t auth_failures)
 		return;
 	}
 	s->stats.auth_failures += auth_failures;
+	s->stats.total_auth_failures += auth_failures;
 }
 
 int handle_sec_mod_commands(main_server_st * s)
@@ -526,10 +527,28 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 	return 0;
 }
 
+static void reset_stats(main_server_st *s, time_t now)
+{
+	s->stats.session_idle_timeouts = 0;
+	s->stats.session_timeouts = 0;
+	s->stats.session_errors = 0;
+	s->stats.sessions_closed = 0;
+	s->stats.auth_failures = 0;
+	s->stats.last_reset = now;
+	s->stats.kbytes_in = 0;
+	s->stats.kbytes_out = 0;
+}
+
 static void update_main_stats(main_server_st * s, struct proc_st *proc)
 {
 	uint64_t kb_in, kb_out;
 	time_t now = time(0), stime;
+
+	if (s->perm_config->stats_reset_time != 0 &&
+	    now - s->stats.last_reset > s->perm_config->stats_reset_time) {
+		mslog(s, NULL, LOG_INFO, "resetting stats counters");
+		reset_stats(s, now);
+	}
 
 	if (proc->discon_reason == REASON_IDLE_TIMEOUT)
 		s->stats.session_idle_timeouts++;
@@ -539,6 +558,7 @@ static void update_main_stats(main_server_st * s, struct proc_st *proc)
 		s->stats.session_errors++;
 
 	s->stats.sessions_closed++;
+	s->stats.total_sessions_closed++;
 	if (s->stats.sessions_closed == 0) { /* overflow */
 		goto reset;
 	}
@@ -571,12 +591,7 @@ static void update_main_stats(main_server_st * s, struct proc_st *proc)
 	return;
  reset:
 	mslog(s, NULL, LOG_INFO, "overflow on updating server statistics, resetting stats");
-	s->stats.session_idle_timeouts = 0;
-	s->stats.session_timeouts = 0;
-	s->stats.session_errors = 0;
-	s->stats.last_reset = now;
-	s->stats.kbytes_in = 0;
-	s->stats.kbytes_out = 0;
+	reset_stats(s, now);
 }
 
 int session_close(main_server_st * s, struct proc_st *proc)

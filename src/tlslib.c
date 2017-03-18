@@ -137,6 +137,75 @@ int ret;
 	return total;
 }
 
+static
+int recv_remaining(int fd, uint8_t *p, int left)
+{
+	int counter = 100; /* allow 10 seconds for a full packet */
+	unsigned total = 0;
+	int ret;
+
+	while(left > 0) {
+		ret = recv(fd, p, left, 0);
+		if (ret == -1 && counter > 0 && (errno == EINTR || errno == EAGAIN)) {
+			counter--;
+			ms_sleep(100);
+			continue;
+		}
+		if (ret == 0)
+			ret = GNUTLS_E_PREMATURE_TERMINATION;
+		if (ret < 0)
+			break;
+
+		left -= ret;
+		p += ret;
+		total += ret;
+	}
+
+	return total;
+}
+
+/* Receives CSTP packet, after the channel is established.
+ * It makes sure that CSTP packet boundaries are respected in
+ * case we do not read over TLS - e.g., when TLS is done by
+ * a proxy. */
+static ssize_t _cstp_recv_packet(worker_st *ws, void *data, size_t data_size)
+{
+	int ret;
+
+	/* socket is in non-blocking mode already */
+
+	if (ws->session != NULL) {
+		return gnutls_record_recv(ws->session, data, data_size);
+	} else {
+		/* It can happen in UNIX sockets case that we receive an
+		 * incomplete CSTP packet. In that case we attempt to read
+		 * a full CSTP packet.
+		 */
+		unsigned pktlen;
+		uint8_t *p = data;
+
+		/* read the header */
+ 		ret = recv_remaining(ws->conn_fd, p, 8);
+ 		if (ret <= 0)	
+ 			return ret;
+
+		/* get the actual length from headers */
+		pktlen = (p[4] << 8) + p[5];
+		if (pktlen+8 > data_size) {
+			oclog(ws, LOG_ERR, "error in CSTP packet length");
+			return GNUTLS_E_UNEXPECTED_PACKET_LENGTH;
+		}
+
+		if (pktlen > 0) {
+			ret = recv_remaining(ws->conn_fd, p+8, pktlen);
+			if (ret <= 0)
+				return ret;
+		}
+
+		return 8+pktlen;
+	}
+}
+
 ssize_t cstp_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
 {
 	int ret;
@@ -150,13 +219,13 @@ ssize_t cstp_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
 			gnutls_packet_get(packet, data, NULL);
 		}
 	} else {
-		ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
+		ret = _cstp_recv_packet(ws, ws->buffer, ws->buffer_size);
 		data->data = ws->buffer;
 		data->size = ret;
 	}
 
 #else
-	ret = cstp_recv_nb(ws, ws->buffer, ws->buffer_size);
+	ret = _cstp_recv_packet(ws, ws->buffer, ws->buffer_size);
 	data->data = ws->buffer;
 	data->size = ret;
 #endif
@@ -190,62 +259,6 @@ ssize_t cstp_recv(worker_st *ws, void *data, size_t data_size)
 	return ret;
 }
 
-ssize_t cstp_recv_nb(worker_st *ws, void *data, size_t data_size)
-{
-	int ret;
-
-	/* socket is in non-blocking mode already */
-
-	if (ws->session != NULL) {
-		ret = gnutls_record_recv(ws->session, data, data_size);
-	} else {
-		/* It can happen in UNIX sockets case that we receive an
-		 * incomplete CSTP packet. In that case we attempt to read
-		 * a full CSTP packet.
-		 */
-		int counter = 100; /* allow 10 seconds for a full packet */
-		unsigned pktlen;
-		unsigned total = 0;
-		int left = data_size;
-		uint8_t *p = data;
-
- 		ret = recv(ws->conn_fd, p, left, 0);
-		if (ret > 6) {
-			total += ret;
-			/* get the actual length from headers */
-			pktlen = (p[4] << 8) + p[5];
-			if (pktlen+8 > data_size) {
-				oclog(ws, LOG_ERR, "error in CSTP packet length");
-				return GNUTLS_E_UNEXPECTED_PACKET_LENGTH;
-			}
-
-			p = p + ret;
-			left = pktlen+8 - ret;
-
-			while(left > 0) {
-				ret = recv(ws->conn_fd, p, left, 0);
-				if (ret == -1 && counter > 0 && (errno == EINTR || errno == EAGAIN)) {
-					counter--;
-					ms_sleep(100);
-					continue;
-				}
-				if (ret == 0)
-					ret = GNUTLS_E_PREMATURE_TERMINATION;
-				if (ret < 0)
-					break;
-
-				left -= ret;
-				p += ret;
-				total += ret;
-			}
-		}
-
-		ret = total;
-
-	}
-
-	return ret;
-}
 
 /* Typically used in a resumed session. It will return
  * true if a certificate has been used.

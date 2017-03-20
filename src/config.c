@@ -839,6 +839,13 @@ size_t urlfw_size = 0;
 	}
 
 	READ_TF("dtls-psk", config->dtls_psk, 1);
+	if (perm_config->unix_conn_file) {
+		if (config->dtls_psk) {
+			fprintf(stderr, NOTESTR"'dtls-psk' cannot be combined with unix socket file\n");
+		}
+		config->dtls_psk = 0;
+	}
+
 	READ_TF("match-tls-dtls-ciphers", config->match_dtls_and_tls, 0);
 	if (config->match_dtls_and_tls) {
 		if (config->dtls_legacy) {

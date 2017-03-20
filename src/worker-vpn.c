@@ -335,7 +335,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 
 	gnutls_session_set_ptr(session, ws);
 
-	if (ws->req.use_psk) {
+	if (ws->req.use_psk && ws->session) {
 		oclog(ws, LOG_INFO, "setting up DTLS-PSK connection");
 		ret = setup_dtls_psk_keys(session, ws);
 	} else {

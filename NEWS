@@ -6,6 +6,9 @@
   it is not possible to derive PSK keys.
 - Added support for haproxy's protocol v1 format. That allows to utilize
   ocserv, even with servers supporting the old protocol.
+- Report additional statistics to occtl, such as authentication failures, total
+  sessions handled total amount of data transferred, average session and authentication
+  time.
 
 
 * Version 0.11.7 (released 2017-02-12)

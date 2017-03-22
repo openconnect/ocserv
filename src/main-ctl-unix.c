@@ -200,6 +200,10 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.max_auth_time = ctx->s->stats.max_auth_time;
 	rep.max_session_mins = ctx->s->stats.max_session_mins;
 
+	rep.auth_failures = ctx->s->stats.auth_failures;
+	rep.total_auth_failures = ctx->s->stats.total_auth_failures;
+	rep.total_sessions_closed = ctx->s->stats.total_sessions_closed;
+
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,
 		       (pack_func) status_rep__pack);

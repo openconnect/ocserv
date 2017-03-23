@@ -66,7 +66,7 @@ if test $? = 124;then
 	fail $PID "Max-same-clients directive was ignored"
 fi
 
-CONTENTS=`cat ${TMPFILE2}|grep "HTTP/1.1 401 Unauthorized"`
+CONTENTS=`cat ${TMPFILE2}|grep "HTTP/1.1 401"`
 if test -z "$CONTENTS";then
 	cat ${TMPFILE2}
 	fail $PID "Max-same-clients directive was ignored"

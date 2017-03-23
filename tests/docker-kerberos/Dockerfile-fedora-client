@@ -1,14 +1,14 @@
 # Clone from the Fedora 22 image
-FROM fedora:24
+FROM fedora:25
 
-RUN yum install -y krb5-libs krb5-workstation libev
-RUN yum install -y gnutls gnutls-utils iproute systemd
-RUN yum install -y bash net-tools nuttcp iputils openssh-clients passwd
-RUN yum install -y lz4 radcli liboauth oathtool procps-ng iputils
-RUN yum install -y openconnect
+RUN dnf install -y krb5-libs krb5-workstation libev
+RUN dnf install -y gnutls gnutls-utils iproute systemd
+RUN dnf install -y bash net-tools nuttcp iputils openssh-clients passwd
+RUN dnf install -y lz4 radcli liboauth oathtool procps-ng iputils
+RUN dnf install -y openconnect
 
 # To be able to debug
-RUN yum install -y openssh-server strace lsof && yum clean all
+RUN dnf install -y openssh-server strace lsof && dnf clean all
 RUN echo 'root:root' | chpasswd
 RUN echo set -o vi >> /etc/bashrc
 

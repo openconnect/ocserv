@@ -39,7 +39,7 @@
 
 #define AVAIL_HEADER_SIZE(hsize, want) { \
 	if (hsize < want) { \
-		oclog(ws, LOG_ERR, "invalid TLV header"); \
+		oclog(ws, LOG_ERR, "proxy-hdr: invalid TLV header"); \
 		return; \
 	} \
 	hsize -= want; \

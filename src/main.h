@@ -231,7 +231,7 @@ int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
 int session_close(main_server_st * s, struct proc_st *proc);
 
-#ifdef DISABLE_LOGS
+#ifdef UNDER_TEST
 /* for testing */
 # define mslog(...)
 

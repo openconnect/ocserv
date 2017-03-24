@@ -316,12 +316,16 @@ void set_resume_db_funcs(gnutls_session_t);
 void __attribute__ ((format(printf, 3, 4)))
     _oclog(const worker_st * server, int priority, const char *fmt, ...);
 
-#ifdef __GNUC__
-# define oclog(server, prio, fmt, ...) \
+#ifdef UNDER_TEST
+# define oclog(...)
+#else
+# ifdef __GNUC__
+#  define oclog(server, prio, fmt, ...) \
 	(prio==LOG_ERR)?_oclog(server, prio, "%s:%d: "fmt, __FILE__, __LINE__, ##__VA_ARGS__): \
 	_oclog(server, prio, fmt, ##__VA_ARGS__)
-#else
-# define oclog _oclog
+# else
+#  define oclog _oclog
+# endif
 #endif
 
 void  oclog_hex(const worker_st* ws, int priority,

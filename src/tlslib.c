@@ -625,6 +625,7 @@ int ret;
 	}
 }
 
+#ifndef UNDER_TEST
 struct key_cb_data {
 	unsigned idx; /* the index of the key */
 	struct sockaddr_un sa;
@@ -999,6 +1000,7 @@ static unsigned crl_type = GNUTLS_X509_FMT_PEM;
 		mslog(s, NULL, LOG_INFO, "loaded CRL: %s", s->config->crl);
 	}
 }
+#endif
 
 void tls_cork(gnutls_session_t session)
 {

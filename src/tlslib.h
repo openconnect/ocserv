@@ -65,6 +65,10 @@ size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac
 
 #define GNUTLS_FATAL_ERR DTLS_FATAL_ERR
 
+#ifdef UNDER_TEST
+# define syslog_open 0
+#endif
+
 #define DTLS_FATAL_ERR_CMD(x, CMD) \
         if (x < 0 && gnutls_error_is_fatal (x) != 0) { \
                 if (syslog_open) \

@@ -67,6 +67,10 @@ LDADD = ../gl/libgnu.a $(LIBTALLOC_LIBS) ../src/libccan.a $(CODE_COVERAGE_LDFLAG
 kkdcp_parsing_SOURCES = kkdcp-parsing.c
 kkdcp_parsing_LDADD = $(LDADD)
 
+cstp_recv_SOURCES = cstp-recv.c
+cstp_recv_CFLAGS = $(CFLAGS) $(LIBGNUTLS_CFLAGS) $(LIBTALLOC_CFLAGS)
+cstp_recv_LDADD = $(LDADD) $(LIBGNUTLS_LIBS)
+
 json_escape_SOURCES = json-escape.c
 json_escape_LDADD = $(LDADD)
 
@@ -79,7 +83,7 @@ html_escape_LDADD = $(LDADD)
 ipv4_prefix_SOURCES = ipv4-prefix.c
 ipv4_prefix_LDADD = $(LDADD)
 
-ban_ips_CPPFLAGS = $(AM_CPPFLAGS) -DDISABLE_LOGS
+ban_ips_CPPFLAGS = $(AM_CPPFLAGS) -DUNDER_TEST
 ban_ips_SOURCES = ban-ips.c
 ban_ips_LDADD = $(LDADD)
 
@@ -101,7 +105,7 @@ valid_hostname_LDADD = $(LDADD)
 port_parsing_LDADD = $(LDADD)
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
-	port-parsing human_addr valid-hostname url-escape html-escape
+	port-parsing human_addr valid-hostname url-escape html-escape cstp-recv
 
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)

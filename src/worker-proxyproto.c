@@ -123,6 +123,140 @@ static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, int data_size)
 
 }
 
+/* A null-terminated string of the form:
+ * TCP4 192.168.0.1 192.168.0.11 56324 443
+ *        src           dst       src  dst
+ */
+static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
+{
+	int ret;
+	char *next;
+
+	memset(&ws->remote_addr, 0, sizeof(ws->remote_addr));
+	memset(&ws->our_addr, 0, sizeof(ws->our_addr));
+
+	if (strncmp(line, "TCP4 ", 5) == 0) {
+		struct sockaddr_in *sa = (void*)&ws->remote_addr;
+
+		ws->our_addr_len = sizeof(struct sockaddr_in);
+		ws->remote_addr_len = sizeof(struct sockaddr_in);
+		sa->sin_family = AF_INET;
+
+		line += 5;
+
+		next = strchr(line, ' ');
+		if (next == NULL) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		*next = 0;
+		ret = inet_pton(AF_INET, line, &sa->sin_addr);
+		if (ret != 1) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header: %s", line);
+			return -1;
+		}
+
+
+		sa = (void*)&ws->our_addr;
+		sa->sin_family = AF_INET;
+
+		line = next+1;
+		next = strchr(line, ' ');
+		if (next == NULL) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		*next = 0;
+
+		ret = inet_pton(AF_INET, line, &sa->sin_addr);
+		if (ret != 1) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		line = next+1;
+
+		sa = (void*)&ws->remote_addr;
+		sa->sin_port = htons(atoi(line));
+
+		line = strchr(line, ' ');
+		if (line == NULL) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+		line++;
+
+		sa = (void*)&ws->our_addr;
+		sa->sin_port = htons(atoi(line));
+	} else if (strncmp(line, "TCP6 ", 5) == 0) {
+		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
+
+		ws->our_addr_len = sizeof(struct sockaddr_in6);
+		ws->remote_addr_len = sizeof(struct sockaddr_in6);
+		sa->sin6_family = AF_INET6;
+
+		line += 5;
+
+		next = strchr(line, ' ');
+		if (next == NULL) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		*next = 0;
+
+		ret = inet_pton(AF_INET6, line, &sa->sin6_addr);
+		if (ret != 1) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		line = next+1;
+		next = strchr(line, ' ');
+		if (next == NULL) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		*next = 0;
+
+		sa = (void*)&ws->our_addr;
+		sa->sin6_family = AF_INET6;
+
+		ret = inet_pton(AF_INET6, line, &sa->sin6_addr);
+		if (ret != 1) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+
+		line = next+1;
+
+		sa = (void*)&ws->remote_addr;
+		sa->sin6_port = htons(atoi(line));
+
+		line = strchr(line, ' ');
+		if (line == NULL) {
+			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
+			return -1;
+		}
+		line++;
+
+		sa = (void*)&ws->our_addr;
+		sa->sin6_port = htons(atoi(line));
+	} else {
+		oclog(ws, LOG_ERR, "proxy-hdr: unknown protocol: %s", line);
+		return -1;
+	}
+
+	return 0;
+}
+
+#define PROXY_HEADER_V1 "PROXY "
+#define PROXY_HEADER_V1_SIZE (sizeof(PROXY_HEADER_V1)-1)
+#define MAX_PROXY_PROTO_V1_SIZE 108
+
 /* This parses a version 2 Proxy protocol header (from haproxy).
  *
  * When called from a UNIX socket (where we don't have any SSL
@@ -148,7 +282,34 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 	}
 
 	if (ret < 16) {
-		oclog(ws, LOG_ERR, "proxy-hdr: invalid v2 header size");
+		oclog(ws, LOG_ERR, "proxy-hdr: header size less than 16");
+		return -1;
+	}
+
+	if (memcmp(hdr.sig, PROXY_HEADER_V1, PROXY_HEADER_V1_SIZE) == 0) {
+		unsigned i;
+
+		/* recv all */
+		oclog(ws, LOG_DEBUG, "proxy-hdr: detected v1 header");
+		memcpy(hdr.data, &hdr, 16);
+		for (i=0;i<MAX_PROXY_PROTO_V1_SIZE-16;i++) {
+			ret = recv(fd, &hdr.data[16+i], 1, 0);
+			if (ret != 1) {
+				oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header");
+				return -1;
+			}
+			if (hdr.data[16+i] == '\r') {
+				hdr.data[16+i] = 0;
+			} else if (hdr.data[16+i] == '\n') {
+				if (hdr.data[16+i-1] == 0) {
+					return parse_proxy_proto_header_v1(ws, (char*)hdr.data+PROXY_HEADER_V1_SIZE);
+				} else {
+					oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header: no carriage return");
+					return -1;
+				}
+			}
+		}
+		oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header");
 		return -1;
 	}
 

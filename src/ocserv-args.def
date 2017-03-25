@@ -161,8 +161,13 @@ udp-port = 4443
 
 # Accept connections using a socket file. It accepts HTTP
 # connections (i.e., without SSL/TLS unlike its TCP counterpart),
-# and uses it as the primary channel. That option cannot be
-# combined with certificate authentication.
+# and uses it as the primary channel. That option is experimental
+# and it has the following known issues.
+#  * can only be combined with certificate authentication, by received
+#    information through the proxy protocol channel (see listen-proxy-proto)
+#  * It cannot derive any keys needed for the DTLS session (dtls-psk)
+#  * It cannot enforce the framing of the SSL/TLS packets, and that
+#    breaks assumptions held by several openconnect clients.
 #listen-clear-file = /var/run/ocserv-conn.socket
 
 # The user the worker processes will be run as. It should be

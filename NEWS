@@ -4,6 +4,8 @@
   accurate TCP_INFO socket option to obtain MTU information.
 - Disable DTLS-PSK when operating under a unix socket. When no session is available
   it is not possible to derive PSK keys.
+- Added support for haproxy's protocol v1 format. That allows to utilize
+  ocserv, even with servers supporting the old protocol.
 
 
 * Version 0.11.7 (released 2017-02-12)

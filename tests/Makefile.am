@@ -28,7 +28,7 @@ dist_check_SCRIPTS =  ocpasswd-test
 if ENABLE_ROOT_TESTS
 #docker tests
 dist_check_SCRIPTS += radius-test full-test unix-test kerberos-test radius-test-config \
-	proxyproto-test proxyproto-unix-test otp-test  \
+	proxyproto-test proxyproto-v1-test proxyproto-unix-test otp-test  \
 	reload-info-test radius-group-test
 
 #other root requiring tests

@@ -105,7 +105,8 @@ valid_hostname_LDADD = $(LDADD)
 port_parsing_LDADD = $(LDADD)
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
-	port-parsing human_addr valid-hostname url-escape html-escape cstp-recv
+	port-parsing human_addr valid-hostname url-escape html-escape cstp-recv \
+	proxyproto-v1
 
 
 TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)

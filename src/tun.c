@@ -445,6 +445,8 @@ static int bsd_open_tun(main_server_st * s)
 	fd = open("/dev/tun", O_RDWR);
 	if (fd == -1) {
 		/* try iterating */
+		e = errno;
+		mslog(s, NULL, LOG_DEBUG, "cannot open /dev/tun; falling back to iteration: %s", strerror(e));
 		for (unit_nr = 0; unit_nr < 255; unit_nr++) {
 			snprintf(tun_name, sizeof(tun_name), "/dev/tun%d", unit_nr);
 			fd = open(tun_name, O_RDWR);
@@ -452,8 +454,11 @@ static int bsd_open_tun(main_server_st * s)
 			if (fd == -1) {
 				/* cannot open tunXX, try creating it */
 				sock = socket(AF_INET, SOCK_DGRAM, 0);
-				if (sock < 0)
+				if (sock < 0) {
+					e = errno;
+					mslog(s, NULL, LOG_ERR, "cannot create tun socket: %s", strerror(e));
 					return -1;
+				}
 
 				memset(&ifr, 0, sizeof(ifr));
 				strncpy(ifr.ifr_name, tun_name + 5, sizeof(ifr.ifr_name) - 1);
@@ -518,7 +523,6 @@ static int bsd_open_tun(main_server_st * s)
 #endif /* TUNSIFHEAD */
 
 	}
-
 
 	return fd;
 }

@@ -13,6 +13,10 @@ Short term items:
 
 * Allow overriding client hostnames via group or user configuration.
 
+* We only send the right profile hash to client, only the a single profile
+  is specified in the global configuration file. When sending profile.xml
+  (user-profile) with the per-user configuration file, we do not send the
+  right profile hash to client, we do send the global configuration file only.
 
 Long term items:
 

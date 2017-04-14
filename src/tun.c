@@ -436,7 +436,7 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 #ifndef __linux__
 static int bsd_open_tun(main_server_st * s)
 {
-	int fd;
+	int fd, e;
 	int sock;
 	char tun_name[80];
 	struct ifreq ifr;

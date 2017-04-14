@@ -529,6 +529,22 @@ int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie
 
 static void reset_stats(main_server_st *s, time_t now)
 {
+	mslog(s, NULL, LOG_INFO, "Start statistics block");
+	mslog(s, NULL, LOG_INFO, "Total sessions handled: %lu", (unsigned long)s->stats.total_sessions_closed);
+	mslog(s, NULL, LOG_INFO, "Sessions handled: %lu", (unsigned long)s->stats.sessions_closed);
+	mslog(s, NULL, LOG_INFO, "Maximum session time: %lu min", (unsigned long)s->stats.max_session_mins);
+	mslog(s, NULL, LOG_INFO, "Average session time: %lu min", (unsigned long)s->stats.avg_session_mins);
+	mslog(s, NULL, LOG_INFO, "Closed due to timeout sessions: %lu", (unsigned long)s->stats.session_timeouts);
+	mslog(s, NULL, LOG_INFO, "Closed due to timeout (idle) sessions: %lu", (unsigned long)s->stats.session_idle_timeouts);
+	mslog(s, NULL, LOG_INFO, "Closed due to error sessions: %lu", (unsigned long)s->stats.session_errors);
+
+	mslog(s, NULL, LOG_INFO, "Total authentication failures: %lu", (unsigned long)s->stats.total_auth_failures);
+	mslog(s, NULL, LOG_INFO, "Authentication failures: %lu", (unsigned long)s->stats.auth_failures);
+	mslog(s, NULL, LOG_INFO, "Maximum authentication time: %lu sec", (unsigned long)s->stats.max_auth_time);
+	mslog(s, NULL, LOG_INFO, "Average authentication time: %lu sec", (unsigned long)s->stats.avg_auth_time);
+	mslog(s, NULL, LOG_INFO, "Data in: %lu, out: %lu kbytes", (unsigned long)s->stats.kbytes_in, (unsigned long)s->stats.kbytes_out);
+	mslog(s, NULL, LOG_INFO, "End of statistics block; resetting non-total stats");
+
 	s->stats.session_idle_timeouts = 0;
 	s->stats.session_timeouts = 0;
 	s->stats.session_errors = 0;
@@ -537,6 +553,8 @@ static void reset_stats(main_server_st *s, time_t now)
 	s->stats.last_reset = now;
 	s->stats.kbytes_in = 0;
 	s->stats.kbytes_out = 0;
+	s->stats.max_session_mins = 0;
+	s->stats.max_auth_time = 0;
 }
 
 static void update_main_stats(main_server_st * s, struct proc_st *proc)

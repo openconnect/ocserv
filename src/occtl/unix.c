@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Red Hat
+ * Copyright (C) 2014-2017 Red Hat
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -309,7 +309,7 @@ int handle_stats_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *param
 			printf("Current stats period:\n");
 
 		t = rep->last_reset;
-		if (t > 0 && t != rep->start_time) {
+		if (t > 0) {
 			tm = localtime(&t);
 			print_time_ival7(buf, time(0), t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);

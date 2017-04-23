@@ -1,8 +1,9 @@
 * Version 0.11.8 (unreleased)
-- Fixed MTU adjustment due to MSS. Previously the MSS value was converted to a
-  lower than the actual MTU estimate. In Linux systems switch to the more
-  accurate TCP_INFO socket option to obtain MTU information.
-- Disable DTLS-PSK when operating under a unix socket. When no session is available
+- Corrected MTU adjustment due to MSS. Previously the MSS value was converted to a
+  lower than the actual MTU estimate resulting to worse (lower) MTU estimates.
+  Furthermore, in Linux systems switch to the more accurate TCP_INFO socket option to
+  obtain MTU information.
+- Disable DTLS-PSK when operating under a unix socket. When no TLS session is available
   it is not possible to derive PSK keys.
 - Added support for haproxy's protocol v1 format. That allows to utilize
   ocserv, even with servers supporting the old protocol.

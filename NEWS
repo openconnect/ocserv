@@ -9,6 +9,8 @@
 - Report additional statistics to syslog and occtl, such as authentication failures,
   total sessions handled, total amount of data transferred, average session and
   authentication time.
+- Increased the default max-ban-score to 8 wrong password attempts, and
+  increased the default IP ban time to 20 minutes.
 
 
 * Version 0.11.7 (released 2017-02-12)

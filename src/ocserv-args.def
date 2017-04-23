@@ -425,10 +425,10 @@ min-reauth-time = 120
 # locally from an HTTP server (i.e., when listen-clear-file is used).
 #
 # Set to zero to disable.
-max-ban-score = 50
+max-ban-score = 80
 
 # The time (in seconds) that all score kept for a client is reset.
-ban-reset-time = 300
+ban-reset-time = 1200
 
 # In case you'd like to change the default points.
 #ban-points-wrong-password = 10

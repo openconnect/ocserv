@@ -78,7 +78,6 @@ void conn_posthandle(CONN_TYPE *ctx);
 typedef int (*cmd_func) (CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 
 int handle_status_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
-int handle_stats_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_users_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_iroutes_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_banned_ips_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);

@@ -208,7 +208,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 	print_start_block(stdout, params);
 	if (NO_JSON(params))
-		printf("OpenConnect SSL VPN server\n");
+		printf("Note: the printed statistics are not real-time\n");
 
 	ret = send_cmd(ctx, CTL_CMD_STATUS, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
@@ -222,72 +222,13 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	print_single_value(stdout, params, "Status", rep->status != 0 ? "online" : "error", 1);
 
 	if (rep->status) {
-		print_single_value_int(stdout, params, "Server PID", rep->pid, 1);
-		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 0);
-
-		t = rep->start_time;
-		tm = localtime(&t);
-		print_time_ival7(buf, time(0), t);
-		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
-
-		print_single_value_ex(stdout, params, "Up since", str_since, buf, 1);
-
-		print_single_value_int(stdout, params, "Clients", rep->active_clients, 1);
-		if (params->debug) {
-			print_single_value_int(stdout, params, "Sec-mod client entries", rep->secmod_client_entries, 1);
-			print_single_value_int(stdout, params, "TLS DB entries", rep->stored_tls_sessions, 1);
-		}
-		print_single_value_int(stdout, params, "IPs in ban list", rep->banned_ips, 1);
-	}
-
-	print_end_block(stdout, params, 0);
-
-	status_rep__free_unpacked(rep, &pa);
-
-	ret = 0;
-	goto cleanup;
-
- error_status:
-	print_single_value(stdout, params, "Status", "offline", 0);
-	print_end_block(stdout, params, 0);
-	ret = 1;
-
- cleanup:
- 	free_reply(&raw);
-	return ret;
-}
-
-int handle_stats_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
-{
-	int ret;
-	struct cmd_reply_st raw;
-	StatusRep *rep;
-	char str_since[64];
-	char buf[MAX_TMPSTR_SIZE];
-	time_t t;
-	struct tm *tm;
-	PROTOBUF_ALLOCATOR(pa, ctx);
-
-	init_reply(&raw);
-
-	print_start_block(stdout, params);
-	if (NO_JSON(params))
-		printf("Note: the printed statistics are not real-time\n");
-
-	ret = send_cmd(ctx, CTL_CMD_STATUS, NULL, NULL, NULL, &raw);
-	if (ret < 0) {
-		goto error_status;
-	}
-
-	rep = status_rep__unpack(&pa, raw.data_size, raw.data);
-	if (rep == NULL)
-		goto error_status;
-
-	if (rep->status) {
 		print_separator(stdout, params);
 
 		if (NO_JSON(params))
 			printf("General info:\n");
+
+		print_single_value_int(stdout, params, "Server PID", rep->pid, 1);
+		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 0);
 
 		t = rep->start_time;
 		tm = localtime(&t);

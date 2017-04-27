@@ -300,7 +300,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 			}
 
 			ret =
-			    send_msg_to_worker(s, NULL, CMD_BAN_IP_REPLY, &reply,
+			    send_msg_to_worker(s, proc, CMD_BAN_IP_REPLY, &reply,
 					       (pack_size_func)
 					       ban_ip_reply_msg__get_packed_size,
 					       (pack_func)

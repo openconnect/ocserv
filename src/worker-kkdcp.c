@@ -110,7 +110,8 @@ int der_encode_inplace(uint8_t *raw, unsigned *raw_size, unsigned max_size, int 
 	
 }
 
-#define BUF_SIZE 16*1024
+/* max UDP size */
+#define BUF_SIZE 64*1024
 int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 {
 	int ret, e, fd = -1;

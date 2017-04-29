@@ -111,6 +111,7 @@ int der_encode_inplace(uint8_t *raw, unsigned *raw_size, unsigned max_size, int 
 }
 
 /* max UDP size */
+#define KKDCP_READ_TIMEOUT 20
 #define BUF_SIZE 64*1024
 int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 {
@@ -231,7 +232,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 			goto fail;
 		}
 
-		ret = force_read_timeout(fd, buf+4, mlength, 5);
+		ret = force_read_timeout(fd, buf+4, mlength, KKDCP_READ_TIMEOUT);
 		if (ret == -1) {
 			e = errno;
 			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));

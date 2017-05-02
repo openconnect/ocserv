@@ -207,8 +207,10 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	init_reply(&raw);
 
 	print_start_block(stdout, params);
-	if (NO_JSON(params))
-		printf("Note: the printed statistics are not real-time\n");
+	if (NO_JSON(params)) {
+		printf("Note: the printed statistics are not real-time; session time\n");
+		printf("as well as RX and TX data are updated on user disconnect\n");
+	}
 
 	ret = send_cmd(ctx, CTL_CMD_STATUS, NULL, NULL, NULL, &raw);
 	if (ret < 0) {
@@ -219,7 +221,6 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	if (rep == NULL)
 		goto error_status;
 
-	print_single_value(stdout, params, "Status", rep->status != 0 ? "online" : "error", 1);
 
 	if (rep->status) {
 		print_separator(stdout, params);
@@ -227,6 +228,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		if (NO_JSON(params))
 			printf("General info:\n");
 
+		print_single_value(stdout, params, "Status", rep->status != 0 ? "online" : "error", 1);
 		print_single_value_int(stdout, params, "Server PID", rep->pid, 1);
 		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 0);
 

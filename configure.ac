@@ -139,6 +139,12 @@ if test "$test_for_libnl" = yes;then
   fi
 fi
 
+PKG_CHECK_MODULES(GEOIP, geoip >= 1.6.0, [have_geoip=yes], [have_geoip=no])
+if test "$have_geoip" = yes;then
+AC_DEFINE(HAVE_GEOIP, 1, [have libgeoip])
+fi
+
+
 have_readline=no
 AC_LIB_HAVE_LINKFLAGS(readline,, [
 #include <stdio.h>
@@ -557,6 +563,7 @@ Summary of build options:
   readline:             ${have_readline}
   libnl3:               ${have_libnl3}
   liboath:              ${have_liboath}
+  libgeoip:             ${have_geoip}
   glibc (sha2crypt):    ${have_glibc}
   local talloc:         ${with_local_talloc}
   local protobuf-c:     ${with_local_protobuf_c}

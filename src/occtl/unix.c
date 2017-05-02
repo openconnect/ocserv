@@ -45,6 +45,7 @@
 #include <sys/un.h>
 #include <assert.h>
 #include "hex.h"
+#include "geoip.h"
 #include <vpn.h>
 #include <base64-helper.h>
 
@@ -1049,7 +1050,8 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 			print_pair_value(out, params, "Device", args->user[i]->tun, "MTU", int2str(tmpbuf, args->user[i]->mtu), 1);
 		else
 			print_single_value(out, params, "Device", args->user[i]->tun, 1);
-		print_pair_value(out, params, "Remote IP", args->user[i]->ip, "Local Device IP", args->user[i]->local_dev_ip, 1);
+		print_pair_value(out, params, "Remote IP", args->user[i]->ip, "Location", geo_lookup(args->user[i]->ip, tmpbuf, sizeof(tmpbuf)), 1);
+		print_single_value(out, params, "Local Device IP", args->user[i]->local_dev_ip, 1);
 
 		if (args->user[i]->local_ip != NULL && args->user[i]->local_ip[0] != 0 &&
 		    args->user[i]->remote_ip != NULL && args->user[i]->remote_ip[0] != 0) {

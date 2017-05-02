@@ -139,11 +139,18 @@ if test "$test_for_libnl" = yes;then
   fi
 fi
 
-PKG_CHECK_MODULES(GEOIP, geoip >= 1.6.0, [have_geoip=yes], [have_geoip=no])
-if test "$have_geoip" = yes;then
-AC_DEFINE(HAVE_GEOIP, 1, [have libgeoip])
-fi
+AC_ARG_WITH(geoip,
+  AS_HELP_STRING([--without-geoip], [do not try to use the geoip library]),
+  test_for_geoip=$withval,
+  test_for_geoip=yes)
 
+have_geoip=no
+if test "$test_for_geoip" = yes;then
+  PKG_CHECK_MODULES(GEOIP, geoip >= 1.6.0, [have_geoip=yes], [have_geoip=no])
+  if test "$have_geoip" = yes;then
+    AC_DEFINE(HAVE_GEOIP, 1, [have libgeoip])
+  fi
+fi
 
 have_readline=no
 AC_LIB_HAVE_LINKFLAGS(readline,, [

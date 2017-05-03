@@ -1,4 +1,4 @@
-* Version 0.11.8 (unreleased)
+* Version 0.11.8 (released 2017-05-03)
 - Corrected MTU adjustment due to MSS. Previously the MSS value was converted to a
   lower than the actual MTU resulting to worse (lower) MTU estimates.
   Furthermore, in Linux systems switch to the more accurate TCP_INFO socket option to

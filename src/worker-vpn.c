@@ -205,6 +205,12 @@ int get_psk_key(gnutls_session_t session,
 	return 0;
 }
 
+#if GNUTLS_VERSION_NUMBER < 0x030318
+# define VERS_STRING "-VERS-TLS-ALL"
+#else
+# define VERS_STRING "-VERS-ALL"
+#endif
+
 #define PSK_LABEL "EXPORTER-openconnect-psk"
 #define PSK_LABEL_SIZE sizeof(PSK_LABEL)-1
 /* We initial a PSK connection with ciphers and MAC matching the TLS negotiated
@@ -222,7 +228,7 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 		cipher = gnutls_cipher_get(ws->session);
 		mac = gnutls_mac_get(ws->session);
 
-		snprintf(prio_string, sizeof(prio_string), "%s:-VERS-ALL:-CIPHER-ALL:-MAC-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL:+%s:+%s",
+		snprintf(prio_string, sizeof(prio_string), "%s:"VERS_STRING":-CIPHER-ALL:-MAC-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL:+%s:+%s",
 			 ws->config->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
 	} else {
 		if (ws->config->match_dtls_and_tls) {
@@ -232,7 +238,7 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 
 		/* if we haven't an associated session, enable all ciphers we would have enabled
 		 * otherwise for TLS. */
-		snprintf(prio_string, sizeof(prio_string), "%s:-VERS-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL",
+		snprintf(prio_string, sizeof(prio_string), "%s:"VERS_STRING":-KX-ALL:+PSK:+VERS-DTLS-ALL",
 			 ws->config->priorities);
 	}
 

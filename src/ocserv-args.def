@@ -977,7 +977,7 @@ crl_number = 1
 _EOF_
 $ cat user-cert.pem >>revoked.pem
 $ certtool --generate-crl --load-ca-privkey ca-key.pem \
-	--load-ca-certificate ca.pem --load-certificate revoked.pem \
+	--load-ca-certificate ca-cert.pem --load-certificate revoked.pem \
 	--template crl.tmpl --outfile crl.pem
 @end example
 After that you may want to notify ocserv of the new CRL by using
@@ -987,7 +987,7 @@ When there are no revoked certificates an empty revocation list
 should be generated as follows.
 @example
 $ certtool --generate-crl --load-ca-privkey ca-key.pem \
-	--load-ca-certificate ca.pem \
+	--load-ca-certificate ca-cert.pem \
 	--template crl.tmpl --outfile crl.pem
 @end example
 _EOT_;

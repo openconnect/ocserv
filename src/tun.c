@@ -48,12 +48,15 @@
 #include <main.h>
 #include <ccan/list/list.h>
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 # include <net/if_var.h>
 # include <netinet/in_var.h>
 #endif
 #if defined(__OpenBSD__)
 # include <netinet6/in6_var.h>
+#endif
+#if defined(__DragonFly__)
+# include <net/tun/if_tun.h>
 #endif
 
 #ifdef __linux__
@@ -691,7 +694,7 @@ static void reset_ipv4_addr(struct proc_st *proc)
 
 	if (proc->ipv4 == NULL || proc->ipv4->lip_len == 0)
 		return;
-	
+
 #if defined(SIOCDIFADDR) && !defined(__linux__)
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 

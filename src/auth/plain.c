@@ -310,9 +310,15 @@ static int plain_auth_user(void *ctx, char *username, int username_size)
 static int plain_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 {
 	struct plain_ctx_st *pctx = ctx;
+	const char *p;
+
+	p = crypt(pass, pctx->cpass);
+	if (p == NULL) {
+		pctx->failed = 1;
+	}
 
 	if (pctx->failed || (pctx->cpass[0] != 0
-	    && strcmp(crypt(pass, pctx->cpass), pctx->cpass) != 0)) {
+	    && strcmp(p, pctx->cpass) != 0)) {
 
 		if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
 			pctx->pass_msg = pass_msg_failed;

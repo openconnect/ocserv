@@ -57,6 +57,8 @@ if ! $PKG_CONFIG --atleast-version=3.0 nettle; then
 		  [nettle uses the pre-3.x base64 API])
 fi
 
+AM_CONDITIONAL(GNUTLS_WITH_NEW_CERTS, $PKG_CONFIG --atleast-version=3.6.0 gnutls)
+
 AC_ARG_WITH(protobuf,
   AS_HELP_STRING([--without-protobuf], [use the included protobuf library]),
   test_for_protobuf=$withval,

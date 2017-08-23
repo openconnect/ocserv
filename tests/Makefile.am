@@ -19,11 +19,18 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/user-cert-testuser.pem test-stress data/test-user-config.config user-config/testuser \
 	data/test-sighup-key-change.config data/test-sighup-key-change.config user-config/testipnet \
 	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem \
-	data/test-san-cert.config certs/user-san-cert.pem
+	data/test-san-cert.config certs/user-san-cert.pem \
+	certs/server-cert-ed25519.pem certs/server-key-ed25519.pem data/test-ed25519.config \
+	certs/server-cert-rsa-pss.pem certs/server-key-rsa-pss.pem data/test-rsa-pss.config
+
 
 SUBDIRS = docker-ocserv docker-kerberos
 
 dist_check_SCRIPTS =  ocpasswd-test
+
+if GNUTLS_WITH_NEW_CERTS
+dist_check_SCRIPTS += server-cert-ed25519 server-cert-rsa-pss
+endif
 
 if ENABLE_ROOT_TESTS
 #docker tests

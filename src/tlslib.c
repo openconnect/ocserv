@@ -627,6 +627,7 @@ int ret;
 
 #ifndef UNDER_TEST
 struct key_cb_data {
+	unsigned pk;
 	unsigned idx; /* the index of the key */
 	struct sockaddr_un sa;
 	unsigned sa_len;
@@ -634,7 +635,7 @@ struct key_cb_data {
 
 static
 int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
-	gnutls_datum_t * output, unsigned type)
+	gnutls_datum_t * output, unsigned sigalgo, unsigned type)
 {
 	struct key_cb_data* cdata = userdata;
 	int sd = -1, ret, e;
@@ -661,6 +662,7 @@ int key_cb_common_func (gnutls_privkey_t key, void* userdata, const gnutls_datum
 
 	msg.has_key_idx = 1;
 	msg.key_idx = cdata->idx;
+	msg.sig = sigalgo;
 	msg.data.data = raw_data->data;
 	msg.data.len = raw_data->size;
 
@@ -702,20 +704,127 @@ error:
 	if (reply != NULL)
 		sec_op_msg__free_unpacked(reply, &pa);
 	return GNUTLS_E_INTERNAL_ERROR;
-
 }
 
+/* This returns the public key algorithm of the key;
+ * in addition it stores it to the userdata.
+ */
+static
+int key_cb_get_pk (gnutls_privkey_t key, void* userdata)
+{
+	struct key_cb_data* cdata = userdata;
+	int sd = -1, ret, e;
+	SecGetPkMsg msg = SEC_GET_PK_MSG__INIT;
+	SecGetPkMsg *reply = NULL;
+	PROTOBUF_ALLOCATOR(pa, userdata);
+	unsigned pk;
+
+	sd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sd == -1) {
+		e = errno;
+		syslog(LOG_ERR, "error opening socket: %s", strerror(e));
+		return GNUTLS_E_INTERNAL_ERROR;
+	}
+
+	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
+	if (ret == -1) {
+		e = errno;
+		syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s",
+			cdata->sa.sun_path, strerror(e));
+		goto error;
+	}
+
+	msg.key_idx = cdata->idx;
+	msg.pk = 0;
+
+	ret = send_msg(userdata, sd, CMD_SEC_GET_PK, &msg,
+			(pack_size_func)sec_get_pk_msg__get_packed_size,
+			(pack_func)sec_get_pk_msg__pack);
+	if (ret < 0) {
+		goto error;
+	}
+
+	ret = recv_msg(userdata, sd, CMD_SEC_GET_PK, (void*)&reply,
+		       (unpack_func)sec_get_pk_msg__unpack,
+		       DEFAULT_SOCKET_TIMEOUT);
+	if (ret < 0) {
+		e = errno;
+		syslog(LOG_ERR, "error receiving sec-mod reply: %s",
+				strerror(e));
+		goto error;
+	}
+	close(sd);
+	sd = -1;
+
+	pk = reply->pk;
+	cdata->pk = pk;
+
+	sec_get_pk_msg__free_unpacked(reply, &pa);
+	if (pk == 0) {
+		syslog(LOG_ERR, "error in public key algorithm!\n");
+		goto error;
+	}
+	return pk;
+
+error:
+	if (sd != -1)
+		close(sd);
+	if (reply != NULL)
+		sec_get_pk_msg__free_unpacked(reply, &pa);
+	return 0;
+}
+
+#if GNUTLS_VERSION_NUMBER >= 0x030600
+static int key_cb_info_func(gnutls_privkey_t key, unsigned int flags, void *userdata)
+{
+	struct key_cb_data *p = userdata;
+
+	if (flags & GNUTLS_PRIVKEY_INFO_PK_ALGO) {
+		return key_cb_get_pk(key, userdata);
+	} else if (flags & GNUTLS_PRIVKEY_INFO_HAVE_SIGN_ALGO) {
+		unsigned sig = GNUTLS_FLAGS_TO_SIGN_ALGO(flags);
+
+		if (gnutls_sign_supports_pk_algorithm(sig, p->pk))
+			return 1;
+
+		return 0;
+	}
+
+	return -1;
+}
+
+static
+int key_cb_sign_data_func (gnutls_privkey_t key, gnutls_sign_algorithm_t sig,
+			   void* userdata, unsigned int flags, const gnutls_datum_t *data,
+			   gnutls_datum_t *signature)
+{
+	return key_cb_common_func(key, userdata, data, signature, sig, CMD_SEC_SIGN_DATA);
+}
+
+static
+int key_cb_sign_hash_func (gnutls_privkey_t key, gnutls_sign_algorithm_t sig,
+			   void* userdata, unsigned int flags, const gnutls_datum_t *data,
+			   gnutls_datum_t *signature)
+{
+	if (sig == GNUTLS_SIGN_RSA_RAW)
+		return key_cb_common_func(key, userdata, data, signature, 0, CMD_SEC_SIGN);
+
+	return key_cb_common_func(key, userdata, data, signature, sig, CMD_SEC_SIGN_HASH);
+}
+
+#else
 static
 int key_cb_sign_func (gnutls_privkey_t key, void* userdata, const gnutls_datum_t * raw_data,
 	gnutls_datum_t * signature)
 {
-	return key_cb_common_func(key, userdata, raw_data, signature, CMD_SEC_SIGN);
+	return key_cb_common_func(key, userdata, raw_data, signature, 0, CMD_SEC_SIGN);
 }
+#endif
 
 static int key_cb_decrypt_func(gnutls_privkey_t key, void* userdata, const gnutls_datum_t * ciphertext,
 	gnutls_datum_t * plaintext)
 {
-	return key_cb_common_func(key, userdata, ciphertext, plaintext, CMD_SEC_DECRYPT);
+	return key_cb_common_func(key, userdata, ciphertext, plaintext, 0, CMD_SEC_DECRYPT);
 }
 
 static void key_cb_deinit_func(gnutls_privkey_t key, void* userdata)
@@ -785,9 +894,16 @@ int load_cert_files(main_server_st *s, tls_st *creds)
 		cdata->sa_len = SUN_LEN(&cdata->sa);
 
 		/* load the private key */
+#if GNUTLS_VERSION_NUMBER >= 0x030600
+		ret = gnutls_privkey_import_ext4(key, cdata, key_cb_sign_data_func,
+			key_cb_sign_hash_func,key_cb_decrypt_func,
+			key_cb_deinit_func, key_cb_info_func,
+			GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE);
+#else
 		ret = gnutls_privkey_import_ext2(key, gnutls_pubkey_get_pk_algorithm(pcert_list[0].pubkey, NULL),
 			cdata, key_cb_sign_func, key_cb_decrypt_func,
 			key_cb_deinit_func, GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE);
+#endif
 		GNUTLS_FATAL_ERR(ret);
 
 		ret = gnutls_certificate_set_key(creds->xcred, NULL, 0, pcert_list,

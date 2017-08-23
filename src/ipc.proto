@@ -237,6 +237,13 @@ message sec_op_msg
 {
 	optional uint32 key_idx = 1;
 	required bytes data = 2;
+	required uint32 sig = 3;
+}
+
+message sec_get_pk_msg
+{
+	required uint32 key_idx = 1;
+	required uint32 pk = 2;
 }
 
 

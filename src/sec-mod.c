@@ -206,6 +206,7 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_
 	gnutls_datum_t data, out;
 	int ret;
 	SecOpMsg *op;
+	SecGetPkMsg *pkm;
 	PROTOBUF_ALLOCATOR(pa, pool);
 
 	seclog(sec, LOG_DEBUG, "cmd [size=%d] %s\n", (int)buffer_size,
@@ -214,6 +215,73 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st * sec, cmd_
 	data.size = buffer_size;
 
 	switch (cmd) {
+#if GNUTLS_VERSION_NUMBER >= 0x030600
+	case CMD_SEC_GET_PK:
+		pkm = sec_get_pk_msg__unpack(&pa, data.size, data.data);
+		if (pkm == NULL) {
+			seclog(sec, LOG_INFO, "error unpacking sec get pk\n");
+			return -1;
+		}
+
+		i = pkm->key_idx;
+		if (i >= sec->key_size) {
+			seclog(sec, LOG_INFO,
+			       "received out-of-bounds key index (%d)", i);
+			return -1;
+		}
+
+		pkm->pk = gnutls_privkey_get_pk_algorithm(sec->key[i], NULL);
+
+		ret = send_msg(pool, cfd, CMD_SEC_GET_PK, pkm,
+			       (pack_size_func) sec_get_pk_msg__get_packed_size,
+			       (pack_func) sec_get_pk_msg__pack);
+
+		sec_get_pk_msg__free_unpacked(pkm, &pa);
+
+		if (ret < 0) {
+			seclog(sec, LOG_INFO, "error sending reply: %s",
+			       gnutls_strerror(ret));
+			return -1;
+		}
+
+		return ret;
+
+	case CMD_SEC_SIGN_DATA:
+	case CMD_SEC_SIGN_HASH:
+		op = sec_op_msg__unpack(&pa, data.size, data.data);
+		if (op == NULL) {
+			seclog(sec, LOG_INFO, "error unpacking sec op\n");
+			return -1;
+		}
+
+		i = op->key_idx;
+		if (op->has_key_idx == 0 || i >= sec->key_size) {
+			seclog(sec, LOG_INFO,
+			       "received out-of-bounds key index (%d)", i);
+			return -1;
+		}
+
+		data.data = op->data.data;
+		data.size = op->data.len;
+
+		if (cmd == CMD_SEC_SIGN_DATA) {
+			ret = gnutls_privkey_sign_data2(sec->key[i], op->sig, 0, &data, &out);
+		} else {
+			ret = gnutls_privkey_sign_hash2(sec->key[i], op->sig, 0, &data, &out);
+		}
+		sec_op_msg__free_unpacked(op, &pa);
+
+		if (ret < 0) {
+			seclog(sec, LOG_INFO, "error in crypto operation: %s",
+			       gnutls_strerror(ret));
+			return -1;
+		}
+
+		ret = handle_op(pool, cfd, sec, cmd, out.data, out.size);
+		gnutls_free(out.data);
+
+		return ret;
+#endif
 	case CMD_SEC_SIGN:
 	case CMD_SEC_DECRYPT:
 		op = sec_op_msg__unpack(&pa, data.size, data.data);

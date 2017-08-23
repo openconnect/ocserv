@@ -80,6 +80,9 @@ typedef enum {
 	CMD_SEC_AUTH_REPLY,
 	CMD_SEC_DECRYPT,
 	CMD_SEC_SIGN,
+	CMD_SEC_SIGN_DATA,
+	CMD_SEC_SIGN_HASH,
+	CMD_SEC_GET_PK,
 	CMD_SEC_CLI_STATS,
 
 	/* from main to sec-mod and vice versa */

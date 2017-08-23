@@ -43,9 +43,15 @@ echo "Connecting to obtain cookie with wrong username... "
 ( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
+# test locked account
+
+echo "Connecting to obtain cookie with locked account... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u locked --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
 #test special characters
 
-echo "Connecting to obtain cookie... "
+echo "Connecting to obtain cookie with special password... "
 ( echo "!@#$%^&*()<>" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 

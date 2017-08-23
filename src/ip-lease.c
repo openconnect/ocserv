@@ -137,8 +137,8 @@ static int is_ipv4_ok(main_server_st *s, struct sockaddr_storage *ip, struct soc
 	unsigned i;
 
 	memcpy(&broadcast, net, sizeof(broadcast));
-       	for (i=0;i<sizeof(struct in_addr);i++) {
-       		SA_IN_U8_P(&broadcast)[i] |= ~(SA_IN_U8_P(&mask)[i]);
+	for (i=0;i<sizeof(struct in_addr);i++) {
+		SA_IN_U8_P(&broadcast)[i] |= ~(SA_IN_U8_P(mask)[i]);
 	}
 
 	if (ip_lease_exists(s, ip, sizeof(struct sockaddr_in)) != 0 ||

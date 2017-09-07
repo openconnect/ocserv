@@ -1313,7 +1313,6 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	uint32_t slength;
 	unsigned data_size;
 	uint8_t *data = NULL;
-	char *groupname;
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	PROTOBUF_ALLOCATOR(pa, ctx);
 	struct termios tio_old, tio_new;
@@ -1428,10 +1427,6 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		if (HAVE_JSON(params)) {
 			common_info_cmd(rep2->user, stdout, params);
 		} else {
-			groupname = rep2->user->user[0]->groupname;
-			if (groupname == NULL || groupname[0] == 0)
-				groupname = NO_GROUP;
-
 			if (rep2->connected) {
 				printf("connected user '%s' (%u) from %s with IP %s\n",
 					rep2->user->user[0]->username,

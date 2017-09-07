@@ -243,7 +243,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		print_single_value_int(stdout, params, "Total sessions", rep->total_sessions_closed, 1);
 		print_single_value_int(stdout, params, "Total authentication failures", rep->total_auth_failures, 1);
 		print_single_value_int(stdout, params, "IPs in ban list", rep->banned_ips, 1);
-		if (params->debug) {
+		if (params && params->debug) {
 			print_single_value_int(stdout, params, "Sec-mod client entries", rep->secmod_client_entries, 1);
 			print_single_value_int(stdout, params, "TLS DB entries", rep->stored_tls_sessions, 1);
 		}

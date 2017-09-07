@@ -107,6 +107,25 @@ Build/asan:
       - ./*.log
       - tests/*.log
 
+static-analyzers/Fedora:
+  image: fedora:26
+  script:
+  - dnf install -y openconnect git which make xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c clang clang-analyzer cppcheck
+  - autoreconf -fvi
+  - scan-build ./configure
+  - scan-build --status-bugs -o scan-build-src make -j$(nproc)
+  - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i libopts
+  tags:
+  - shared
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - scan-build-lib/*
+      - scan-build-libdane/*
+
 Build/FreeBSD:
   script:
   - git submodule update --init && sh autogen.sh && LIBS="-L/usr/local/lib" ./configure --disable-nls --without-root-tests &&

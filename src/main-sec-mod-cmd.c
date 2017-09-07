@@ -254,11 +254,13 @@ static void append_routes(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 
 		if (s->config->append_routes) {
 			/* Append all global routes */
-			for (i=0;i<s->config->network.routes_size;i++) {
-				gc->routes[gc->n_routes] = talloc_strdup(proc, s->config->network.routes[i]);
-				if (gc->routes[gc->n_routes] == NULL)
-					break;
-				gc->n_routes++;
+			if (gc->routes) {
+				for (i=0;i<s->config->network.routes_size;i++) {
+					gc->routes[gc->n_routes] = talloc_strdup(proc, s->config->network.routes[i]);
+					if (gc->routes[gc->n_routes] == NULL)
+						break;
+					gc->n_routes++;
+				}
 			}
 
 			/* Append no-routes */

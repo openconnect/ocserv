@@ -347,7 +347,6 @@ static int setup_dtls_connection(struct worker_st *ws)
 	} else {
 		if (!ws->config->dtls_legacy) {
 			oclog(ws, LOG_INFO, "CISCO client compatibility (dtls-legacy) is disabled; will not setup a DTLS session");
-			ret = -1;
 			goto fail;
 		}
 		oclog(ws, LOG_INFO, "setting up DTLS-0.9 connection");
@@ -2020,6 +2019,7 @@ static int connect_handler(worker_st * ws)
 			ret =
 			    cstp_printf(ws, "X-DTLS-CipherSuite: %s\r\n",
 				       ws->req.selected_ciphersuite->oc_name);
+			SEND_ERR(ret);
 
 			/* only send the X-DTLS-MTU in the legacy protocol, as there
 			 * the DTLS ciphersuite/version is negotiated and we cannot predict

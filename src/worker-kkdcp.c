@@ -151,7 +151,6 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	buf = talloc_size(ws, length);
 	if (buf == NULL) {
 		oclog(ws, LOG_ERR, "kkdcp: memory error");
-		reason = "kkdcp: memory error";
 		return -1;
 	}
 
@@ -219,7 +218,6 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 			e = errno;
 			oclog(ws, LOG_ERR, "kkdcp: recv error: %s", strerror(e));
 			reason = "kkdcp: error receiving from server";
-			ret = -1;
 			goto fail;
 		}
 
@@ -228,7 +226,6 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		if (mlength >= BUF_SIZE-4) {
 			oclog(ws, LOG_ERR, "kkdcp: too long message (%d bytes)", (int)mlength);
 			reason = "kkdcp: error receiving from server";
-			ret = -1;
 			goto fail;
 		}
 

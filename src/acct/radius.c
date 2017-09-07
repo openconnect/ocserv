@@ -173,7 +173,6 @@ VALUE_PAIR *send = NULL, *recvd = NULL;
 	syslog(LOG_DEBUG, "radius-auth: sending session interim update");
 
 	if (rc_avpair_add(rh, &send, PW_ACCT_STATUS_TYPE, &status_type, -1, 0) == NULL) {
-		ret = -1;
 		goto cleanup;
 	}
 

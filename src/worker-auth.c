@@ -937,7 +937,6 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		success_msg_foot_size = strlen(success_msg_foot);
 	} else {
 		success_msg_head = oc_success_msg_head;
-		success_msg_foot = OC_SUCCESS_MSG_FOOT;
 		if (ws->config->xml_config_file) {
 			success_msg_foot = talloc_asprintf(ws, OC_SUCCESS_MSG_FOOT_PROFILE,
 				ws->config->xml_config_file, ws->config->xml_config_hash);
@@ -1188,7 +1187,7 @@ int parse_reply(worker_st * ws, char *body, unsigned body_length,
 		xml = 1;
 		if (xml_field) {
 			field = xml_field;
-			field_size = xml_field_size;
+			/*field_size = xml_field_size;*/
 		}
 
 		snprintf(temp1, sizeof(temp1), "<%s>", field);

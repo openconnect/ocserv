@@ -1317,6 +1317,7 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	PROTOBUF_ALLOCATOR(pa, ctx);
 	struct termios tio_old, tio_new;
 	SIGHANDLER_T old_sighandler;
+	fd_set rfds;
 
 	init_reply(&raw);
 
@@ -1345,10 +1346,11 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 	/* start listening for updates */
 	while(1) {
-		fd_set rfds;
-
 		FD_ZERO(&rfds);
+#ifndef __clang_analyzer__
+		/* for some reason this confuses the clang static analyzer */
 		FD_SET(STDIN_FILENO, &rfds);
+#endif
 		FD_SET(ctx->fd, &rfds);
 
 		ret = select(MAX(STDIN_FILENO,ctx->fd)+1, &rfds, NULL, NULL, NULL);

@@ -1419,7 +1419,7 @@ int add_multi_line_val(void *pool, const char *name, char ***s_name, size_t *num
 
 void clear_old_configs(struct perm_cfg_st* config)
 {
-	attic_entry_st *e, *pos;
+	attic_entry_st *e = NULL, *pos;
 
 	/* go through the attic and clear old configurations if unused */
 	list_for_each_safe(&config->attic, e, pos, list) {

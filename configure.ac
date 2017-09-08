@@ -509,6 +509,8 @@ if test "$have_cwrap_pam" = yes; then
 		AC_SUBST([PAMDIR], [/usr/lib64/security])
 	elif test -f /usr/lib/security/pam_oath.so;then
 		AC_SUBST([PAMDIR], [/usr/lib/security])
+	elif test -f /lib/security/pam_oath.so;then
+		AC_SUBST([PAMDIR], [/lib/security])
 	else
 		AC_SUBST([PAMDIR], [/usr/lib/security])
 	fi

@@ -40,14 +40,15 @@ dist_check_SCRIPTS += radius-test full-test unix-test kerberos-test radius-test-
 
 #other root requiring tests
 dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script test-pass-opt-cert \
-	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip test-gssapi \
+	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban
 endif
 
 if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
-	test-enc-key test-sighup-key-change test-get-cert test-san-cert
+	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
+	test-gssapi
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

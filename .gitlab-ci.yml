@@ -5,8 +5,8 @@ Build/Debian:
   script:
   - apt-get update
   - apt-get install -y openconnect libuid-wrapper libpam-wrapper libnss-wrapper libsocket-wrapper gss-ntlmssp git-core make autoconf libtool autopoint gettext automake nettle-dev libwrap0-dev libpam0g-dev liblz4-dev libseccomp-dev libreadline-dev libnl-route-3-dev libkrb5-dev liboath-dev libradcli-dev libprotobuf-c0-dev libtalloc-dev libhttp-parser-dev libpcl1-dev libopts25-dev autogen protobuf-c-compiler gperf liblockfile-bin nuttcp libpam-oath libev-dev libgnutls28-dev gnutls-bin
-  - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure --without-root-tests && make -j$(nproc) && make check -j$(nproc)
+  - git submodule update --init && autoreconf -fvi &&
+    ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   except:
@@ -23,8 +23,8 @@ Build/Centos7:
   - yum install -y epel-release
 # not installing gssntlmssp as only kerberos seems to work reliably
   - yum install -y GeoIP-devel openconnect make git which xz autoconf libtool automake gettext-devel  gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper pam_oath gnutls-utils git2cl
-  - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure --without-root-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
+  - git submodule update --init && autoreconf -fvi &&
+    ./configure --without-docker-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
     make local-code-coverage-output && make files-update && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
   - shared
@@ -41,8 +41,8 @@ Build/Fedora26:
   image: fedora:26
   script:
   - dnf install -y GeoIP-devel openconnect make git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
-  - git submodule update --init && autoreconf -fvi && mkdir -p build && cd build &&
-    ../configure --without-root-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
+  - git submodule update --init && autoreconf -fvi &&
+    ./configure --without-docker-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
     make local-code-coverage-output && make files-update && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
   - shared
@@ -61,8 +61,8 @@ Build/Centos6:
   - yum install -y epel-release
   - yum install -y openconnect make git which xz autoconf libtool automake gettext-devel gnutls30-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel protobuf-c gperf lockfile-progs nuttcp uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - sed -i 's/AM_PROG_AR//g' configure.ac
-  - git submodule update --init && autoreconf -fvi && mkdir -p build
-  - cd build && CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ../configure --disable-systemd --enable-local-libopts --without-root-tests && make && make check -j$(nproc)
+  - git submodule update --init && autoreconf -fvi
+  - CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ./configure --disable-systemd --enable-local-libopts --without-docker-tests && make && make check -j$(nproc)
   tags:
   - shared
   except:
@@ -79,7 +79,7 @@ Build/minimal:
   - yum install -y epel-release
   - yum install -y openconnect git make which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && 
-    ./configure --without-root-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   except:
@@ -96,7 +96,7 @@ asan/Fedora:
   script:
   - dnf install -y openconnect git which make xz autoconf libtool automake gettext-devel libasan-static libasan gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
-    ./configure --without-root-tests && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   except:
@@ -129,7 +129,8 @@ static-analyzers/Fedora:
 
 Build/FreeBSD:
   script:
-  - git submodule update --init && sh autogen.sh && LIBS="-L/usr/local/lib" ./configure --disable-nls --without-root-tests &&
+  - git submodule update --init && sh autogen.sh && mkdir build
+  - cd build && LIBS="-L/usr/local/lib" ../configure --disable-nls --without-root-tests &&
     gmake -j$(sysctl hw.ncpu | awk '{print $2}') && gmake check -j$(sysctl hw.ncpu | awk '{print $2}')
   tags:
   - freebsd

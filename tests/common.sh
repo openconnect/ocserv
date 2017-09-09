@@ -31,8 +31,7 @@ if ! test -x ${OPENCONNECT};then
 fi
 
 if test -z "$NO_NEED_ROOT";then
-	id|grep root >/dev/null 2>&1
-	if [ $? != 0 ];then
+	if test "$(id -u)" != "0";then
 		exit 77
 	fi
 else

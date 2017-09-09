@@ -100,6 +100,13 @@ AC_ARG_WITH(root-tests,
 
 AM_CONDITIONAL(ENABLE_ROOT_TESTS, test "x$root_tests" = xyes)
 
+AC_ARG_WITH(docker-tests,
+  AS_HELP_STRING([--without-docker-tests], [disable any tests requiring docker]),
+  docker_tests=$withval,
+  docker_tests=yes)
+
+AM_CONDITIONAL(ENABLE_DOCKER_TESTS, test "x$docker_tests" = xyes)
+
 AC_ARG_WITH(local-talloc,
   AS_HELP_STRING([--with-local-talloc], [use the included talloc library]),
   no_test_for_talloc=$withval,

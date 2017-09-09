@@ -33,10 +33,12 @@ dist_check_SCRIPTS += server-cert-ed25519 server-cert-rsa-pss
 endif
 
 if ENABLE_ROOT_TESTS
+if ENABLE_DOCKER_TESTS
 #docker tests
 dist_check_SCRIPTS += radius-test full-test unix-test kerberos-test radius-test-config \
 	proxyproto-test proxyproto-v1-test proxyproto-unix-test otp-test  \
 	reload-info-test radius-group-test
+endif
 
 #other root requiring tests
 dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script test-pass-opt-cert \

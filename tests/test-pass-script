@@ -28,6 +28,12 @@ PORT=4448
 rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
 
+$OPENCONNECT --help|grep local-hostname
+if test $? != 0;then
+	echo "Openconnect doesn't support --local-hostname"
+	exit 77
+fi
+
 echo "Testing local backend with username-password... "
 
 launch_server -d 1 -f -c "${srcdir}/data/test-pass-script.config" & PID=$!

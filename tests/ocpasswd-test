@@ -51,6 +51,19 @@ if test $? != 0;then
 	exit 1
 fi
 
+echo "Double locking user... "
+$OCPASSWD -c passwd.out -l test
+if test $? != 0;then
+	echo "Failed double locking user test"
+	exit 1
+fi
+
+grep ':!!\$' passwd.out >/dev/null 2>&1
+if test $? = 0;then
+	echo "Failed double locking user test. double exclamation marks were found"
+	exit 1
+fi
+
 echo "Deleting user... "
 $OCPASSWD -c passwd.out -d test
 if test $? != 0;then

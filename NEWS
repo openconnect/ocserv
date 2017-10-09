@@ -5,6 +5,8 @@
 - Fixed null pointer dereference when parsing locked accounts in plain
   password authentication.
 - Add support for RSA-PSS and Ed25519 private keys when used with GnuTLS 3.6.0.
+- ocpasswd: when locking an account multiple times, add the '!' character
+  only once. Based on patch by Frank Huang.
 
 
 * Version 0.11.8 (released 2017-05-03)

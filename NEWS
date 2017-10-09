@@ -1,4 +1,4 @@
-* Version 0.11.9 (unreleased)
+* Version 0.11.9 (released 2017-10-09)
 - Fixed bug which caused the acceptable of invalid IPv4 address as valid (#112).
 - Fixed compatibility with gnutls 3.3.8 (used in debian jessie) by avoiding the
   use of the 'VERS-ALL' priority string which was introduced in 3.3.24.

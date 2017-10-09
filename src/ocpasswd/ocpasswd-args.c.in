@@ -63,7 +63,7 @@ extern FILE * option_usage_fp;
  *  static const strings for ocpasswd options
  */
 static char const ocpasswd_opt_strs[1516] =
-/*     0 */ "ocpasswd 0.11.8\n"
+/*     0 */ "ocpasswd 0.11.9\n"
             "Copyright (C) 2013-2017 Nikos Mavrogiannopoulos, all rights reserved.\n"
             "This is free software. It is licensed for use, modification and\n"
             "redistribution under the terms of the GNU General Public License,\n"
@@ -105,7 +105,7 @@ static char const ocpasswd_opt_strs[1516] =
 /*  1270 */ "\n\0"
 /*  1272 */ "This program is openconnect password (ocpasswd) utility.  It allows the\n"
             "generation and handling of a 'plain' password file used by ocserv.\n\0"
-/*  1412 */ "ocpasswd 0.11.8\0"
+/*  1412 */ "ocpasswd 0.11.9\0"
 /*  1428 */ "Usage: ocpasswd -c [passwd] [options] username\n"
             "ocpasswd --help for usage instructions.\n";
 
@@ -588,7 +588,7 @@ static void bogus_function(void) {
      translate option names.
    */
   /* referenced via ocpasswdOptions.pzCopyright */
-  puts(_("ocpasswd 0.11.8\n\
+  puts(_("ocpasswd 0.11.9\n\
 Copyright (C) 2013-2017 Nikos Mavrogiannopoulos, all rights reserved.\n\
 This is free software. It is licensed for use, modification and\n\
 redistribution under the terms of the GNU General Public License,\n\
@@ -641,7 +641,7 @@ Usage:  %s [ -<flag> [<val>] | --<name>[{=| }<val>] ]... [username]\n"));
 generation and handling of a 'plain' password file used by ocserv.\n"));
 
   /* referenced via ocpasswdOptions.pzFullVersion */
-  puts(_("ocpasswd 0.11.8"));
+  puts(_("ocpasswd 0.11.9"));
 
   /* referenced via ocpasswdOptions.pzFullUsage */
   puts(_("<<<NOT-FOUND>>>"));

@@ -64,7 +64,7 @@ extern FILE * option_usage_fp;
  *  static const strings for ocserv options
  */
 static char const ocserv_opt_strs[1647] =
-/*     0 */ "ocserv 0.11.8\n"
+/*     0 */ "ocserv 0.11.9\n"
             "Copyright (C) 2013-2017 Nikos Mavrogiannopoulos, all rights reserved.\n"
             "This is free software. It is licensed for use, modification and\n"
             "redistribution under the terms of the GNU General Public License,\n"
@@ -107,7 +107,7 @@ static char const ocserv_opt_strs[1647] =
 /*  1366 */ "Openconnect VPN server (ocserv) is a VPN server compatible with the\n"
             "openconnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n"
             "protocol which is used by several CISCO routers.\n\0"
-/*  1558 */ "ocserv 0.11.8\0"
+/*  1558 */ "ocserv 0.11.9\0"
 /*  1572 */ "Usage: ocserv [options] -c [config]\n"
             "ocserv --help for usage instructions.\n";
 
@@ -650,7 +650,7 @@ static void bogus_function(void) {
      translate option names.
    */
   /* referenced via ocservOptions.pzCopyright */
-  puts(_("ocserv 0.11.8\n\
+  puts(_("ocserv 0.11.9\n\
 Copyright (C) 2013-2017 Nikos Mavrogiannopoulos, all rights reserved.\n\
 This is free software. It is licensed for use, modification and\n\
 redistribution under the terms of the GNU General Public License,\n\
@@ -704,7 +704,7 @@ openconnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n\
 protocol which is used by several CISCO routers.\n"));
 
   /* referenced via ocservOptions.pzFullVersion */
-  puts(_("ocserv 0.11.8"));
+  puts(_("ocserv 0.11.9"));
 
   /* referenced via ocservOptions.pzFullUsage */
   puts(_("<<<NOT-FOUND>>>"));

@@ -134,6 +134,10 @@ const char *cmd_request_to_str(unsigned _cmd)
 		return "sm: ban IP";
 	case CMD_SECM_BAN_IP_REPLY:
 		return "sm: ban IP reply";
+	case CMD_SECM_LIST_COOKIES:
+		return "sm: list cookies";
+	case CMD_SECM_LIST_COOKIES_REPLY:
+		return "sm: list cookies reply";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

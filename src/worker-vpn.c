@@ -362,7 +362,10 @@ static int setup_dtls_connection(struct worker_st *ws)
 	gnutls_transport_set_pull_timeout_function(session, dtls_pull_timeout);
 	gnutls_transport_set_ptr(session, &ws->dtls_tptr);
 
-	gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+	/* we decrease the default retransmission timeout to bring
+	 * our DTLS support in par with the DTLS1.3 recommendations.
+	 */
+	gnutls_dtls_set_timeouts(session, 400, 60*1000);
 
 	ws->udp_state = UP_HANDSHAKE;
 

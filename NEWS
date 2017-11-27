@@ -1,3 +1,8 @@
+* Version 0.11.10 (unreleased)
+- Increased the DTLS handshake timeout to 60 seconds and decreased
+  retransmission time to 400ms.
+
+
 * Version 0.11.9 (released 2017-10-09)
 - Fixed bug which caused the acceptance of invalid IPv4 address as valid (#112).
 - Fixed compatibility with gnutls 3.3.8 (used in debian jessie) by avoiding the

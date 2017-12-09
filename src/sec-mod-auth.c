@@ -143,7 +143,7 @@ int send_sec_auth_reply(int cfd, sec_mod_st * sec, client_entry_st * entry, AUTH
 		}
 
 		/* calculate time in auth for this client */
-		update_auth_time_stats(sec, time(0) - entry->time);
+		update_auth_time_stats(sec, time(0) - entry->created);
 
 		msg.has_sid = 1;
 		msg.sid.data = entry->sid;
@@ -521,7 +521,8 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 	talloc_free(lpool);
 
 	seclog(sec, LOG_INFO, "initiating session for user '%s' "SESSION_STR, e->acct_info.username, e->acct_info.safe_id);
-	e->time = -1;
+	/* refresh cookie validity */
+	e->exptime = time(0) + sec->config->cookie_timeout + AUTH_SLACK_TIME;
 	e->in_use++;
 
 	return 0;

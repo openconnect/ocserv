@@ -709,16 +709,14 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 		/* add header */
 		if (i == 0) {
 			fprintf(out, "%6s %8s %8s %14s %24s %8s %8s\n",
-				"session", "user", "group", "ip", "user agent", "updated", "status");
+				"session", "user", "group", "ip", "user agent", "created", "status");
 		}
 
-		t = rep->cookies[i]->last_modified;
+		t = rep->cookies[i]->created;
 		if (t > 0) {
 			tm = localtime(&t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 			print_time_ival7(tmpbuf, time(0), t);
-		} else {
-			strlcpy(tmpbuf, "(active)", sizeof(tmpbuf));
 		}
 
 		groupname = rep->cookies[i]->groupname;
@@ -1193,15 +1191,13 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
 		print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
 		print_single_value(out, params, "State", ps_status_to_str(args->cookies[i]->status, 1), 1);
-		t = args->cookies[i]->last_modified;
+		t = args->cookies[i]->created;
 
 		if (t > 0) {
 			tm = localtime(&t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
-		} else {
-			strlcpy(str_since, "(active)", sizeof(str_since));
 		}
-		print_single_value(out, params, "Last Modified", str_since, 1);
+		print_single_value(out, params, "Created", str_since, 1);
 
 		username = args->cookies[i]->username;
 		if (username == NULL || username[0] == 0)

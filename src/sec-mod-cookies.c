@@ -85,9 +85,9 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		cookies[msg.n_cookies].tls_auth_ok = t->tls_auth_ok;
 
 		if (t->created > 0)
-			cookies[msg.n_cookies].last_modified = t->created;
+			cookies[msg.n_cookies].created = t->created;
 		else
-			cookies[msg.n_cookies].last_modified = 0;
+			cookies[msg.n_cookies].created = 0;
 		cookies[msg.n_cookies].username = t->acct_info.username;
 		cookies[msg.n_cookies].groupname = t->acct_info.groupname;
 		cookies[msg.n_cookies].user_agent = t->acct_info.user_agent;

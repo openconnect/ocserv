@@ -305,7 +305,7 @@ message cookie_int_msg
 	required bytes safe_id = 1;
 	required bool session_is_open = 2;
 	required bool tls_auth_ok = 3;
-	required uint32 last_modified = 4;
+	required uint32 created = 4;
 	required string username = 5;
 	optional string groupname = 6;
 	required string user_agent = 7;

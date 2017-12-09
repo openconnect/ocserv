@@ -1,6 +1,13 @@
 * Version 0.11.10 (unreleased)
 - Increased the DTLS handshake timeout to 60 seconds and decreased
   retransmission time to 400ms.
+- Improved compatibility with certain anyconnect clients which
+  disconnect and reconnect after session establishment. Sessions
+  which are explicitly terminated by the user, remain active for
+  few seconds (10) to allow for anyconnect clients' reconnections.
+- Improved cookie behavior on client timeout. The cookies remain
+  active for their validity time, allowing mobile clients to get
+  into sleep and recover session using the same cookie.
 
 
 * Version 0.11.9 (released 2017-10-09)

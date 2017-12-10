@@ -706,6 +706,7 @@ error:
 	return GNUTLS_E_INTERNAL_ERROR;
 }
 
+#if GNUTLS_VERSION_NUMBER >= 0x030600
 /* This returns the public key algorithm of the key;
  * in addition it stores it to the userdata.
  */
@@ -774,7 +775,6 @@ error:
 	return 0;
 }
 
-#if GNUTLS_VERSION_NUMBER >= 0x030600
 static int key_cb_info_func(gnutls_privkey_t key, unsigned int flags, void *userdata)
 {
 	struct key_cb_data *p = userdata;

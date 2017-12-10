@@ -137,7 +137,7 @@ int lz4_compress(void *dst, int dstlen, const void *src, int srclen)
 {
 	/* we intentionally restrict output to srclen so that
 	 * compression fails early for packets that expand. */
-	return LZ4_compress_limitedOutput(src, dst, srclen, srclen);
+	return LZ4_compress_default(src, dst, srclen, srclen);
 }
 #endif
 

@@ -405,7 +405,9 @@ auth-timeout = 240
 #idle-timeout = 1200
 
 # The time (in seconds) that a client is allowed to stay connected
-# Unset to disable.
+# Unset to disable. When set a client will be disconnected after being
+# continuously connected for this amount of time, and its cookies will
+# be invalidated (i.e., re-authentication will be required).
 #session-timeout = 86400
 
 # The time (in seconds) that a mobile client is allowed to stay idle (no

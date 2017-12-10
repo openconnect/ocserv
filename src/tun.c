@@ -540,8 +540,13 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	ret = get_ip_leases(s, proc);
 	if (ret < 0)
 		return ret;
-	snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%%d",
-		 s->config->network.name);
+	ret = snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%%d",
+		       s->config->network.name);
+	if (ret != strlen(proc->tun_lease.name)) {
+		mslog(s, NULL, LOG_ERR, "Truncation error in tun name: %s; adjust 'device' option\n",
+		      proc->tun_lease.name);
+		return -1;
+	}
 
 	/* No need to free the lease after this point.
 	 */

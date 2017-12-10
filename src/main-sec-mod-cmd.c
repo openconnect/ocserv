@@ -678,8 +678,12 @@ int run_sec_mod(main_server_st * s, int *sync_fd)
 		 s->perm_config->socket_file_prefix, (unsigned)getpid());
 
 	if (s->perm_config->chroot_dir != NULL) {
-		snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
-			 s->perm_config->chroot_dir, s->socket_file);
+		ret = snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
+			       s->perm_config->chroot_dir, s->socket_file);
+		if (ret != strlen(s->full_socket_file)) {
+			mslog(s, NULL, LOG_ERR, "too long chroot path; cannot create socket: %s", s->full_socket_file);
+			exit(1);
+		}
 	} else {
 		strlcpy(s->full_socket_file, s->socket_file, sizeof(s->full_socket_file));
 	}

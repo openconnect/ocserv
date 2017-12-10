@@ -629,6 +629,7 @@ static void load_iroutes(struct cfg_st *config)
 {
 	DIR *dir;
 	struct dirent *r;
+	int ret;
 	char path[_POSIX_PATH_MAX];
 
 	if (config->per_user_dir == NULL)
@@ -639,7 +640,10 @@ static void load_iroutes(struct cfg_st *config)
 		do {
 			r = readdir(dir);
 			if (r != NULL && r->d_type == DT_REG) {
-				snprintf(path, sizeof(path), "%s/%s", config->per_user_dir, r->d_name);
+				ret = snprintf(path, sizeof(path), "%s/%s", config->per_user_dir, r->d_name);
+				if (ret != strlen(path)) {
+					fprintf(stderr, NOTESTR"path name too long and truncated: %s\n", path);
+				}
 				append_iroutes_from_file(config, path);
 			}
 		} while(r != NULL);

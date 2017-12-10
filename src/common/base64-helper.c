@@ -30,7 +30,7 @@ void oc_base64_encode (const char *restrict in, size_t inlen,
 		snprintf(out, outlen, "(too long data)");
 		return;
 	}
-	base64_encode_raw((uint8_t*)out, inlen, (uint8_t*)in);
+	base64_encode_raw((void*)out, inlen, (uint8_t*)in);
 	out[raw] = 0;
 	return;
 }
@@ -52,7 +52,7 @@ oc_base64_decode(const uint8_t *src, unsigned src_length,
 			*dst_length = len;
 	}
 #else
-	ret = base64_decode_update(&ctx, dst_length, dst, src_length, src);
+	ret = base64_decode_update(&ctx, dst_length, dst, src_length, (void*)src);
 #endif
 
 	if (ret == 0)

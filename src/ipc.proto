@@ -310,6 +310,7 @@ message cookie_int_msg
 	optional string groupname = 6;
 	required string user_agent = 7;
 	required string remote_ip = 8;
+	required uint32 expires = 9;
 	required uint32 status = 10; /* the authentication status (PS_*) */
 }
 

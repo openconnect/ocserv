@@ -1164,6 +1164,7 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 	char *username = "";
 	char *groupname = "";
 	char str_since[65];
+	char str_since2[65];
 	struct tm *tm;
 	time_t t;
 	unsigned at_least_one = 0;
@@ -1197,7 +1198,14 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 			tm = localtime(&t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 		}
-		print_single_value(out, params, "Created", str_since, 1);
+
+		t = args->cookies[i]->expires;
+
+		if (t > 0) {
+			tm = localtime(&t);
+			strftime(str_since2, sizeof(str_since2), DATE_TIME_FMT, tm);
+		}
+		print_pair_value(out, params, "Created", str_since, "Expires", str_since2, 1);
 
 		username = args->cookies[i]->username;
 		if (username == NULL || username[0] == 0)

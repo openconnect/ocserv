@@ -73,7 +73,11 @@ if test $? != 0;then
 fi
 
 rm -f "${PIDFILE2}"
-sleep 3
+# We give the server few seconds to cleanup before we retry the cookie.
+# In 0.11.10 the server behavior changed to allow immediate reconnection,
+# with a cookie that was explicitly terminated by the user, as anyconnect
+# clients follow that behavioral pattern.
+sleep 12
 
 echo "Proper termination and connecting again with same (invalidated) cookie... "
 #( echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||

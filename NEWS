@@ -4,7 +4,7 @@
 - Improved compatibility with certain anyconnect clients which
   disconnect and reconnect after session establishment. Sessions
   which are explicitly terminated by the user, remain active for
-  few seconds (10) to allow for anyconnect clients' reconnections.
+  few seconds (15) to allow for anyconnect clients' reconnections.
 - Improved cookie behavior on client timeout. The cookies remain
   active for their validity time, allowing mobile clients to get
   into sleep and recover session using the same cookie.

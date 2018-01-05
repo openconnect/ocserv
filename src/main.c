@@ -863,7 +863,7 @@ int sfd = -1;
 			ret = bind(sfd, (struct sockaddr *)&our_addr, our_addr_size);
 			if (ret == -1) {
 				e = errno;
-				mslog(s, proc_to_send, LOG_ERR, "bind UDP to %s: %s",
+				mslog(s, proc_to_send, LOG_INFO, "bind UDP to %s: %s",
 				      human_addr((struct sockaddr*)&listener->addr, listener->addr_len, tbuf, sizeof(tbuf)),
 				      strerror(e));
 			}

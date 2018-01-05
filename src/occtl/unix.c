@@ -1194,6 +1194,9 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		print_single_value(out, params, "State", ps_status_to_str(args->cookies[i]->status, 1), 1);
 		t = args->cookies[i]->created;
 
+		str_since[0] = 0;
+		str_since2[0] = 0;
+
 		if (t > 0) {
 			tm = localtime(&t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);

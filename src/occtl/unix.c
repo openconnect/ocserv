@@ -51,7 +51,7 @@
 
 /* In JSON output include fields which were no longer available after 0.11.7
  */
-#define OCSERV_0_11_6_COMPAT 1
+#undef OCSERV_0_11_6_COMPAT
 
 static
 int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);

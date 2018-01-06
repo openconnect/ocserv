@@ -106,7 +106,8 @@ bin_PROGRAMS = occtl/occtl
 occtl_occtl_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/occtl $(LIBNL3_CFLAGS) $(GEOIP_CFLAGS)
 occtl_occtl_SOURCES = occtl/occtl.c occtl/pager.c occtl/occtl.h occtl/time.c occtl/cache.c \
 	occtl/ip-cache.c occtl/nl.c occtl/ctl.h occtl/print.c occtl/json.c occtl/json.h \
-	occtl/hex.c occtl/hex.h occtl/unix.c occtl/geoip.c occtl/geoip.h
+	occtl/hex.c occtl/hex.h occtl/unix.c occtl/geoip.c occtl/geoip.h \
+	occtl/session-cache.c
 occtl_occtl_LDADD = ../gl/libgnu.a libcommon.a $(LIBREADLINE_LIBS) \
 	$(LIBNL3_LIBS) $(NEEDED_LIBPROTOBUF_LIBS) $(LIBTALLOC_LIBS) libccan.a \
 	libipc.a $(NEEDED_LIBPROTOBUF_LIBS) $(CODE_COVERAGE_LDFLAGS) \

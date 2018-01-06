@@ -49,6 +49,10 @@ char* search_for_user(unsigned idx, const char* match, int match_size);
 void entries_add(void *pool, const char* user, unsigned user_size, unsigned id);
 void entries_clear(void);
 
+void session_entries_add(void *pool, const char* session);
+void session_entries_clear(void);
+char* search_for_session(unsigned idx, const char* match, int match_size);
+
 char* search_for_ip(unsigned idx, const char* match, int match_size);
 void ip_entries_add(void *pool, const char* ip, unsigned ip_size);
 void ip_entries_clear(void);
@@ -81,8 +85,10 @@ int handle_status_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_users_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_iroutes_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_list_banned_ips_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
-int handle_list_all_cookies_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
-int handle_list_valid_cookies_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_list_all_sessions_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_list_valid_sessions_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+int handle_show_session_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
+
 int handle_list_banned_points_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_show_user_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);
 int handle_show_id_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params);

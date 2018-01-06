@@ -56,7 +56,9 @@
 static
 int common_info_cmd(UserListRep *args, FILE *out, cmd_params_st *params);
 static
-int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params, unsigned all);
+int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
+		    cmd_params_st *params,
+		    const char *lsid, unsigned all);
 
 struct unix_ctx {
 	int fd;
@@ -670,12 +672,12 @@ int handle_list_users_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *
 	return ret;
 }
 
-static char *shorten(void *cookie, unsigned cookie_size, unsigned small)
+static char *shorten(void *cookie, unsigned session_id_size, unsigned small)
 {
 	static char psid[SAFE_ID_SIZE];
 
-	assert(cookie_size <= SAFE_ID_SIZE);
-	memcpy(psid, cookie, cookie_size);
+	assert(session_id_size <= SAFE_ID_SIZE);
+	memcpy(psid, cookie, session_id_size);
 
 	if (small)
 		psid[6] = 0;
@@ -686,7 +688,7 @@ static char *shorten(void *cookie, unsigned cookie_size, unsigned small)
 }
 
 static
-void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, cmd_params_st *params,
+void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, cmd_params_st *params,
 		 unsigned all)
 {
 	unsigned i;
@@ -695,9 +697,12 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 	time_t t;
 	struct tm *tm;
 	char str_since[65];
+	const char *sid;
+
+	session_entries_clear();
 
 	if (HAVE_JSON(params)) {
-		cookie_info_cmd(rep, out, params, all);
+		session_info_cmd(ctx, rep, out, params, NULL, all);
 	} else for (i=0;i<rep->n_cookies;i++) {
 		if (!all && rep->cookies[i]->status != PS_AUTH_COMPLETED)
 			continue;
@@ -723,16 +728,17 @@ void cookie_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out, 
 		if (groupname == NULL || groupname[0] == 0)
 			groupname = NO_GROUP;
 
+		sid = shorten(rep->cookies[i]->safe_id.data, rep->cookies[i]->safe_id.len, 1);
+		session_entries_add(ctx, sid);
 
 		fprintf(out, "%.6s %8s %8s %14s %.24s %8s %8s\n",
-			shorten(rep->cookies[i]->safe_id.data, rep->cookies[i]->safe_id.len, 1),
-			username, groupname, rep->cookies[i]->remote_ip,
+			sid, username, groupname, rep->cookies[i]->remote_ip,
 			rep->cookies[i]->user_agent, tmpbuf, ps_status_to_str(rep->cookies[i]->status, 1));
 	}
 }
 
 static
-int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params, unsigned all)
+int handle_list_sessions_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params, unsigned all)
 {
 	int ret;
 	struct cmd_reply_st raw;
@@ -755,7 +761,7 @@ int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 	if (rep == NULL)
 		goto error;
 
-	cookie_list(ctx, rep, out, params, all);
+	session_list(ctx, rep, out, params, all);
 
 	ret = 0;
 	goto cleanup;
@@ -774,14 +780,62 @@ int handle_list_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 	return ret;
 }
 
-int handle_list_valid_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+int handle_show_session_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
 {
-	return handle_list_cookies_cmd(ctx, arg, params, 0);
+	int ret;
+	struct cmd_reply_st raw;
+	SecmListCookiesReplyMsg *rep = NULL;
+	FILE *out;
+	const char *sid = (void*)arg;
+	PROTOBUF_ALLOCATOR(pa, ctx);
+
+	if (arg == NULL || need_help(arg)) {
+		check_cmd_help(rl_line_buffer);
+		return 1;
+	}
+
+	init_reply(&raw);
+
+	entries_clear();
+
+	out = pager_start(params);
+
+	ret = send_cmd(ctx, CTL_CMD_LIST_COOKIES, NULL, NULL, NULL, &raw);
+	if (ret < 0) {
+		goto error;
+	}
+
+	rep = secm_list_cookies_reply_msg__unpack(&pa, raw.data_size, raw.data);
+	if (rep == NULL)
+		goto error;
+
+	session_info_cmd(ctx, rep, out, params, sid, 0);
+
+	ret = 0;
+	goto cleanup;
+
+ error:
+	ret = 1;
+	fprintf(stderr, ERR_SERVER_UNREACHABLE);
+
+ cleanup:
+	if (rep != NULL)
+		secm_list_cookies_reply_msg__free_unpacked(rep, &pa);
+
+	free_reply(&raw);
+	pager_stop(out);
+
+	return ret;
 }
 
-int handle_list_all_cookies_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+int handle_list_valid_sessions_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
 {
-	return handle_list_cookies_cmd(ctx, arg, params, 1);
+	return handle_list_sessions_cmd(ctx, arg, params, 0);
+}
+
+int handle_list_all_sessions_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
+{
+	return handle_list_sessions_cmd(ctx, arg, params, 1);
 }
 
 int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
@@ -1159,10 +1213,10 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 }
 
 static
-int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *params, unsigned all)
+int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
+		    cmd_params_st *params, const char *lsid, unsigned all)
 {
-	char *username = "";
-	char *groupname = "";
+	const char *username, *groupname;
 	char str_since[65];
 	char str_since2[65];
 	struct tm *tm;
@@ -1170,7 +1224,12 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 	unsigned at_least_one = 0;
 	int ret = 1;
 	unsigned i;
+	const char *sid;
 	unsigned init_pager = 0;
+	unsigned int match_len = 0;
+
+	if (lsid)
+		match_len = strlen(lsid);
 
 	if (out == NULL) {
 		out = pager_start(params);
@@ -1180,8 +1239,16 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 	if (HAVE_JSON(params))
 		fprintf(out, "[\n");
 
+	session_entries_clear();
+
 	for (i=0;i<args->n_cookies;i++) {
-		if (!all && args->cookies[i]->status != PS_AUTH_COMPLETED)
+		if (!all && args->cookies[i]->status != PS_AUTH_COMPLETED && lsid == NULL)
+			continue;
+
+		sid = shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1);
+		session_entries_add(ctx, sid);
+
+		if (lsid && strncmp(sid, lsid, match_len) != 0)
 			continue;
 
 		if (at_least_one > 0)
@@ -1189,9 +1256,12 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 
 		print_start_block(out, params);
 
-		print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
-		print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
-		print_single_value(out, params, "State", ps_status_to_str(args->cookies[i]->status, 1), 1);
+		print_single_value(out, params, "Session", sid, 1);
+		if (HAVE_JSON(params))
+			print_single_value(out, params, "Full session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
+		else
+			print_single_value(out, params, "Full session ID", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
+
 		t = args->cookies[i]->created;
 
 		str_since[0] = 0;
@@ -1210,6 +1280,8 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		}
 		print_pair_value(out, params, "Created", str_since, "Expires", str_since2, 1);
 
+		print_single_value(out, params, "State", ps_status_to_str(args->cookies[i]->status, 1), 1);
+
 		username = args->cookies[i]->username;
 		if (username == NULL || username[0] == 0)
 			username = NO_USER;
@@ -1222,6 +1294,15 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		print_single_value(out, params, "User-Agent", args->cookies[i]->user_agent, 1);
 		print_single_value(out, params, "Remote IP", args->cookies[i]->remote_ip, 1);
 
+		if (HAVE_JSON(params)) {
+			/* old names for compatibility */
+			print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
+			print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
+		} else {
+			/* old names for compatibility */
+			print_single_value(out, params, "Active", args->cookies[i]->session_is_open?"True":"False", 1);
+			print_single_value(out, params, "Certificate auth", args->cookies[i]->tls_auth_ok?"True":"False", 1);
+		}
 
 #ifdef OCSERV_0_11_6_COMPAT
 		if (HAVE_JSON(params)) {
@@ -1231,8 +1312,6 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 			print_single_value(out, params, "Cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
 		}
 #endif
-		print_single_value(out, params, "Full session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
-		print_single_value(out, params, "Session", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
 
 		print_end_block(out, params, i<(args->n_cookies-1)?1:0);
 
@@ -1248,7 +1327,7 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
  cleanup:
 	if (at_least_one == 0) {
 		if (NO_JSON(params))
-			fprintf(out, "user or ID not found\n");
+			fprintf(out, "Session ID not found\n");
 		ret = 2;
 	}
 	if (init_pager)

@@ -473,10 +473,9 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 			e->status = PS_AUTH_FAILED;
 			seclog(sec, LOG_INFO, "denied session for user '%s' "SESSION_STR, e->acct_info.username, e->acct_info.safe_id);
 			return send_failed_session_open_reply(sec, fd);
-		} else {
-			e->session_is_open = 1;
 		}
 	}
+	e->session_is_open = 1;
 
 	rep.username = e->acct_info.username;
 	rep.groupname = e->acct_info.groupname;

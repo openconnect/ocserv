@@ -39,7 +39,7 @@ if [ -z "$COOKIE" ];then
 fi
 
 #echo "Cookie: $COOKIE"
-sleep 10
+sleep 16
 echo ""
 echo "Connecting with cookie... "
 echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE}" --background
@@ -54,7 +54,7 @@ CPID=`cat "${PIDFILE}"`
 kill $CPID
 rm -f "${PIDFILE}"
 
-sleep 10
+sleep 16
 echo ""
 echo "Connecting again with cookie... "
 echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE}" --background
@@ -69,7 +69,7 @@ CPID=`cat "${PIDFILE}"`
 kill -9 $CPID
 rm -f "${PIDFILE}"
 
-sleep 10
+sleep 16
 echo ""
 echo "Connecting after forced kill with cookie... "
 echo "test" | $OPENCONNECT -b -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE}" --background
@@ -85,7 +85,7 @@ kill $CPID
 rm -f "${PIDFILE}"
 
 
-sleep 40
+sleep 45
 echo ""
 echo "Connecting with cookie after expiration... "
 echo "test" | $OPENCONNECT -q -b localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE}" --background

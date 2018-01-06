@@ -1222,11 +1222,11 @@ int cookie_info_cmd(SecmListCookiesReplyMsg * args, FILE *out, cmd_params_st *pa
 		print_single_value(out, params, "User-Agent", args->cookies[i]->user_agent, 1);
 		print_single_value(out, params, "Remote IP", args->cookies[i]->remote_ip, 1);
 
-		print_single_value(out, params, "Last Modified", str_since, 1);
 
 #ifdef OCSERV_0_11_6_COMPAT
 		if (HAVE_JSON(params)) {
 			/* compat with previous versions */
+			print_single_value(out, params, "Last Modified", str_since, 1);
 			print_single_value(out, params, "Raw cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 0), 1);
 			print_single_value(out, params, "Cookie", shorten(args->cookies[i]->safe_id.data, args->cookies[i]->safe_id.len, 1), 1);
 		}

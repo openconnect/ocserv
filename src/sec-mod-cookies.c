@@ -72,7 +72,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 	t = htable_first(db, &iter);
 	while (t != NULL) {
 		if IS_CLIENT_ENTRY_EXPIRED(sec, t, now)
-			continue;
+			goto cont;
 
 		if (msg.n_cookies >= db->elems)
 			break;
@@ -102,6 +102,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		msg.cookies[msg.n_cookies] = &cookies[msg.n_cookies];
 		msg.n_cookies++;
 
+ cont:
 		t = htable_next(db, &iter);
 	}
 

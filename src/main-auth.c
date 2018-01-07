@@ -193,8 +193,7 @@ struct proc_st *old_proc;
 	/* check for a user with the same sid as in the cookie */
 	old_proc = proc_search_sid(s, req->cookie.data);
 	if (old_proc != NULL) {
-		mslog(s, old_proc, LOG_DEBUG, "disconnecting previous user session (%u) due to session re-use",
-			(unsigned)old_proc->pid);
+		mslog(s, old_proc, LOG_INFO, "disconnecting previous user session due to session re-use");
 
 		if (strcmp(proc->username, old_proc->username) != 0) {
 			mslog(s, old_proc, LOG_ERR, "the user of the new session doesn't match the old (new: %s)",
@@ -207,7 +206,7 @@ struct proc_st *old_proc;
 
 		if (old_proc->pid > 0)
 			kill(old_proc->pid, SIGTERM);
-		mslog(s, proc, LOG_INFO, "re-using session");
+		mslog(s, proc, LOG_DEBUG, "re-using session");
 	} else {
 		mslog(s, proc, LOG_INFO, "new user session");
 	}

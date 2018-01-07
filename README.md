@@ -141,5 +141,5 @@ You may examine the output using:
 
 # How the VPN works
 
-Please see the [technical description page](http://www.infradead.org/ocserv/technical.html).
+Please see the [technical description page](http://ocserv.gitlab.io/www/technical.html).
 

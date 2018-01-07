@@ -1227,6 +1227,7 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
 	const char *sid;
 	unsigned init_pager = 0;
 	unsigned int match_len = 0;
+	char tmpbuf[MAX_TMPSTR_SIZE];
 
 	if (lsid)
 		match_len = strlen(lsid);
@@ -1292,7 +1293,7 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
 
 		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
 		print_single_value(out, params, "User-Agent", args->cookies[i]->user_agent, 1);
-		print_single_value(out, params, "Remote IP", args->cookies[i]->remote_ip, 1);
+		print_pair_value(out, params, "Remote IP", args->cookies[i]->remote_ip, "Location", geo_lookup(args->cookies[i]->remote_ip, tmpbuf, sizeof(tmpbuf)), 1);
 
 		if (HAVE_JSON(params)) {
 			/* old names for compatibility */

@@ -1,4 +1,4 @@
-* Version 0.11.10 (unreleased)
+* Version 0.11.10 (released 2018-01-07)
 - Increased the DTLS handshake timeout to 60 seconds and decreased
   retransmission time to 400ms.
 - Improved compatibility with certain anyconnect clients which

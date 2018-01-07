@@ -1298,9 +1298,11 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
 			/* old names for compatibility */
 			print_single_value_int(out, params, "session_is_open", args->cookies[i]->session_is_open, 1);
 			print_single_value_int(out, params, "tls_auth_ok", args->cookies[i]->tls_auth_ok, 1);
+			print_single_value_int(out, params, "in_use", args->cookies[i]->in_use, 1);
 		} else {
 			/* old names for compatibility */
-			print_single_value(out, params, "Active", args->cookies[i]->session_is_open?"True":"False", 1);
+			print_pair_value(out, params, "In use", args->cookies[i]->in_use?"True":"False", 
+					 "Activated", args->cookies[i]->session_is_open?"True":"False", 1);
 			print_single_value(out, params, "Certificate auth", args->cookies[i]->tls_auth_ok?"True":"False", 1);
 		}
 
@@ -1327,7 +1329,7 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
  cleanup:
 	if (at_least_one == 0) {
 		if (NO_JSON(params))
-			fprintf(out, "Session ID not found\n");
+			fprintf(out, "Session ID not found or expired\n");
 		ret = 2;
 	}
 	if (init_pager)

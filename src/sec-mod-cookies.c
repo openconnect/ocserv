@@ -89,7 +89,8 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		else
 			cookies[msg.n_cookies].created = 0;
 
-		if (t->exptime > 0)
+		/* a session which is in use, does not expire */
+		if (t->exptime > 0 && t->in_use == 0)
 			cookies[msg.n_cookies].expires = t->exptime;
 		else
 			cookies[msg.n_cookies].expires = 0;
@@ -98,6 +99,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		cookies[msg.n_cookies].user_agent = t->acct_info.user_agent;
 		cookies[msg.n_cookies].remote_ip = t->acct_info.remote_ip;
 		cookies[msg.n_cookies].status = t->status;
+		cookies[msg.n_cookies].in_use = t->in_use;
 
 		msg.cookies[msg.n_cookies] = &cookies[msg.n_cookies];
 		msg.n_cookies++;

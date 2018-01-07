@@ -312,6 +312,7 @@ message cookie_int_msg
 	required string remote_ip = 8;
 	required uint32 expires = 9;
 	required uint32 status = 10; /* the authentication status (PS_*) */
+	required bool in_use = 11;
 }
 
 /* SECM_LIST_COOKIES - no content */

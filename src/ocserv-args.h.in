@@ -78,9 +78,9 @@ typedef enum {
 /** count of all options for ocserv */
 #define OPTION_CT    8
 /** ocserv version */
-#define OCSERV_VERSION       "0.11.9"
+#define OCSERV_VERSION       "0.11.10"
 /** Full ocserv version text */
-#define OCSERV_FULL_VERSION  "ocserv 0.11.9"
+#define OCSERV_FULL_VERSION  "ocserv 0.11.10"
 
 /**
  *  Interface defines for all options.  Replace "n" with the UPPER_CASED

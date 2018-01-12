@@ -641,7 +641,7 @@ static void load_iroutes(struct cfg_st *config)
 			r = readdir(dir);
 			if (r != NULL && r->d_type == DT_REG) {
 				ret = snprintf(path, sizeof(path), "%s/%s", config->per_user_dir, r->d_name);
-				if (ret != strlen(path)) {
+				if (ret != (int)strlen(path)) {
 					fprintf(stderr, NOTESTR"path name too long and truncated: %s\n", path);
 				}
 				append_iroutes_from_file(config, path);
@@ -655,7 +655,8 @@ static void parse_cfg_file(void *pool, const char* file, struct perm_cfg_st *per
 {
 tOptionValue const * pov;
 const tOptionValue* val, *prev;
-unsigned j, i, mand, ret;
+unsigned j, i, mand;
+int ret;
 char** auth = NULL;
 size_t auth_size = 0;
 unsigned prefix = 0, auto_select_group = 0;
@@ -965,9 +966,9 @@ size_t urlfw_size = 0;
 
 	READ_NUMERIC("idle-timeout", config->idle_timeout);
 
-	config->mobile_idle_timeout = -1;
+	config->mobile_idle_timeout = (unsigned)-1;
 	READ_NUMERIC("mobile-idle-timeout", config->mobile_idle_timeout);
-	if (config->mobile_idle_timeout == -1)
+	if (config->mobile_idle_timeout == (unsigned)-1)
 		config->mobile_idle_timeout = config->idle_timeout;
 
 	READ_NUMERIC("max-clients", config->max_clients);

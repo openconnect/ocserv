@@ -51,7 +51,7 @@ struct known_urls_st {
 
 #define LL(x,y,z) {x, sizeof(x)-1, 0, y, z}
 #define LL_DIR(x,y,z) {x, sizeof(x)-1, 1, y, z}
-const static struct known_urls_st known_urls[] = {
+static const struct known_urls_st known_urls[] = {
 	LL("/", get_auth_handler, post_auth_handler),
 	LL("/auth", get_auth_handler, post_auth_handler),
 	LL("/VPN", get_auth_handler, post_auth_handler),

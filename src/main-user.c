@@ -62,7 +62,7 @@ typedef enum script_type_t {
 	SCRIPT_DISCONNECT
 } script_type_t;
 
-const static char *type_name[] = {"up", "host-update", "down"};
+static const char *type_name[] = {"up", "host-update", "down"};
 
 static void export_fw_info(main_server_st *s, struct proc_st* proc)
 {

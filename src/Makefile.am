@@ -8,24 +8,18 @@ AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
 	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS) $(SRC_CFLAGS)
 
-BUILT_SOURCES = ocserv-args.c ocserv-args.h ipc.pb-c.c ipc.pb-c.h \
+BUILT_SOURCES = ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c ctl.pb-c.c ctl.pb-c.h
 
-EXTRA_DIST = version.inc.in version.inc ocserv-args.c.in ocserv-args.h.in \
-	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw occtl/occtl-args.def
-	
+EXTRA_DIST = version.inc.in version.inc \
+	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw occtl/occtl-args.def \
+	ocpasswd/ocpasswd-args.def ocserv-args.def
+
 
 sbin_PROGRAMS = ocserv
 bin_SCRIPTS = ocserv-fw
 
-noinst_LIBRARIES = libcmd-ocserv.a libipc.a
-libcmd_ocserv_a_SOURCES = ocserv-args.def ocserv-args.c ocserv-args.h
-
-ocserv-args.stamp: $(srcdir)/ocserv-args.def $(builddir)/version.inc
-	$(AUTOGEN) $<
-	touch $@
-ocserv-args.h: ocserv-args.stamp
-ocserv-args.c: ocserv-args.stamp
+noinst_LIBRARIES = libipc.a
 
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
@@ -66,7 +60,7 @@ if LOCAL_HTTP_PARSER
 HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
 endif
 
-ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocserv.a libccan.a libcommon.a
+ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libccan.a libcommon.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
@@ -114,8 +108,6 @@ occtl_occtl_LDADD = ../gl/libgnu.a libcommon.a $(LIBREADLINE_LIBS) \
 	$(LIBNETTLE_LIBS) $(GEOIP_LIBS)
 
 # Ocpasswd
-
-EXTRA_DIST += ocpasswd/ocpasswd-args.def
 
 bin_PROGRAMS += ocpasswd/ocpasswd
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2017 Nikos Mavrogiannopoulos
  * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <fcntl.h>
-#include <ocserv-args.h>
 #include <autoopts/options.h>
 #include <limits.h>
 #include <common.h>
@@ -54,8 +53,12 @@
 #include <occtl/ctl.h>
 #include "common-config.h"
 
+#include <getopt.h>
+
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
+
+static void print_version(void);
 
 static char pid_file[_POSIX_PATH_MAX] = "";
 static char cfg_file[_POSIX_PATH_MAX] = DEFAULT_CFG_FILE;
@@ -1221,28 +1224,88 @@ static void check_cfg(struct perm_cfg_st *perm_config)
 		perm_config->config->priorities = talloc_strdup(perm_config->config, "NORMAL:%SERVER_PRECEDENCE:%COMPAT");
 }
 
+static const struct option long_options[] = {
+	{"debug", 1, 0, 'd'},
+	{"config", 1, 0, 'c'},
+	{"pid-file", 0, 0, 'p'},
+	{"test-config", 0, 0, 't'},
+	{"foreground", 0, 0, 'f'},
+	{"help", 0, 0, 'h'},
+	{"version", 0, 0, 'v'},
+	{NULL, 0, 0, 0}
+};
+
+static
+void usage(void)
+{
+	fprintf(stderr, "ocserv - OpenConnect VPN server\n");
+	fprintf(stderr, "Usage:  ocserv [ -<flag> [<val>] | --<name>[{=| }<val>] ]...\n\n");
+
+	fprintf(stderr, "   -f, --foreground           Do not fork into background\n");
+	fprintf(stderr, "   -d, --debug=num            Enable verbose network debugging information\n");
+	fprintf(stderr, "				- it must be in the range:\n");
+	fprintf(stderr, "				  0 to 9999\n");
+	fprintf(stderr, "   -c, --config=file          Configuration file for the server\n");
+	fprintf(stderr, "				- file must exist\n");
+	fprintf(stderr, "   -t, --test-config          Test the provided configuration file\n");
+	fprintf(stderr, "   -p, --pid-file=file        Specify pid file for the server\n");
+	fprintf(stderr, "   -v, --version              output version information and exit\n");
+	fprintf(stderr, "   -h, --help                 display extended usage information and exit\n\n");
+
+	fprintf(stderr, "Openconnect VPN server (ocserv) is a VPN server compatible with the\n");
+	fprintf(stderr, "openconnect VPN client.  It follows the TLS and DTLS-based AnyConnect VPN\n");
+	fprintf(stderr, "protocol which is used by several CISCO routers.\n\n");
+
+	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+}
+
 int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 {
+	unsigned test_only = 0;
+	int c;
+
 	*config = talloc_zero(pool, struct perm_cfg_st);
 	if (*config == NULL)
 		exit(1);
 
-	optionProcess( &ocservOptions, argc, argv);
-  
-	if (HAVE_OPT(FOREGROUND))
-		(*config)->foreground = 1;
+	while (1) {
+		c = getopt_long(argc, argv, "d:c:p:ftvh", long_options, NULL);
+		if (c == -1)
+			break;
 
-	if (HAVE_OPT(PID_FILE)) {
-		strlcpy(pid_file, OPT_ARG(PID_FILE), sizeof(pid_file));
+		switch(c) {
+			case 'f':
+				(*config)->foreground = 1;
+				break;
+			case 'p':
+				strlcpy(pid_file, optarg, sizeof(pid_file));
+				break;
+			case 'c':
+				strlcpy(cfg_file, optarg, sizeof(cfg_file));
+				break;
+			case 'd':
+				(*config)->debug = atoi(optarg);
+				break;
+			case 't':
+				test_only = 1;
+				break;
+			case 'h':
+				usage();
+				exit(0);
+			case 'v':
+				print_version();
+				exit(0);
+		}
 	}
 
-	if (HAVE_OPT(DEBUG))
-		(*config)->debug = OPT_VALUE_DEBUG;
+	if (optind != argc) {
+		fprintf(stderr, ERRSTR"no additional command line options are allowed\n\n");
+		exit(1);
+	}
 
-	if (HAVE_OPT(CONFIG)) {
-		strlcpy(cfg_file, OPT_ARG(CONFIG), sizeof(cfg_file));
-	} else if (access(cfg_file, R_OK) != 0) {
-		fprintf(stderr, "%s -c [config]\nUse %s --help for more information.\n", argv[0], argv[0]);
+	if (access(cfg_file, R_OK) != 0) {
+		fprintf(stderr, ERRSTR"cannot access config file: %s\n", cfg_file);
+		fprintf(stderr, "Usage: %s -c [config]\nUse %s --help for more information.\n", argv[0], argv[0]);
 		exit(1);
 	}
 
@@ -1250,7 +1313,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct perm_cfg_st** config)
 
 	check_cfg(*config);
 
-	if (HAVE_OPT(TEST_CONFIG))
+	if (test_only)
 		exit(0);
 
 	return 0;
@@ -1307,11 +1370,11 @@ static void append(const char *option)
 	fprintf(stderr, "%s", option);
 }
 
-void print_version(tOptions *opts, tOptDesc *desc)
+static void print_version(void)
 {
 	const char *p;
 
-	fputs(OCSERV_FULL_VERSION, stderr);
+	fputs(PACKAGE_STRING, stderr);
 	fprintf(stderr, "\n\nCompiled with: ");
 #ifdef HAVE_LIBSECCOMP
 	append("seccomp");
@@ -1345,8 +1408,6 @@ void print_version(tOptions *opts, tOptDesc *desc)
 	} else {
 		fprintf(stderr, "GnuTLS version: %s\n", p);
 	}
-
-	exit(0);
 }
 
 

@@ -536,8 +536,6 @@ AC_SUBST([ROOTGID], [$gid])
 LIBOPTS_CHECK([libopts])
 if test "$NEED_LIBOPTS_DIR" = "true";then
 	dnl create libopts-generated files
-        AC_CONFIG_LINKS([src/ocserv-args.c:src/ocserv-args.c.in
-			 src/ocserv-args.h:src/ocserv-args.h.in])
 	AC_SUBST([AUTOGEN], [:])
 	enable_local_libopts=yes
 else

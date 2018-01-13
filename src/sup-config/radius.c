@@ -25,7 +25,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <fcntl.h>
-#include <ocserv-args.h>
 #include <autoopts/options.h>
 #include <limits.h>
 #include <common.h>

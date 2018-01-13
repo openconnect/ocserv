@@ -164,8 +164,11 @@ char *escape_url(void *pool, const char *url, unsigned len, unsigned *out_len)
 		return NULL;
 
 	for (i = pos = 0; i < len;) {
-		if (c_isalpha(url[i])) {
+		if (c_isalnum(url[i]) || url[i]=='-' || url[i]=='_' || url[i]=='.' || url[i]=='~') {
 			msg[pos++] = url[i++];
+		} else if (url[i] == ' ') {
+			msg[pos++] = '+';
+			i++;
 		} else {
 			snprintf(&msg[pos], 4, "%%%02X", (unsigned)url[i++]);
 			pos+=3;

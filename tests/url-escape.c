@@ -28,15 +28,15 @@
 
 static char *strings[] = 
 {
-	"Laguna%20Beach",
-	"%20",
+	"Laguna+Beach",
+	"_+-.~%2C",
 	"Laguna%25%2B%40Beach"
 };
 
 static char *decoded_strings[] = 
 {
 	"Laguna Beach",
-	" ",
+	"_ -.~,",
 	"Laguna%+@Beach"
 };
 

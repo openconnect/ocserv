@@ -87,9 +87,6 @@ json_escape_LDADD = $(LDADD)
 url_escape_SOURCES = url-escape.c
 url_escape_LDADD = $(LDADD)
 
-url_unescape_SOURCES = url-escape.c
-url_unescape_LDADD = $(LDADD)
-
 html_escape_SOURCES = html-escape.c
 html_escape_LDADD = $(LDADD)
 
@@ -118,7 +115,7 @@ valid_hostname_LDADD = $(LDADD)
 port_parsing_LDADD = $(LDADD)
 
 check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-escape ban-ips \
-	port-parsing human_addr valid-hostname url-escape url-unescape html-escape cstp-recv \
+	port-parsing human_addr valid-hostname url-escape html-escape cstp-recv \
 	proxyproto-v1
 
 

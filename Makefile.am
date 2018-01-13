@@ -38,8 +38,6 @@ ChangeLog:
 files-update:
 	cp -f $(builddir)/src/ocserv-args.c $(srcdir)/src/ocserv-args.c.in
 	cp -f $(builddir)/src/ocserv-args.h $(srcdir)/src/ocserv-args.h.in
-	cp -f $(builddir)/src/ocpasswd-args.c $(srcdir)/src/ocpasswd/ocpasswd-args.c.in
-	cp -f $(builddir)/src/ocpasswd-args.h $(srcdir)/src/ocpasswd/ocpasswd-args.h.in
 
 files-compare:
 	@echo "*****************************************************************"
@@ -48,8 +46,6 @@ files-compare:
 	@echo "*****************************************************************"
 	cmp $(srcdir)/src/ocserv-args.c.in $(builddir)/src/ocserv-args.c
 	cmp $(srcdir)/src/ocserv-args.h.in $(builddir)/src/ocserv-args.h
-	cmp $(srcdir)/src/ocpasswd/ocpasswd-args.c.in $(builddir)/src/ocpasswd-args.c
-	cmp $(srcdir)/src/ocpasswd/ocpasswd-args.h.in $(builddir)/src/ocpasswd-args.h
 
 dist-hook: files-compare ChangeLog
 	mv ChangeLog $(distdir)
@@ -59,7 +55,7 @@ dist-hook: files-compare ChangeLog
 	@echo "check fails upgrade the included libopts."
 	@echo "*****************************************************************"
 	test "$(SKIP_LIBOPTS_CHECK)" = "1" || test "`autoopts-config libsrc|cut -d '-' -f 2|sed 's/.tar.gz//'`" = "`cat $(srcdir)/libopts/autoopts/options.h |grep OPTIONS_VERSION_STRING|cut -d '"' -f 2|sed 's/:/./g'`"
-	for dir in $(distdir)/src/ $(distdir)/src/ocpasswd/;do \
+	for dir in $(distdir)/src/;do \
 		( cd $$dir && for i in *args.def;do \
 			$(AUTOGEN) $$i; \
 		done && \

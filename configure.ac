@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [0.11.10], [nmav@gnutls.org])
+AC_INIT([ocserv], [0.11.10], [openconnect-devel@lists.infradead.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -536,9 +536,7 @@ AC_SUBST([ROOTGID], [$gid])
 LIBOPTS_CHECK([libopts])
 if test "$NEED_LIBOPTS_DIR" = "true";then
 	dnl create libopts-generated files
-        AC_CONFIG_LINKS([src/ocpasswd-args.c:src/ocpasswd/ocpasswd-args.c.in
-			 src/ocpasswd-args.h:src/ocpasswd/ocpasswd-args.h.in
-			 src/ocserv-args.c:src/ocserv-args.c.in
+        AC_CONFIG_LINKS([src/ocserv-args.c:src/ocserv-args.c.in
 			 src/ocserv-args.h:src/ocserv-args.h.in])
 	AC_SUBST([AUTOGEN], [:])
 	enable_local_libopts=yes

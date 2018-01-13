@@ -31,7 +31,7 @@
 #include <gnutls/crypto.h>	/* for random */
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "ocpasswd-args.h"
+#include <getopt.h>
 
 /* Gnulib portability files. */
 #include <getpass.h>
@@ -354,13 +354,62 @@ unlock_user(const char *fpasswd, const char *username)
 	free(tmp_passwd);
 }
 
+static const struct option long_options[] = {
+	{"passwd", 1, 0, 'c'},
+	{"groupname", 1, 0, 'g'},
+	{"delete", 0, 0, 'd'},
+	{"lock", 0, 0, 'l'},
+	{"unlock", 0, 0, 'u'},
+	{"help", 0, 0, 'h'},
+	{"version", 0, 0, 'v'},
+	{NULL, 0, 0, 0}
+};
+
+static
+void usage(void)
+{
+	fprintf(stderr, "ocpasswd - OpenConnect server password utility\n");
+	fprintf(stderr, "Usage:  ocpasswd [ -<flag> [<val>] | --<name>[{=| }<val>] ]... [username]\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "   -c, --passwd=file          Password file\n");
+	fprintf(stderr, "   -g, --groupname=str        User's group name\n");
+	fprintf(stderr, "   -d, --delete               Delete user\n");
+	fprintf(stderr, "   -l, --lock                 Lock user\n");
+	fprintf(stderr, "   -u, --unlock               Unlock user\n");
+	fprintf(stderr, "   -v, --version              output version information and exit\n");
+	fprintf(stderr, "   -h, --help                 display extended usage information and exit\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Options are specified by doubled hyphens and their name or by a single\n");
+	fprintf(stderr, "hyphen and the flag character.\n\n");
+	fprintf(stderr, "This program is openconnect password (ocpasswd) utility.  It allows the\n");
+	fprintf(stderr, "generation and handling of a 'plain' password file used by ocserv.\n\n");
+	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+}
+
+static
+void version(void)
+{
+	fprintf(stderr, "ocpasswd - "VERSION"\n");
+	fprintf(stderr, "Copyright (C) 2013-2017 Nikos Mavrogiannopoulos, all rights reserved.\n");
+	fprintf(stderr, "This is free software. It is licensed for use, modification and\n");
+	fprintf(stderr, "redistribution under the terms of the GNU General Public License,\n");
+	fprintf(stderr, "version 2 <http://gnu.org/licenses/gpl.html>\n\n");
+	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
+}
+
+#define FLAG_DELETE 1
+#define FLAG_LOCK (1<<1)
+#define FLAG_UNLOCK (1<<2)
+
 int main(int argc, char **argv)
 {
-	int ret, optct;
-	const char *username, *groupname, *fpasswd;
-	char* passwd;
+	int ret, c;
+	const char *username = NULL;
+	char *groupname = NULL, *fpasswd = NULL;
+	char* passwd = NULL;
 	unsigned free_passwd = 0;
 	size_t l, i;
+	unsigned flags = 0;
 
 	if ((ret = gnutls_global_init()) < 0) {
 		fprintf(stderr, "global_init: %s\n", gnutls_strerror(ret));
@@ -369,36 +418,67 @@ int main(int argc, char **argv)
 
 	umask(066);
 
-	optct = optionProcess(&ocpasswdOptions, argc, argv);
-	argc -= optct;
-	argv += optct;
+	while (1) {
+		c = getopt_long(argc, argv, "c:g:dluvh", long_options, NULL);
+		if (c == -1)
+			break;
 
-	if (argc > 0)
-		username = argv[0];
-	else {
-		optionUsage(&ocpasswdOptions, 1);
+		switch(c) {
+			case 'c':
+				fpasswd = strdup(optarg);
+				break;
+			case 'g':
+				groupname = strdup(optarg);
+				break;
+			case 'd':
+				if (flags) {
+					usage();
+					exit(1);
+				}
+				flags |= FLAG_DELETE;
+				break;
+			case 'u':
+				if (flags) {
+					usage();
+					exit(1);
+				}
+				flags |= FLAG_UNLOCK;
+				break;
+			case 'l':
+				if (flags) {
+					usage();
+					exit(1);
+				}
+				flags |= FLAG_LOCK;
+				break;
+			case 'h':
+				usage();
+				exit(0);
+			case 'v':
+				version();
+				exit(0);
+		}
+	}
+
+	if (optind < argc && argc-optind == 1) {
+		username = argv[optind++];
+	} else {
+		usage();
 		exit(1);
 	}
 
-	if (HAVE_OPT(PASSWD)) {
-		fpasswd = OPT_ARG(PASSWD);
-	} else {
-		fpasswd = DEFAULT_OCPASSWD;
-	}
+	if (!groupname)
+		groupname = strdup("*");
+	if (!fpasswd)
+		fpasswd = strdup(DEFAULT_OCPASSWD);
 
-	if (HAVE_OPT(GROUPNAME))
-		groupname = OPT_ARG(GROUPNAME);
-	else {
-		groupname = "*";
-	}
-
-	if (HAVE_OPT(LOCK))
+	if (flags & FLAG_LOCK) {
 		lock_user(fpasswd, username);
-	else if (HAVE_OPT(UNLOCK))
+	} else if (flags & FLAG_UNLOCK) {
 		unlock_user(fpasswd, username);
-	else if (HAVE_OPT(DELETE))
+	} else if (flags & FLAG_DELETE) {
 		delete_user(fpasswd, username);
-	else { /* set password */
+	} else { /* set password */
 
 		if (isatty(STDIN_FILENO)) {
 			char* p2;
@@ -440,6 +520,8 @@ int main(int argc, char **argv)
 			free(passwd);
 	}
 
+	free(fpasswd);
+	free(groupname);
 	gnutls_global_deinit();
 	return 0;
 }

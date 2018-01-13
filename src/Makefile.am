@@ -115,26 +115,15 @@ occtl_occtl_LDADD = ../gl/libgnu.a libcommon.a $(LIBREADLINE_LIBS) \
 
 # Ocpasswd
 
-EXTRA_DIST += ocpasswd/ocpasswd-args.def ocpasswd/ocpasswd-args.c.in ocpasswd/ocpasswd-args.h.in
-
-BUILT_SOURCES += ocpasswd-args.c ocpasswd-args.h
+EXTRA_DIST += ocpasswd/ocpasswd-args.def
 
 bin_PROGRAMS += ocpasswd/ocpasswd
 
-noinst_LIBRARIES += libcmd-ocpasswd.a
-libcmd_ocpasswd_a_SOURCES = ocpasswd/ocpasswd-args.def ocpasswd-args.c ocpasswd-args.h
-
 ocpasswd_ocpasswd_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/ocpasswd
 ocpasswd_ocpasswd_SOURCES = ocpasswd/ocpasswd.c
-ocpasswd_ocpasswd_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libcmd-ocpasswd.a
+ocpasswd_ocpasswd_LDADD = ../gl/libgnu.a
 ocpasswd_ocpasswd_LDADD += $(LIBGNUTLS_LIBS) $(LIBCRYPT) $(CODE_COVERAGE_LDFLAGS) \
 	$(LIBNETTLE_LIBS)
-
-ocpasswd-args.stamp: $(srcdir)/ocpasswd/ocpasswd-args.def $(builddir)/version.inc
-	$(AUTOGEN) $<
-	touch $@
-ocpasswd-args.h: ocpasswd-args.stamp
-ocpasswd-args.c: ocpasswd-args.stamp
 
 
 # libcommon

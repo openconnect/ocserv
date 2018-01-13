@@ -35,7 +35,9 @@ static char *strings[] =
 	"try to escape \\escapes",
 	"\tbig pile  \b\b of stuff\r\n",
 	"<hi there>",
-	"\"hi there\""
+	"\"hi there\"",
+	"Ahoy matey!",
+	"Ahoy matey&#33"
 };
 
 static char *encoded_strings[] = 
@@ -47,7 +49,9 @@ static char *encoded_strings[] =
 	"try to escape \\escapes",
 	"&#x0009;big pile  &#x0008;&#x0008; of stuff&#x000d;&#x000a;",
 	"&lt;hi&nbsp;there&gt;",
-	"&quot;hi there&quot;"
+	"&quot;hi there&quot;",
+	"&#65;hoy&#000032;matey!",
+	"Ahoy matey&#33"
 };
 
 int main()

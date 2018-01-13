@@ -133,7 +133,7 @@ static-analyzers/Fedora:
   - autoreconf -fvi
   - scan-build ./configure
   - scan-build --status-bugs -o scan-build-src make -j$(nproc)
-  - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i libopts
+  - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i src/inih
   tags:
   - shared
   except:

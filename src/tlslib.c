@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2017 Nikos Mavrogiannopoulos
  * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
@@ -851,7 +851,7 @@ int load_cert_files(main_server_st *s, tls_st *creds)
 		} else {
 			ret = gnutls_load_file(s->perm_config->cert[i], &data);
 			if (ret < 0) {
-				mslog(s, NULL, LOG_ERR, "error loading file '%s'", s->perm_config->cert[i]);
+				mslog(s, NULL, LOG_ERR, "error loading file[%d] '%s'", i, s->perm_config->cert[i]);
 				return -1;
 			}
 

@@ -288,7 +288,6 @@ struct cfg_st {
 	unsigned max_same_clients;
 	unsigned use_utmp;
 	unsigned tunnel_all_dns;
-	unsigned use_dbus; /* whether the D-BUS service is registered */
 	unsigned use_occtl; /* whether support for the occtl tool will be enabled */
 
 	unsigned try_mtu; /* MTU discovery enabled */

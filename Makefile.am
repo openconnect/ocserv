@@ -2,12 +2,9 @@ AUTOMAKE_OPTIONS = foreign
 EXTRA_DIST = LICENSE README.md CONTRIBUTING.md
 
 SUBDIRS = gl
-if NEED_LIBOPTS
-SUBDIRS += libopts
-endif
 SUBDIRS += src doc tests
 
-ACLOCAL_AMFLAGS = -I m4 -I gl/m4 -I libopts/m4
+ACLOCAL_AMFLAGS = -I m4 -I gl/m4
 
 @CODE_COVERAGE_RULES@
 
@@ -44,11 +41,5 @@ files-compare:
 
 dist-hook: files-compare ChangeLog
 	mv ChangeLog $(distdir)
-	$(AUTOGEN) --version
-	@echo "*****************************************************************"
-	@echo "Checking whether included libopts matches the system's. If the"
-	@echo "check fails upgrade the included libopts."
-	@echo "*****************************************************************"
-	test "$(SKIP_LIBOPTS_CHECK)" = "1" || test "`autoopts-config libsrc|cut -d '-' -f 2|sed 's/.tar.gz//'`" = "`cat $(srcdir)/libopts/autoopts/options.h |grep OPTIONS_VERSION_STRING|cut -d '"' -f 2|sed 's/:/./g'`"
 
 .PHONY: files-update files-compare

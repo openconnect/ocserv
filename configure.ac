@@ -23,14 +23,6 @@ AC_CHECK_PROG([AUTOGEN], [autogen], [autogen], [:])
 
 AX_CODE_COVERAGE
 
-if test x"$AUTOGEN" = "x:"; then
-	AC_MSG_WARN([[
-***
-*** autogen not found. Will not link against libopts.
-*** ]])
-enable_local_libopts=yes
-fi
-
 AC_CHECK_TYPES([sighandler_t, sig_t, __sighandler_t],,,
 [#include <sys/types.h>
 #include <signal.h> ])
@@ -504,6 +496,11 @@ AC_ARG_WITH(werror,
   [src_cflags="-Werror"], [])
 AC_SUBST([SRC_CFLAGS], [${src_cflags}])
 
+dnl config options for inih
+AC_DEFINE([INI_STOP_ON_FIRST_ERROR], [1], [inih configuration])
+AC_DEFINE([INI_INLINE_COMMENT_PREFIXES], ["#"], [inih configuration])
+AC_DEFINE([INI_ALLOW_MULTILINE], [1], [inih configuration])
+
 if test "$have_cwrap_pam" = yes; then
 	m4_ifdef([PKG_CHECK_VAR], [PKG_CHECK_VAR([CWRAP_PAM_MODULES], [pam_wrapper], [modules])])
 
@@ -532,16 +529,6 @@ uid=$(id -u)
 gid=$(id -g)
 AC_SUBST([ROOTUID], [$uid])
 AC_SUBST([ROOTGID], [$gid])
-
-LIBOPTS_CHECK([libopts])
-if test "$NEED_LIBOPTS_DIR" = "true";then
-	dnl create libopts-generated files
-	AC_SUBST([AUTOGEN], [:])
-	enable_local_libopts=yes
-else
-	enable_local_libopts=no
-fi
-AM_CONDITIONAL(NEED_LIBOPTS, test "$enable_local_libopts" = "yes")
 
 AC_CONFIG_FILES([
 	Makefile
@@ -587,7 +574,6 @@ Summary of build options:
   local talloc:         ${with_local_talloc}
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}
-  local libopts:        ${enable_local_libopts}
   local http-parser:    ${with_local_http_parser}
 ])
 

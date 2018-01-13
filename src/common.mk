@@ -1,11 +1,5 @@
 AM_CPPFLAGS = 
 
-if NEED_LIBOPTS
-NEEDED_LIBOPTS = $(top_builddir)/libopts/libopts.a
-else
-NEEDED_LIBOPTS = $(LIBOPTS_LDADD)
-endif
-
 if LOCAL_TALLOC
 AM_CPPFLAGS += -I$(top_srcdir)/src/ccan/talloc
 endif

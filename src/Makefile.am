@@ -1,7 +1,7 @@
 include common.mk
 
 AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
-	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ $(LIBOPTS_CFLAGS) \
+	-I$(srcdir)/ -I$(builddir)/../ -I$(srcdir)/../ \
 	$(LIBGNUTLS_CFLAGS) -I$(srcdir)/common -I$(builddir)/common \
 	$(LIBPROTOBUF_C_CFLAGS) $(LIBLZ4_CFLAGS) \
 	$(LIBREADLINE_CFLAGS) $(CODE_COVERAGE_CFLAGS) \
@@ -46,7 +46,9 @@ ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
 	main-ban.c main-ban.h common-config.h valid-hostname.c \
 	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	sec-mod-acct.h setproctitle.c setproctitle.h sec-mod-resume.h \
-	sec-mod-cookies.c defs.h
+	sec-mod-cookies.c defs.h inih/ini.c inih/ini.h
+
+
 
 if ENABLE_COMPRESSION
 ocserv_SOURCES += lzs.c lzs.h
@@ -60,7 +62,7 @@ if LOCAL_HTTP_PARSER
 HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
 endif
 
-ocserv_LDADD = ../gl/libgnu.a $(NEEDED_LIBOPTS) libccan.a libcommon.a
+ocserv_LDADD = ../gl/libgnu.a libccan.a libcommon.a
 ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \

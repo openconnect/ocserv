@@ -25,7 +25,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <fcntl.h>
-#include <autoopts/options.h>
 #include <limits.h>
 #include <common.h>
 #include <ip-util.h>

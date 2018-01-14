@@ -1,3 +1,8 @@
+* Version 0.11.11 (unreleased)
+- Enhanced HTML unescaping to account encodings seen in some
+  AnyConnect clients. Contributed by Daniel Lenski.
+
+
 * Version 0.11.10 (released 2018-01-07)
 - Increased the DTLS handshake timeout to 60 seconds and decreased
   retransmission time to 400ms.

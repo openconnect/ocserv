@@ -129,7 +129,7 @@ asan/Fedora:
 static-analyzers/Fedora:
   image: fedora:26
   script:
-  - dnf install -y openconnect git which make xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c clang clang-analyzer cppcheck
+  - dnf install -y openconnect git which make xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c clang clang-analyzer cppcheck gperf
   - autoreconf -fvi
   - scan-build ./configure
   - scan-build --status-bugs -o scan-build-src make -j$(nproc)
@@ -142,8 +142,7 @@ static-analyzers/Fedora:
     expire_in: 1 week
     when: on_failure
     paths:
-      - scan-build-lib/*
-      - scan-build-libdane/*
+      - scan-build-src/*
 
 Build/FreeBSD:
   script:

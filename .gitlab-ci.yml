@@ -37,12 +37,12 @@ Build/Centos7:
       - build/*.log
       - build/tests/*.log
 
-Build/Fedora26:
-  image: fedora:26
+Build/Fedora27:
+  image: fedora:27
   script:
   - dnf install -y GeoIP-devel openconnect make git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-docker-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
+    ./configure --without-docker-tests --with-werror --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
     make local-code-coverage-output && make files-update && make SKIP_LIBOPTS_CHECK=1 dist
   tags:
   - shared
@@ -110,7 +110,7 @@ Build/minimal:
       - tests/*.log
 
 asan/Fedora:
-  image: fedora:26
+  image: fedora:27
   script:
   - dnf install -y openconnect git which make xz autoconf libtool automake gettext-devel libasan-static libasan gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils git2cl
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
@@ -127,7 +127,7 @@ asan/Fedora:
       - tests/*.log
 
 static-analyzers/Fedora:
-  image: fedora:26
+  image: fedora:27
   script:
   - dnf install -y openconnect git which make xz autoconf libtool automake gettext-devel gnutls-devel libev-devel tcp_wrappers-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel autogen-libopts-devel autogen protobuf-c clang clang-analyzer cppcheck gperf
   - autoreconf -fvi

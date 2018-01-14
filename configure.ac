@@ -499,6 +499,11 @@ LIBS="$oldlibs"
 fi
 AM_CONDITIONAL(PCL, test "$with_local_pcl" = no)
 
+AC_ARG_WITH(werror,
+  AS_HELP_STRING([--with-werror], [fail on gcc warnings]),
+  [src_cflags="-Werror"], [])
+AC_SUBST([SRC_CFLAGS], [${src_cflags}])
+
 if test "$have_cwrap_pam" = yes; then
 	m4_ifdef([PKG_CHECK_VAR], [PKG_CHECK_VAR([CWRAP_PAM_MODULES], [pam_wrapper], [modules])])
 

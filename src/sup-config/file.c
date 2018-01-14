@@ -92,6 +92,11 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 	int ret;
 	char *value;
 
+	if (section != NULL && section[0] != 0) {
+		syslog(LOG_INFO, "skipping unknown section '%s' in %s", section, file);
+		return 0;
+	}
+
 	value = sanitize_config_value(ctx->pool, _value);
 	if (value == NULL)
 		return 0;
@@ -187,7 +192,7 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 			return -1;
 		}
 	} else {
-		syslog(LOG_ERR, "skipping unknown option '%s' in %s", name, file);
+		syslog(LOG_INFO, "skipping unknown option '%s' in %s", name, file);
 	}
 
 	talloc_free(value);

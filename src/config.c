@@ -411,6 +411,11 @@ static int iroutes_handler(void *_ctx, const char *section, const char *name, co
 	int ret;
 	char *value;
 
+	if (section != NULL && section[0] != 0) {
+		fprintf(stderr, WARNSTR"skipping unknown section '%s'\n", section);
+		return 0;
+	}
+
 	if (strcmp(name, "iroute")!=0)
 		return 0;
 
@@ -507,6 +512,12 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	unsigned prefix = 0;
 	unsigned prefix4 = 0;
 	char *value;
+
+	if (section != NULL && section[0] != 0) {
+		if (reload == 0)
+			fprintf(stderr, WARNSTR"skipping unknown section '%s'\n", section);
+		return 0;
+	}
 
 	value = sanitize_config_value(config, _value);
 	if (value == NULL)
@@ -818,10 +829,6 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	} else {
 		if (reload == 0)
 			fprintf(stderr, WARNSTR"skipping unknown option '%s'\n", name);
-#if 0
-		else
-			fprintf(stderr, NOTESTR"skipping option '%s'\n", name);
-#endif
 	}
 
  exit:

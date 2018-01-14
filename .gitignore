@@ -21,6 +21,7 @@ tags
 .deps
 stamp-h1
 *.o
+*.a
 gl/string.h
 gl/libgnu.a
 gl/arg-nonnull.h

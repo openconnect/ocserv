@@ -19,7 +19,17 @@ if [ test "$GCC" = "yes" ];then
 fi
 AC_PATH_PROG(CTAGS, ctags, [:])
 AC_PATH_PROG(CSCOPE, cscope, [:])
-AC_CHECK_PROG([AUTOGEN], [autogen], [autogen], [:])
+AC_CHECK_PROG([RONN], [ronn], [ronn], [:])
+
+if test x"$RONN" = "x:"; then
+	AC_MSG_WARN([[
+***
+*** ronn (ruby-ronn) was not found. Will not be able to generate manpages
+*** ]])
+skip_manpages=yes
+fi
+
+AM_CONDITIONAL(SKIP_MANPAGES, test "$skip_manpages" = yes)
 
 AX_CODE_COVERAGE
 

@@ -41,5 +41,6 @@ files-compare:
 
 dist-hook: files-compare ChangeLog
 	mv ChangeLog $(distdir)
+	test -f doc/ocserv.8 && test -f doc/ocpasswd.8 && test -f doc/occtl.8
 
 .PHONY: files-update files-compare

@@ -12,8 +12,7 @@ BUILT_SOURCES = ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c ctl.pb-c.c ctl.pb-c.h
 
 EXTRA_DIST = version.inc.in version.inc \
-	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw occtl/occtl-args.def \
-	ocpasswd/ocpasswd-args.def ocserv-args.def
+	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw
 
 
 sbin_PROGRAMS = ocserv

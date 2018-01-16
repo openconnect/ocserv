@@ -2158,8 +2158,14 @@ static int connect_handler(worker_st * ws)
 			sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 			if (ret == -1) {
-				if (errno == EINTR)
+				if (errno == EINTR || EAGAIN)
 					continue;
+				terminate_reason = REASON_ERROR;
+				goto exit;
+			}
+
+			if ((pfd[0].revents | pfd[1].revents |
+			     pfd[2].revents | pfd[3].revents) & POLLERR) {
 				terminate_reason = REASON_ERROR;
 				goto exit;
 			}

@@ -31,6 +31,11 @@
 #   include <radcli/radcli.h>
 #  endif
 
+struct radius_vhost_ctx {
+	rc_handle *rh;
+	char nas_identifier[64];
+};
+
 struct radius_ctx_st {
 	char username[MAX_USERNAME_SIZE*2];
 	char user_agent[MAX_AGENT_NAME];
@@ -61,6 +66,8 @@ struct radius_ctx_st {
 	char pass_msg[PW_MAX_MSG_SIZE];
 	unsigned retries;
 	unsigned id;
+
+	struct radius_vhost_ctx *vctx;
 };
 
 extern const struct auth_mod_st radius_auth_funcs;

@@ -85,7 +85,7 @@ struct htable *db = sec->client_db;
 		return 0;
 }
 
-client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip, unsigned pid)
+client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, const char *ip, unsigned pid)
 {
 	struct htable *db = sec->client_db;
 	client_entry_st *e, *te;
@@ -100,6 +100,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip, unsigned pid)
 
 	strlcpy(e->acct_info.remote_ip, ip, sizeof(e->acct_info.remote_ip));
 	e->acct_info.id = pid;
+	e->vhost = vhost;
 
 	do {
 		ret = gnutls_rnd(GNUTLS_RND_RANDOM, e->sid, sizeof(e->sid));
@@ -120,7 +121,7 @@ client_entry_st *new_client_entry(sec_mod_st *sec, const char *ip, unsigned pid)
 
 	calc_safe_id(e->sid, SID_SIZE, (char *)e->acct_info.safe_id, sizeof(e->acct_info.safe_id));
 	now = time(0);
-	e->exptime = now + sec->config->cookie_timeout + AUTH_SLACK_TIME;
+	e->exptime = now + vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
 	e->created = now;
 
 	if (htable_add(db, rehash(e, NULL), e) == 0) {
@@ -196,7 +197,7 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 	if (e->in_use > 0)
 		e->in_use--;
 	if (e->in_use == 0) {
-		if (sec->config->persistent_cookies == 0 && (e->discon_reason == REASON_SERVER_DISCONNECT ||
+		if (e->vhost->perm_config.config->persistent_cookies == 0 && (e->discon_reason == REASON_SERVER_DISCONNECT ||
 		    e->discon_reason == REASON_SESSION_TIMEOUT)) {
 			seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
 			       e->acct_info.username, e->acct_info.safe_id);
@@ -209,10 +210,10 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 			 * explicitly disconnect with the intention to reconnect
 			 * seconds later. */
 			if (e->discon_reason == REASON_USER_DISCONNECT) {
-				if (!sec->config->persistent_cookies || (now+AUTH_SLACK_TIME >= e->exptime))
+				if (!e->vhost->perm_config.config->persistent_cookies || (now+AUTH_SLACK_TIME >= e->exptime))
 					e->exptime = now + AUTH_SLACK_TIME;
 			} else {
-				e->exptime = now + sec->config->cookie_timeout + AUTH_SLACK_TIME;
+				e->exptime = now + e->vhost->perm_config.config->cookie_timeout + AUTH_SLACK_TIME;
 			}
 			seclog(sec, LOG_INFO, "temporarily closing session for %s "SESSION_STR, e->acct_info.username, e->acct_info.safe_id);
 		}

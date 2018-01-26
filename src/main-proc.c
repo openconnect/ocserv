@@ -65,7 +65,7 @@ struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *our_addr, socklen_t our_addr_len,
 			uint8_t *sid, size_t sid_size)
 {
-struct proc_st *ctmp;
+	struct proc_st *ctmp;
 
 	ctmp = talloc_zero(s, struct proc_st);
 	if (ctmp == NULL)
@@ -84,7 +84,11 @@ struct proc_st *ctmp;
 	ctmp->our_addr_len = our_addr_len;
 
 	list_add(&s->proc_list.head, &(ctmp->list));
-	put_into_cgroup(s, s->config->cgroup, pid);
+
+	/* initially we put into the "default" vhost cgroup. We
+	 * will change cgroup once it is known which vhost this
+	 * proc belongs to */
+	put_into_cgroup(s, GETCONFIG(s)->cgroup, pid);
 	s->stats.active_clients++;
 
 	return ctmp;

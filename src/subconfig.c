@@ -103,18 +103,18 @@ unsigned expand_brackets_string(void *pool, const char *str, subcfg_val_st out[M
 }
 
 #ifdef HAVE_GSSAPI
-void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str)
+void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
 	gssapi_cfg_st *additional;
 
-	additional = talloc_zero(config, gssapi_cfg_st);
+	additional = talloc_zero(pool, gssapi_cfg_st);
 	if (additional == NULL) {
 		return NULL;
 	}
 
-	vals_size = expand_brackets_string(config, str, vals);
+	vals_size = expand_brackets_string(pool, str, vals);
 	for (i=0;i<vals_size;i++) {
 		if (c_strcasecmp(vals[i].name, "keytab") == 0) {
 			additional->keytab = vals[i].value;
@@ -205,14 +205,14 @@ static void *get_brackets_string2(void *pool, const char *str)
 	return talloc_strndup(pool, p, len);
 }
 
-void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)
+void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
 {
 	char *p;
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
 	radius_cfg_st *additional;
 
-	additional = talloc_zero(config, radius_cfg_st);
+	additional = talloc_zero(pool, radius_cfg_st);
 	if (additional == NULL) {
 		return NULL;
 	}
@@ -220,7 +220,7 @@ void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)
 	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
 		fprintf(stderr, "Parsing radius auth method subconfig using legacy format\n");
 
-		additional->config = get_brackets_string1(config, str);
+		additional->config = get_brackets_string1(pool, str);
 
 		p = get_brackets_string2(config, str);
 		if (p != NULL) {
@@ -232,7 +232,7 @@ void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)
 		}
 	} else {
 		/* new format */
-		vals_size = expand_brackets_string(config, str, vals);
+		vals_size = expand_brackets_string(pool, str, vals);
 		for (i=0;i<vals_size;i++) {
 			if (c_strcasecmp(vals[i].name, "config") == 0) {
 				additional->config = vals[i].value;
@@ -261,19 +261,19 @@ void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str)
 #endif
 
 #ifdef HAVE_PAM
-void *pam_get_brackets_string(struct perm_cfg_st *config, const char *str)
+void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
 	pam_cfg_st *additional;
 
-	additional = talloc_zero(config, pam_cfg_st);
+	additional = talloc_zero(pool, pam_cfg_st);
 	if (additional == NULL) {
 		return NULL;
 	}
 
 	/* new format */
-	vals_size = expand_brackets_string(config, str, vals);
+	vals_size = expand_brackets_string(pool, str, vals);
 	for (i=0;i<vals_size;i++) {
 		if (c_strcasecmp(vals[i].name, "gid-min") == 0) {
 			additional->gid_min = atoi(vals[i].value);
@@ -292,22 +292,22 @@ void *pam_get_brackets_string(struct perm_cfg_st *config, const char *str)
 }
 #endif
 
-void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str)
+void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str)
 {
 	subcfg_val_st vals[MAX_SUBOPTIONS];
 	unsigned vals_size, i;
 	plain_cfg_st *additional;
 
-	additional = talloc_zero(config, plain_cfg_st);
+	additional = talloc_zero(pool, plain_cfg_st);
 	if (additional == NULL) {
 		return NULL;
 	}
 
 	if (str && str[0] == '[' && (str[1] == '/' || str[1] == '.')) { /* legacy format */
 		fprintf(stderr, "Parsing plain auth method subconfig using legacy format\n");
-		additional->passwd = get_brackets_string1(config, str);
+		additional->passwd = get_brackets_string1(pool, str);
 	} else {
-		vals_size = expand_brackets_string(config, str, vals);
+		vals_size = expand_brackets_string(pool, str, vals);
 		for (i=0;i<vals_size;i++) {
 			if (c_strcasecmp(vals[i].name, "passwd") == 0) {
 				additional->passwd = vals[i].value;

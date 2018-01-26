@@ -23,7 +23,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/server-cert-ed25519.pem certs/server-key-ed25519.pem data/test-ed25519.config \
 	certs/server-cert-rsa-pss.pem certs/server-key-rsa-pss.pem data/test-rsa-pss.config \
 	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd \
-	data/test-otp.config data/test-cert-opt-pass.config data/test-gssapi-opt-pass.config
+	data/test-otp.config data/test-cert-opt-pass.config data/test-gssapi-opt-pass.config \
+	certs/server-key-secp521r1.pem certs/server-cert-secp521r1.pem
 
 
 SUBDIRS = docker-ocserv docker-kerberos

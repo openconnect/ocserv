@@ -113,13 +113,13 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	struct ban_entry_st *e;
 	ban_entry_st t;
 	time_t now = time(0);
-	time_t expiration = now + s->config->min_reauth_time;
+	time_t expiration = now + GETCONFIG(s)->min_reauth_time;
 	int ret = 0;
 	char str_ip[MAX_IP_STR];
 	const char *p_str_ip = NULL;
 	unsigned print_msg;
 
-	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || (ip_size != 4 && ip_size != 16))
+	if (db == NULL || GETCONFIG(s)->max_ban_score == 0 || ip == NULL || (ip_size != 4 && ip_size != 16))
 		return 0;
 
 	memcpy(t.ip.ip, ip, ip_size);
@@ -144,7 +144,7 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 			goto fail;
 		}
 	} else {
-		if (now > e->last_reset + s->config->ban_reset_time) {
+		if (now > e->last_reset + GETCONFIG(s)->ban_reset_time) {
 			e->score = 0;
 			e->last_reset = now;
 		}
@@ -153,7 +153,7 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	/* if the user is already banned, don't increase the expiration time
 	 * on further attempts, or the user will never be unbanned if he
 	 * periodically polls the server */
-	if (e->score < s->config->max_ban_score) {
+	if (e->score < GETCONFIG(s)->max_ban_score) {
 		e->expires = expiration;
 		print_msg = 0;
 	} else
@@ -165,14 +165,15 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	else
 		p_str_ip = inet_ntop(AF_INET6, ip, str_ip, sizeof(str_ip));
 
-	if (s->config->max_ban_score > 0 && e->score >= s->config->max_ban_score) {
+	if (GETCONFIG(s)->max_ban_score > 0 && e->score >= GETCONFIG(s)->max_ban_score) {
 		if (print_msg && p_str_ip) {
 			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", str_ip, e->score, ctime(&e->expires));
 		}
 		ret = -1;
 	} else {
-		if (p_str_ip)
+		if (p_str_ip) {
 			mslog(s, NULL, LOG_DEBUG, "added %d points (total %d) for IP '%s' to ban list", score, e->score, str_ip);
+		}
 		ret = 0;
 	}
 
@@ -188,7 +189,7 @@ int add_str_ip_to_ban_list(main_server_st *s, const char *ip, unsigned score)
 	ban_entry_st t;
 	int ret = 0;
 
-	if (db == NULL || s->config->max_ban_score == 0 || ip == NULL || ip[0] == 0)
+	if (db == NULL || GETCONFIG(s)->max_ban_score == 0 || ip == NULL || ip[0] == 0)
 		return 0;
 
 	if (strchr(ip, ':') != 0) {
@@ -219,9 +220,10 @@ int remove_ip_from_ban_list(main_server_st *s, const uint8_t *ip, unsigned size)
 		return 0;
 
 	if (size == 4 || size == 16) {
-		if (inet_ntop(size==16?AF_INET6:AF_INET, ip, txt_ip, sizeof(txt_ip)) != NULL)
+		if (inet_ntop(size==16?AF_INET6:AF_INET, ip, txt_ip, sizeof(txt_ip)) != NULL) {
 			mslog(s, NULL, LOG_INFO,
 				      "unbanning IP '%s'", txt_ip);
+		}
 
 		t.ip.size = size;
 		memcpy(&t.ip.ip, ip, size);
@@ -248,7 +250,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 	unsigned in_size;
 	char txt[MAX_IP_STR];
 
-	if (db == NULL || s->config->max_ban_score == 0)
+	if (db == NULL || GETCONFIG(s)->max_ban_score == 0)
 		return 0;
 
 	in_size = SA_IN_SIZE(addr_size);
@@ -264,7 +266,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 	massage_ipv6_address(&t);
 
 	/* add its current connection points */
-	add_ip_to_ban_list(s, t.ip.ip, t.ip.size, s->config->ban_points_connect);
+	add_ip_to_ban_list(s, t.ip.ip, t.ip.size, GETCONFIG(s)->ban_points_connect);
 
 	now = time(0);
 	e = htable_get(db, rehash(&t, NULL), ban_entry_cmp, &t);
@@ -272,7 +274,7 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 		if (now > e->expires)
 			return 0;
 
-		if (e->score >= s->config->max_ban_score) {
+		if (e->score >= GETCONFIG(s)->max_ban_score) {
 		    	mslog(s, NULL, LOG_INFO, "rejected connection from banned IP: %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), 0));
 			return 1;
 		}
@@ -292,7 +294,7 @@ void cleanup_banned_entries(main_server_st *s)
 
 	t = htable_first(db, &iter);
 	while (t != NULL) {
-		if (now >= t->expires && now > t->last_reset + s->config->ban_reset_time) {
+		if (now >= t->expires && now > t->last_reset + GETCONFIG(s)->ban_reset_time) {
 			htable_delval(db, &iter);
 			talloc_free(t);
 		}

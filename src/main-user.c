@@ -253,11 +253,11 @@ int ret;
 const char* script, *next_script = NULL;
 
 	if (type == SCRIPT_CONNECT)
-		script = s->config->connect_script;
+		script = GETCONFIG(s)->connect_script;
 	else if (type == SCRIPT_HOST_UPDATE)
-		script = s->config->host_update_script;
+		script = GETCONFIG(s)->host_update_script;
 	else
-		script = s->config->disconnect_script;
+		script = GETCONFIG(s)->disconnect_script;
 
 	if (type != SCRIPT_HOST_UPDATE) {
 		if (proc->config->restrict_user_to_routes || proc->config->n_fw_ports > 0) {
@@ -336,6 +336,8 @@ const char* script, *next_script = NULL;
 			}
 		}
 
+		if (proc->vhost)
+			setenv("VHOST", VHOSTNAME(proc->vhost), 1);
 		setenv("USERNAME", proc->username, 1);
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
@@ -402,7 +404,7 @@ add_utmp_entry(main_server_st *s, struct proc_st* proc)
 	struct utmpx entry;
 	struct timespec tv;
 	
-	if (s->config->use_utmp == 0)
+	if (GETCONFIG(s)->use_utmp == 0)
 		return;
 
 	memset(&entry, 0, sizeof(entry));
@@ -440,7 +442,7 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 	struct utmpx entry;
 	struct timespec tv;
 
-	if (s->config->use_utmp == 0)
+	if (GETCONFIG(s)->use_utmp == 0)
 		return;
 
 	memset(&entry, 0, sizeof(entry));

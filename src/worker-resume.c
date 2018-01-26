@@ -100,6 +100,7 @@ static gnutls_datum_t resume_db_fetch(void *dbf, gnutls_datum_t key)
 	msg.session_id.data = key.data;
 	msg.cli_addr.len = ws->remote_addr_len;
 	msg.cli_addr.data = (void*)&ws->remote_addr;
+	msg.vhost = ws->vhost->name;
 
 	ret = send_msg_to_secmod(ws, sd, RESUME_FETCH_REQ, &msg,
 		(pack_size_func)session_resume_fetch_msg__get_packed_size,
@@ -141,6 +142,8 @@ resume_db_store (void *dbf, gnutls_datum_t key, gnutls_datum_t data)
 
 	msg.cli_addr.len = ws->remote_addr_len;
 	msg.cli_addr.data = (void*)&ws->remote_addr;
+
+	msg.vhost = ws->vhost->name;
 
 	sd = connect_to_secmod(ws);
 	if (sd == -1) {

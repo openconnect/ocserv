@@ -154,7 +154,7 @@ int pret;
 	}
 }
 
-static int pam_auth_init(void** ctx, void *pool, const common_auth_init_st *info)
+static int pam_auth_init(void** ctx, void *pool, void *vctx, const common_auth_init_st *info)
 {
 int pret;
 struct pam_ctx_st * pctx;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014-2016 Red Hat, Inc.
- * Copyright (C) 2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2016-2018 Nikos Mavrogiannopoulos
  *
  * This file is part of ocserv.
  *
@@ -58,31 +58,34 @@
 # define CHALLENGE_RC 3
 #endif
 
-static rc_handle *rh = NULL;
-static char nas_identifier[64];
-
-static void radius_global_init(void *pool, void *additional)
+static void radius_vhost_init(void **_vctx, void *pool, void *additional)
 {
 	radius_cfg_st *config = additional;
+	struct radius_vhost_ctx *vctx;
 
 	if (config == NULL)
 		goto fail;
 
-	rh = rc_read_config(config->config);
-	if (rh == NULL) {
+	vctx = talloc_zero(pool, struct radius_vhost_ctx);
+	if (vctx == NULL)
+		goto fail;
+
+	vctx->rh = rc_read_config(config->config);
+	if (vctx->rh == NULL) {
 		goto fail;
 	}
 
 	if (config->nas_identifier) {
-		strlcpy(nas_identifier, config->nas_identifier, sizeof(nas_identifier));
+		strlcpy(vctx->nas_identifier, config->nas_identifier, sizeof(vctx->nas_identifier));
 	} else {
-		nas_identifier[0] = 0;
+		vctx->nas_identifier[0] = 0;
 	}
 
-	if (rc_read_dictionary(rh, rc_conf_str(rh, "dictionary")) != 0) {
+	if (rc_read_dictionary(vctx->rh, rc_conf_str(vctx->rh, "dictionary")) != 0) {
 		fprintf(stderr, "error reading the radius dictionary\n");
 		exit(1);
 	}
+	*_vctx = vctx;
 
 	return;
  fail:
@@ -90,16 +93,19 @@ static void radius_global_init(void *pool, void *additional)
 	exit(1);
 }
 
-static void radius_global_deinit()
+static void radius_vhost_deinit(void *_vctx)
 {
-	if (rh != NULL)
-		rc_destroy(rh);
+	struct radius_vhost_ctx *vctx = _vctx;
+
+	if (vctx->rh != NULL)
+		rc_destroy(vctx->rh);
 }
 
-static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *info)
+static int radius_auth_init(void **ctx, void *pool, void *_vctx, const common_auth_init_st *info)
 {
 	struct radius_ctx_st *pctx;
 	char *default_realm;
+	struct radius_vhost_ctx *vctx = _vctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
 		syslog(LOG_AUTH,
@@ -117,8 +123,9 @@ static int radius_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 		strlcpy(pctx->our_ip, info->our_ip, sizeof(pctx->our_ip));
 
 	pctx->pass_msg[0] = 0;
+	pctx->vctx = vctx;
 
-	default_realm = rc_conf_str(rh, "default_realm");
+	default_realm = rc_conf_str(pctx->vctx->rh, "default_realm");
 
 	if ((strchr(info->username, '@') == NULL) && default_realm &&
 	    default_realm[0] != 0) {
@@ -246,14 +253,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 	/* send Access-Request */
 	syslog(LOG_DEBUG, "radius-auth: communicating username (%s) and password", pctx->username);
-	if (rc_avpair_add(rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_NAME, pctx->username, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
 		return ERR_AUTH_FAIL;
 	}
 
-	if (rc_avpair_add(rh, &send, PW_USER_PASSWORD, (char*)pass, -1, 0) == NULL) {
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_USER_PASSWORD, (char*)pass, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
@@ -267,14 +274,14 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		if (inet_pton(AF_INET, pctx->our_ip, &in) != 0) {
 			in.s_addr = ntohl(in.s_addr);
-			rc_avpair_add(rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0);
+			rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IP_ADDRESS, (char*)&in, sizeof(struct in_addr), 0);
 		} else if (inet_pton(AF_INET6, pctx->our_ip, &in6) != 0) {
-			rc_avpair_add(rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0);
+			rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IPV6_ADDRESS, (char*)&in6, sizeof(struct in6_addr), 0);
 		}
 	}
 
-	if (nas_identifier[0] != 0) {
-		if (rc_avpair_add(rh, &send, PW_NAS_IDENTIFIER, nas_identifier, -1, 0) == NULL) {
+	if (pctx->vctx->nas_identifier[0] != 0) {
+		if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_IDENTIFIER, pctx->vctx->nas_identifier, -1, 0) == NULL) {
 			syslog(LOG_ERR,
 			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
@@ -283,7 +290,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		}
 	}
 
-	if (rc_avpair_add(rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_CALLING_STATION_ID, pctx->remote_ip, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
@@ -292,7 +299,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	if (pctx->user_agent[0] != 0) {
-		if (rc_avpair_add(rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
+		if (rc_avpair_add(pctx->vctx->rh, &send, PW_CONNECT_INFO, pctx->user_agent, -1, 0) == NULL) {
 			syslog(LOG_ERR,
 			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 			       pctx->username);
@@ -302,7 +309,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	service = PW_AUTHENTICATE_ONLY;
-	if (rc_avpair_add(rh, &send, PW_SERVICE_TYPE, &service, -1, 0) == NULL) {
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_SERVICE_TYPE, &service, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
@@ -311,7 +318,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	service = PW_ASYNC;
-	if (rc_avpair_add(rh, &send, PW_NAS_PORT_TYPE, &service, -1, 0) == NULL) {
+	if (rc_avpair_add(pctx->vctx->rh, &send, PW_NAS_PORT_TYPE, &service, -1, 0) == NULL) {
 		syslog(LOG_ERR,
 		       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
 		       pctx->username);
@@ -320,7 +327,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	pctx->pass_msg[0] = 0;
-	ret = rc_aaa(rh, pctx->id, send, &recvd, pctx->pass_msg, 1, PW_ACCESS_REQUEST);
+	ret = rc_aaa(pctx->vctx->rh, pctx->id, send, &recvd, pctx->pass_msg, 1, PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {
 		uint32_t ipv4;
@@ -454,8 +461,8 @@ static void radius_auth_deinit(void *ctx)
 const struct auth_mod_st radius_auth_funcs = {
 	.type = AUTH_TYPE_RADIUS | AUTH_TYPE_USERNAME_PASS,
 	.allows_retries = 1,
-	.global_init = radius_global_init,
-	.global_deinit = radius_global_deinit,
+	.vhost_init = radius_vhost_init,
+	.vhost_deinit = radius_vhost_deinit,
 	.auth_init = radius_auth_init,
 	.auth_deinit = radius_auth_deinit,
 	.auth_msg = radius_auth_msg,

@@ -146,13 +146,13 @@ char *cmd = NULL;
 static
 int route_add(struct main_server_st* s, proc_st *proc, const char* route, const char* dev)
 {
-	return route_adddel(s, proc, s->config->route_add_cmd, route, dev);
+	return route_adddel(s, proc, GETCONFIG(s)->route_add_cmd, route, dev);
 }
 
 static
 int route_del(struct main_server_st* s, proc_st *proc, const char* route, const char* dev)
 {
-	return route_adddel(s, proc, s->config->route_del_cmd, route, dev);
+	return route_adddel(s, proc, GETCONFIG(s)->route_del_cmd, route, dev);
 }
 
 /* Executes the commands required to apply all the configured routes 

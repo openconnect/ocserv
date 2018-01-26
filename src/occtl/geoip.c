@@ -211,6 +211,10 @@ char *geo_lookup(const char *ip, char *buf, unsigned buf_size)
 	return buf;
 
  fail:
+	free(country);
+	free(city);
+	free(coord);
+
 	return "unknown";
 }
 

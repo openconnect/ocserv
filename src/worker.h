@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include <sys/un.h>
 #include <sys/uio.h>
+#include "vhost.h"
 
 typedef enum {
 	UP_DISABLED,
@@ -168,7 +169,6 @@ typedef struct dtls_transport_ptr {
 #define DATA_MTU(ws,mtu) (mtu-ws->dtls_crypto_overhead-ws->dtls_proto_overhead)
 
 typedef struct worker_st {
-	struct tls_st *creds;
 	gnutls_session_t session;
 	gnutls_session_t dtls_session;
 
@@ -187,8 +187,14 @@ typedef struct worker_st {
 	sock_type_t conn_type; /* AF_UNIX or something else */
 	
 	http_parser *parser;
-	struct cfg_st *config;
-	struct perm_cfg_st *perm_config;
+
+	struct list_head *vconfig;
+
+	/* pointer inside vconfig */
+#define WSCREDS(ws) (&ws->vhost->creds)
+#define WSCONFIG(ws) (ws->vhost->perm_config.config)
+#define WSPCONFIG(ws) (&ws->vhost->perm_config)
+	struct vhost_cfg_st *vhost;
 
 	unsigned int auth_state; /* S_AUTH */
 

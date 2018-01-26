@@ -63,10 +63,10 @@ typedef struct pam_cfg_st {
 struct perm_cfg_st;
 
 void *get_brackets_string1(void *pool, const char *str);
-void *gssapi_get_brackets_string(struct perm_cfg_st *config, const char *str);
-void *radius_get_brackets_string(struct perm_cfg_st *config, const char *str);
-void *pam_get_brackets_string(struct perm_cfg_st *config, const char *str);
-void *plain_get_brackets_string(struct perm_cfg_st *config, const char *str);
+void *gssapi_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
+void *radius_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
+void *pam_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
+void *plain_get_brackets_string(void *pool, struct perm_cfg_st *config, const char *str);
 
 void parse_kkdcp_string(char *str, int *socktype, char **_port, char **_server, char **_path, char **_realm);
 

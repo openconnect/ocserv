@@ -93,6 +93,7 @@ message session_resume_fetch_msg
 	 * and contains the address of the client.
 	 */
 	required bytes cli_addr = 2;
+	optional string vhost = 3;
 }
 
 /* RESUME_STORE_REQ */
@@ -104,6 +105,7 @@ message session_resume_store_req_msg
 	 * and contains the address of the client.
 	 */
 	required bytes cli_addr = 3;
+	optional string vhost = 4;
 }
 
 /* RESUME_FETCH_REP */
@@ -211,6 +213,7 @@ message sec_auth_init_msg
 	required uint32 auth_type = 9 [default = 0];
 	optional string our_ip = 10;
 	optional string user_agent = 11;
+	optional string vhost = 12;
 }
 
 /* SEC_AUTH_CONT */
@@ -238,12 +241,14 @@ message sec_op_msg
 	optional uint32 key_idx = 1;
 	required bytes data = 2;
 	required uint32 sig = 3;
+	optional string vhost = 4;
 }
 
 message sec_get_pk_msg
 {
 	required uint32 key_idx = 1;
 	required uint32 pk = 2;
+	optional string vhost = 3;
 }
 
 
@@ -297,6 +302,7 @@ message secm_session_reply_msg
 	required uint32 ipv4_seed = 8;
 	required bytes sid = 9;
 	required bool tls_auth_ok = 10;
+	optional string vhost = 11;
 }
 
 /* internal struct */
@@ -313,6 +319,7 @@ message cookie_int_msg
 	required uint32 expires = 9;
 	required uint32 status = 10; /* the authentication status (PS_*) */
 	required bool in_use = 11;
+	required string vhost = 12;
 }
 
 /* SECM_LIST_COOKIES - no content */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
  * Copyright (C) 2015-2016 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -456,7 +456,7 @@ int y;
 	y = 1;
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
 
-	if (s->config->try_mtu) {
+	if (GETCONFIG(s)->try_mtu) {
 		set_mtu_disc(fd, family, 1);
 	}
 	set_cloexec_flag (fd, 1);
@@ -481,8 +481,8 @@ static void update_fd_limits(main_server_st *s, unsigned main)
 			exit(1);
 		}
 
-		if (s->config->max_clients > 0 && s->config->max_clients > def_set.rlim_cur)
-			max = s->config->max_clients + 32;
+		if (GETCONFIG(s)->max_clients > 0 && GETCONFIG(s)->max_clients > def_set.rlim_cur)
+			max = GETCONFIG(s)->max_clients + 32;
 		else
 			max = MAX(4*1024, def_set.rlim_cur);
 
@@ -510,46 +510,46 @@ static void drop_privileges(main_server_st* s)
 	int ret, e;
 	struct rlimit rl;
 
-	if (s->perm_config->chroot_dir) {
-		ret = chdir(s->perm_config->chroot_dir);
+	if (GETPCONFIG(s)->chroot_dir) {
+		ret = chdir(GETPCONFIG(s)->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->perm_config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", GETPCONFIG(s)->chroot_dir, strerror(e));
 			exit(1);
 		}
 
-		ret = chroot(s->perm_config->chroot_dir);
+		ret = chroot(GETPCONFIG(s)->chroot_dir);
 		if (ret != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s", s->perm_config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s", GETPCONFIG(s)->chroot_dir, strerror(e));
 			exit(1);
 		}
 	}
 
-	if (s->perm_config->gid != -1 && (getgid() == 0 || getegid() == 0)) {
-		ret = setgid(s->perm_config->gid);
+	if (GETPCONFIG(s)->gid != -1 && (getgid() == 0 || getegid() == 0)) {
+		ret = setgid(GETPCONFIG(s)->gid);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
-			       (int) s->perm_config->gid, strerror(e));
+			       (int) GETPCONFIG(s)->gid, strerror(e));
 			exit(1);
 		}
 
-		ret = setgroups(1, &s->perm_config->gid);
+		ret = setgroups(1, &GETPCONFIG(s)->gid);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set groups to %d: %s\n",
-			       (int) s->perm_config->gid, strerror(e));
+			       (int) GETPCONFIG(s)->gid, strerror(e));
 			exit(1);
 		}
 	}
 
-	if (s->perm_config->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
-		ret = setuid(s->perm_config->uid);
+	if (GETPCONFIG(s)->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
+		ret = setuid(GETPCONFIG(s)->uid);
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "cannot set uid to %d: %s\n",
-			       (int) s->perm_config->uid, strerror(e));
+			       (int) GETPCONFIG(s)->uid, strerror(e));
 			exit(1);
 
 		}
@@ -577,7 +577,7 @@ static void drop_privileges(main_server_st* s)
 	}
 
 #define MAX_WORKER_MEM (16*1024*1024)
-	if (s->perm_config->debug == 0) {
+	if (GETPCONFIG(s)->debug == 0) {
 		rl.rlim_cur = MAX_WORKER_MEM;
 		rl.rlim_max = MAX_WORKER_MEM;
 		ret = setrlimit(RLIMIT_AS, &rl);
@@ -694,7 +694,7 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 		return 0;
 	}
 
-	if (!s->config->dtls_psk)
+	if (!GETCONFIG(s)->dtls_psk)
 		goto fallback;
 
 	/* try to read the extension data */
@@ -780,7 +780,7 @@ int sfd = -1;
 	ret = oc_recvfrom_at(listener->fd, s->msg_buffer, sizeof(s->msg_buffer), 0,
 			  (struct sockaddr*)&cli_addr, &cli_addr_size,
 			  (struct sockaddr*)&our_addr, &our_addr_size,
-			  s->perm_config->udp_port);
+			  GETPCONFIG(s)->udp_port);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_INFO, "error receiving in UDP socket");
 		return -1;
@@ -821,7 +821,7 @@ int sfd = -1;
 		match_ip_only = 1;
 
 		/* don't bother IP matching when the listen-clear-file is in use */
-		if (s->perm_config->unix_conn_file)
+		if (GETPCONFIG(s)->unix_conn_file)
 			goto fail;
 	} else {
 		if (!get_session_id(s, s->msg_buffer, buffer_size, &session_id, &session_id_size)) {
@@ -1029,18 +1029,11 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revent
 	mslog(s, NULL, LOG_INFO, "reloading configuration");
 	kill(s->sec_mod_pid, SIGHUP);
 
-	reload_cfg_file(s->main_pool, s->perm_config, 1);
-	s->config = s->perm_config->config;
-
-	/* These must be called after sec-mod has been sent SIGHUP.
+	/* Reload on main needs to happen later than sec-mod.
 	 * That's because of a test that the certificate matches the
-	 * used key in certain gnutls versions */
-#if GNUTLS_VERSION_NUMBER < 0x030407
-	ms_sleep(1000);
-#endif
-	tls_load_files(s, s->creds);
-	tls_load_prio(s, s->creds);
-	tls_reload_crl(s, s->creds, 1);
+	 * used key. */
+	ms_sleep(1500);
+	reload_cfg_file(s->config_pool, s->vconfig, 1);
 }
 
 static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)
@@ -1083,7 +1076,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 		set_block(fd);
 #endif
 
-		if (s->config->max_clients > 0 && s->stats.active_clients >= s->config->max_clients) {
+		if (GETCONFIG(s)->max_clients > 0 && s->stats.active_clients >= GETCONFIG(s)->max_clients) {
 			close(fd);
 			mslog(s, NULL, LOG_INFO, "reached maximum client limit (active: %u)", s->stats.active_clients);
 			return;
@@ -1095,7 +1088,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			return;
 		}
 
-		if (ws->conn_type != SOCK_TYPE_UNIX && !s->config->listen_proxy_proto) {
+		if (ws->conn_type != SOCK_TYPE_UNIX && !GETCONFIG(s)->listen_proxy_proto) {
 			memset(&ws->our_addr, 0, sizeof(ws->our_addr));
 			ws->our_addr_len = sizeof(ws->our_addr);
 			if (getsockname(fd, (struct sockaddr*)&ws->our_addr, &ws->our_addr_len) < 0)
@@ -1135,14 +1128,14 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			ws->secmod_addr_len = s->secmod_addr_len;
 
 			ws->main_pool = s->main_pool;
-			ws->config = s->config;
-			ws->perm_config = s->perm_config;
+
+			ws->vconfig = s->vconfig;
+
 			ws->cmd_fd = cmd_fd[1];
 			ws->tun_fd = -1;
 			ws->dtls_tptr.fd = -1;
 			ws->conn_fd = fd;
 			ws->conn_type = stype;
-			ws->creds = s->creds;
 
 			/* Drop privileges after this point */
 			drop_privileges(s);
@@ -1188,8 +1181,8 @@ fork_failed:
 		forward_udp_to_owner(s, ltmp);
 	}
 
-	if (s->config->rate_limit_ms > 0)
-		ms_sleep(s->config->rate_limit_ms);
+	if (GETCONFIG(s)->rate_limit_ms > 0)
+		ms_sleep(GETCONFIG(s)->rate_limit_ms);
 }
 
 static void sec_mod_watcher_cb (EV_P_ ev_io *w, int revents)
@@ -1215,12 +1208,16 @@ static void ctl_watcher_cb (EV_P_ ev_io *w, int revents)
 static void maintainance_watcher_cb(EV_P_ ev_timer *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
+	vhost_cfg_st *vhost = NULL;
 
 	/* Check if we need to expire any data */
 	mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
-	tls_reload_crl(s, s->creds, 0);
 	cleanup_banned_entries(s);
-	clear_old_configs(s->perm_config);
+	clear_old_configs(s->vconfig);
+
+	list_for_each_rev(s->vconfig, vhost, list) {
+		tls_reload_crl(s->config_pool, vhost, 0);
+	}
 }
 
 static void syserr_cb (const char *msg)
@@ -1238,22 +1235,25 @@ int main(int argc, char** argv)
 	int ret, flags;
 	char *p;
 	void *worker_pool;
-	void *main_pool;
+	void *main_pool, *config_pool;
 	main_server_st *s;
-	/* tls credentials */
-	struct tls_st creds;
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
 #endif
+
 	saved_argc = argc;
 	saved_argv = argv;
-
-	memset(&creds, 0, sizeof(creds));
 
 	/* main pool */
 	main_pool = talloc_init("main");
 	if (main_pool == NULL) {
+		fprintf(stderr, "talloc init error\n");
+		exit(1);
+	}
+
+	config_pool = talloc_init("config");
+	if (config_pool == NULL) {
 		fprintf(stderr, "talloc init error\n");
 		exit(1);
 	}
@@ -1264,7 +1264,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 	s->main_pool = main_pool;
-	s->creds = &creds;
+	s->config_pool = config_pool;
 	s->stats.start_time = s->stats.last_reset = time(0);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
@@ -1280,16 +1280,21 @@ int main(int argc, char** argv)
 	ocsignal(SIGPIPE, SIG_IGN);
 
 	/* Initialize GnuTLS */
-	tls_global_init(&creds);
+	tls_global_init();
 
 	/* load configuration */
-	ret = cmd_parser(main_pool, argc, argv, &s->perm_config);
+	s->vconfig = talloc_zero(config_pool, struct list_head);
+	if (s->vconfig == NULL) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
+	}
+	list_head_init(s->vconfig);
+
+	ret = cmd_parser(config_pool, argc, argv, s->vconfig);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
 	}
-
-	s->config = s->perm_config->config;
 
 	setproctitle(PACKAGE_NAME"-main");
 
@@ -1299,7 +1304,7 @@ int main(int argc, char** argv)
 	}
 
 	/* Listen to network ports */
-	ret = listen_ports(s, s->perm_config, &s->listen_list);
+	ret = listen_ports(s, GETPCONFIG(s), &s->listen_list);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -1307,7 +1312,7 @@ int main(int argc, char** argv)
 
 	flags = LOG_PID|LOG_NDELAY;
 #ifdef LOG_PERROR
-	if (s->perm_config->debug != 0)
+	if (GETPCONFIG(s)->debug != 0)
 		flags |= LOG_PERROR;
 #endif
 	openlog("ocserv", flags, LOG_DAEMON);
@@ -1317,7 +1322,7 @@ int main(int argc, char** argv)
 	deny_severity = LOG_DAEMON|LOG_WARNING;
 #endif
 
-	if (s->perm_config->foreground == 0) {
+	if (GETPCONFIG(s)->foreground == 0) {
 		if (daemon(0, 0) == -1) {
 			e = errno;
 			fprintf(stderr, "daemon failed: %s\n", strerror(e));
@@ -1348,22 +1353,18 @@ int main(int argc, char** argv)
 
 	/* chdir to our chroot directory, to allow opening the sec-mod
 	 * socket if necessary. */
-	if (s->perm_config->chroot_dir) {
-		if (chdir(s->perm_config->chroot_dir) != 0) {
+	if (GETPCONFIG(s)->chroot_dir) {
+		if (chdir(GETPCONFIG(s)->chroot_dir) != 0) {
 			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", s->perm_config->chroot_dir, strerror(e));
+			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", GETPCONFIG(s)->chroot_dir, strerror(e));
 			exit(1);
 		}
 	}
 	ms_sleep(100); /* give some time for sec-mod to initialize */
 
-	/* Initialize certificates */
-	tls_load_files(s, &creds);
-	tls_load_prio(s, s->creds);
-
 	s->secmod_addr.sun_family = AF_UNIX;
 	p = s->socket_file;
-	if (s->perm_config->chroot_dir) /* if we are on chroot make the socket file path relative */
+	if (GETPCONFIG(s)->chroot_dir) /* if we are on chroot make the socket file path relative */
 		while (*p == '/') p++;
 	strlcpy(s->secmod_addr.sun_path, p, sizeof(s->secmod_addr.sun_path));
 	s->secmod_addr_len = SUN_LEN(&s->secmod_addr);
@@ -1383,12 +1384,10 @@ int main(int argc, char** argv)
 
 #ifdef HAVE_GSSAPI
 	/* Initialize kkdcp structures */
-	if (s->config->kkdcp) {
-		ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
-		if (ret != ASN1_SUCCESS) {
-			mslog(s, NULL, LOG_ERR, "KKDCP ASN.1 initialization error");
-			exit(1);
-		}
+	ret = asn1_array2tree(kkdcp_asn1_tab, &_kkdcp_pkix1_asn, NULL);
+	if (ret != ASN1_SUCCESS) {
+		mslog(s, NULL, LOG_ERR, "KKDCP ASN.1 initialization error");
+		exit(1);
 	}
 #endif
 
@@ -1440,13 +1439,12 @@ int main(int argc, char** argv)
 	 * for memory leaks.
 	 */
 	remove(s->full_socket_file);
-	remove(s->perm_config->occtl_socket_file);
+	remove(GETPCONFIG(s)->occtl_socket_file);
 	remove_pid_file();
 
 	clear_lists(s);
-	tls_global_deinit(s->creds);
-	clear_cfg(s->perm_config);
-	talloc_free(s->perm_config);
+	clear_vhosts(s->vconfig);
+	talloc_free(s->config_pool);
 	talloc_free(s->main_pool);
 	closelog();
 

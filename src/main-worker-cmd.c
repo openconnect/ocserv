@@ -157,7 +157,7 @@ static int accept_user(main_server_st * s, struct proc_st *proc, unsigned cmd)
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO,
 		      "user tried to connect more than %u times",
-		      s->config->max_same_clients);
+		      proc->config->max_same_clients);
 		return ret;
 	}
 
@@ -375,7 +375,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 				user_hostname_update(s, proc);
 			}
 
-			if (s->config->listen_proxy_proto) {
+			if (GETCONFIG(s)->listen_proxy_proto) {
 				if (tmsg->has_remote_addr && tmsg->remote_addr.len <= sizeof(struct sockaddr_storage)) {
 					proc_table_update_ip(s, proc, (struct sockaddr_storage*)tmsg->remote_addr.data, tmsg->remote_addr.len);
 

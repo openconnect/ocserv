@@ -192,12 +192,15 @@ typedef struct auth_struct_st {
 	char *additional;
 	unsigned type;
 	const struct auth_mod_st *amod;
+	void *auth_ctx;
+
 	bool enabled;
 } auth_struct_st;
 
 typedef struct acct_struct_st {
 	const char *name;
 	char *additional;
+	void *acct_ctx;
 	const struct acct_mod_st *amod;
 } acct_struct_st;
 
@@ -424,9 +427,8 @@ enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_
 
 #include <ip-util.h>
 
-void reload_cfg_file(void *pool, struct perm_cfg_st* config, unsigned archive);
-void clear_old_configs(struct perm_cfg_st* config);
-void clear_cfg(struct perm_cfg_st* config);
+void reload_cfg_file(void *pool, struct list_head *configs, unsigned archive);
+void clear_old_configs(struct list_head *configs);
 void write_pid_file(void);
 void remove_pid_file(void);
 

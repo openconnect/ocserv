@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014-2017 Red Hat
+ * Copyright (C) 2014-2018 Nikos Mavrogiannopoulos
  *
  * Author: Nikos Mavrogiannopoulos
  *
@@ -586,7 +587,7 @@ static const char *get_ip(const char *ip1, const char *ip2)
 void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_params_st *params)
 {
 	unsigned i;
-	const char *vpn_ip, *groupname, *username;
+	const char *vpn_ip, *username;
 	const char *dtls_ciphersuite;
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	time_t t;
@@ -605,7 +606,7 @@ void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_par
 		/* add header */
 		if (i == 0) {
 			fprintf(out, "%8s %8s %8s %14s %14s %6s %7s %14s %9s\n",
-				"id", "user", "group", "ip", "vpn-ip", "device",
+				"id", "user", "vhost", "ip", "vpn-ip", "device",
 				"since", "dtls-cipher", "status");
 		}
 
@@ -613,14 +614,10 @@ void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_par
 		tm = localtime(&t);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
-		groupname = rep->user[i]->groupname;
-		if (groupname == NULL || groupname[0] == 0)
-			groupname = NO_GROUP;
-
 		print_time_ival7(tmpbuf, time(0), t);
 
 		fprintf(out, "%8d %8s %8s %14s %14s %6s ",
-			(int)rep->user[i]->id, username, groupname, rep->user[i]->ip, vpn_ip, rep->user[i]->tun);
+			(int)rep->user[i]->id, username, rep->user[i]->vhost, rep->user[i]->ip, vpn_ip, rep->user[i]->tun);
 
 		dtls_ciphersuite = fix_ciphersuite(rep->user[i]->dtls_ciphersuite);
 
@@ -692,7 +689,7 @@ void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out,
 		 unsigned all)
 {
 	unsigned i;
-	const char *groupname, *username;
+	const char *username;
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	time_t t;
 	struct tm *tm;
@@ -714,7 +711,7 @@ void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out,
 		/* add header */
 		if (i == 0) {
 			fprintf(out, "%6s %8s %8s %14s %24s %8s %8s\n",
-				"session", "user", "group", "ip", "user agent", "created", "status");
+				"session", "user", "vhost", "ip", "user agent", "created", "status");
 		}
 
 		t = rep->cookies[i]->created;
@@ -724,15 +721,11 @@ void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out,
 			print_time_ival7(tmpbuf, time(0), t);
 		}
 
-		groupname = rep->cookies[i]->groupname;
-		if (groupname == NULL || groupname[0] == 0)
-			groupname = NO_GROUP;
-
 		sid = shorten(rep->cookies[i]->safe_id.data, rep->cookies[i]->safe_id.len, 1);
 		session_entries_add(ctx, sid);
 
 		fprintf(out, "%.6s %8s %8s %14s %.24s %8s %8s\n",
-			sid, username, groupname, rep->cookies[i]->remote_ip,
+			sid, username, rep->cookies[i]->vhost, rep->cookies[i]->remote_ip,
 			rep->cookies[i]->user_agent, tmpbuf, ps_status_to_str(rep->cookies[i]->status, 1));
 	}
 }
@@ -876,13 +869,13 @@ int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 
 			/* add header */
 			if (i == 0) {
-				fprintf(out, "%6s %8s %6s %16s %28s\n",
-					"id", "user", "device", "vpn-ip", "iroute");
+				fprintf(out, "%6s %8s %8s %6s %16s %28s\n",
+					"id", "user", "vhost", "device", "vpn-ip", "iroute");
 			}
 
 			for (j=0;j<rep->user[i]->n_iroutes;j++)
-				fprintf(out, "%6d %8s %6s %16s %28s\n",
-					(int)rep->user[i]->id, username, rep->user[i]->tun, vpn_ip, rep->user[i]->iroutes[j]);
+				fprintf(out, "%6d %8s %8s %6s %16s %28s\n",
+					(int)rep->user[i]->id, username, rep->user[i]->vhost, rep->user[i]->tun, vpn_ip, rep->user[i]->iroutes[j]);
 
 		}
 	} else {
@@ -898,6 +891,7 @@ int handle_list_iroutes_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st
 
 			print_single_value_int(out, params, "ID", rep->user[i]->id, 1);
 			print_single_value(out, params, "Username", username, 1);
+			print_single_value(out, params, "vhost", rep->user[i]->vhost, 1);
 			print_single_value(out, params, "Device", rep->user[i]->tun, 1);
 			print_single_value(out, params, "IP", vpn_ip, 1);
 			print_list_entries(out, params, "iRoutes", rep->user[i]->iroutes, rep->user[i]->n_iroutes, 1);
@@ -1098,6 +1092,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
 
 		print_single_value(out, params, "State", ps_status_to_str(args->user[i]->status, 0), 1);
+		print_single_value(out, params, "vhost", args->user[i]->vhost, 1);
 		if (args->user[i]->has_mtu != 0)
 			print_pair_value(out, params, "Device", args->user[i]->tun, "MTU", int2str(tmpbuf, args->user[i]->mtu), 1);
 		else
@@ -1292,7 +1287,7 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
 			groupname = NO_GROUP;
 
 		print_pair_value(out, params, "Username", username, "Groupname", groupname, 1);
-		print_single_value(out, params, "User-Agent", args->cookies[i]->user_agent, 1);
+		print_pair_value(out, params, "vhost", args->cookies[i]->vhost, "User-Agent", args->cookies[i]->user_agent, 1);
 		print_pair_value(out, params, "Remote IP", args->cookies[i]->remote_ip, "Location", geo_lookup(args->cookies[i]->remote_ip, tmpbuf, sizeof(tmpbuf)), 1);
 
 		if (HAVE_JSON(params)) {
@@ -1520,7 +1515,8 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 			common_info_cmd(rep2->user, stdout, params);
 		} else {
 			if (rep2->connected) {
-				printf("connected user '%s' (%u) from %s with IP %s\n",
+				printf("%s: connected user '%s' (%u) from %s with IP %s\n",
+					rep2->user->user[0]->vhost,
 					rep2->user->user[0]->username,
 					rep2->user->user[0]->id,
 					rep2->user->user[0]->ip,
@@ -1530,7 +1526,8 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 				entries_add(ctx, rep2->user->user[0]->username, strlen(rep2->user->user[0]->username), rep2->user->user[0]->id);
 			} else {
 				print_time_ival7(tmpbuf, time(0), rep2->user->user[0]->conn_time);
-				printf("disconnect user '%s' (%u) from %s with IP %s (reason: %s, time: %s)\n",
+				printf("%s: disconnect user '%s' (%u) from %s with IP %s (reason: %s, time: %s)\n",
+					rep2->user->user[0]->vhost,
 					rep2->user->user[0]->username,
 					rep2->user->user[0]->id,
 					rep2->user->user[0]->ip,

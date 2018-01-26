@@ -127,9 +127,9 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 
 	oclog(ws, LOG_INFO, "Processing KKDCP request");
 
-	for (i=0;i<ws->config->kkdcp_size;i++) {
-		if (ws->config->kkdcp[i].url && strcmp(ws->config->kkdcp[i].url, req->url) == 0) {
-			kkdcp = &ws->config->kkdcp[i];
+	for (i=0;i<WSCONFIG(ws)->kkdcp_size;i++) {
+		if (WSCONFIG(ws)->kkdcp[i].url && strcmp(WSCONFIG(ws)->kkdcp[i].url, req->url) == 0) {
+			kkdcp = &WSCONFIG(ws)->kkdcp[i];
 			break;
 		}
 	}
@@ -144,7 +144,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		return -1;
 	}
 
-	ws_add_score_to_ip(ws, ws->config->ban_points_kkdcp, 0);
+	ws_add_score_to_ip(ws, WSCONFIG(ws)->ban_points_kkdcp, 0);
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
 
 	length = BUF_SIZE;

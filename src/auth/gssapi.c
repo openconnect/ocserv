@@ -38,10 +38,12 @@
 #include <base64-helper.h>
 #include "common-config.h"
 
-static gss_cred_id_t glob_creds;
-static gss_OID_set glob_oids;
-static unsigned no_local_map = 0;
-static time_t ticket_freshness_secs = 0;
+struct gssapi_vhost_ctx_st {
+	gss_cred_id_t creds;
+	gss_OID_set oids;
+	unsigned no_local_map;
+	time_t ticket_freshness_secs;
+};
 
 struct gssapi_ctx_st {
 	char username[MAX_USERNAME_SIZE];
@@ -49,6 +51,8 @@ struct gssapi_ctx_st {
 
 	gss_cred_id_t delegated_creds;
 	gss_buffer_desc msg;
+
+	struct gssapi_vhost_ctx_st *vctx;
 };
 
 /* Taken from openconnect's gssapi */
@@ -85,16 +89,23 @@ const gss_OID_set_desc desired_mechs = {
 	.elements = (gss_OID)&spnego_mech
 };
 
-static void gssapi_global_init(void *pool, void *additional)
+static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 {
 	int ret;
 	OM_uint32 time, minor;
 	gss_name_t name = GSS_C_NO_NAME;
 	gssapi_cfg_st *config = additional;
+	struct gssapi_vhost_ctx_st *vctx;
+
+	vctx = talloc_zero(pool, struct gssapi_vhost_ctx_st);
+	if (vctx == NULL) {
+		fprintf(stderr, "auth-gssapi: memory error\n");
+		exit(1);
+	}
 
 	if (config) {
-		no_local_map = config->no_local_map;
-		ticket_freshness_secs = config->ticket_freshness_secs;
+		vctx->no_local_map = config->no_local_map;
+		vctx->ticket_freshness_secs = config->ticket_freshness_secs;
 	}
 
 	if (config && config->keytab) {
@@ -107,7 +118,7 @@ static void gssapi_global_init(void *pool, void *additional)
 		cred_store.elements = &element;
 
 		ret = gss_acquire_cred_from(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
-			&cred_store, &glob_creds, &glob_oids, &time);
+			&cred_store, &vctx->creds, &vctx->oids, &time);
 
 		if (ret != GSS_S_COMPLETE) {
 			ret = -1;
@@ -116,7 +127,7 @@ static void gssapi_global_init(void *pool, void *additional)
 		}
 	} else {
 		ret = gss_acquire_cred(&minor, name, 0, (gss_OID_set)&desired_mechs, 2,
-			&glob_creds, &glob_oids, &time);
+			&vctx->creds, &vctx->oids, &time);
 
 		if (ret != GSS_S_COMPLETE) {
 			ret = -1;
@@ -128,15 +139,17 @@ static void gssapi_global_init(void *pool, void *additional)
 	if (name != GSS_C_NO_NAME)
 		gss_release_name(&minor, &name);
 
+	*_vctx = vctx;
 	return;
 }
 
-static void gssapi_global_deinit()
+static void gssapi_vhost_deinit(void *_vctx)
 {
+	struct gssapi_vhost_ctx_st *vctx = _vctx;
 	OM_uint32 minor;
 
-	if (glob_creds != NULL)
-		gss_release_cred(&minor, &glob_creds);
+	if (vctx->creds != NULL)
+		gss_release_cred(&minor, &vctx->creds);
 }
 
 static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_type)
@@ -161,7 +174,7 @@ static int get_name(struct gssapi_ctx_st *pctx, gss_name_t client, gss_OID mech_
 	syslog(LOG_DEBUG, "gssapi: authenticated GSSAPI user: %.*s", (unsigned)name.length, (char*)name.value);
 	gss_release_buffer(&minor, &name);
 
-	if (no_local_map == 0) {
+	if (pctx->vctx->no_local_map == 0) {
 		ret = gss_localname(&minor, client, mech_type, &name);
 		if (GSS_ERROR(ret) || name.length >= MAX_USERNAME_SIZE) {
 			print_gss_err("gss_localname", mech_type, ret, minor);
@@ -191,7 +204,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 	if (mech_type == NULL ||
 	   ((mech_type->length != gss_mech_krb5->length || memcmp(mech_type->elements, gss_mech_krb5->elements, mech_type->length) != 0) &&
 	    (mech_type->length != gss_mech_krb5_old->length || memcmp(mech_type->elements, gss_mech_krb5_old->elements, mech_type->length) != 0)) ||
-	    ticket_freshness_secs == 0) {
+	    pctx->vctx->ticket_freshness_secs == 0) {
 		return 0;
 	}
 
@@ -201,7 +214,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 		return -1;
 	}
 
-	if (time(0) > authtime + ticket_freshness_secs) {
+	if (time(0) > authtime + pctx->vctx->ticket_freshness_secs) {
 		syslog(LOG_INFO, "gssapi: the presented kerberos ticket for %s is too old", pctx->username);
 		return -1;
 	}
@@ -209,7 +222,7 @@ static int verify_krb5_constraints(struct gssapi_ctx_st *pctx, gss_OID mech_type
 	return 0;
 }
 
-static int gssapi_auth_init(void **ctx, void *pool, const common_auth_init_st *info)
+static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_auth_init_st *info)
 {
 	struct gssapi_ctx_st *pctx;
 	OM_uint32 minor, flags, time;
@@ -220,6 +233,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 	size_t raw_len;
 	char *raw;
 	const char *spnego = info->username;
+	struct gssapi_vhost_ctx_st *vctx = _vctx;
 
 	if (spnego == NULL || spnego[0] == 0) {
 		syslog(LOG_ERR, "gssapi: error in spnego data %s", __func__);
@@ -238,7 +252,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 
 	buf.value = raw;
 	buf.length = raw_len;
-	ret = gss_accept_sec_context(&minor, &pctx->gssctx, glob_creds, &buf,
+	ret = gss_accept_sec_context(&minor, &pctx->gssctx, vctx->creds, &buf,
 		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
 		&flags, &time, &pctx->delegated_creds);
 	talloc_free(raw);
@@ -258,6 +272,7 @@ static int gssapi_auth_init(void **ctx, void *pool, const common_auth_init_st *i
 		return ERR_AUTH_FAIL;
 	}
 
+	pctx->vctx = vctx;
 	*ctx = pctx;
 
 	return ret;
@@ -300,7 +315,7 @@ static int gssapi_auth_pass(void *ctx, const char *spnego, unsigned spnego_len)
 
 	buf.value = raw;
 	buf.length = raw_len;
-	ret = gss_accept_sec_context(&minor, &pctx->gssctx, glob_creds, &buf,
+	ret = gss_accept_sec_context(&minor, &pctx->gssctx, pctx->vctx->creds, &buf,
 		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
 		&flags, &time, &pctx->delegated_creds);
 	talloc_free(raw);
@@ -372,8 +387,8 @@ const struct auth_mod_st gssapi_auth_funcs = {
 	.auth_pass = gssapi_auth_pass,
 	.auth_user = gssapi_auth_user,
 	.auth_group = gssapi_auth_group,
-	.global_init = gssapi_global_init,
-	.global_deinit = gssapi_global_deinit,
+	.vhost_init = gssapi_vhost_init,
+	.vhost_deinit = gssapi_vhost_deinit,
 	.group_list = gssapi_group_list
 };
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015-2018 Nikos Mavrogiannopoulos
  * Copyright (C) 2015 Red Hat
  *
  * This file is part of ocserv.
@@ -179,7 +180,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	if (req->value.length <= 0)
 		return;
 
-	if (ws->perm_config->debug < DEBUG_SENSITIVE &&
+	if (WSPCONFIG(ws)->debug < DEBUG_SENSITIVE &&
 		((req->header.length == 6 && strncasecmp((char*)req->header.data, "Cookie", 6) == 0) ||
 		(req->header.length == 20 && strncasecmp((char*)req->header.data, "X-DTLS-Master-Secret", 20) == 0)))
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: (censored)", (int)req->header.length,
@@ -199,7 +200,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 	switch (req->next_header) {
 	case HEADER_MASTER_SECRET:
-		if (req->use_psk || !ws->config->dtls_legacy) /* ignored */
+		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy) /* ignored */
 			break;
 
 		if (value_length < TLS_MASTER_SIZE * 2) {
@@ -298,7 +299,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		p = strstr(str, DTLS_PROTO_INDICATOR);
 		if (p != NULL && (p[sizeof(DTLS_PROTO_INDICATOR)-1] == 0 || p[sizeof(DTLS_PROTO_INDICATOR)-1] == ':')) {
 			/* OpenConnect DTLS setup was detected. */
-			if (ws->config->dtls_psk) {
+			if (WSCONFIG(ws)->dtls_psk) {
 				req->use_psk = 1;
 				req->master_secret_set = 1; /* we don't need it */
 				break;
@@ -348,7 +349,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 #ifdef ENABLE_COMPRESSION
 	case HEADER_DTLS_ENCODING:
 	case HEADER_CSTP_ENCODING:
-	        if (ws->config->enable_compression == 0)
+	        if (WSCONFIG(ws)->enable_compression == 0)
 	        	break;
 
 		if (req->next_header == HEADER_DTLS_ENCODING)
@@ -504,8 +505,8 @@ url_handler_fn http_post_url_handler(struct worker_st *ws, const char *url)
 		p++;
 	} while (p->url != NULL);
 
-	for (i=0;i<ws->config->kkdcp_size;i++) {
-		if (ws->config->kkdcp[i].url && strcmp(ws->config->kkdcp[i].url, url) == 0)
+	for (i=0;i<WSCONFIG(ws)->kkdcp_size;i++) {
+		if (WSCONFIG(ws)->kkdcp[i].url && strcmp(WSCONFIG(ws)->kkdcp[i].url, url) == 0)
 			return post_kkdcp_handler;
 	}
 

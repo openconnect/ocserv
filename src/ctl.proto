@@ -75,6 +75,7 @@ message user_info_rep
 	repeated fw_port_st fw_ports = 31;
 
 	required bytes safe_id = 32; /* a value derived from the cookie */
+	required string vhost = 33;
 }
 
 message user_list_rep

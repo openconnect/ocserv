@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
  * Copyright (C) 2015 Red Hat
  *
  * This file is part of ocserv.
@@ -162,7 +162,7 @@ int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
 		}
 
 		for (i=0;i<8;i++) {
-			ret = gnutls_certificate_get_crt_raw(ws->creds->xcred, i, 1, &tmpca);
+			ret = gnutls_certificate_get_crt_raw(WSCREDS(ws)->xcred, i, 1, &tmpca);
 			if (ret < 0) {
 				goto cleanup;
 			}

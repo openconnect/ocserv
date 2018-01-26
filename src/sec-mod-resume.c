@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,14 +33,14 @@
 #include <gnutls/crypto.h>
 #include <ccan/hash/hash.h>
 
-#include <vpn.h>
+#include <main.h>
 #include <sec-mod-resume.h>
 #include <common.h>
 #include <ip-util.h>
 #include <tlslib.h>
 
 int handle_resume_delete_req(sec_mod_st *sec,
-			     const SessionResumeFetchMsg * req)
+			     const SessionResumeFetchMsg *req)
 {
 	tls_cache_st *cache;
 	struct htable_iter iter;
@@ -70,8 +70,8 @@ int handle_resume_delete_req(sec_mod_st *sec,
 }
 
 int handle_resume_fetch_req(sec_mod_st *sec,
-			    const SessionResumeFetchMsg * req,
-			    SessionResumeReplyMsg * rep)
+			    const SessionResumeFetchMsg *req,
+			    SessionResumeReplyMsg *rep)
 {
 	tls_cache_st *cache;
 	struct htable_iter iter;
@@ -86,6 +86,11 @@ int handle_resume_fetch_req(sec_mod_st *sec,
 		if (req->session_id.len == cache->session_id_size &&
 		    memcmp(req->session_id.data, cache->session_id,
 			   req->session_id.len) == 0) {
+
+			if (req->vhost && cache->vhostname && c_strcasecmp(req->vhost, cache->vhostname) != 0)
+				return 0;
+			else if (req->vhost != cache->vhostname)
+				return 0;
 
 			if (req->cli_addr.len == cache->remote_addr_len &&
 			    ip_cmp((struct sockaddr_storage *)req->cli_addr.data, &cache->remote_addr) == 0) {
@@ -116,7 +121,7 @@ int handle_resume_fetch_req(sec_mod_st *sec,
 }
 
 int handle_resume_store_req(sec_mod_st *sec,
-			    const SessionResumeStoreReqMsg * req)
+			    const SessionResumeStoreReqMsg *req)
 {
 	tls_cache_st *cache;
 	size_t key;
@@ -127,7 +132,7 @@ int handle_resume_store_req(sec_mod_st *sec,
 	if (req->session_data.len > MAX_SESSION_DATA_SIZE)
 		return -1;
 
-	max = MAX(2 * sec->config->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
+	max = MAX(2 * GETCONFIG(sec)->max_clients, DEFAULT_MAX_CACHED_TLS_SESSIONS);
 	if (sec->tls_db.entries >= max) {
 		seclog(sec, LOG_INFO,
 		      "maximum number of stored TLS sessions reached (%u)",
@@ -150,6 +155,10 @@ int handle_resume_store_req(sec_mod_st *sec,
 	cache->session_id_size = req->session_id.len;
 	cache->session_data_size = req->session_data.len;
 	cache->remote_addr_len = req->cli_addr.len;
+	if (req->vhost)
+		cache->vhostname = talloc_strdup(cache, req->vhost);
+	else
+		cache->vhostname = NULL;
 
 	memcpy(cache->session_id, req->session_id.data, req->session_id.len);
 	memcpy(cache->session_data, req->session_data.data,
@@ -183,7 +192,7 @@ void expire_tls_sessions(sec_mod_st *sec)
 
 		exp = gnutls_db_check_entry_time(&d);
 
-		if (now - exp > TLS_SESSION_EXPIRATION_TIME(sec->config)) {
+		if (now - exp > TLS_SESSION_EXPIRATION_TIME(GETCONFIG(sec))) {
 			cache->session_id_size = 0;
 
 			htable_delval(sec->tls_db.ht, &iter);

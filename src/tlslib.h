@@ -55,11 +55,14 @@ typedef struct tls_st {
 	gnutls_datum_t ocsp_response;
 } tls_st;
 
-void tls_reload_crl(struct main_server_st* s, struct tls_st *creds, unsigned force);
-void tls_global_init(struct tls_st *creds);
-void tls_global_deinit(struct tls_st *creds);
-void tls_load_files(struct main_server_st* s, struct tls_st *creds);
-void tls_load_prio(struct main_server_st *s, tls_st *creds);
+struct vhost_cfg_st;
+
+void tls_reload_crl(struct main_server_st* s, struct vhost_cfg_st *vhost, unsigned force);
+void tls_global_init(void);
+void tls_vhost_init(struct vhost_cfg_st *vhost);
+void tls_vhost_deinit(struct vhost_cfg_st *vhost);
+void tls_load_files(struct main_server_st* s, struct vhost_cfg_st *vhost);
+void tls_load_prio(struct main_server_st *s, struct vhost_cfg_st *vhost);
 
 size_t tls_get_overhead(gnutls_protocol_t, gnutls_cipher_algorithm_t, gnutls_mac_algorithm_t);
 
@@ -114,6 +117,8 @@ typedef struct
 
   char session_data[MAX_SESSION_DATA_SIZE];
   unsigned int session_data_size;
+
+  char *vhostname;
 } tls_cache_st;
 
 #define TLS_SESSION_EXPIRATION_TIME(config) ((config)->cookie_timeout)

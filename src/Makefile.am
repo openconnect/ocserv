@@ -28,7 +28,7 @@ AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/
 ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
 
 ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	main-worker-cmd.c ip-lease.c ip-lease.h main-proc.c \
+	main-worker-cmd.c ip-lease.c ip-lease.h vhost.h main-proc.c \
 	vpn.h tlslib.h log.c tun.c tun.h config-kkdcp.c \
 	config.c worker-resume.c worker.h sec-mod-resume.c main.h \
 	worker-http-handlers.c html.c html.h worker-http.c \

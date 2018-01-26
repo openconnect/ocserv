@@ -100,6 +100,7 @@ void handle_secm_list_cookies_reply(void *pool, int fd, sec_mod_st *sec)
 		cookies[msg.n_cookies].remote_ip = t->acct_info.remote_ip;
 		cookies[msg.n_cookies].status = t->status;
 		cookies[msg.n_cookies].in_use = t->in_use;
+		cookies[msg.n_cookies].vhost = VHOSTNAME(t->vhost);
 
 		msg.cookies[msg.n_cookies] = &cookies[msg.n_cookies];
 		msg.n_cookies++;

@@ -123,6 +123,8 @@ void ms_sleep(unsigned ms)
 
 const char *ps_status_to_str(int status, unsigned cookie);
 
+const char *_vhost_prefix(const char *name);
+
 #ifndef HAVE_STRLCPY
 size_t oc_strlcpy(char *dst, char const *src, size_t siz);
 # define strlcpy oc_strlcpy

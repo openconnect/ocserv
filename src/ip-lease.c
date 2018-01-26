@@ -160,16 +160,18 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 	unsigned i;
 	unsigned max_loops = MAX_IP_TRIES;
 	int ret;
-	const char* c_network, *c_netmask;
+	const char *c_network, *c_netmask;
 	char buf[64];
 
 	/* Our IP accounting */
 	if (proc->config->ipv4_net && proc->config->ipv4_netmask) {
+		/* We only read from user/group configuration as this
+		 * is updated with the current vhost information */
 		c_network = proc->config->ipv4_net;
 		c_netmask = proc->config->ipv4_netmask;
 	} else {
-		c_network = s->config->network.ipv4;
-		c_netmask = s->config->network.ipv4_netmask;
+		c_network = proc->vhost->perm_config.config->network.ipv4;
+		c_netmask = proc->vhost->perm_config.config->network.ipv4_netmask;
 	}
 
 	if (c_network == NULL || c_netmask == NULL) {
@@ -322,8 +324,8 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 
 	struct sockaddr_storage tmp, mask, network, rnd, subnet_mask;
 	unsigned i, max_loops = MAX_IP_TRIES;
-	const char* c_network;
-	unsigned prefix, subnet_prefix;
+	const char* c_network = NULL;
+	unsigned prefix, subnet_prefix ;
 	int ret;
 	char buf[64];
 
@@ -332,9 +334,9 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 		prefix = proc->config->ipv6_prefix;
 		subnet_prefix = proc->config->ipv6_subnet_prefix;
 	} else {
-		c_network = s->config->network.ipv6;
-		prefix = s->config->network.ipv6_prefix;
-		subnet_prefix = s->config->network.ipv6_subnet_prefix;
+		c_network = proc->vhost->perm_config.config->network.ipv6;
+		prefix = proc->vhost->perm_config.config->network.ipv6_prefix;
+		subnet_prefix = proc->vhost->perm_config.config->network.ipv6_subnet_prefix;
 	}
 
 	if (c_network == NULL || prefix == 0 || subnet_prefix == 0) {

@@ -35,6 +35,7 @@ int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
+	vhost_cfg_st *vhost = NULL;
 
 	ctx = seccomp_init(SCMP_ACT_ERRNO(EPERM));
 	if (ctx == NULL) {
@@ -106,10 +107,13 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(getsockopt, 0);
 	ADD_SYSCALL(setsockopt, 0);
 
-	/* we need to open files when we have an xml_config_file setup */
-	if (ws->config->xml_config_file) {
-		ADD_SYSCALL(stat, 0);
-		ADD_SYSCALL(open, 0);
+	/* we need to open files when we have an xml_config_file setup on any vhost */
+	list_for_each(ws->vconfig, vhost, list) {
+		if (vhost->perm_config.config->xml_config_file) {
+			ADD_SYSCALL(stat, 0);
+			ADD_SYSCALL(open, 0);
+			break;
+		}
 	}
 
 	/* this we need to get the MTU from

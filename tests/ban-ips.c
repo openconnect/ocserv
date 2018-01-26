@@ -55,19 +55,27 @@ unsigned check_if_banned_str(main_server_st *s, const char *ip)
 int main()
 {
 	main_server_st *s = talloc(NULL, struct main_server_st);
+	vhost_cfg_st *vhost;
+
 	if (s == NULL)
 		exit(1);
 
 	memset(s, 0, sizeof(*s));
 
-	s->config = talloc(s, struct cfg_st);
-	if (s->config == NULL)
+	s->vconfig = talloc_zero(s, struct list_head);
+	if (s->vconfig == NULL)
 		exit(1);
+	list_head_init(s->vconfig);
 
-	memset(s->config, 0, sizeof(struct cfg_st));
+	vhost = talloc_zero(s, struct vhost_cfg_st);
+	if (vhost == NULL)
+		exit(1);
+	vhost->perm_config.config = talloc_zero(vhost, struct cfg_st);
 
-	s->config->max_ban_score = 20;
-	s->config->min_reauth_time = 30;
+	list_add(s->vconfig, &vhost->list);
+
+	vhost->perm_config.config->max_ban_score = 20;
+	vhost->perm_config.config->min_reauth_time = 30;
 
 	main_ban_db_init(s);
 
@@ -131,7 +139,7 @@ int main()
 	}
 
 	/* check expiration of entries */ 
-	sleep(s->config->min_reauth_time+1);
+	sleep(GETCONFIG(s)->min_reauth_time+1);
 
 	if (check_if_banned_str(s, "192.168.1.1") != 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
@@ -154,7 +162,7 @@ int main()
 	}
 
 	/* check cleanup */
-	sleep(s->config->min_reauth_time+1);
+	sleep(GETCONFIG(s)->min_reauth_time+1);
 
 	cleanup_banned_entries(s);
 

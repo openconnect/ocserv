@@ -104,7 +104,7 @@ static const ctl_method_st methods[] = {
 
 void ctl_handler_deinit(main_server_st * s)
 {
-	if (s->config->use_occtl == 0)
+	if (GETCONFIG(s)->use_occtl == 0)
 		return;
 
 	if (s->ctl_fd >= 0) {
@@ -122,22 +122,22 @@ int ctl_handler_init(main_server_st * s)
 	struct sockaddr_un sa;
 	int sd, e;
 
-	if (s->config->use_occtl == 0 || s->perm_config->occtl_socket_file == NULL) {
+	if (GETCONFIG(s)->use_occtl == 0 || GETPCONFIG(s)->occtl_socket_file == NULL) {
 		mslog(s, NULL, LOG_INFO, "not using control unix socket");
 		return 0;
 	}
 
-	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s", s->perm_config->occtl_socket_file);
+	mslog(s, NULL, LOG_DEBUG, "initializing control unix socket: %s", GETPCONFIG(s)->occtl_socket_file);
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
-	strlcpy(sa.sun_path, s->perm_config->occtl_socket_file, sizeof(sa.sun_path));
-	remove(s->perm_config->occtl_socket_file);
+	strlcpy(sa.sun_path, GETPCONFIG(s)->occtl_socket_file, sizeof(sa.sun_path));
+	remove(GETPCONFIG(s)->occtl_socket_file);
 
 	sd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sd == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not create socket '%s': %s",
-		      s->perm_config->occtl_socket_file, strerror(e));
+		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
 		return -1;
 	}
 
@@ -146,22 +146,22 @@ int ctl_handler_init(main_server_st * s)
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not bind socket '%s': %s",
-		      s->perm_config->occtl_socket_file, strerror(e));
+		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
 		return -1;
 	}
 
-	ret = chown(s->perm_config->occtl_socket_file, s->perm_config->uid, s->perm_config->gid);
+	ret = chown(GETPCONFIG(s)->occtl_socket_file, GETPCONFIG(s)->uid, GETPCONFIG(s)->gid);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not chown socket '%s': %s",
-		      s->perm_config->occtl_socket_file, strerror(e));
+		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
 	}
 
 	ret = listen(sd, 1024);
 	if (ret == -1) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "could not listen to socket '%s': %s",
-		      s->perm_config->occtl_socket_file, strerror(e));
+		      GETPCONFIG(s)->occtl_socket_file, strerror(e));
 		return -1;
 	}
 
@@ -291,6 +291,7 @@ static int append_user_info(method_ctx *ctx,
 	rep->id = ctmp->pid;
 	rep->username = ctmp->username;
 	rep->groupname = ctmp->groupname;
+	rep->vhost = VHOSTNAME(ctmp->vhost);
 
 	ipbuf = talloc_size(ctx->pool, IPBUF_SIZE);
 	if (ipbuf == NULL)
@@ -404,8 +405,10 @@ static int append_user_info(method_ctx *ctx,
 		rep->dpd = ctmp->config->dpd;
 
 		rep->keepalive = ctmp->config->keepalive;
-		rep->domains = ctx->s->config->split_dns;
-		rep->n_domains = ctx->s->config->split_dns_size;
+		if (ctmp->vhost) {
+			rep->domains = ctmp->vhost->perm_config.config->split_dns;
+			rep->n_domains = ctmp->vhost->perm_config.config->split_dns_size;
+		}
 
 		rep->dns = ctmp->config->dns;
 		rep->n_dns = ctmp->config->n_dns;
@@ -474,10 +477,11 @@ static void method_top(method_ctx *ctx, int cfd, uint8_t * msg,
 }
 
 static int append_ban_info(method_ctx *ctx,
-			    BanListRep *list,
-			    struct ban_entry_st *e)
+			   BanListRep *list,
+			   struct ban_entry_st *e)
 {
 	BanInfoRep *rep;
+	main_server_st *s = ctx->s;
 
 	list->info =
 	    talloc_realloc(ctx->pool, list->info, BanInfoRep *, (1 + list->n_info));
@@ -495,7 +499,7 @@ static int append_ban_info(method_ctx *ctx,
 	rep->ip.len = e->ip.size;
 	rep->score = e->score;
 
-	if (ctx->s->config->max_ban_score > 0 && e->score >= ctx->s->config->max_ban_score) {
+	if (GETCONFIG(s)->max_ban_score > 0 && e->score >= GETCONFIG(s)->max_ban_score) {
 		rep->expires = e->expires;
 		rep->has_expires = 1;
 	}
@@ -836,7 +840,7 @@ static void ctl_handle_commands(main_server_st * s)
 		goto fail;
 	}
 
-	ret = check_upeer_id("ctl", s->perm_config->debug, cfd, 0, 0, NULL, NULL);
+	ret = check_upeer_id("ctl", GETPCONFIG(s)->debug, cfd, 0, 0, NULL, NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "ctl: unauthorized connection");
 		goto fail;
@@ -861,7 +865,7 @@ static void ctl_handle_commands(main_server_st * s)
 
 void ctl_handler_set_fds(main_server_st * s, ev_io *watcher)
 {
-	if (s->config->use_occtl == 0)
+	if (GETCONFIG(s)->use_occtl == 0)
 		return;
 
 	ev_io_set(watcher, s->ctl_fd, EV_READ);
@@ -869,7 +873,7 @@ void ctl_handler_set_fds(main_server_st * s, ev_io *watcher)
 
 void ctl_handler_run_pending(main_server_st* s, ev_io *watcher)
 {
-	if (s->config->use_occtl == 0)
+	if (GETCONFIG(s)->use_occtl == 0)
 		return;
 
 	ctl_handle_commands(s);

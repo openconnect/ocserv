@@ -541,7 +541,7 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	if (ret < 0)
 		return ret;
 	ret = snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%%d",
-		       s->config->network.name);
+		       GETCONFIG(s)->network.name);
 	if (ret != strlen(proc->tun_lease.name)) {
 		mslog(s, NULL, LOG_ERR, "Truncation error in tun name: %s; adjust 'device' option\n",
 		      proc->tun_lease.name);
@@ -586,8 +586,8 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		goto fail;
 	}
 
-	if (s->perm_config->uid != -1) {
-		t = s->perm_config->uid;
+	if (GETPCONFIG(s)->uid != -1) {
+		t = GETPCONFIG(s)->uid;
 		ret = ioctl(tunfd, TUNSETOWNER, t);
 		if (ret < 0) {
 			e = errno;
@@ -597,8 +597,8 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		}
 	}
 #ifdef TUNSETGROUP
-	if (s->perm_config->gid != -1) {
-		t = s->perm_config->gid;
+	if (GETPCONFIG(s)->gid != -1) {
+		t = GETPCONFIG(s)->gid;
 		ret = ioctl(tunfd, TUNSETGROUP, t);
 		if (ret < 0) {
 			e = errno;

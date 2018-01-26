@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
  * Copyright (C) 2015, 2016 Red Hat, Inc.
  *
  * This file is part of ocserv.
@@ -224,14 +224,16 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 	gnutls_mac_algorithm_t mac;
 	gnutls_cipher_algorithm_t cipher;
 
-	if (ws->session && ws->config->match_dtls_and_tls) {
+	gnutls_psk_set_server_credentials_function(WSCREDS(ws)->pskcred, get_psk_key);
+
+	if (ws->session && WSCONFIG(ws)->match_dtls_and_tls) {
 		cipher = gnutls_cipher_get(ws->session);
 		mac = gnutls_mac_get(ws->session);
 
 		snprintf(prio_string, sizeof(prio_string), "%s:"VERS_STRING":-CIPHER-ALL:-MAC-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL:+%s:+%s",
-			 ws->config->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
+			 WSCONFIG(ws)->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
 	} else {
-		if (ws->config->match_dtls_and_tls) {
+		if (WSCONFIG(ws)->match_dtls_and_tls) {
 			oclog(ws, LOG_ERR, "cannot determine ciphersuite from CSTP channel (unset match-tls-dtls-ciphers)");
 			return -1;
 		}
@@ -239,7 +241,7 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 		/* if we haven't an associated session, enable all ciphers we would have enabled
 		 * otherwise for TLS. */
 		snprintf(prio_string, sizeof(prio_string), "%s:"VERS_STRING":-KX-ALL:+PSK:+VERS-DTLS-ALL",
-			 ws->config->priorities);
+			 WSCONFIG(ws)->priorities);
 	}
 
 	ret =
@@ -262,7 +264,7 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 
 	ret =
 	    gnutls_credentials_set(session, GNUTLS_CRD_PSK,
-				   ws->creds->pskcred);
+				   WSCREDS(ws)->pskcred);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS PSK credentials: %s",
 		      gnutls_strerror(ret));
@@ -314,7 +316,7 @@ static int setup_dtls0_9_keys(gnutls_session_t session, struct worker_st *ws)
 
 	ret =
 	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
-				   ws->creds->xcred);
+				   WSCREDS(ws)->xcred);
 	if (ret < 0) {
 		oclog(ws, LOG_ERR, "could not set TLS credentials: %s",
 		      gnutls_strerror(ret));
@@ -345,7 +347,7 @@ static int setup_dtls_connection(struct worker_st *ws)
 		oclog(ws, LOG_INFO, "setting up DTLS-PSK connection");
 		ret = setup_dtls_psk_keys(session, ws);
 	} else {
-		if (!ws->config->dtls_legacy) {
+		if (!WSCONFIG(ws)->dtls_legacy) {
 			oclog(ws, LOG_INFO, "CISCO client compatibility (dtls-legacy) is disabled; will not setup a DTLS session");
 			goto fail;
 		}
@@ -370,8 +372,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 	ws->udp_state = UP_HANDSHAKE;
 
 	/* Setup the fd settings */
-	if (ws->config->output_buffer > 0) {
-		int t = MIN(2048, ws->link_mtu * ws->config->output_buffer);
+	if (WSCONFIG(ws)->output_buffer > 0) {
+		int t = MIN(2048, ws->link_mtu * WSCONFIG(ws)->output_buffer);
 		ret = setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_SNDBUF, &t,
 			   sizeof(t));
 		if (ret == -1)
@@ -401,14 +403,14 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 	PROTOBUF_ALLOCATOR(pa, ws);
 
 	/* no reporting if banning is disabled */
-	if (ws->config->max_ban_score == 0)
+	if (WSCONFIG(ws)->max_ban_score == 0)
 		return;
 
 	/* In final call, no score added, we simply send */
 	if (final == 0) {
 		ws->ban_points += points;
 		/* do not use IPC for small values */
-		if (points < ws->config->ban_points_wrong_password)
+		if (points < WSCONFIG(ws)->ban_points_wrong_password)
 			return;
 	}
 
@@ -483,7 +485,7 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 			      (unsigned long)msg.bytes_out);
 		} else {
 			e = errno;
-			oclog(ws, LOG_WARNING, "could not send periodic stats to sec-mod: %s\n", strerror(e));	      
+			oclog(ws, LOG_WARNING, "could not send periodic stats to sec-mod: %s\n", strerror(e));
 		}
 	}
 }
@@ -511,6 +513,182 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 	_exit(1);
 }
 
+#define HANDSHAKE_SESSION_ID_POS (34)
+#define SKIP_V16(pos, total) \
+	{ uint16_t _s; \
+	  if (pos+2 > total) goto finish; \
+	  _s = (msg->data[pos] << 8) | msg->data[pos+1]; \
+	  if (pos+2+_s > total) goto finish; \
+	  pos += 2+_s; \
+	}
+
+#define SKIP16(pos, total) \
+	  if (pos+2 > total) goto finish; \
+	  pos += 2
+
+#define SKIP8(pos, total) \
+	  if (pos+1 > total) goto finish; \
+	  pos++
+
+#define SKIP_V8(pos, total) \
+	{ uint8_t _s; \
+	  if (pos+1 > total) goto finish; \
+	  _s = msg->data[pos]; \
+	  if (pos+1+_s > total) goto finish; \
+	  pos += 1+_s; \
+	}
+
+#define SET_VHOST_CREDS \
+	ret = \
+	    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, \
+				   WSCREDS(ws)->xcred); \
+	GNUTLS_FATAL_ERR(ret); \
+	gnutls_certificate_server_set_request(session, WSCONFIG(ws)->cert_req); \
+	ret = gnutls_priority_set(session, WSCREDS(ws)->cprio); \
+	GNUTLS_FATAL_ERR(ret); \
+	gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(WSCONFIG(ws)))
+
+/* Parse the TLS client hello to figure vhost */
+static int hello_hook_func(gnutls_session_t session, unsigned int htype,
+			   unsigned when, unsigned int incoming,
+			   const gnutls_datum_t *msg)
+
+{
+	ssize_t ret;
+	size_t pos;
+	size_t hsize;
+	struct worker_st *ws = gnutls_session_get_ptr(session);
+
+	if (htype != GNUTLS_HANDSHAKE_CLIENT_HELLO || when != GNUTLS_HOOK_PRE)
+		goto finish;
+
+	/* find the server name extension */
+
+	pos = HANDSHAKE_SESSION_ID_POS;
+	if (msg->size <= pos)
+		goto finish;
+
+	if (msg->data[0] != 0x03) {
+		/* unknown packet version */
+		goto finish;
+	}
+
+	/* skip session id */
+	SKIP_V8(pos, msg->size);
+
+	/* CipherSuites */
+	SKIP_V16(pos, msg->size);
+
+	/* legacy_compression_methods */
+	SKIP_V8(pos, msg->size);
+
+	/* Skip extension total size */
+	SKIP16(pos, msg->size);
+
+	while (pos < msg->size) {
+		uint16_t type;
+
+		/* read ExtensionType */
+		SKIP16(pos, msg->size);
+		type = (msg->data[pos-2] << 8) | msg->data[pos-1];
+
+		if (type == 0) { /* server name ext */
+			SKIP16(pos, msg->size);
+			SKIP16(pos, msg->size); /* we don't support anything but a single name */
+
+			SKIP8(pos, msg->size);
+			if (msg->data[pos-1] != 0) { /* HostName */
+				oclog(ws, LOG_DEBUG,
+				      "received server name extension with invalid name type field");
+				goto finish;
+			}
+
+			SKIP16(pos, msg->size);
+			hsize = (msg->data[pos-2] << 8) | msg->data[pos-1];
+
+			if (hsize == 0 || hsize + pos > msg->size || hsize > sizeof(ws->buffer)-1) {
+				oclog(ws, LOG_DEBUG,
+				      "received server name extension with too large name");
+				goto finish;
+			}
+
+			memcpy(ws->buffer, &msg->data[pos], hsize);
+			ws->buffer[hsize] = 0;
+
+			oclog(ws, LOG_DEBUG,
+			      "client requested hostname: %s", (char*)ws->buffer);
+
+			ws->vhost = find_vhost(ws->vconfig, (char*)ws->buffer);
+			if (ws->vhost->name && c_strcasecmp(ws->vhost->name, (char*)ws->buffer) != 0) {
+				oclog(ws, LOG_INFO,
+				      "client requested hostname %s does not match known vhost", (char*)ws->buffer);
+			}
+
+			goto finish;
+		} else {
+			SKIP_V16(pos, msg->size);
+		}
+	}
+
+ finish:
+	/* We set credentials irrespective of whether a virtual host was found,
+	 * as they have not been previously set. */
+	SET_VHOST_CREDS;
+
+	return 0;
+}
+
+#if GNUTLS_VERSION_NUMBER < 0x030400
+# define SIMULATE_CLIENT_HELLO_HOOK
+#endif
+
+#ifdef SIMULATE_CLIENT_HELLO_HOOK
+#define TLS_RECORD_HEADER 5
+#define TLS_HANDSHAKE_HEADER 4
+
+/* In gnutls 3.3 we don't get the size in the handshake callback
+ * so we try to simulate.
+ */
+static void peek_client_hello(struct worker_st *ws, gnutls_session_t session, int fd)
+{
+	unsigned read_tries = 0;
+	int ret;
+	size_t size, hsize;
+	gnutls_datum_t msg;
+
+	do {
+		if (read_tries > 0) {
+			if (read_tries > 5)
+				goto fallback;
+			ms_sleep(150);
+		}
+		read_tries++;
+
+		ret = recv(fd, ws->buffer, sizeof(ws->buffer), MSG_PEEK);
+		if (ret == -1)
+			goto fallback;
+		size = ret;
+
+		if (size < TLS_RECORD_HEADER)
+			goto fallback;
+
+		hsize = (ws->buffer[3] << 8) | ws->buffer[4];
+	} while(hsize+TLS_RECORD_HEADER > size);
+
+	if (size < TLS_RECORD_HEADER+TLS_HANDSHAKE_HEADER+HANDSHAKE_SESSION_ID_POS)
+		goto fallback;
+
+	msg.data = ws->buffer + TLS_RECORD_HEADER+TLS_HANDSHAKE_HEADER;
+	msg.size = size - (TLS_RECORD_HEADER+TLS_HANDSHAKE_HEADER);
+	hello_hook_func(session, GNUTLS_HANDSHAKE_CLIENT_HELLO,
+			GNUTLS_HOOK_PRE, 1, &msg);
+
+	return;
+
+ fallback:
+	SET_VHOST_CREDS;
+}
+#endif
 
 /* vpn_server:
  * @ws: an initialized worker structure
@@ -544,14 +722,14 @@ void vpn_server(struct worker_st *ws)
 	ocsignal(SIGALRM, handle_alarm);
 
 	global_ws = ws;
-	if (ws->config->auth_timeout)
-		alarm(ws->config->auth_timeout);
+	if (GETCONFIG(ws)->auth_timeout)
+		alarm(GETCONFIG(ws)->auth_timeout);
 
 	/* do not allow this process to be traced. That
 	 * prevents worker processes tracing each other. */
-	if (ws->perm_config->debug == 0)
+	if (GETPCONFIG(ws)->debug == 0)
 		pr_set_undumpable("worker");
-	if (ws->config->isolate != 0) {
+	if (GETCONFIG(ws)->isolate != 0) {
 		ret = disable_system_calls(ws);
 		if (ret < 0) {
 			oclog(ws, LOG_INFO,
@@ -560,14 +738,12 @@ void vpn_server(struct worker_st *ws)
 	}
 	ws->session_start_time = time(0);
 
-	gnutls_psk_set_server_credentials_function(ws->creds->pskcred, get_psk_key);
-
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
 		ws->proto = AF_INET;
 	else
 		ws->proto = AF_INET6;
 
-	if (ws->config->listen_proxy_proto) {
+	if (GETCONFIG(ws)->listen_proxy_proto) {
 		oclog(ws, LOG_DEBUG, "accepted proxy protocol connection");
 		ret = parse_proxy_proto_header(ws, ws->conn_fd);
 		if (ret < 0) {
@@ -580,27 +756,36 @@ void vpn_server(struct worker_st *ws)
 	}
 
 	if (ws->conn_type != SOCK_TYPE_UNIX) {
+		/* ws->vhost is being assigned in gnutls_handshake()
+		 * after client hello is received. We set temporarily a value
+		 * as we need to set some cipher priorities for handshake to start. */
+		ws->vhost = find_vhost(ws->vconfig, NULL);
+
 		/* initialize the session */
 		ret = gnutls_init(&session, GNUTLS_SERVER);
 		GNUTLS_FATAL_ERR(ret);
 
-		ret = gnutls_priority_set(session, ws->creds->cprio);
+		ret = gnutls_priority_set(session, WSCREDS(ws)->cprio);
 		GNUTLS_FATAL_ERR(ret);
+		gnutls_session_set_ptr(session, ws);
 
-		ret =
-		    gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE,
-					   ws->creds->xcred);
-		GNUTLS_FATAL_ERR(ret);
-
-		gnutls_certificate_server_set_request(session, ws->config->cert_req);
+		/* if we have a single vhost, avoid going through a callback to set credentials. */
+		if (!HAVE_VHOSTS(ws)) {
+			SET_VHOST_CREDS;
+		} else {
+#ifdef SIMULATE_CLIENT_HELLO_HOOK
+			peek_client_hello(ws, session, ws->conn_fd);
+#else
+			gnutls_handshake_set_hook_function(session, GNUTLS_HANDSHAKE_CLIENT_HELLO,
+							   GNUTLS_HOOK_PRE, hello_hook_func);
+#endif
+		}
 
 		gnutls_transport_set_ptr(session,
 				 (gnutls_transport_ptr_t) (long)ws->conn_fd);
 
 		set_resume_db_funcs(session);
-		gnutls_session_set_ptr(session, ws);
 		gnutls_db_set_ptr(session, ws);
-		gnutls_db_set_cache_expiration(session, TLS_SESSION_EXPIRATION_TIME(ws->config));
 
 		gnutls_handshake_set_timeout(session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 		gnutls_transport_set_pull_timeout_function(session, tls_pull_timeout);
@@ -611,13 +796,16 @@ void vpn_server(struct worker_st *ws)
 
 		oclog(ws, LOG_DEBUG, "TLS handshake completed");
 	} else {
+		ws->vhost = find_vhost(ws->vconfig, NULL);
+
 		oclog(ws, LOG_DEBUG, "Accepted unix connection");
 	}
+
 	session_info_send(ws);
 
 	memset(&settings, 0, sizeof(settings));
 
-	ws->selected_auth = &ws->perm_config->auth[0];
+	ws->selected_auth = &WSPCONFIG(ws)->auth[0];
 	if (ws->cert_auth_ok)
 		ws_switch_auth_to(ws, AUTH_TYPE_CERTIFICATE);
 
@@ -631,7 +819,7 @@ void vpn_server(struct worker_st *ws)
 
 	human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
 
-	if (ws->config->listen_proxy_proto) {
+	if (WSCONFIG(ws)->listen_proxy_proto) {
 		oclog(ws, LOG_DEBUG, "proxy-hdr: peer is %s\n", ws->remote_ip_str);
 	}
 
@@ -777,7 +965,7 @@ void session_info_send(worker_st * ws)
 		msg.hostname = ws->req.hostname;
 	}
 
-	if (ws->config->listen_proxy_proto) {
+	if (WSCONFIG(ws)->listen_proxy_proto) {
 		msg.our_addr.data = (uint8_t*)&ws->our_addr;
 		msg.our_addr.len = ws->our_addr_len;
 		msg.has_our_addr = 1;
@@ -840,7 +1028,7 @@ static void disable_mtu_disc(worker_st *ws)
 	oclog(ws, LOG_DEBUG, "disabling MTU discovery on UDP socket");
 	set_mtu_disc(ws->dtls_tptr.fd, ws->proto, 0);
 	link_mtu_set(ws, ws->adv_link_mtu);
-	ws->config->try_mtu = 0;
+	WSCONFIG(ws)->try_mtu = 0;
 }
 
 /* sets the current value of mtu as bad,
@@ -851,7 +1039,7 @@ static void disable_mtu_disc(worker_st *ws)
 static
 int mtu_not_ok(worker_st * ws)
 {
-	if (ws->config->try_mtu == 0 || ws->dtls_session == NULL)
+	if (WSCONFIG(ws)->try_mtu == 0 || ws->dtls_session == NULL)
 		return 0;
 
 	if (ws->proto == AF_INET) {
@@ -917,7 +1105,7 @@ static void mtu_discovery_init(worker_st * ws, unsigned mtu)
 		disable_mtu_disc(ws);
 	}
 
-	if (!ws->config->try_mtu)
+	if (!WSCONFIG(ws)->try_mtu)
 		oclog(ws, LOG_DEBUG,
 		      "Initializing MTU discovery; initial MTU: %u\n", mtu);
 
@@ -930,7 +1118,7 @@ void mtu_ok(worker_st * ws)
 {
 	unsigned int c;
 
-	if (ws->config->try_mtu == 0 || ws->proto == AF_INET6)
+	if (WSCONFIG(ws)->try_mtu == 0 || ws->proto == AF_INET6)
 		return;
 
 	if (ws->last_bad_mtu == (ws->link_mtu) + 1 ||
@@ -964,7 +1152,7 @@ int get_pmtu_approx(worker_st *ws)
 		e = errno;
 		oclog(ws, LOG_INFO, "error in getting TCP_INFO: %s",
 		      strerror(e));
-		return -1; 
+		return -1;
 	} else {
 		return ti.tcpi_pmtu;
 	}
@@ -1006,8 +1194,8 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 	 * the the alarm instead of hanging. */
 	alarm(1800);
 
-	if (ws->config->idle_timeout > 0) {
-		if (now - ws->last_nc_msg > ws->config->idle_timeout) {
+	if (WSCONFIG(ws)->idle_timeout > 0) {
+		if (now - ws->last_nc_msg > WSCONFIG(ws)->idle_timeout) {
 			oclog(ws, LOG_ERR,
 			      "idle timeout reached for process (%d secs)",
 			      (int)(now - ws->last_nc_msg));
@@ -1156,7 +1344,7 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 
 			if (ws->last_dtls_rehandshake > 0 &&
 			    tnow->tv_sec - ws->last_dtls_rehandshake <
-			    ws->config->rekey_time / 2) {
+			    WSCONFIG(ws)->rekey_time / 2) {
 				oclog(ws, LOG_INFO,
 				      "client requested DTLS rehandshake too soon");
 				ret = -1;
@@ -1294,7 +1482,7 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 		/* rekey? */
 		if (ws->last_tls_rehandshake > 0 &&
 		    tnow->tv_sec - ws->last_tls_rehandshake <
-		    ws->config->rekey_time / 2) {
+		    WSCONFIG(ws)->rekey_time / 2) {
 			oclog(ws, LOG_INFO,
 			      "client requested TLS rehandshake too soon");
 			ret = -1;
@@ -1353,15 +1541,15 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	cstp_to_send.data = ws->buffer;
 	cstp_to_send.size = l;
 
-	if (ws->config->switch_to_tcp_timeout &&
+	if (WSCONFIG(ws)->switch_to_tcp_timeout &&
 	    ws->udp_state == UP_ACTIVE &&
-	    tnow->tv_sec > ws->udp_recv_time + ws->config->switch_to_tcp_timeout) {
+	    tnow->tv_sec > ws->udp_recv_time + WSCONFIG(ws)->switch_to_tcp_timeout) {
 		oclog(ws, LOG_DEBUG, "No UDP data received for %li seconds, using TCP instead\n",
 				tnow->tv_sec - ws->udp_recv_time);
 		ws->udp_state = UP_INACTIVE;
 	}
 
-	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > ws->config->no_compress_limit) {
+	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > WSCONFIG(ws)->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);
 		oclog(ws, LOG_TRANSFER_DEBUG, "compressed %d to %d\n", (int)l, ret);
@@ -1378,7 +1566,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 				}
 			}
 		}
-	} else if (ws->cstp_selected_comp != NULL && l > ws->config->no_compress_limit) {
+	} else if (ws->cstp_selected_comp != NULL && l > WSCONFIG(ws)->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->cstp_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);
 		oclog(ws, LOG_TRANSFER_DEBUG, "compressed %d to %d\n", (int)l, ret);
@@ -1411,7 +1599,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 				      "retrying (TLS) %d\n", l);
 				tls_retry = 1;
 			} else if (ret >= 1+DATA_MTU(ws, ws->link_mtu) &&
-				   ws->config->try_mtu != 0) {
+				   WSCONFIG(ws)->try_mtu != 0) {
 				mtu_ok(ws);
 			}
 		}
@@ -1595,7 +1783,7 @@ static void calc_mtu_values(worker_st * ws)
  * should be set to %S_AUTH_COMPLETE or the client will be
  * disconnected.
  *
- * If the user is authenticate it handles the TCP and UDP VPN 
+ * If the user is authenticate it handles the TCP and UDP VPN
  * tunnels.
  *
  */
@@ -1632,7 +1820,7 @@ static int connect_handler(worker_st * ws)
 		exit_worker(ws);
 	}
 
-	if (ws->config->network.name[0] == 0) {
+	if (WSCONFIG(ws)->network.name[0] == 0) {
 		oclog(ws, LOG_ERR,
 		      "no networks are configured; rejecting client");
 		cstp_puts(ws, "HTTP/1.1 503 Service Unavailable\r\n");
@@ -1657,10 +1845,10 @@ static int connect_handler(worker_st * ws)
 	}
 
 	FUZZ(ws->user_config->interim_update_secs, 5, rnd);
-	FUZZ(ws->config->rekey_time, 30, rnd);
+	FUZZ(WSCONFIG(ws)->rekey_time, 30, rnd);
 
 	/* Connected. Turn of the alarm */
-	if (ws->config->auth_timeout)
+	if (WSCONFIG(ws)->auth_timeout)
 		alarm(0);
 	http_req_deinit(ws);
 
@@ -1676,7 +1864,7 @@ static int connect_handler(worker_st * ws)
 
 	if (req->is_mobile) {
 		ws->user_config->dpd = ws->user_config->mobile_dpd;
-		ws->config->idle_timeout = ws->config->mobile_idle_timeout;
+		WSCONFIG(ws)->idle_timeout = WSCONFIG(ws)->mobile_idle_timeout;
 	}
 
 	/* Notify back the client about the accepted hostname */
@@ -1693,15 +1881,15 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
-	if (ws->config->default_domain) {
+	if (WSCONFIG(ws)->default_domain) {
 		ret =
 		    cstp_printf(ws, "X-CSTP-Default-Domain: %s\r\n",
-			       ws->config->default_domain);
+			       WSCONFIG(ws)->default_domain);
 		SEND_ERR(ret);
 	}
 
 	ws->udp_state = UP_DISABLED;
-	if (ws->perm_config->udp_port != 0 && req->master_secret_set != 0) {
+	if (WSPCONFIG(ws)->udp_port != 0 && req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
 		ws->udp_state = UP_WAIT_FD;
 	} else {
@@ -1825,8 +2013,8 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
-	for (i = 0; i < ws->config->split_dns_size; i++) {
-		if (strchr(ws->config->split_dns[i], ':') != 0)
+	for (i = 0; i < WSCONFIG(ws)->split_dns_size; i++) {
+		if (strchr(WSCONFIG(ws)->split_dns[i], ':') != 0)
 			ip6 = 1;
 		else
 			ip6 = 0;
@@ -1837,10 +2025,10 @@ static int connect_handler(worker_st * ws)
 			continue;
 
 		oclog(ws, LOG_INFO, "adding split DNS %s",
-		      ws->config->split_dns[i]);
+		      WSCONFIG(ws)->split_dns[i]);
 		ret =
 		    cstp_printf(ws, "X-CSTP-Split-DNS: %s\r\n",
-			       ws->config->split_dns[i]);
+			       WSCONFIG(ws)->split_dns[i]);
 		SEND_ERR(ret);
 	}
 
@@ -1850,10 +2038,10 @@ static int connect_handler(worker_st * ws)
 
 	} else {
 		/* default route */
-		ws->config->tunnel_all_dns = 1;
+		WSCONFIG(ws)->tunnel_all_dns = 1;
 	}
 
-	if (ws->config->tunnel_all_dns) {
+	if (WSCONFIG(ws)->tunnel_all_dns) {
 		ret = cstp_puts(ws, "X-CSTP-Tunnel-All-DNS: true\r\n");
 	} else {
 		ret = cstp_puts(ws, "X-CSTP-Tunnel-All-DNS: false\r\n");
@@ -1868,11 +2056,11 @@ static int connect_handler(worker_st * ws)
 		       ws->user_config->keepalive);
 	SEND_ERR(ret);
 
-	if (ws->config->idle_timeout > 0) {
+	if (WSCONFIG(ws)->idle_timeout > 0) {
 		ret =
 		    cstp_printf(ws,
 			       "X-CSTP-Idle-Timeout: %u\r\n",
-			       (unsigned)ws->config->idle_timeout);
+			       (unsigned)WSCONFIG(ws)->idle_timeout);
 	} else {
 		ret = cstp_puts(ws, "X-CSTP-Idle-Timeout: none\r\n");
 	}
@@ -1883,25 +2071,25 @@ static int connect_handler(worker_st * ws)
 		     "X-CSTP-Smartcard-Removal-Disconnect: true\r\n");
 	SEND_ERR(ret);
 
-	if (ws->config->is_dyndns != 0) {
+	if (WSCONFIG(ws)->is_dyndns != 0) {
 		ret =
 		    cstp_puts(ws,
 			     "X-CSTP-DynDNS: true\r\n");
 		SEND_ERR(ret);
 	}
 
-	if (ws->config->rekey_time > 0) {
+	if (WSCONFIG(ws)->rekey_time > 0) {
 		unsigned method;
 
 		ret =
 		    cstp_printf(ws, "X-CSTP-Rekey-Time: %u\r\n",
-			       (unsigned)(ws->config->rekey_time));
+			       (unsigned)(WSCONFIG(ws)->rekey_time));
 		SEND_ERR(ret);
 
 		/* if the peer isn't patched for safe renegotiation, always
 		 * require him to open a new tunnel. */
 		if (ws->session != NULL && gnutls_safe_renegotiation_status(ws->session) != 0)
-			method = ws->config->rekey_method;
+			method = WSCONFIG(ws)->rekey_method;
 		else
 			method = REKEY_METHOD_NEW_TUNNEL;
 
@@ -1914,8 +2102,8 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
-	if (ws->config->proxy_url != NULL) {
-		char *url = replace_vals(ws, ws->config->proxy_url);
+	if (WSCONFIG(ws)->proxy_url != NULL) {
+		char *url = replace_vals(ws, WSCONFIG(ws)->proxy_url);
 		if (url != NULL) {
 			ret =
 			    cstp_printf(ws, "X-CSTP-MSIE-Proxy-Pac-URL: %s\r\n",
@@ -1932,8 +2120,8 @@ static int connect_handler(worker_st * ws)
 		       "X-CSTP-License: accept\r\n");
 	SEND_ERR(ret);
 
-	for (i = 0; i < ws->config->custom_header_size; i++) {
-		char *h = replace_vals(ws, ws->config->custom_header[i]);
+	for (i = 0; i < WSCONFIG(ws)->custom_header_size; i++) {
+		char *h = replace_vals(ws, WSCONFIG(ws)->custom_header[i]);
 
 		if (h) {
 			oclog(ws, LOG_INFO, "adding custom header '%s'", h);
@@ -1946,9 +2134,9 @@ static int connect_handler(worker_st * ws)
 
 
 	/* set TCP socket options */
-	if (ws->config->output_buffer > 0) {
+	if (WSCONFIG(ws)->output_buffer > 0) {
 		t = ws->link_mtu;
-		t *= ws->config->output_buffer;
+		t *= WSCONFIG(ws)->output_buffer;
 
 		ret =
 		    setsockopt(ws->conn_fd, SOL_SOCKET, SO_SNDBUF, &t,
@@ -1973,17 +2161,17 @@ static int connect_handler(worker_st * ws)
 
 		ret =
 		    cstp_printf(ws, "X-DTLS-Port: %u\r\n",
-			       ws->perm_config->udp_port);
+			       WSPCONFIG(ws)->udp_port);
 		SEND_ERR(ret);
 
-		if (ws->config->rekey_time > 0) {
+		if (WSCONFIG(ws)->rekey_time > 0) {
 			ret =
 			    cstp_printf(ws, "X-DTLS-Rekey-Time: %u\r\n",
-				       (unsigned)(ws->config->rekey_time + 10));
+				       (unsigned)(WSCONFIG(ws)->rekey_time + 10));
 			SEND_ERR(ret);
 
 			/* This is our private extension */
-			if (ws->config->rekey_method == REKEY_METHOD_SSL) {
+			if (WSCONFIG(ws)->rekey_method == REKEY_METHOD_SSL) {
 				ret =
 				    cstp_puts(ws,
 					     "X-DTLS-Rekey-Method: ssl\r\n");
@@ -2002,7 +2190,7 @@ static int connect_handler(worker_st * ws)
 			p += 2;
 		}
 
-		if (ws->req.use_psk || !ws->config->dtls_legacy) {
+		if (ws->req.use_psk || !WSCONFIG(ws)->dtls_legacy) {
 			ret =
 			    cstp_printf(ws, "X-DTLS-App-ID: %s\r\n",
 				       ws->buffer);
@@ -2053,10 +2241,10 @@ static int connect_handler(worker_st * ws)
 
 	data_mtu_send(ws, DATA_MTU(ws, ws->link_mtu));
 
-	if (ws->config->banner) {
+	if (WSCONFIG(ws)->banner) {
 		ret =
 		    cstp_printf(ws, "X-CSTP-Banner: %s\r\n",
-			       ws->config->banner);
+			       WSCONFIG(ws)->banner);
 		SEND_ERR(ret);
 	}
 

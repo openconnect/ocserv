@@ -3,6 +3,8 @@
   AnyConnect clients. Contributed by Daniel Lenski.
 - Addressed issue which could cause the worker process enter an
   infinite loop while handling a disconnection.
+- Improved detection of openconnect mobile client. Contributed by
+  Kevin Cernekee.
 
 
 * Version 0.11.10 (released 2018-01-07)

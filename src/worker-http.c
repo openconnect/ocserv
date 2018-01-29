@@ -282,6 +282,8 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 				req->user_agent_type = AGENT_OPENCONNECT_V3;
 			else
 				req->user_agent_type = AGENT_OPENCONNECT;
+		} else if (strncasecmp(req->user_agent, "OpenConnect VPN Agent", 21) == 0) {
+			req->user_agent_type = AGENT_OPENCONNECT;
 		}
 		break;
 

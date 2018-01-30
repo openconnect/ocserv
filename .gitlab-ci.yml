@@ -15,8 +15,8 @@ Build/Debian:
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/*.log
-      - build/tests/*.log
+      - ./*.log
+      - ./tests/*.log
 
 Build/Centos7:
   script:
@@ -34,8 +34,8 @@ Build/Centos7:
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/*.log
-      - build/tests/*.log
+      - ./*.log
+      - ./tests/*.log
 
 Build/Fedora27:
   image: fedora:27
@@ -52,8 +52,8 @@ Build/Fedora27:
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/*.log
-      - build/tests/*.log
+      - ./*.log
+      - ./tests/*.log
 
 Build/Fedora-rawhide:
   image: fedora:rawhide
@@ -70,8 +70,8 @@ Build/Fedora-rawhide:
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/*.log
-      - build/tests/*.log
+      - ./*.log
+      - ./tests/*.log
 
 Build/Centos6:
   image: centos:6
@@ -89,8 +89,8 @@ Build/Centos6:
     expire_in: 1 week
     when: on_failure
     paths:
-      - build/*.log
-      - build/tests/*.log
+      - ./*.log
+      - ./tests/*.log
 
 Build/minimal:
   script:
@@ -159,5 +159,5 @@ Build/FreeBSD:
     expire_in: 1 week
     when: on_failure
     paths:
-      - ./*.log
-      - tests/*.log
+      - build/*.log
+      - build/tests/*.log

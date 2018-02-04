@@ -1294,9 +1294,7 @@ static void print_version(void)
 #ifdef HAVE_PAM
 	append("PAM");
 #endif
-#ifdef HAVE_PKCS11
 	append("PKCS#11");
-#endif
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	append("AnyConnect");
 #endif

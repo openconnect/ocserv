@@ -920,14 +920,6 @@ void sec_mod_server(void *main_pool, struct perm_cfg_st *perm_config, const char
 	sec->cmd_fd = cmd_fd;
 	sec->cmd_fd_sync = cmd_fd_sync;
 
-#ifdef HAVE_PKCS11
-	ret = gnutls_pkcs11_reinit();
-	if (ret < 0) {
-		seclog(sec, LOG_WARNING, "error in PKCS #11 reinitialization: %s",
-		       gnutls_strerror(ret));
-	}
-#endif
-
 	if (sec_mod_client_db_init(sec) == NULL) {
 		seclog(sec, LOG_ERR, "error in client db initialization");
 		exit(1);

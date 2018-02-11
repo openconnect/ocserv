@@ -154,6 +154,8 @@ int handle_commands_from_main(struct worker_st *ws)
 				set_mtu_disc(fd, ws->proto, 0);
 
 			oclog(ws, LOG_DEBUG, "received new UDP fd and connected to peer");
+			ws->udp_recv_time = time(0);
+
 			return 0;
 
 			}

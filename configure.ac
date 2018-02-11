@@ -235,12 +235,14 @@ fi
 
 PKG_CHECK_MODULES([CWRAP], [uid_wrapper, socket_wrapper], have_cwrap=yes, have_cwrap=no)
 PKG_CHECK_MODULES([CWRAP_PAM], [pam_wrapper], have_cwrap_pam=yes, have_cwrap_pam=no)
+PKG_CHECK_MODULES([CWRAP_NSS], [nss_wrapper], have_cwrap_nss=yes, have_cwrap_nss=no)
 
 if test "$have_cwrap" != no;then
 	AC_DEFINE([HAVE_CWRAP], 1, [Enable testing with cwrap])
 fi
 AM_CONDITIONAL(HAVE_CWRAP, test "x$have_cwrap" != xno)
 AM_CONDITIONAL(HAVE_CWRAP_PAM, test "x$have_cwrap_pam" != xno && test "$have_liboath" = yes && test "$pam_enabled" = yes)
+AM_CONDITIONAL(HAVE_CWRAP_ALL, test "x$have_cwrap_nss" != xno && test "x$have_cwrap_pam")
 
 AC_ARG_WITH(radius,
   AS_HELP_STRING([--without-radius], [do not include Radius support]),
@@ -564,6 +566,7 @@ Summary of build options:
   CFlags:               ${CFLAGS}
   CWrap testing:        ${have_cwrap}
   CWrap PAM testing:    ${have_cwrap_pam}
+  CWrap NSS testing:    ${have_cwrap_nss}
   
   PAM auth backend:     ${pam_enabled}
   Radius auth backend:  ${radius_enabled}

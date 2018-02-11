@@ -4,7 +4,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/server-key.pem data/test1.config data/pam/nss-group.in data/pam/nss-passwd.in \
 	data/pam/users.oath.templ data/test-pam-noauth.config data/test-pam.passwd \
 	data/test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \
-	data/test3.config data/test-iroute.config data/test-pam.config \
+	data/test3.config data/test-iroute.config data/test-pam.config data/test-vhost2.passwd \
 	user-config/test user-config-opt/test data/test-pass-script.config data/test-multi-cookie.config \
 	data/test-stress.config certs/user-cert-wrong.pem connect-script data/test-group.passwd \
 	data/test-group-pass.config certs/user-group-cert.pem certs/user-group-key.pem \
@@ -19,13 +19,13 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/user-cert-testuser.pem test-stress data/test-user-config.config user-config/testuser \
 	data/test-sighup-key-change.config data/test-sighup-key-change.config user-config/testipnet \
 	certs/user-cert-testipnet.pem certs/user-cert-invalid.pem certs/server-cert-ca.pem \
-	data/test-san-cert.config certs/user-san-cert.pem \
+	data/test-san-cert.config certs/user-san-cert.pem data/test-vhost3.passwd \
 	certs/server-cert-ed25519.pem certs/server-key-ed25519.pem data/test-ed25519.config \
 	certs/server-cert-rsa-pss.pem certs/server-key-rsa-pss.pem data/test-rsa-pss.config \
 	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd \
 	data/test-otp.config data/test-cert-opt-pass.config data/test-gssapi-opt-pass.config \
-	certs/server-key-secp521r1.pem certs/server-cert-secp521r1.pem
-
+	certs/server-key-secp521r1.pem certs/server-cert-secp521r1.pem data/test-vhost-pass-cert.config \
+	data/vhost.hosts
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -50,6 +50,10 @@ dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 endif
 
 if HAVE_CWRAP
+if HAVE_CWRAP_ALL
+dist_check_SCRIPTS += test-vhost
+endif
+
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \

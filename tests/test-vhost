@@ -1,0 +1,163 @@
+#!/bin/sh
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+
+PKG_CONFIG="${PKG_CONFIG:-/usr/bin/pkg-config}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=443
+NO_NEED_ROOT=1
+TMPFILE=pid.$$.tmp
+
+VERBOSE=1
+
+. `dirname $0`/common.sh
+
+connect()
+{
+vhost=$1:$PORT
+opts=$2
+pass=$3
+certhash=$4
+COOKIE=''
+
+echo $pass | LD_PRELOAD="libnss_wrapper.so:libsocket_wrapper.so" ${RAW_OPENCONNECT} ${vhost} -q $opts --servercert=${certhash} --authenticate --passwd-on-stdin >$TMPFILE 2>&1
+grep COOKIE= $TMPFILE >/dev/null 2>&1
+if test $? != 0;then
+	cat $TMPFILE
+	return 1
+fi
+
+return 0
+}
+
+echo "Testing vhosts backend with two username-password hosts and a certificate one... "
+
+${OPENCONNECT} --version|grep 'Using OpenSSL' >/dev/null 2>&1
+if test $? = 0;then
+	# openconnect doesn't support server_name in these cases
+	${PKG_CONFIG} --atleast-version=1.0.2 openssl
+	test $? != 0 && exit 77
+fi
+
+update_config test-vhost-pass-cert.config
+launch_simple_sr_server -p $TMPFILE -d 1 -f -c "${CONFIG}"
+PID=$!
+wait_server $PID
+
+echo -n "Connecting to default host to obtain cookie (user without certificate)... "
+connect "default.example.com" "-u test" "test" "d66b507ae074d03b02eafca40d35f87dd81049d3"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without certificate!"
+fi
+echo ok
+
+echo -n "Connecting to pass2 host to obtain cookie with username from default... "
+connect "pass2.example.com" "-u test" "test" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? = 0;then
+	fail $PID "Connected to wrong host!"
+fi
+echo ok
+
+echo -n "Connecting to pass2 host to obtain cookie with username... "
+connect "pass2.example.com" "-u vhost" "vhost" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? != 0;then
+	fail $PID "Could not connect to pass2!"
+fi
+echo ok
+
+echo -n "Connecting to certificate host to obtain cookie with username from default... "
+connect "cert.example.com" "-u test" "test" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? = 0;then
+	fail $PID "Connected to wrong host!"
+fi
+echo ok
+
+echo -n "Connecting to certificate host to obtain cookie (with certificate)... "
+connect "cert.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? != 0;then
+	fail $PID "Failed to connect with certificate!"
+fi
+echo ok
+
+echo -n "Connecting to certificate host to obtain cookie (with incorrect certificate)... "
+connect "cert.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert-wrong.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? = 0;then
+	fail $PID "Should not have connected with wrong certificate!"
+fi
+echo ok
+
+echo -n "Connecting to pass2 host to obtain cookie (with certificate)... "
+connect "pass2.example.com" "-u vhost --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? = 0;then
+	fail $PID "Connected to wrong host with certificate!"
+fi
+echo ok
+
+echo -n "Connecting to default host to obtain cookie (with certificate)... "
+connect "default.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "d66b507ae074d03b02eafca40d35f87dd81049d3"
+if test $? = 0;then
+	fail $PID "Connected to wrong host with certificate!"
+fi
+echo ok
+
+echo "Adding new vhost and reloading..."
+
+cat >>${CONFIG} <<_EOF
+[vhost:pass3.example.com]
+auth = plain[passwd=${srcdir}/data/test-vhost3.passwd]
+
+ca-cert = ${srcdir}/certs/ca.pem
+
+server-cert = ${srcdir}/certs/server-cert-secp521r1.pem
+server-key = ${srcdir}/certs/server-key-secp521r1.pem
+
+ipv4-network = 192.168.67.0
+ipv4-netmask = 255.255.255.0
+_EOF
+
+kill -HUP $PID
+sleep 5
+
+echo -n "Sanity check to default host..."
+connect "default.example.com" "-u test" "test" "d66b507ae074d03b02eafca40d35f87dd81049d3"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without certificate!"
+fi
+echo ok
+
+echo -n "Sanity check to cert host..."
+connect "cert.example.com" "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem" "" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? != 0;then
+	fail $PID "Failed to connect with certificate!"
+fi
+echo ok
+
+echo -n "Connecting to pass3 host to obtain cookie with username... "
+connect "pass3.example.com" "-u vhost2" "vhost2" "sha1:8e253ef2a87dd9188fe444702f2fe349d30af816"
+if test $? != 0;then
+	fail $PID "Could not connect to pass3!"
+fi
+echo ok
+
+kill $PID
+wait
+
+rm -f $TMPFILE
+
+exit 0

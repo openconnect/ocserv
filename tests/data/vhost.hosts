@@ -1,0 +1,7 @@
+127.0.0.2 pass2.example.com
+127.0.0.2 default.example.com
+127.0.0.2 cert.example.com
+127.0.0.2 pass3.example.com
+fd00::5357:5f02 pass2.example.com
+fd00::5357:5f02 default.example.com
+fd00::5357:5f02 cert.example.com

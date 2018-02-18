@@ -47,8 +47,6 @@ libprotobuf-c0-dev / protobuf-c-devel
 libtalloc-dev      / libtalloc-devel
 libhttp-parser-dev / http-parser-devel
 libpcl1-dev        / pcllib-devel
-libopts25-dev      / autogen-libopts-devel
-autogen            / autogen
 protobuf-c-compiler/ protobuf-c
 gperf              / gperf
 liblockfile-bin    / lockfile-progs
@@ -73,10 +71,6 @@ To build from a distributed release use:
 $ ./configure && make && make check
 ```
 
-When cross compiling it may be useful to add the --enable-local-libopts
-option to configure.
-
-
 To test the code coverage of the test suite use the following:
 ```
 $ ./configure --enable-code-coverage
@@ -87,18 +81,13 @@ Note that the code coverage reported does not currently include tests which
 are run within docker.
 
 In addition to the prerequisites listed above, building from git requires
-the following packages: autoconf, automake, autogen, git2cl, and xz.
+the following packages: autoconf, automake, git2cl, and xz.
 
 To build from the git repository use:
 ```
 $ autoreconf -fvi
 $ ./configure && make
 ```
-
-
-Note that the system's autogen version must match the included libopts
-version on the development system, if the included libopts library is to
-be used.
 
 
 # Basic installation instructions

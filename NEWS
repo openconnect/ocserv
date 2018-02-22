@@ -3,6 +3,9 @@
   AnyConnect clients. Contributed by Daniel Lenski.
 - Addressed issue which could cause the worker process enter an
   infinite loop while handling a disconnection.
+- Allow DTLS stream to come from different IP from TLS stream.
+  There are situations where internet providers send the UDP 
+  stream from different IP from the TCP stream.
 
 
 * Version 0.11.10 (released 2018-01-07)

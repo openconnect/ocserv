@@ -1394,7 +1394,7 @@ static void dummy_sighandler(int signo)
 
 int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *params)
 {
-	uint8_t header[3];
+	uint8_t header[5];
 	int ret;
 	struct cmd_reply_st raw;
 	UserListRep *rep1 = NULL;
@@ -1466,6 +1466,7 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		if (!FD_ISSET(ctx->fd, &rfds))
 			continue;
 
+		assert(sizeof(header) == 1+sizeof(slength));
 		ret = force_read_timeout(ctx->fd, header, 1+sizeof(slength), DEFAULT_TIMEOUT);
 		if (ret == -1) {
 			int e = errno;

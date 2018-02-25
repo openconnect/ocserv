@@ -29,6 +29,11 @@ OTP_FILE=test-otp.$$.tmp
 
 echo "Testing local backend with username-password-otp and certificate... "
 
+$SERV --version 2>&1|grep oath >/dev/null 2>&1
+if [ $? != 0 ];then
+        exit 77
+fi
+
 #user 'test' has cert, password + OTP
 #user 'testuser' has cert and OTP only
 

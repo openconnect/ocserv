@@ -254,8 +254,12 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		}
 		break;
 	case HEADER_SUPPORT_SPNEGO:
-		ws_switch_auth_to(ws, AUTH_TYPE_GSSAPI);
-		req->spnego_set = 1;
+		/* Switch to GSSAPI if the client supports it, but only
+		 * if we haven't already authenticated with a certificate */
+		if (!((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) && ws->cert_auth_ok != 0)) {
+			ws_switch_auth_to(ws, AUTH_TYPE_GSSAPI);
+			req->spnego_set = 1;
+		}
 		break;
 	case HEADER_AUTHORIZATION:
 		if (req->authorization != NULL)

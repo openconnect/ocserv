@@ -216,7 +216,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 		login_msg_end = oc_login_msg_end;
 	}
 
-	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && ws->auth_state < S_AUTH_COOKIE) {
+	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) && ws->auth_state < S_AUTH_COOKIE) {
 		if (ws->req.authorization == NULL || ws->req.authorization_size == 0)
 			return basic_auth_handler(ws, http_ver, NULL);
 		else
@@ -305,7 +305,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 		}
 
-		if (ws->selected_auth->type & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
+		if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) && ws->cert_auth_ok != 0) {
 			ret = get_cert_info(ws);
 			if (ret < 0) {
 				ret = -1;
@@ -344,7 +344,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 
 			/* append any groups available in the certificate */
-			if (ws->selected_auth->type & AUTH_TYPE_CERTIFICATE && ws->cert_auth_ok != 0) {
+			if ((ws->selected_auth->type & AUTH_TYPE_CERTIFICATE) && ws->cert_auth_ok != 0) {
 				unsigned dup;
 
 				for (i=0;i<ws->cert_groups_size;i++) {
@@ -979,7 +979,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	if (ret < 0)
 		goto fail;
 
-	if (ws->selected_auth->type & AUTH_TYPE_GSSAPI && imsg != NULL && imsg[0] != 0) {
+	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) && imsg != NULL && imsg[0] != 0) {
 		ret = cstp_printf(ws, "WWW-Authenticate: Negotiate %s\r\n", imsg);
 		if (ret < 0)
 			goto fail;
@@ -1511,7 +1511,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			areq.password = req->authorization + 10;
 		}
 
-		if (areq.password == NULL && ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
+		if (areq.password == NULL && (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS)) {
 			ret = match_password_in_reply(ws, req->body, req->body_length,
 						      &password);
 			if (ret < 0) {

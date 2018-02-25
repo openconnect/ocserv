@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # Copyright (C) 2014 Red Hat
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
 #
 # This file is part of ocserv.
 #
@@ -15,46 +16,41 @@
 # General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GnuTLS; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-TMPFILE=${srcdir}/outfile.$$
+TMPFILE=${srcdir}/outfile.$$.tmp
+NO_NEED_ROOT=1
 PORT=8445
 
 . `dirname $0`/common.sh
+
+echo "Testing local backend with username-password and optional certificate... "
+
+update_config test-pass-opt-cert.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
 
 connect()
 {
 opts=$1
 pass=$2
-COOKIE=''
-eval `echo "$pass" | $OPENCONNECT -q localhost:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate`
-if [ -z "$COOKIE" ];then
-	return 1
-fi
-
-rm -f $TMPFILE
-echo "$pass" | $OPENCONNECT -q localhost:$PORT $opts -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file ${srcdir}/pidx >$TMPFILE 2>&1 &
-CPID=$!
-
-sleep 3
-grep "Established DTLS" $TMPFILE >/dev/null 2>&1
+echo ${pass} | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --passwd-on-stdin --authenticate >${TMPFILE}
 if test $? != 0;then
-	rm -f $TMPFILE
+	cat ${TMPFILE}
+	return 1
+fi
+
+grep 'COOKIE=' ${TMPFILE}
+if test $? != 0;then
+	cat ${TMPFILE}
 	return 1
 fi
 
 rm -f $TMPFILE
-kill $CPID
 return 0
 }
-
-echo "Testing local backend with username-password and optional certificate... "
-
-launch_server -d 1 -f -c "${srcdir}/data/test-pass-opt-cert.config" & PID=$!
-wait_server $PID
 
 echo -n "Connecting to obtain cookie (user without certificate)... "
 connect "-u test2" "test2"
@@ -84,11 +80,6 @@ if test $? = 0;then
 fi
 echo ok
 
-#echo "Normal connection... "
-#( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
-#	fail $PID "Could not connect to server"
-
-kill $PID
-wait
+cleanup
 
 exit 0

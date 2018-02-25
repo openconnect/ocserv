@@ -1,0 +1,86 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4425
+OUTFILE=test-cert-opt-pass.$$.tmp
+
+. `dirname $0`/common.sh
+
+echo "Testing local backend with certificate and optional username-password... "
+
+connect()
+{
+opts=$1
+pass=$2
+rm -f ${OUTFILE}
+
+echo "$pass" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate >${OUTFILE} 2>&1
+if test $? != 0;then
+	cat ${OUTFILE}
+	return 1
+fi
+
+grep 'COOKIE=' ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	return 1
+fi
+
+rm -f ${OUTFILE}
+return 0
+}
+
+update_config test-cert-opt-pass.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (user without certificate)... "
+connect "-u test2" "test2"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without certificate!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+connect "-u test" "test"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without certificate!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+connect "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert.pem"
+if test $? != 0;then
+	fail $PID "Failed to connect with certificate!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (with incorrect certificate)... "
+connect "-u test --sslkey ./certs/user-key.pem -c ./certs/user-cert-wrong.pem" ""
+if test $? = 0;then
+	fail $PID "Should not have connected with wrong certificate!"
+fi
+echo ok
+
+cleanup
+
+exit 0

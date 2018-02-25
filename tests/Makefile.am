@@ -23,7 +23,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	certs/server-cert-ed25519.pem certs/server-key-ed25519.pem data/test-ed25519.config \
 	certs/server-cert-rsa-pss.pem certs/server-key-rsa-pss.pem data/test-rsa-pss.config \
 	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd \
-	data/test-otp.config
+	data/test-otp.config data/test-cert-opt-pass.config
 
 
 SUBDIRS = docker-ocserv docker-kerberos
@@ -52,7 +52,7 @@ if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
-	test-gssapi test-pass-opt-cert
+	test-gssapi test-pass-opt-cert test-cert-opt-pass
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

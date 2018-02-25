@@ -7,7 +7,7 @@ EXTRA_DIST = passwd ocserv.conf Dockerfile-debian-tcp dev-tun.tgz myscript key.p
 	ocserv-proxyproto.conf Dockerfile-fedora-proxyproto haproxy-proxyproto.cfg \
 	haproxy-proxyproto-unix.cfg Dockerfile-fedora-proxyproto-unix ocserv-proxyproto-unix.conf \
 	proxy-connectscript \
-	Dockerfile-fedora-otp ocserv-otp.conf users2.oath Dockerfile-fedora-reload \
+	Dockerfile-fedora-reload \
 	ocserv-reload.conf radiusclient-debian.conf \
 	ocserv-radius-group.conf Dockerfile-fedora-radius-group
 

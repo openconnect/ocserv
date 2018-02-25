@@ -192,6 +192,8 @@ have_liboath=yes],
 [have_liboath=no])
 fi
 
+AM_CONDITIONAL(HAVE_LIBOATH, test "x$have_liboath" != xno)
+
 have_glibc=no
 AC_LIB_HAVE_LINKFLAGS(c,, [
 #include <stdio.h>

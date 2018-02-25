@@ -22,7 +22,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	data/test-san-cert.config certs/user-san-cert.pem \
 	certs/server-cert-ed25519.pem certs/server-key-ed25519.pem data/test-ed25519.config \
 	certs/server-cert-rsa-pss.pem certs/server-key-rsa-pss.pem data/test-rsa-pss.config \
-	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd
+	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd \
+	data/test-otp.config
 
 
 SUBDIRS = docker-ocserv docker-kerberos
@@ -37,7 +38,7 @@ if ENABLE_ROOT_TESTS
 if ENABLE_DOCKER_TESTS
 #docker tests
 dist_check_SCRIPTS += radius-test full-test unix-test kerberos-test radius-test-config \
-	proxyproto-test proxyproto-v1-test proxyproto-unix-test otp-test  \
+	proxyproto-test proxyproto-v1-test proxyproto-unix-test \
 	reload-info-test radius-group-test
 endif
 
@@ -51,10 +52,14 @@ if HAVE_CWRAP
 dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
-	test-gssapi test-otp-cert
+	test-gssapi
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth
+endif
+
+if HAVE_LIBOATH
+dist_check_SCRIPTS += test-otp-cert test-otp
 endif
 
 endif

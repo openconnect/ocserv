@@ -1,0 +1,110 @@
+#!/bin/sh
+#
+# Copyright (C) 2013-2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+builddir=${builddir:-.}
+NO_NEED_ROOT=1
+PORT=4439
+OUTFILE=test-gssapi-opt-pass.$$.tmp
+
+connect()
+{
+opts=$1
+pass=$2
+rm -f ${OUTFILE}
+
+echo "$pass" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT $opts --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate >${OUTFILE} 2>&1
+if test $? != 0;then
+	cat ${OUTFILE}
+	return 1
+fi
+
+grep 'COOKIE=' ${OUTFILE}
+if test $? != 0;then
+	cat ${OUTFILE}
+	return 1
+fi
+
+rm -f ${OUTFILE}
+return 0
+}
+
+
+NTLMSSP_CONF=""
+for conf in /etc/gss/mech.d/mech.ntlmssp.conf /etc/gss/mech.d/ntlmssp.conf;do
+	if test -f ${conf};then
+		NTLMSSP_CONF=${conf}
+	fi
+done
+
+if test -z "$NTLMSSP_CONF";then
+	echo "GSS NTLM SSP was not found"
+	exit 77
+fi
+
+echo $NTLMSSP_CONF
+
+$SERV --version 2>&1|grep gssapi >/dev/null 2>&1
+if [ $? != 0 ];then
+	exit 77
+fi
+
+. `dirname $0`/common.sh
+
+echo "Testing local backend with gssapi and password fallback... "
+
+VERBOSE=1
+
+update_config test-gssapi-opt-pass.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (user with non-gssapi password)... "
+connect "-u test2" "test2"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without gssapi!"
+fi
+echo ok
+
+echo -n "Connecting to obtain cookie (user with non-gssapi password)... "
+connect "-u test" "test"
+if test $? != 0;then
+	fail $PID "Failed to connect with user without gssapi!"
+fi
+echo ok
+
+# Try GSSAPI
+
+export NTLM_USER_FILE=${builddir}/ntlm.$$.pass.tmp
+echo "TESTINVALID:testinvalid:testpass" >$NTLM_USER_FILE
+
+#CURLOPTS="--cacert ${srcdir}/certs/ca.pem"
+CURLOPTS="--insecure"
+
+echo "Connecting with curl/negotiate... "
+LD_PRELOAD=libsocket_wrapper.so curl https://testinvalid:testpass@$ADDRESS:$PORT ${CURLOPTS} --negotiate -f -v ||
+	fail $PID "Could not connect to server"
+
+kill $PID
+wait
+
+rm -f ${builddir}/ntlm.$$.pass.tmp
+
+exit 0

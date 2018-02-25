@@ -359,7 +359,7 @@ void exit_worker(worker_st * ws);
 void exit_worker_reason(worker_st * ws, unsigned reason);
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth);
-void ws_disable_auth(struct worker_st *ws, unsigned auth);
+int ws_switch_auth_to_next(struct worker_st *ws);
 void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final);
 
 int connect_to_secmod(worker_st * ws);

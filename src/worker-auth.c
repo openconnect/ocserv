@@ -125,15 +125,28 @@ int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 	return 0;
 }
 
-void ws_disable_auth(struct worker_st *ws, unsigned auth)
+/* disables the selected auth method and switches to the next
+ * available authentication method, and returns
+ * non-zero on success */
+int ws_switch_auth_to_next(struct worker_st *ws)
 {
 	unsigned i;
 
+	if (!ws->selected_auth) {
+		return 0;
+	}
+
+	ws->selected_auth->enabled = 0;
+
 	for (i=0;i<ws->perm_config->auth_methods;i++) {
-		if ((ws->perm_config->auth[i].type & auth) != 0) {
-			ws->perm_config->auth[i].enabled = 0;
+		if (&ws->perm_config->auth[i] != ws->selected_auth &&
+		    ws->perm_config->auth[i].enabled != 0) {
+
+			ws->selected_auth = &ws->perm_config->auth[i];
+			return 1;
 		}
 	}
+	return 0;
 }
 
 static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
@@ -1428,7 +1441,13 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				reason = MSG_NO_CERT_ERROR;
 				oclog(ws, LOG_INFO,
 				      "no certificate provided for authentication");
-				goto auth_fail;
+
+				if (ws_switch_auth_to_next(ws) == 0)
+					goto auth_fail;
+
+				ws->auth_state = S_AUTH_INACTIVE;
+				ws->sid_set = 0;
+				goto ask_auth;
 			} else {
 				ret = get_cert_info(ws);
 				if (ret < 0) {
@@ -1564,9 +1583,8 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	} else if (ret < 0) {
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			/* Fallback from GSSAPI to USERNAME-PASSWORD */
-			ws_disable_auth(ws, AUTH_TYPE_GSSAPI);
 			oclog(ws, LOG_ERR, "failed gssapi authentication");
-			if (ws_switch_auth_to(ws, AUTH_TYPE_USERNAME_PASS) == 0)
+			if (ws_switch_auth_to_next(ws) == 0)
 				goto auth_fail;
 
 			ws->auth_state = S_AUTH_INACTIVE;

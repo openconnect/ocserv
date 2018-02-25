@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# bash script because of echo -e
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4479
+OTP_FILE=test-otp-users.$$.tmp
+
+. `dirname $0`/common.sh
+
+echo "Testing local backend with username-password-otp and certificate... "
+
+#user 'test' has cert, password + OTP
+#user 'testuser' has cert and OTP only
+
+rm -f ${OTP_FILE}
+cp data/test-otp.oath ${OTP_FILE}
+update_config test-otp-cert.config
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo -n "Connecting to obtain cookie (without certificate)... "
+( echo -e "test\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Connected without certificate!"
+echo ok
+
+echo -n "Connecting to obtain cookie (with incorrect certificate)... "
+( echo -e "test\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-wrong.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Should not have connected with wrong certificate!"
+echo ok
+
+echo -n "Connecting to obtain cookie (with certificate)... "
+( echo -e "test\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert.pem -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+echo ok
+
+echo -n "Connecting to obtain cookie (with no pass and certificate)... "
+( echo -e "328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect with certificate!"
+echo ok
+
+rm -f ${OTP_FILE}
+cleanup
+
+exit 0

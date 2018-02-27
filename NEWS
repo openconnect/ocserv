@@ -6,6 +6,9 @@
 - Allow DTLS stream to come from different IP from TLS stream.
   There are situations where internet providers send the UDP 
   stream from different IP from the TCP stream.
+- Increased possibilities of allowed combinations of authentication
+  (#108)
+- Corrected regression since 0.11.8 with OTP authentication (#137)
 
 
 * Version 0.11.10 (released 2018-01-07)

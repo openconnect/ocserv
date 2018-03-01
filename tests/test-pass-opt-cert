@@ -23,13 +23,14 @@ srcdir=${srcdir:-.}
 TMPFILE=${srcdir}/outfile.$$.tmp
 NO_NEED_ROOT=1
 PORT=8445
+PIDFILE=ocserv-pid.$$.tmp
 
 . `dirname $0`/common.sh
 
 echo "Testing local backend with username-password and optional certificate... "
 
 update_config test-pass-opt-cert.config
-launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+launch_sr_server -d 1 -f --pid-file ${PIDFILE} -c ${CONFIG} & PID=$!
 wait_server $PID
 
 connect()
@@ -79,6 +80,10 @@ if test $? = 0;then
 	fail $PID "Should not have connected with wrong certificate!"
 fi
 echo ok
+
+if ! test -f ${PIDFILE};then
+	fail $PID "Could not find pid file ${PIDFILE}"
+fi
 
 cleanup
 

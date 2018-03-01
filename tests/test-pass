@@ -22,13 +22,14 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
 PORT=4444
+PIDFILE=ocserv-pid.$$.tmp
 
 . `dirname $0`/common.sh
 
 echo "Testing local backend with username-password... "
 
 update_config test1.config
-launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
@@ -62,6 +63,10 @@ echo "Connecting to obtain cookie with empty password... "
 #echo "Normal connection... "
 #( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
 #	fail $PID "Could not connect to server"
+
+if ! test -f ${PIDFILE};then
+	fail $PID "Could not find pid file ${PIDFILE}"
+fi
 
 cleanup
 

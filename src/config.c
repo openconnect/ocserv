@@ -1127,7 +1127,7 @@ static void check_cfg(struct perm_cfg_st *perm_config, unsigned silent)
 static const struct option long_options[] = {
 	{"debug", 1, 0, 'd'},
 	{"config", 1, 0, 'c'},
-	{"pid-file", 0, 0, 'p'},
+	{"pid-file", 1, 0, 'p'},
 	{"test-config", 0, 0, 't'},
 	{"foreground", 0, 0, 'f'},
 	{"help", 0, 0, 'h'},

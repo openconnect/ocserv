@@ -581,8 +581,11 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			/* cannot be modified as it would require sec-mod to
 			 * re-read configuration too */
 			READ_NUMERIC(perm_config->stats_reset_time);
-		} else if (strcmp(name, "pid-file") == 0 && pid_file[0] == 0) {
-			READ_STATIC_STRING(pid_file);
+		} else if (strcmp(name, "pid-file") == 0) {
+			if (pid_file[0] == 0) {
+				READ_STATIC_STRING(pid_file);
+			} else if (reload == 0)
+				fprintf(stderr, NOTESTR"skipping 'pid-file' config option\n");
 		} else {
 			stage1_found = 0;
 		}

@@ -55,23 +55,23 @@ Build/Fedora27:
       - ./*.log
       - ./tests/*.log
 
-Build/Fedora-rawhide:
-  image: fedora:rawhide
-  script:
-  - dnf install -y GeoIP-devel openconnect make git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils
-  - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-docker-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
-    make local-code-coverage-output
-  tags:
-  - shared
-  except:
-  - tags
-  artifacts:
-    expire_in: 1 week
-    when: on_failure
-    paths:
-      - ./*.log
-      - ./tests/*.log
+#Build/Fedora-rawhide:
+#  image: fedora:rawhide
+#  script:
+#  - dnf install -y GeoIP-devel openconnect make git which xz autoconf libtool automake gettext-devel gnutls-devel libev-devel pam-devel lz4-devel libseccomp-devel readline-devel libnl3-devel krb5-devel liboath-devel radcli-devel protobuf-c-devel libtalloc-devel http-parser-devel pcllib-devel protobuf-c gperf lockfile-progs nuttcp lcov uid_wrapper pam_wrapper nss_wrapper socket_wrapper gssntlmssp pam_oath gnutls-utils
+#  - git submodule update --init && autoreconf -fvi &&
+#    ./configure --without-docker-tests --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) && make code-coverage-capture &&
+#    make local-code-coverage-output
+#  tags:
+#  - shared
+#  except:
+#  - tags
+#  artifacts:
+#    expire_in: 1 week
+#    when: on_failure
+#    paths:
+#      - ./*.log
+#      - ./tests/*.log
 
 Build/Centos6:
   image: centos:6

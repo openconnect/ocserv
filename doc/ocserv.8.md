@@ -34,6 +34,12 @@ certificate, or presented on login for the user to choose. That way a user may
 take advantage of the different settings that may apply per group. See the 
 comments on the configuration file for more information.
 
+It is also possible to run hostname-based virtual servers which could support
+different authentication methods. When multiple virtual servers are present
+clients are distinguished by the advertised server name over TLS (SNI).
+Clients which do not support or sent SNI, are directed to the default
+server.
+
 ## OPTIONS
 
   * **-f, --foreground**::
@@ -261,7 +267,7 @@ file at _/etc/ocserv/ocserv.conf_. An example configuration file follows.
 occtl(8), ocpasswd(8)
 
 ## COPYRIGHT
-Copyright (C) 2013-2017 Nikos Mavrogiannopoulos and others, all rights reserved.
+Copyright (C) 2013-2018 Nikos Mavrogiannopoulos and others, all rights reserved.
 This program is released under the terms of the GNU General Public License, version 2.
 
 ## AUTHORS

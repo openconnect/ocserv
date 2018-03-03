@@ -5,6 +5,7 @@
   infinite loop while handling a disconnection.
 - Improved detection of openconnect mobile client. Contributed by
   Kevin Cernekee.
+- Corrected regression since 0.11.8 with OTP authentication (#137)
 
 
 * Version 0.11.10 (released 2018-01-07)

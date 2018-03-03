@@ -1,4 +1,4 @@
-* Version 0.11.11 (unreleased)
+* Version 0.11.11 (released 2018-03-03)
 - Enhanced HTML unescaping to account encodings seen in some
   AnyConnect clients. Contributed by Daniel Lenski.
 - Addressed issue which could cause the worker process enter an

@@ -47,6 +47,7 @@
 #include <tun.h>
 #include <main.h>
 #include <ccan/list/list.h>
+#include "vhost.h"
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 # include <net/if_var.h>
@@ -437,6 +438,52 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 #include <ccan/hash/hash.h>
 
 #ifndef __linux__
+# ifdef SIOCSIFNAME
+static int bsd_ifrename(main_server_st *s, struct proc_st *proc, const char *oldname)
+{
+	int fd = -1;
+	int e, ret;
+	struct ifreq ifr;
+	uint8_t ctr;
+	unsigned i;
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd == -1)
+		return -1;
+
+	memset(&ifr, 0, sizeof(struct ifreq));
+	strlcpy(ifr.ifr_name, oldname, IFNAMSIZ);
+
+	ctr = proc->pid % 64;
+
+	for (i=ctr;i<2048;i++) {
+		ret = snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%u",
+			       GETCONFIG(s)->network.name, i);
+		ifr.ifr_data = proc->tun_lease.name;;
+
+		ret = ioctl(fd, SIOCSIFNAME, &ifr);
+		if (ret != 0) {
+			e = errno;
+			if (e == EEXIST)
+				continue;
+
+			mslog(s, NULL, LOG_ERR, "%s: Error renaming interface: %s\n",
+				oldname, strerror(e));
+			break;
+		}
+
+		break;
+	}
+
+
+ cleanup:
+	if (fd != -1)
+		close(fd);
+
+	return ret;
+}
+# endif
+
 static int bsd_open_tun(main_server_st * s)
 {
 	int fd, e;
@@ -632,7 +679,13 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 			goto fail;
 		}
 
+#ifdef SIOCSIFNAME
+		/* rename the device */
+		if (bsd_ifrename(s, proc, devname(st.st_rdev, S_IFCHR)) < 0)
+			strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
+#else
 		strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
+#endif
 	}
 
 	set_cloexec_flag(tunfd, 1);

@@ -1,7 +1,5 @@
-Gitlab CI [![Build status](https://gitlab.com/ocserv/ocserv/badges/master/build.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
-
+[![Build status](https://gitlab.com/ocserv/ocserv/badges/master/build.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
 [![coverage report](https://gitlab.com/ocserv/ocserv/badges/master/coverage.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
-(coverage report doesn't include tests that run under docker)
 
 # About
 

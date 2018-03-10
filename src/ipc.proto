@@ -244,6 +244,7 @@ message sec_get_pk_msg
 {
 	required uint32 key_idx = 1;
 	required uint32 pk = 2;
+	optional uint32 bits = 4;
 }
 
 

@@ -1331,7 +1331,7 @@ static char *get_our_ip(worker_st * ws, char str[MAX_IP_STR])
 {
 	int ret;
 	struct sockaddr_storage sockaddr;
-	gsocklen socklen;
+	socklen_t socklen;
 
 	if (ws->our_addr_len > 0) {
 		return human_addr2((struct sockaddr*)&ws->our_addr, ws->our_addr_len, str, MAX_IP_STR, 0);

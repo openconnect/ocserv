@@ -158,12 +158,6 @@ typedef struct dtls_transport_ptr {
 	int consumed;
 } dtls_transport_ptr;
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-# define gsocklen int
-#else
-# define gsocklen socklen_t
-#endif
-
 /* Given a base MTU, this macro provides the DTLS plaintext data we can send;
  * the output value does not include the DTLS header */
 #define DATA_MTU(ws,mtu) (mtu-ws->dtls_crypto_overhead-ws->dtls_proto_overhead)
@@ -202,7 +196,7 @@ typedef struct worker_st {
 	socklen_t secmod_addr_len;
 
 	struct sockaddr_storage our_addr;	/* our address */
-	gsocklen our_addr_len;
+	socklen_t our_addr_len;
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
 	char remote_ip_str[MAX_IP_STR];

@@ -760,6 +760,7 @@ int key_cb_get_pk (gnutls_privkey_t key, void* userdata)
 	msg.key_idx = cdata->idx;
 	msg.vhost = cdata->vhost;
 	msg.pk = 0;
+	msg.bits = 0;
 
 	ret = send_msg(userdata, sd, CMD_SEC_GET_PK, &msg,
 			(pack_size_func)sec_get_pk_msg__get_packed_size,
@@ -782,6 +783,7 @@ int key_cb_get_pk (gnutls_privkey_t key, void* userdata)
 
 	pk = reply->pk;
 	cdata->pk = pk;
+	cdata->bits = reply->bits;
 
 	sec_get_pk_msg__free_unpacked(reply, &pa);
 	if (pk == 0) {
@@ -803,9 +805,22 @@ static int key_cb_info_func(gnutls_privkey_t key, unsigned int flags, void *user
 	struct key_cb_data *p = userdata;
 
 	if (flags & GNUTLS_PRIVKEY_INFO_PK_ALGO) {
-		return key_cb_get_pk(key, userdata);
+		if (p->pk)
+			return p->pk;
+		return key_cb_get_pk(key, p);
+#if GNUTLS_VERSION_NUMBER >= 0x030603
+	} else if (flags & GNUTLS_PRIVKEY_INFO_PK_ALGO_BITS) {
+		if (p->bits)
+			return p->bits;
+
+		key_cb_get_pk(key, p);
+		return p->bits;
+#endif
 	} else if (flags & GNUTLS_PRIVKEY_INFO_HAVE_SIGN_ALGO) {
 		unsigned sig = GNUTLS_FLAGS_TO_SIGN_ALGO(flags);
+
+		if (!p->pk)
+			key_cb_get_pk(key, p);
 
 		if (gnutls_sign_supports_pk_algorithm(sig, p->pk))
 			return 1;

@@ -249,6 +249,7 @@ message sec_get_pk_msg
 	required uint32 key_idx = 1;
 	required uint32 pk = 2;
 	optional string vhost = 3;
+	optional uint32 bits = 4;
 }
 
 

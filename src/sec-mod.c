@@ -202,6 +202,7 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 	int ret;
 	SecOpMsg *op;
 	vhost_cfg_st *vhost;
+	unsigned bits;
 #if GNUTLS_VERSION_NUMBER >= 0x030600
 	SecGetPkMsg *pkm;
 #endif
@@ -232,7 +233,8 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 			return -1;
 		}
 
-		pkm->pk = gnutls_privkey_get_pk_algorithm(vhost->key[i], NULL);
+		pkm->pk = gnutls_privkey_get_pk_algorithm(vhost->key[i], &bits);
+		pkm->bits = bits;
 
 		ret = send_msg(pool, cfd, CMD_SEC_GET_PK, pkm,
 			       (pack_size_func) sec_get_pk_msg__get_packed_size,

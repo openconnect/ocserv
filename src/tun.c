@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <cloexec.h>
 #include <ip-lease.h>
+#include <minmax.h>
 
 #if defined(HAVE_LINUX_IF_TUN_H)
 # include <linux/if_tun.h>
@@ -439,27 +440,28 @@ static int set_network_info(main_server_st * s, struct proc_st *proc)
 
 #ifndef __linux__
 # ifdef SIOCSIFNAME
-static int bsd_ifrename(main_server_st *s, struct proc_st *proc, const char *oldname)
+static int bsd_ifrename(main_server_st *s, struct proc_st *proc)
 {
 	int fd = -1;
 	int e, ret;
 	struct ifreq ifr;
 	uint8_t ctr;
 	unsigned i;
+	char tun_name[IFNAMSIZ];
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd == -1)
 		return -1;
 
 	memset(&ifr, 0, sizeof(struct ifreq));
-	strlcpy(ifr.ifr_name, oldname, IFNAMSIZ);
+	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
 
 	ctr = proc->pid % 64;
 
-	for (i=ctr;i<2048;i++) {
-		ret = snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "%s%u",
+	for (i=ctr;i<MAX(GETCONFIG(s)->max_clients,2048);i++) {
+		ret = snprintf(tun_name, sizeof(tun_name), "%s%u",
 			       GETCONFIG(s)->network.name, i);
-		ifr.ifr_data = proc->tun_lease.name;;
+		ifr.ifr_data = tun_name;
 
 		ret = ioctl(fd, SIOCSIFNAME, &ifr);
 		if (ret != 0) {
@@ -468,29 +470,31 @@ static int bsd_ifrename(main_server_st *s, struct proc_st *proc, const char *old
 				continue;
 
 			mslog(s, NULL, LOG_ERR, "%s: Error renaming interface: %s\n",
-				oldname, strerror(e));
+				proc->tun_lease.name, strerror(e));
 			break;
 		}
 
 		break;
 	}
 
-
- cleanup:
 	if (fd != -1)
 		close(fd);
+
+	/* set name */
+	if (ret >= 0)
+		strlcpy(proc->tun_lease.name, tun_name, sizeof(proc->tun_lease.name));
 
 	return ret;
 }
 # endif
 
-static int bsd_open_tun(main_server_st * s)
+static int bsd_open_tun(main_server_st * s, struct proc_st *proc)
 {
-	int fd, e;
+	int fd, e, ret;
 	int sock;
-	char tun_name[80];
 	struct ifreq ifr;
 	int unit_nr = 0;
+	struct stat st;
 
 	fd = open("/dev/tun", O_RDWR);
 	if (fd == -1) {
@@ -498,8 +502,8 @@ static int bsd_open_tun(main_server_st * s)
 		e = errno;
 		mslog(s, NULL, LOG_DEBUG, "cannot open /dev/tun; falling back to iteration: %s", strerror(e));
 		for (unit_nr = 0; unit_nr < 255; unit_nr++) {
-			snprintf(tun_name, sizeof(tun_name), "/dev/tun%d", unit_nr);
-			fd = open(tun_name, O_RDWR);
+			snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "/dev/tun%d", unit_nr);
+			fd = open(proc->tun_lease.name, O_RDWR);
 # ifdef SIOCIFCREATE
 			if (fd == -1) {
 				/* cannot open tunXX, try creating it */
@@ -511,9 +515,9 @@ static int bsd_open_tun(main_server_st * s)
 				}
 
 				memset(&ifr, 0, sizeof(ifr));
-				strncpy(ifr.ifr_name, tun_name + 5, sizeof(ifr.ifr_name) - 1);
+				strncpy(ifr.ifr_name, proc->tun_lease.name + 5, sizeof(ifr.ifr_name) - 1);
 				if (!ioctl(sock, SIOCIFCREATE, &ifr))
-					fd = open(tun_name, O_RDWR);
+					fd = open(proc->tun_lease.name, O_RDWR);
 				close(sock);
 			}
 # endif
@@ -521,6 +525,19 @@ static int bsd_open_tun(main_server_st * s)
 				break;
 		}
 	}
+
+	if (fd < 0)
+		return fd;
+
+	/* get tun name */
+	ret = fstat(fd, &st);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", fd, strerror(e));
+		close(fd);
+		return -1;
+	}
+	strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
 
 	if (fd >= 0) {
 		int i, e, ret;
@@ -531,7 +548,7 @@ static int bsd_open_tun(main_server_st * s)
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNGIFINFO: %s\n",
-					tun_name, strerror(e));
+					proc->tun_lease.name, strerror(e));
 		} else {
 			inf.flags |= IFF_MULTICAST;
 
@@ -539,7 +556,7 @@ static int bsd_open_tun(main_server_st * s)
 			if (ret < 0) {
 				e = errno;
 				mslog(s, NULL, LOG_ERR, "%s: TUNSIFINFO: %s\n",
-						tun_name, strerror(e));
+						proc->tun_lease.name, strerror(e));
 			}
 		}
 #else /* FreeBSD + NetBSD */
@@ -548,7 +565,7 @@ static int bsd_open_tun(main_server_st * s)
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNSIFMODE: %s\n",
-			      tun_name, strerror(e));
+			      proc->tun_lease.name, strerror(e));
 		}
 
 		/* link layer mode off */
@@ -557,7 +574,7 @@ static int bsd_open_tun(main_server_st * s)
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNSLMODE: %s\n",
-			      tun_name, strerror(e));
+			      proc->tun_lease.name, strerror(e));
 		}
 #endif
 
@@ -568,11 +585,16 @@ static int bsd_open_tun(main_server_st * s)
 		if (ret < 0) {
 			e = errno;
 			mslog(s, NULL, LOG_ERR, "%s: TUNSIFHEAD: %s\n",
-			      tun_name, strerror(e));
+			      proc->tun_lease.name, strerror(e));
 		}
 #endif /* TUNSIFHEAD */
 
 	}
+
+#ifdef SIOCSIFNAME
+	/* rename the device */
+	bsd_ifrename(s, proc);
+#endif
 
 	return fd;
 }
@@ -607,8 +629,6 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 		      strerror(e));
 		return -1;
 	}
-
-	set_cloexec_flag(tunfd, 1);
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
@@ -660,36 +680,16 @@ int open_tun(main_server_st * s, struct proc_st *proc)
 	}
 #endif
 #else				/* freebsd */
-	tunfd = bsd_open_tun(s);
+	tunfd = bsd_open_tun(s, proc);
 	if (tunfd < 0) {
 		int e = errno;
 		mslog(s, NULL, LOG_ERR, "Can't open /dev/tun: %s\n",
 		      strerror(e));
 		return -1;
 	}
-
-	/* find device name */
-	{
-		struct stat st;
-
-		ret = fstat(tunfd, &st);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", tunfd, strerror(e));
-			goto fail;
-		}
-
-#ifdef SIOCSIFNAME
-		/* rename the device */
-		if (bsd_ifrename(s, proc, devname(st.st_rdev, S_IFCHR)) < 0)
-			strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
-#else
-		strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
 #endif
-	}
 
 	set_cloexec_flag(tunfd, 1);
-#endif
 
 	if (proc->tun_lease.name[0] == 0) {
 		mslog(s, NULL, LOG_ERR, "tun device with no name!");

@@ -332,6 +332,8 @@ else
 	libwrap_enabled="yes"
 fi
 
+isolation="none"
+
 AC_ARG_ENABLE(seccomp,
   AS_HELP_STRING([--disable-seccomp], [disable seccomp support]),
     seccomp_enabled=$enableval, seccomp_enabled=yes)
@@ -343,6 +345,7 @@ AC_LIB_HAVE_LINKFLAGS(seccomp,, [#include <seccomp.h>
 	seccomp_enabled="no"
  else
 	seccomp_enabled="yes"
+	isolation="seccomp"
  fi
 fi
 
@@ -576,7 +579,7 @@ Summary of build options:
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}
   (socket activation)
-  seccomp:              ${seccomp_enabled}
+  worker isolation:     ${isolation}
   Compression:          ${enable_compression}
   LZ4 compression:      ${enable_lz4}
   readline:             ${have_readline}
@@ -589,4 +592,13 @@ Summary of build options:
   local PCL library:    ${with_local_pcl}
   local http-parser:    ${with_local_http_parser}
 ])
+
+if test "x${isolation}" = xnone;then
+	AC_MSG_WARN([[
+***
+*** No supported worker isolation system was found. Worker processes
+*** will not be isolated. Only seccomp is supported (see src/worker-privs.c)
+*** ]])
+fi
+
 

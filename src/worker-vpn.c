@@ -2346,7 +2346,7 @@ static int connect_handler(worker_st * ws)
 			sigprocmask(SIG_BLOCK, &blockset, NULL);
 #endif
 			if (ret == -1) {
-				if (errno == EINTR || EAGAIN)
+				if (errno == EINTR || errno == EAGAIN)
 					continue;
 				terminate_reason = REASON_ERROR;
 				goto exit;

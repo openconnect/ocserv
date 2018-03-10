@@ -87,7 +87,7 @@ inline static const char *proto_to_str(fw_proto_t proto)
 		"icmpv6"
 	};
 
-	if (proto < 0 || proto >= PROTO_MAX)
+	if ((int)proto < 0 || proto >= PROTO_MAX)
 		return "unknown";
 	return proto2str[proto];
 }

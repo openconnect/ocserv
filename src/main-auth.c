@@ -48,6 +48,7 @@
 /* Puts the provided PIN into the config's cgroup */
 void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 {
+#ifdef __linux__
 	char *name, *p, *savep;
 	char cgroup[128];
 	char file[_POSIX_PATH_MAX];
@@ -56,7 +57,6 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 	if (_cgroup == NULL)
 		return;
 
-#ifdef __linux__
 	/* format: cpu,memory:cgroup-name */
 	strlcpy(cgroup, _cgroup, sizeof(cgroup));
 
@@ -93,8 +93,9 @@ void put_into_cgroup(main_server_st * s, const char *_cgroup, pid_t pid)
 
 	return;
 #else
-	mslog(s, NULL, LOG_DEBUG,
-	      "Ignoring cgroup option as it is not supported on this system");
+	if (_cgroup != NULL)
+		mslog(s, NULL, LOG_WARNING,
+		      "Ignoring cgroup option as it is not supported on this system");
 #endif
 }
 

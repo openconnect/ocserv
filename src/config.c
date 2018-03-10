@@ -638,7 +638,7 @@ char *sanitize_name(void *pool, const char *p)
 static int cfg_ini_handler(void *_ctx, const char *section, const char *name, const char *_value)
 {
 	struct ini_ctx_st *ctx = _ctx;
-	vhost_cfg_st *vhost, *vtmp, *defvhost;
+	vhost_cfg_st *vhost, *vtmp = NULL, *defvhost;
 	unsigned use_dbus;
 	struct cfg_st *config;
 	void *pool;

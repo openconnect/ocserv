@@ -263,7 +263,9 @@ int icmp_ping6(main_server_st * s,
 	struct icmp6_hdr *pkt;
 	char buf1[64];
 	int pingsock, c, e;
+#if defined(SOL_RAW) && defined(IPV6_CHECKSUM)
 	int sockopt;
+#endif
 	char packet1[DEFDATALEN + MAXIPLEN + MAXICMPLEN];
 	uint16_t id1;
 	unsigned gotreply = 0, unreachable = 0;

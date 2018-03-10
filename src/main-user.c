@@ -440,7 +440,9 @@ static void remove_utmp_entry(main_server_st *s, struct proc_st* proc)
 {
 #ifdef HAVE_LIBUTIL
 	struct utmpx entry;
+#if defined(WTMPX_FILE)
 	struct timespec tv;
+#endif
 
 	if (GETCONFIG(s)->use_utmp == 0)
 		return;

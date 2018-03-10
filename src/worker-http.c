@@ -174,8 +174,8 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	const dtls_ciphersuite_st *cand = NULL;
 	const compression_method_st *comp_cand = NULL;
 	const compression_method_st **selected_comp;
-	gnutls_cipher_algorithm_t want_cipher;
-	gnutls_mac_algorithm_t want_mac;
+	int want_cipher;
+	int want_mac;
 
 	if (req->value.length <= 0)
 		return;

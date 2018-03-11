@@ -31,6 +31,7 @@ fi
 
 AM_CONDITIONAL(SKIP_MANPAGES, test "$skip_manpages" = yes)
 
+AM_MAINTAINER_MODE([enable])
 AX_CODE_COVERAGE
 
 AC_CHECK_TYPES([sighandler_t, sig_t, __sighandler_t],,,

@@ -1,5 +1,5 @@
 [![Build status](https://gitlab.com/ocserv/ocserv/badges/master/build.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
-[![coverage report](https://gitlab.com/ocserv/ocserv/badges/master/coverage.svg)](https://gitlab.com/ocserv/ocserv/commits/master)
+[![coverage report](https://gitlab.com/ocserv/ocserv/badges/master/coverage.svg)](https://ocserv.gitlab.io/ocserv/coverage/)
 
 # About
 
@@ -123,6 +123,15 @@ You may examine the output using:
 ```
 # perf report
 ```
+
+
+# Continuous Integration (CI)
+
+We utilize the gitlab-ci continuous integration system. It is used to test
+most of the Linux systems (see .gitlab-ci.yml),and is split in two phases,
+build image creation and compilation/test. The build image creation is done
+at the ocserv/build-images subproject and uploads the image at the gitlab.com
+container registry. The compilation/test phase is on every commit to project.
 
 
 # How the VPN works

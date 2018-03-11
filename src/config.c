@@ -1270,7 +1270,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		exit(1);
 	}
 
-	if (config->network.name[0] == 0) {
+	if (!vhost->name && config->network.name[0] == 0) {
 		fprintf(stderr, ERRSTR"%sthe 'device' configuration option must be specified!\n", PREFIX_VHOST(vhost));
 		exit(1);
 	}

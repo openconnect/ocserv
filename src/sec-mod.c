@@ -202,8 +202,8 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 	int ret;
 	SecOpMsg *op;
 	vhost_cfg_st *vhost;
-	unsigned bits;
 #if GNUTLS_VERSION_NUMBER >= 0x030600
+	unsigned bits;
 	SecGetPkMsg *pkm;
 #endif
 	PROTOBUF_ALLOCATOR(pa, pool);

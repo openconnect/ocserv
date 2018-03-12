@@ -100,7 +100,23 @@ asan/Fedora:
   script:
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" &&
     ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
+  tags:
+  - shared
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - tests/*.log
 
+ubsan/Fedora:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  script:
+  - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2" LDFLAGS="-static-libuban" &&
+    ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   except:

@@ -1611,8 +1611,7 @@ int _add_multi_line_val(void *pool, char ***varname, size_t *num,
 	}
 
 	if (*num >= _max-1) {
-		_max += 128;
-		tmp = talloc_realloc(pool, *varname, char*, _max);
+		tmp = talloc_realloc(pool, *varname, char*, (*num)+2);
 		if (tmp == NULL)
 			return -1;
 		*varname = tmp;

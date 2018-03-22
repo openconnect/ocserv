@@ -12,6 +12,8 @@
 - Added support for hostname-based virtual hosts, utilizing TLS
   SNI. With that change it is possible to configure multiple servers
   running over the same port.
+- Rename the tun device on BSD systems which support SIOCSIFNAME
+  ioctl.
 
 
 * Version 0.11.10 (released 2018-01-07)

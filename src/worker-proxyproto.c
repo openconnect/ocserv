@@ -264,6 +264,8 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
  * We expect to receive the peer's certificate verification status,
  * and CN. That corresponds to send-proxy-v2-ssl-cn and send-proxy-v2-ssl
  * haproxy config options.
+ *
+ * Returns -1 on error and zero on success.
  */
 int parse_proxy_proto_header(struct worker_st *ws, int fd)
 {
@@ -340,11 +342,12 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 	}
 
 	if (cmd != 0x01) {
-		if (hdr.family == 0)
+		if (cmd == 0) {
 			oclog(ws, LOG_DEBUG, "proxy-hdr: received health check command");
-		else
+		} else {
 			oclog(ws, LOG_ERR, "proxy-hdr: received unsupported command %x", (unsigned)cmd);
-		return -1;
+			return -1;
+		}
 	}
 
 	family = (hdr.family & 0xf0) >> 4;

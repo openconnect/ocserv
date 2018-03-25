@@ -55,6 +55,7 @@ libnss-wrapper     / nss_wrapper
 libsocket-wrapper  / socket_wrapper
 gss-ntlmssp        / gssntlmssp
 libpam-oath        / pam_oath
+haproxy            / haproxy
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

@@ -25,7 +25,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd \
 	data/test-otp.config data/test-cert-opt-pass.config data/test-gssapi-opt-pass.config \
 	certs/server-key-secp521r1.pem certs/server-cert-secp521r1.pem data/test-vhost-pass-cert.config \
-	data/vhost.hosts data/multiple-routes.config
+	data/vhost.hosts data/multiple-routes.config data/haproxy-auth.cfg data/test-haproxy-auth.config
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -59,7 +59,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
 	test-gssapi test-pass-opt-cert test-cert-opt-pass test-gssapi-opt-pass \
-	test-gssapi-opt-cert
+	test-gssapi-opt-cert haproxy-auth
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

@@ -55,6 +55,8 @@ update_config() {
 	sed -i 's|@SRCDIR@|'${srcdir}'|g' "$file.$$.tmp"
 	sed -i 's|@OTP_FILE@|'${OTP_FILE}'|g' "$file.$$.tmp"
 	sed -i 's|@CRLNAME@|'${CRLNAME}'|g' "$file.$$.tmp"
+	sed -i 's|@PORT@|'${PORT}'|g' "$file.$$.tmp"
+	sed -i 's|@ADDRESS@|'${ADDRESS}'|g' "$file.$$.tmp"
 	CONFIG="$file.$$.tmp"
 }
 

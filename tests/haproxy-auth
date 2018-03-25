@@ -1,0 +1,82 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4466
+HAPORT=4467
+PIDFILE=ocserv-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+HACONFIG=haproxy.conf.$$.tmp
+HAPROXY=$(which haproxy)
+
+. `dirname $0`/common.sh
+
+if test -z "${HAPROXY}";then
+	echo "no haproxy present"
+	exit 77
+fi
+
+echo "Testing ocserv connection via haproxy... "
+
+
+update_config test-haproxy-auth.config
+launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
+wait_server ${PID}
+
+sed -e 's|@HAPORT@|'${HAPORT}'|g' -e 's|@PORT@|'${PORT}'|g' -e 's|@ADDRESS@|'${ADDRESS}'|g' ${srcdir}/data/haproxy-auth.cfg >${HACONFIG}
+
+LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+wait_server ${HAPID}
+
+echo "Connecting to obtain cookie... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	kill ${HAPID}
+	fail ${PID} "Could not receive cookie from server"
+fi
+
+# Restart haproxy and reconnect.
+kill ${HAPID}
+
+sleep 2
+
+LD_PRELOAD=libsocket_wrapper.so:libuid_wrapper.so UID_WRAPPER=1 UID_WRAPPER_ROOT=1 ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+wait_server ${HAPID}
+
+echo "Re-connecting to obtain cookie after haproxy restart... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	kill ${HAPID}
+	fail ${PID} "Could not receive cookie from server"
+fi
+
+
+kill ${HAPID}
+if ! test -f ${PIDFILE};then
+	fail ${PID} "Could not find pid file ${PIDFILE}"
+fi
+
+echo "Cleaning up..."
+rm -f ${HACONFIG}
+cleanup
+
+exit 0

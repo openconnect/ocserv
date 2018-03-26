@@ -41,7 +41,7 @@ struct find_sid_st {
 
 static size_t rehash_ip(const void* _p, void* unused)
 {
-const struct proc_st * proc = _p;
+	const struct proc_st * proc = _p;
 
 	return hash_any(
 		SA_IN_P_GENERIC(&proc->remote_addr, proc->remote_addr_len),
@@ -50,7 +50,7 @@ const struct proc_st * proc = _p;
 
 static size_t rehash_dtls_ip(const void* _p, void* unused)
 {
-const struct proc_st * proc = _p;
+	const struct proc_st * proc = _p;
 
 	return hash_any(
 		SA_IN_P_GENERIC(&proc->dtls_remote_addr, proc->dtls_remote_addr_len),
@@ -59,14 +59,14 @@ const struct proc_st * proc = _p;
 
 static size_t rehash_dtls_id(const void* _p, void* unused)
 {
-const struct proc_st * proc = _p;
+	const struct proc_st * proc = _p;
 
 	return hash_any(proc->dtls_session_id, proc->dtls_session_id_size, 0);
 }
 
 static size_t rehash_sid(const void* _p, void* unused)
 {
-const struct proc_st * proc = _p;
+	const struct proc_st * proc = _p;
 
 	return hash_any(proc->sid, sizeof(proc->sid), 0);
 }
@@ -188,8 +188,8 @@ void proc_table_del(main_server_st *s, struct proc_st *proc)
 
 static bool local_ip_cmp(const void* _c1, void* _c2)
 {
-const struct proc_st* c1 = _c1;
-struct find_ip_st* c2 = _c2;
+	const struct proc_st* c1 = _c1;
+	struct find_ip_st* c2 = _c2;
 
 	if (c2->sockaddr_size == 0)
 		return 0;
@@ -246,8 +246,8 @@ struct proc_st *proc_search_single_ip(struct main_server_st *s,
 
 static bool dtls_id_cmp(const void* _c1, void* _c2)
 {
-const struct proc_st* c1 = _c1;
-struct find_dtls_id_st* c2 = _c2;
+	const struct proc_st* c1 = _c1;
+	struct find_dtls_id_st* c2 = _c2;
 
 	if (c1->dtls_session_id_size != c2->dtls_id_size)
 		return 0;
@@ -274,8 +274,8 @@ struct proc_st *proc_search_dtls_id(struct main_server_st *s,
 
 static bool sid_cmp(const void* _c1, void* _c2)
 {
-const struct proc_st* c1 = _c1;
-struct find_sid_st* c2 = _c2;
+	const struct proc_st* c1 = _c1;
+	struct find_sid_st* c2 = _c2;
 
 	if (memcmp(c1->sid,
 		   c2->sid,

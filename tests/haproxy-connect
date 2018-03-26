@@ -1,0 +1,180 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4566
+HAPORT=4567
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+HACONFIG=haproxy.conf.$$.tmp
+PATH=${PATH}:/usr/sbin
+HAPROXY=$(which haproxy)
+IP=$(which ip)
+
+. `dirname $0`/common.sh
+
+if test -z "${HAPROXY}";then
+	echo "no haproxy present"
+	exit 77
+fi
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing ocserv connection via haproxy... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${HAPID}" && kill ${HAPID} >/dev/null 2>&1
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${ETHNAME1}" && ${IP} link delete ${ETHNAME1} >/dev/null 2>&1
+  test -n "${ETHNAME2}" && ${IP} link delete ${ETHNAME2} >/dev/null 2>&1
+  test -n "${NSNAME1}" && ${IP} netns delete ${NSNAME1} >/dev/null 2>&1
+  test -n "${NSNAME2}" && ${IP} netns delete ${NSNAME2} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${HACONFIG}" && rm -f ${HACONFIG} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${NUTTCPPID}" && kill ${NUTTCPPID} >/dev/null 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.200.2.1
+CLI_ADDRESS=10.200.1.1
+VPNNET=192.168.1.0/24
+VPNADDR=192.168.1.1
+
+echo " * Setting up namespaces..."
+set -e
+NSNAME1="ocserv-c-tmp-$$"
+NSNAME2="ocserv-s-tmp-$$"
+ETHNAME1="oceth-c$$"
+ETHNAME2="oceth-s$$"
+${IP} netns add ${NSNAME1}
+${IP} netns add ${NSNAME2}
+
+${IP} link add ${ETHNAME1} type veth peer name ${ETHNAME2}
+${IP} link set ${ETHNAME1} netns ${NSNAME1}
+${IP} link set ${ETHNAME2} netns ${NSNAME2}
+
+${IP} netns exec ${NSNAME1} ip link set ${ETHNAME1} up
+${IP} netns exec ${NSNAME2} ip link set ${ETHNAME2} up
+${IP} netns exec ${NSNAME2} ip link set lo up
+
+${IP} netns exec ${NSNAME1} ip addr add ${CLI_ADDRESS} dev ${ETHNAME1}
+${IP} netns exec ${NSNAME2} ip addr add ${ADDRESS} dev ${ETHNAME2}
+
+${IP} netns exec ${NSNAME1} ip route add default via ${CLI_ADDRESS} dev ${ETHNAME1}
+${IP} netns exec ${NSNAME2} ip route add default via ${ADDRESS} dev ${ETHNAME2}
+
+${IP} netns exec ${NSNAME2} ip addr
+${IP} netns exec ${NSNAME2} ip route
+${IP} netns exec ${NSNAME1} ip route
+
+${IP} netns exec ${NSNAME1} ping -c 1 ${ADDRESS}
+${IP} netns exec ${NSNAME2} ping -c 1 ${ADDRESS}
+${IP} netns exec ${NSNAME2} ping -c 1 ${CLI_ADDRESS}
+set +e
+
+# Run servers
+update_config test-haproxy-connect.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${IP} netns exec ${NSNAME2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 1
+
+rm -f ${HACONFIG}
+sed -e 's|@HAPORT@|'${HAPORT}'|g' -e 's|@PORT@|'${PORT}'|g' -e 's|@ADDRESS@|'${ADDRESS}'|g' ${srcdir}/data/haproxy-connect.cfg >${HACONFIG}
+${IP} netns exec ${NSNAME2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+
+sleep 3
+
+# Run clients
+echo " * Getting cookie from ${ADDRESS}:${HAPORT}..."
+( echo "test" | ${IP} netns exec ${NSNAME1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+echo " * Connecting to ${ADDRESS}:${HAPORT}..."
+( echo "test" | ${IP} netns exec ${NSNAME1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+echo " * ping remote address"
+
+${IP} netns exec ${NSNAME1} ping -c 3 ${VPNADDR}
+
+set +e
+
+echo " * Restarting haproxy..."
+# Restart haproxy and reconnect.
+kill ${HAPID}
+
+sleep 2
+
+${IP} netns exec ${NSNAME2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+
+sleep 2
+
+kill $(cat ${CLIPID}) >/dev/null 2>&1
+
+sleep 2
+
+# This is to reproduce issue #146. There multiple entries of the client IP
+# are present and these packets would trigger invalid lookup/crash.
+echo " * Sending a stray UDP packet to VPN server"
+set -e
+${IP} netns exec ${NSNAME1} bash -c "echo -e \"\x17\xfe\xff\x00\x0b\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\" >/dev/udp/${ADDRESS}/${PORT}"
+set +e
+
+sleep 3
+
+echo " * Re-connecting to obtain cookie after haproxy restart... "
+( echo "test" | ${IP} netns exec ${NSNAME1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	echo "Could not receive cookie from server on reconnection"
+	exit 1
+fi
+
+if ! test -f ${PIDFILE};then
+	echo "Could not find pid file ${PIDFILE}"
+	exit 1
+fi
+
+exit 0

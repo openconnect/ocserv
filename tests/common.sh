@@ -57,6 +57,7 @@ update_config() {
 	sed -i 's|@CRLNAME@|'${CRLNAME}'|g' "$file.$$.tmp"
 	sed -i 's|@PORT@|'${PORT}'|g' "$file.$$.tmp"
 	sed -i 's|@ADDRESS@|'${ADDRESS}'|g' "$file.$$.tmp"
+	sed -i 's|@VPNNET@|'${VPNNET}'|g' "$file.$$.tmp"
 	CONFIG="$file.$$.tmp"
 }
 

@@ -124,18 +124,41 @@ int proc_table_add(main_server_st *s, struct proc_st *proc)
 	return 0;
 }
 
-int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size)
+int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr,
+			 unsigned addr_size)
 {
-	size_t ip_hash = rehash_ip(proc, NULL);
+	char buf[MAX_IP_STR];
+	unsigned removed;
 
-	htable_del(s->proc_table.db_ip, ip_hash, proc);
+	/* only update if we can remove the old IP */
+	if (addr_size != proc->remote_addr_len ||
+	    memcmp(addr, &proc->remote_addr, addr_size) != 0) {
+		mslog(s, proc, LOG_INFO, "updating remote IP to %s",
+		      human_addr2((struct sockaddr*)addr, addr_size, buf, sizeof(buf), 0));
 
-	memcpy(&proc->remote_addr, addr, addr_size);
-	proc->remote_addr_len = addr_size;
+		removed = htable_del(s->proc_table.db_ip, rehash_ip(proc, NULL), proc);
 
-	ip_hash = rehash_ip(proc, NULL);
-	if (htable_add(s->proc_table.db_ip, ip_hash, proc) == 0) {
-		return -1;
+		memcpy(&proc->remote_addr, addr, addr_size);
+		proc->remote_addr_len = addr_size;
+
+		/* If DTLS IP matches the CSTP IP remove it, to avoid
+		 * keeping duplicate entries. */
+		if (proc->dtls_remote_addr_len == addr_size &&
+		    memcmp(SA_IN_P_GENERIC(addr, addr_size),
+			   SA_IN_P_GENERIC(&proc->dtls_remote_addr, addr_size),
+			   SA_IN_SIZE(addr_size) == 0)) {
+
+			if (htable_del(s->proc_table.db_dtls_ip, rehash_dtls_ip(proc, NULL), proc) != 0)
+				proc->dtls_remote_addr_len = 0;
+		}
+
+		/* only add into table if the previous entry was there. That is because
+		 * we may be called even before that entry is added, and we don't want
+		 * duplicates */
+		if (removed) {
+			if (htable_add(s->proc_table.db_ip, rehash_ip(proc, NULL), proc) == 0)
+				return -1;
+		}
 	}
 
 	return 0;
@@ -218,8 +241,8 @@ static bool local_ip_cmp(const void* _c1, void* _c2)
 /* returns a result only if there is a single IP matching
  */
 struct proc_st *proc_search_single_ip(struct main_server_st *s,
-			       struct sockaddr_storage *sockaddr,
-			       unsigned sockaddr_size)
+				      struct sockaddr_storage *sockaddr,
+				      unsigned sockaddr_size)
 {
 	struct proc_st *proc;
 	struct find_ip_st fip;

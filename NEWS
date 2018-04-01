@@ -10,6 +10,8 @@
   running over the same port (#133).
 - Rename the tun device on BSD systems which support SIOCSIFNAME
   ioctl.
+- Correctly handle proxy-protocol's health commands. That eliminates
+  few connection drops when proxy protocol is in use.
 
 
 * Version 0.11.10 (released 2018-01-07)

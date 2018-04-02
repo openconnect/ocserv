@@ -110,16 +110,26 @@ int proc_table_add(main_server_st *s, struct proc_st *proc)
 
 int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockaddr_storage *addr, unsigned addr_size)
 {
+	char buf[MAX_IP_STR];
 	size_t ip_hash = rehash_ip(proc, NULL);
+	unsigned removed;
 
-	htable_del(s->proc_table.db_ip, ip_hash, proc);
+	if (addr_size != proc->remote_addr_len ||
+	    memcmp(addr, &proc->remote_addr, addr_size) != 0) {
 
-	memcpy(&proc->remote_addr, addr, addr_size);
-	proc->remote_addr_len = addr_size;
+		removed = htable_del(s->proc_table.db_ip, ip_hash, proc);
 
-	ip_hash = rehash_ip(proc, NULL);
-	if (htable_add(s->proc_table.db_ip, ip_hash, proc) == 0) {
-		return -1;
+		mslog(s, proc, LOG_INFO, "updating remote IP to %s",
+		      human_addr2((struct sockaddr*)addr, addr_size, buf, sizeof(buf), 0));
+
+		memcpy(&proc->remote_addr, addr, addr_size);
+		proc->remote_addr_len = addr_size;
+
+		if (removed != 0) {
+			ip_hash = rehash_ip(proc, NULL);
+			if (htable_add(s->proc_table.db_ip, ip_hash, proc) == 0)
+				return -1;
+		}
 	}
 
 	return 0;

@@ -1,3 +1,7 @@
+* Version 0.11.12 (unreleased)
+- Corrected crash on certain cases when proxy protocol is in use (#146).
+
+
 * Version 0.11.11 (released 2018-03-03)
 - Enhanced HTML unescaping to account encodings seen in some
   AnyConnect clients. Contributed by Daniel Lenski.

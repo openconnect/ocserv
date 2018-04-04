@@ -25,7 +25,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	data/test-otp-cert.config data/test-otp.oath test-otp-cert data/test-otp.passwd \
 	data/test-otp.config data/test-cert-opt-pass.config data/test-gssapi-opt-pass.config \
 	certs/server-key-secp521r1.pem certs/server-cert-secp521r1.pem data/test-vhost-pass-cert.config \
-	data/vhost.hosts data/multiple-routes.config data/haproxy-auth.cfg data/test-haproxy-auth.config
+	data/vhost.hosts data/multiple-routes.config data/haproxy-auth.cfg data/test-haproxy-auth.config \
+	data/haproxy-connect.cfg data/test-haproxy-connect.config scripts/vpnc-script
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -47,7 +48,7 @@ endif
 dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
-	multiple-routes
+	multiple-routes haproxy-connect
 endif
 
 if HAVE_CWRAP
@@ -136,3 +137,4 @@ TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"
+

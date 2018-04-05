@@ -49,7 +49,7 @@ Build/Fedora:
   script:
   - git submodule update --init && autoreconf -fvi &&
     ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage && make -j$(nproc) && make check
-    && make files-update && make dist
+    && make files-update && make dist && make local-code-coverage-output
   tags:
   - shared
   except:

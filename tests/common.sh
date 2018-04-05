@@ -50,14 +50,16 @@ update_config() {
 	username=$(whoami)
 	group=$(groups|cut -f 1 -d ' ')
 	cp "${srcdir}/data/${file}" "$file.$$.tmp"
-	sed -i 's|@USERNAME@|'${username}'|g' "$file.$$.tmp"
-	sed -i 's|@GROUP@|'${group}'|g' "$file.$$.tmp"
-	sed -i 's|@SRCDIR@|'${srcdir}'|g' "$file.$$.tmp"
-	sed -i 's|@OTP_FILE@|'${OTP_FILE}'|g' "$file.$$.tmp"
-	sed -i 's|@CRLNAME@|'${CRLNAME}'|g' "$file.$$.tmp"
-	sed -i 's|@PORT@|'${PORT}'|g' "$file.$$.tmp"
-	sed -i 's|@ADDRESS@|'${ADDRESS}'|g' "$file.$$.tmp"
-	sed -i 's|@VPNNET@|'${VPNNET}'|g' "$file.$$.tmp"
+	sed -i -e 's|@USERNAME@|'${username}'|g' "$file.$$.tmp" \
+	       -e 's|@GROUP@|'${group}'|g' "$file.$$.tmp" \
+	       -e 's|@SRCDIR@|'${srcdir}'|g' "$file.$$.tmp" \
+	       -e 's|@OTP_FILE@|'${OTP_FILE}'|g' "$file.$$.tmp" \
+	       -e 's|@CRLNAME@|'${CRLNAME}'|g' "$file.$$.tmp" \
+	       -e 's|@PORT@|'${PORT}'|g' "$file.$$.tmp" \
+	       -e 's|@ADDRESS@|'${ADDRESS}'|g' "$file.$$.tmp" \
+	       -e 's|@VPNNET@|'${VPNNET}'|g' "$file.$$.tmp" \
+	       -e 's|@VPNNET6@|'${VPNNET6}'|g' "$file.$$.tmp" \
+	       -e 's|@OCCTL_SOCKET@|'${OCCTL_SOCKET}'|g' "$file.$$.tmp"
 	CONFIG="$file.$$.tmp"
 }
 

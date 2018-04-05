@@ -107,6 +107,12 @@ AC_ARG_WITH(docker-tests,
 
 AM_CONDITIONAL(ENABLE_DOCKER_TESTS, test "x$docker_tests" = xyes)
 
+AC_ARG_WITH(nuttcp-tests,
+  AS_HELP_STRING([--without-nuttcp-tests], [disable any tests requiring nuttcp]),
+  nuttcp_tests=$withval,
+  nuttcp_tests=yes)
+AM_CONDITIONAL(ENABLE_NUTTCP_TESTS, test "x$nuttcp_tests" = xyes)
+
 AC_ARG_WITH(local-talloc,
   AS_HELP_STRING([--with-local-talloc], [use the included talloc library]),
   no_test_for_talloc=$withval,

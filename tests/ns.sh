@@ -40,6 +40,17 @@ if test "$(id -u)" != "0";then
 	exit 77
 fi
 
+ip netns list >/dev/null 2>&1
+if test $? != 0;then
+	echo "This test requires ip netns command"
+	exit 77
+fi
+
+if test "$(uname -s)" != Linux;then
+	echo "This test must be run on Linux"
+	exit 77
+fi
+
 function nsfinish {
   set +e
   test -n "${ETHNAME1}" && ${IP} link delete ${ETHNAME1} >/dev/null 2>&1

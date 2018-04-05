@@ -14,7 +14,7 @@ Build/Debian:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$DEBIAN_BUILD
   script:
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-nuttcp-tests --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   except:

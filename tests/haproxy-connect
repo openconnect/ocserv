@@ -53,10 +53,6 @@ function finish {
   echo " * Cleaning up..."
   test -n "${HAPID}" && kill ${HAPID} >/dev/null 2>&1
   test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${ETHNAME1}" && ${IP} link delete ${ETHNAME1} >/dev/null 2>&1
-  test -n "${ETHNAME2}" && ${IP} link delete ${ETHNAME2} >/dev/null 2>&1
-  test -n "${NSNAME1}" && ${IP} netns delete ${NSNAME1} >/dev/null 2>&1
-  test -n "${NSNAME2}" && ${IP} netns delete ${NSNAME2} >/dev/null 2>&1
   test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
   test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
   test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
@@ -72,37 +68,7 @@ CLI_ADDRESS=10.200.1.1
 VPNNET=192.168.1.0/24
 VPNADDR=192.168.1.1
 
-echo " * Setting up namespaces..."
-set -e
-NSNAME1="ocserv-c-tmp-$$"
-NSNAME2="ocserv-s-tmp-$$"
-ETHNAME1="oceth-c$$"
-ETHNAME2="oceth-s$$"
-${IP} netns add ${NSNAME1}
-${IP} netns add ${NSNAME2}
-
-${IP} link add ${ETHNAME1} type veth peer name ${ETHNAME2}
-${IP} link set ${ETHNAME1} netns ${NSNAME1}
-${IP} link set ${ETHNAME2} netns ${NSNAME2}
-
-${IP} netns exec ${NSNAME1} ip link set ${ETHNAME1} up
-${IP} netns exec ${NSNAME2} ip link set ${ETHNAME2} up
-${IP} netns exec ${NSNAME2} ip link set lo up
-
-${IP} netns exec ${NSNAME1} ip addr add ${CLI_ADDRESS} dev ${ETHNAME1}
-${IP} netns exec ${NSNAME2} ip addr add ${ADDRESS} dev ${ETHNAME2}
-
-${IP} netns exec ${NSNAME1} ip route add default via ${CLI_ADDRESS} dev ${ETHNAME1}
-${IP} netns exec ${NSNAME2} ip route add default via ${ADDRESS} dev ${ETHNAME2}
-
-${IP} netns exec ${NSNAME2} ip addr
-${IP} netns exec ${NSNAME2} ip route
-${IP} netns exec ${NSNAME1} ip route
-
-${IP} netns exec ${NSNAME1} ping -c 1 ${ADDRESS}
-${IP} netns exec ${NSNAME2} ping -c 1 ${ADDRESS}
-${IP} netns exec ${NSNAME2} ping -c 1 ${CLI_ADDRESS}
-set +e
+. `dirname $0`/ns.sh
 
 # Run servers
 update_config test-haproxy-connect.config
@@ -110,26 +76,26 @@ if test "$VERBOSE" = 1;then
 DEBUG="-d 3"
 fi
 
-${IP} netns exec ${NSNAME2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 
 sleep 1
 
 rm -f ${HACONFIG}
 sed -e 's|@HAPORT@|'${HAPORT}'|g' -e 's|@PORT@|'${PORT}'|g' -e 's|@ADDRESS@|'${ADDRESS}'|g' ${srcdir}/data/haproxy-connect.cfg >${HACONFIG}
-${IP} netns exec ${NSNAME2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+${CMDNS2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
 
 sleep 3
 
 # Run clients
 echo " * Getting cookie from ${ADDRESS}:${HAPORT}..."
-( echo "test" | ${IP} netns exec ${NSNAME1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
 if test $? != 0;then
 	echo "Could not get cookie from server"
 	exit 1
 fi
 
 echo " * Connecting to ${ADDRESS}:${HAPORT}..."
-( echo "test" | ${IP} netns exec ${NSNAME1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+( echo "test" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1
@@ -138,7 +104,7 @@ fi
 set -e
 echo " * ping remote address"
 
-${IP} netns exec ${NSNAME1} ping -c 3 ${VPNADDR}
+${CMDNS1} ping -c 3 ${VPNADDR}
 
 set +e
 
@@ -148,7 +114,7 @@ kill ${HAPID}
 
 sleep 2
 
-${IP} netns exec ${NSNAME2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+${CMDNS2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
 
 sleep 2
 
@@ -160,13 +126,13 @@ sleep 2
 # are present and these packets would trigger invalid lookup/crash.
 echo " * Sending a stray UDP packet to VPN server"
 set -e
-${IP} netns exec ${NSNAME1} bash -c "echo -e \"\x17\xfe\xff\x00\x0b\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\" >/dev/udp/${ADDRESS}/${PORT}"
+${CMDNS1} bash -c "echo -e \"\x17\xfe\xff\x00\x0b\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\" >/dev/udp/${ADDRESS}/${PORT}"
 set +e
 
 sleep 3
 
 echo " * Re-connecting to obtain cookie after haproxy restart... "
-( echo "test" | ${IP} netns exec ${NSNAME1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+( echo "test" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
 if test $? != 0;then
 	echo "Could not receive cookie from server on reconnection"
 	exit 1

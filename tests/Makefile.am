@@ -1,6 +1,6 @@
 include ../src/common.mk
 
-EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
+EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem \
 	certs/server-key.pem data/test1.config data/pam/nss-group.in data/pam/nss-passwd.in \
 	data/pam/users.oath.templ data/test-pam-noauth.config data/test-pam.passwd \
 	data/test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \

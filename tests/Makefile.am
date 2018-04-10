@@ -1,6 +1,6 @@
 include ../src/common.mk
 
-EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
+EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem \
 	certs/server-key.pem data/test1.config data/pam/nss-group.in data/pam/nss-passwd.in \
 	data/pam/users.oath.templ data/test-pam-noauth.config data/test-pam.passwd \
 	data/test1.passwd data/test-user-cert.config certs/user-cert.pem certs/user-key.pem \
@@ -26,7 +26,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem common.sh certs/server-cert.pem \
 	data/test-otp.config data/test-cert-opt-pass.config data/test-gssapi-opt-pass.config \
 	certs/server-key-secp521r1.pem certs/server-cert-secp521r1.pem data/test-vhost-pass-cert.config \
 	data/vhost.hosts data/multiple-routes.config data/haproxy-auth.cfg data/test-haproxy-auth.config \
-	data/haproxy-connect.cfg data/test-haproxy-connect.config scripts/vpnc-script
+	data/haproxy-connect.cfg data/test-haproxy-connect.config scripts/vpnc-script \
+	data/test-traffic.config data/test-compression.config
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -39,7 +40,7 @@ endif
 if ENABLE_ROOT_TESTS
 if ENABLE_DOCKER_TESTS
 #docker tests
-dist_check_SCRIPTS += radius-test full-test unix-test kerberos-test radius-test-config \
+dist_check_SCRIPTS += radius-test unix-test kerberos-test radius-test-config \
 	proxyproto-test proxyproto-v1-test proxyproto-unix-test \
 	reload-info-test radius-group-test
 endif
@@ -49,7 +50,14 @@ dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
 	multiple-routes haproxy-connect
+
+#other tests requiring nuttcp for traffic
+if ENABLE_NUTTCP_TESTS
+dist_check_SCRIPTS += traffic compression
 endif
+
+endif
+
 
 if HAVE_CWRAP
 if HAVE_CWRAP_ALL

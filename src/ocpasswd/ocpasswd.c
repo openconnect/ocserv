@@ -32,6 +32,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <getopt.h>
+#ifdef HAVE_CRYPT_H
+  /* libcrypt in Fedora28 does not provide prototype
+   * in unistd.h */
+# include <crypt.h>
+#endif
 
 /* Gnulib portability files. */
 #include <getpass.h>

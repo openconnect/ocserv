@@ -648,6 +648,7 @@ static void set_dh_params(main_server_st* s, struct vhost_cfg_st *vhost)
 #ifndef UNDER_TEST
 struct key_cb_data {
 	unsigned pk;
+	unsigned bits;
 	unsigned idx; /* the index of the key */
 	struct sockaddr_un sa;
 	unsigned sa_len;
@@ -758,7 +759,7 @@ int key_cb_get_pk (gnutls_privkey_t key, void* userdata)
 	}
 
 	msg.key_idx = cdata->idx;
-	msg.vhost = cdata->vhost;
+	msg.vhost = (void*)cdata->vhost;
 	msg.pk = 0;
 	msg.bits = 0;
 

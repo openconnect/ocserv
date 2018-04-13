@@ -31,11 +31,16 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 
 SUBDIRS = docker-ocserv docker-kerberos
 
+xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
 
 if GNUTLS_WITH_NEW_CERTS
-dist_check_SCRIPTS += server-cert-ed25519 server-cert-rsa-pss
+dist_check_SCRIPTS += server-cert-ed25519
+
+# gnutls 3.6.2 doesn't enable support for rsa-pss yet
+xfail_scripts += server-cert-rsa-pss
 endif
+
 
 if ENABLE_ROOT_TESTS
 if ENABLE_DOCKER_TESTS
@@ -141,7 +146,9 @@ check_PROGRAMS = str-test str-test2 ipv4-prefix ipv6-prefix kkdcp-parsing json-e
 	proxyproto-v1
 
 
-TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS)
+TESTS = $(dist_check_SCRIPTS) $(check_PROGRAMS) $(xfail_scripts)
+
+XFAIL_TESTS = $(xfail_scripts)
 
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"

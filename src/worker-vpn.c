@@ -1323,17 +1323,6 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 	switch (ws->udp_state) {
 	case UP_ACTIVE:
 	case UP_INACTIVE:
-#if GNUTLS_VERSION_NUMBER <= 0x030210
-		/* work-around an infinite loop caused by gnutls_record_recv()
-		 * always succeeding by counting every error as a discarded packet.
-		 */
-		ret = gnutls_record_get_discarded(ws->dtls_session);
-		if (ret > 1000) {
-			ws->udp_state = UP_DISABLED;
-			break;
-		}
-#endif
-
 		ret = dtls_recv_packet(ws, &data, &packet);
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);

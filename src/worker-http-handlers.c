@@ -123,9 +123,6 @@ int get_cert_der_handler(worker_st * ws, unsigned http_ver)
 static
 int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
 {
-#if GNUTLS_VERSION_NUMBER < 0x030205
-	return -1;
-#else
 	if (ws->conn_type != SOCK_TYPE_UNIX) { /* we have TLS */
 		const gnutls_datum_t *certs;
 		gnutls_datum_t out = {NULL, 0}, tmpca;
@@ -207,7 +204,6 @@ int ca_handler(worker_st * ws, unsigned http_ver, unsigned der)
 	} else {
 		return -1;
 	}
-#endif
 }
 
 int get_ca_handler(worker_st * ws, unsigned http_ver)

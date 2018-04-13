@@ -1164,48 +1164,5 @@ void *calc_sha1_hash(void *pool, char* file, unsigned cert)
 
 size_t tls_get_overhead(gnutls_protocol_t version, gnutls_cipher_algorithm_t cipher, gnutls_mac_algorithm_t mac)
 {
-#if GNUTLS_VERSION_NUMBER >= 0x030207
 	return gnutls_est_record_overhead_size(version, cipher, mac, GNUTLS_COMP_NULL, 0);
-#else
-	unsigned overhead = 0, t;
-	unsigned block_size;
-	block_size = gnutls_cipher_get_block_size(cipher);
-
-	switch(version) {
-		case GNUTLS_DTLS0_9:
-		case GNUTLS_DTLS1_0:
-		case GNUTLS_DTLS1_2:
-			overhead += 13;
-			break;
-		default:
-			overhead += 5;
-			break;
-	}
-
-	switch(cipher) {
-		case GNUTLS_CIPHER_3DES_CBC:
-		case GNUTLS_CIPHER_AES_128_CBC:
-		case GNUTLS_CIPHER_AES_256_CBC:
-		case GNUTLS_CIPHER_CAMELLIA_128_CBC:
-		case GNUTLS_CIPHER_CAMELLIA_256_CBC:
-		case GNUTLS_CIPHER_AES_192_CBC:
-		case GNUTLS_CIPHER_CAMELLIA_192_CBC:
-			overhead += block_size; /* max pad */
-			overhead += block_size; /* IV */
-			break;
-		case GNUTLS_CIPHER_AES_128_GCM:
-		case GNUTLS_CIPHER_AES_256_GCM:
-			overhead += 8; /* explicit nonce */
-			overhead += block_size; /* tag size */
-			break;
-		default:
-			break;
-	}
-
-	t = gnutls_hmac_get_len(mac);
-	if (t > 0)
-		overhead += t;
-
-	return overhead;
-#endif
 }

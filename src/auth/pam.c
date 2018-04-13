@@ -103,7 +103,7 @@ unsigned i;
 				co_resume();
 				pctx->state = PAM_S_INIT;
 
-				if (pctx->password)
+				if (pctx->password[0] != 0)
 					pctx->replies[i].resp = strdup(pctx->password);
 				pctx->sent_msg = 0;
 				break;

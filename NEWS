@@ -1,5 +1,6 @@
 * Version 0.11.12 (unreleased)
 - Corrected crash on certain cases when proxy protocol is in use (#146).
+- Corrected use of new features in GnuTLS 3.6.x
 
 
 * Version 0.11.11 (released 2018-03-03)

@@ -146,7 +146,7 @@ int proc_table_update_ip(main_server_st *s, struct proc_st *proc, struct sockadd
 		if (proc->dtls_remote_addr_len == addr_size &&
 		    memcmp(SA_IN_P_GENERIC(addr, addr_size),
 			   SA_IN_P_GENERIC(&proc->dtls_remote_addr, addr_size),
-			   SA_IN_SIZE(addr_size) == 0)) {
+			   SA_IN_SIZE(addr_size)) == 0) {
 
 			if (htable_del(s->proc_table.db_dtls_ip, rehash_dtls_ip(proc, NULL), proc) != 0)
 				proc->dtls_remote_addr_len = 0;

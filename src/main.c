@@ -1033,7 +1033,7 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revent
 	 * That's because of a test that the certificate matches the
 	 * used key. */
 	ms_sleep(1500);
-	reload_cfg_file(s->config_pool, s->vconfig, 1);
+	reload_cfg_file(s->config_pool, s->vconfig, 0);
 }
 
 static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)

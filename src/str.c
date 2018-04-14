@@ -37,7 +37,7 @@ void trim_trailing_whitespace(char *str)
 
 	if (len > 0) {
 		p = str+len-1;
-		while (c_isspace(*p) && p >= str) {
+		while (p >= str && c_isspace(*p)) {
 			*p = 0;
 			p--;
 		}

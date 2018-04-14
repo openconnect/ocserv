@@ -246,7 +246,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	struct radius_ctx_st *pctx = ctx;
 	VALUE_PAIR *send = NULL, *recvd = NULL;
 	uint32_t service;
-	char route[64];
+	char route[72];
 	char txt[64];
 	VALUE_PAIR *vp;
 	int ret;

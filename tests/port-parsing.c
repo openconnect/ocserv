@@ -67,10 +67,11 @@ int main()
 	int ret;
 	FwPortSt **fw_ports = NULL;
 	size_t n_fw_ports = 0;
+	void *pool = talloc_new(NULL);
 
 	strcpy(p, "icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6()");
 
-	ret = cfg_parse_ports(NULL, &fw_ports, &n_fw_ports, p);
+	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret < 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
@@ -82,7 +83,7 @@ int main()
 	reset(fw_ports, n_fw_ports);
 	strcpy(p, "icmp (  ), tcp	 (  88 ), udp  (  90  ), sctp  (  70   )   ,   tcp   (  443   )    ,  	 udp(80)  	, icmpv6 ( )   	");
 
-	ret = cfg_parse_ports(NULL, &fw_ports, &n_fw_ports, p);
+	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret < 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
@@ -93,7 +94,7 @@ int main()
 	/* test error 1 */
 	reset(fw_ports, n_fw_ports);
 	strcpy(p, "tcp(88), tcp(90),");
-	ret = cfg_parse_ports(NULL, &fw_ports, &n_fw_ports, p);
+	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret >= 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
@@ -102,7 +103,7 @@ int main()
 	/* test error 2 */
 	reset(fw_ports, n_fw_ports);
 	strcpy(p, "tcp(88), tcp");
-	ret = cfg_parse_ports(NULL, &fw_ports, &n_fw_ports, p);
+	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret >= 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
@@ -111,7 +112,7 @@ int main()
 	reset(fw_ports, n_fw_ports);
 	strcpy(p, "!(icmp(), tcp(88), udp(90), sctp(70), tcp(443), udp(80), icmpv6())");
 
-	ret = cfg_parse_ports(NULL, &fw_ports, &n_fw_ports, p);
+	ret = cfg_parse_ports(pool, &fw_ports, &n_fw_ports, p);
 	if (ret < 0) {
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
@@ -122,6 +123,7 @@ int main()
 		fprintf(stderr, "error in %d\n", __LINE__);
 		exit(1);
 	}
+	talloc_free(pool);
 
 	return 0;
 }

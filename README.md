@@ -32,7 +32,6 @@ seccomp:      libseccomp-dev     / libseccomp-devel
 occtl:        libreadline-dev    / readline-devel
               libnl-route-3-dev  / libnl3-devel
 GSSAPI:       libkrb5-dev        / krb5-devel
-OATH:         liboath-dev        / liboath-devel
 Radius:       libradcli-dev      / radcli-devel
 ```
 
@@ -54,7 +53,6 @@ libpam-wrapper     / pam_wrapper
 libnss-wrapper     / nss_wrapper
 libsocket-wrapper  / socket_wrapper
 gss-ntlmssp        / gssntlmssp
-libpam-oath        / pam_oath
 haproxy            / haproxy
 iputils-ping       / iputils
 ```

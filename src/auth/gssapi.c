@@ -244,6 +244,8 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 	if (pctx == NULL)
 		return ERR_AUTH_FAIL;
 
+	pctx->vctx = vctx;
+
 	ret = oc_base64_decode_alloc(pctx, spnego, strlen(spnego), &raw, &raw_len);
 	if (ret == 0) {
 		syslog(LOG_ERR, "gssapi: error in base64 decoding %s", __func__);
@@ -256,6 +258,7 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 		GSS_C_NO_CHANNEL_BINDINGS, &client, &mech_type, &pctx->msg,
 		&flags, &time, &pctx->delegated_creds);
 	talloc_free(raw);
+
 
 	if (ret == GSS_S_CONTINUE_NEEDED) {
 		gss_release_name(&minor, &client);
@@ -272,7 +275,6 @@ static int gssapi_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 		return ERR_AUTH_FAIL;
 	}
 
-	pctx->vctx = vctx;
 	*ctx = pctx;
 
 	return ret;

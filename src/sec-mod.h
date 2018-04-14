@@ -35,6 +35,7 @@
 typedef struct sec_mod_st {
 	struct list_head *vconfig;
 	void *config_pool;
+	void *sec_mod_pool;
 
 	struct htable *client_db;
 	int cmd_fd;

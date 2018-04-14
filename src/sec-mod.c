@@ -626,13 +626,13 @@ static void check_other_work(sec_mod_st *sec)
 		sec_mod_client_db_deinit(sec);
 		tls_cache_deinit(&sec->tls_db);
 		talloc_free(sec->config_pool);
-		talloc_free(sec);
+		talloc_free(sec->sec_mod_pool);
 		exit(0);
 	}
 
 	if (need_reload) {
 		seclog(sec, LOG_DEBUG, "reloading configuration");
-		reload_cfg_file(sec, sec->vconfig, 0);
+		reload_cfg_file(sec, sec->vconfig, 1);
 		load_keys(sec, 0);
 
 		list_for_each(sec->vconfig, vhost, list) {
@@ -918,6 +918,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 
 	sec->vconfig = vconfig;
 	sec->config_pool = config_pool;
+	sec->sec_mod_pool = sec_mod_pool;
 
 	tls_cache_init(sec, &sec->tls_db);
 	sup_config_init(sec);

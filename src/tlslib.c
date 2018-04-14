@@ -816,7 +816,7 @@ int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 			}
 
 			pcert_list_size = 8;
-			pcert_list = gnutls_malloc(sizeof(pcert_list[0])*pcert_list_size);
+			pcert_list = talloc_size(vhost->pool, sizeof(pcert_list[0])*pcert_list_size);
 			if (pcert_list == NULL) {
 				mslog(s, NULL, LOG_ERR, "error allocating memory");
 				return -1;
@@ -1037,6 +1037,9 @@ void tls_load_prio(main_server_st *s, struct vhost_cfg_st *vhost)
 {
 	int ret;
 	const char* perr;
+
+	if (vhost->creds.cprio != NULL)
+		gnutls_priority_deinit(vhost->creds.cprio);
 
 	ret = gnutls_priority_init(&vhost->creds.cprio, vhost->perm_config.config->priorities, &perr);
 	if (ret == GNUTLS_E_PARSING_ERROR)

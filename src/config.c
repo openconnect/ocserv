@@ -1048,9 +1048,13 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	return 0;
 }
 
+enum {
+	CFG_FLAG_RELOAD = (1<<0),
+	CFG_FLAG_SECMOD = (1<<1)
+};
 
 static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
-			   unsigned reload)
+			   unsigned flags)
 {
 	int ret;
 	struct cfg_st *config;
@@ -1060,7 +1064,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.file = file;
-	ctx.reload = reload;
+	ctx.reload = (flags&CFG_FLAG_RELOAD)?1:0;
 	ctx.head = head;
 
 	/* parse configuration
@@ -1109,11 +1113,14 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			defvhost = NULL;
 
 		/* this check copies mandatory fields from default vhost if needed */
-		check_cfg(vhost, defvhost, reload);
+		check_cfg(vhost, defvhost, ctx.reload);
 
-		tls_load_files(NULL, vhost);
-		tls_load_prio(NULL, vhost);
-		tls_reload_crl(NULL, vhost, 1);
+		/* the following are only useful in main process */
+		if (!(flags & CFG_FLAG_SECMOD)) {
+			tls_load_files(NULL, vhost);
+			tls_load_prio(NULL, vhost);
+			tls_reload_crl(NULL, vhost, 1);
+		}
 
 #ifdef HAVE_GSSAPI
 		if (vhost->urlfw_size > 0) {
@@ -1550,12 +1557,16 @@ static void print_version(void)
 }
 
 
-void reload_cfg_file(void *pool, struct list_head *configs, unsigned archive)
+void reload_cfg_file(void *pool, struct list_head *configs, unsigned sec_mod)
 {
 	struct vhost_cfg_st* vhost = NULL;
+	unsigned flags = CFG_FLAG_RELOAD;
+
+	if (sec_mod)
+		flags |= CFG_FLAG_SECMOD;
 
 	/* Archive or clear any non-permanent configs */
-	if (archive)
+	if (!sec_mod)
 		archive_cfg(configs);
 	else
 		clear_cfg(configs);
@@ -1567,7 +1578,7 @@ void reload_cfg_file(void *pool, struct list_head *configs, unsigned archive)
 	}
 
 	/* parse the config again */
-	parse_cfg_file(pool, cfg_file, configs, 1);
+	parse_cfg_file(pool, cfg_file, configs, flags);
 
 	return;
 }

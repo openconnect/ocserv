@@ -675,6 +675,16 @@ void secmod_socket_file_name(struct perm_cfg_st *perm_config, char *name, unsign
 		 perm_config->socket_file_prefix, (unsigned)getpid());
 }
 
+static void clear_unneeded_mem(struct list_head *vconfig)
+{
+	vhost_cfg_st *vhost = NULL;
+
+	/* deinitialize certificate credentials etc. */
+	list_for_each_rev(vconfig, vhost, list) {
+		tls_vhost_deinit(vhost);
+	}
+}
+
 /* Returns two file descriptors to be used for communication with sec-mod.
  * The sync_fd is used by main to send synchronous commands- commands which
  * expect a reply immediately.
@@ -728,6 +738,7 @@ int run_sec_mod(main_server_st *s, int *sync_fd)
 		close(sfd[1]);
 		set_cloexec_flag (fd[0], 1);
 		set_cloexec_flag (sfd[0], 1);
+		clear_unneeded_mem(s->vconfig);
 		sec_mod_server(s->main_pool, s->config_pool, s->vconfig, p, fd[0], sfd[0]);
 		exit(0);
 	} else if (pid > 0) {	/* parent */

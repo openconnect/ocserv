@@ -427,7 +427,7 @@ enum option_types { OPTION_NUMERIC, OPTION_STRING, OPTION_BOOLEAN, OPTION_MULTI_
 
 #include <ip-util.h>
 
-void reload_cfg_file(void *pool, struct list_head *configs, unsigned archive);
+void reload_cfg_file(void *pool, struct list_head *configs, unsigned sec_mod);
 void clear_old_configs(struct list_head *configs);
 void write_pid_file(void);
 void remove_pid_file(void);

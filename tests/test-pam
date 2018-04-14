@@ -27,7 +27,7 @@ VERBOSE=1
 
 . `dirname $0`/common.sh
 
-echo "Testing PAM backend with username-password-otp... "
+echo "Testing PAM backend with username-password... "
 
 export PAMDIR=pam
 update_config test-pam.config
@@ -35,23 +35,18 @@ launch_sr_pam_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo ""
-echo "Connecting with wrong password and OTP... "
-( echo -e "testuser\n9999999\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+echo "Connecting with wrong password... "
+( echo -e "testuser\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie with wrong cred"
 
 echo ""
 echo "Connecting with wrong username... "
-( echo -e "testuser123\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie with wrong cred"
 
 echo ""
-echo "Connecting with wrong OTP... "
-( echo -e "testuser123\n328489\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
-	fail $PID "Received cookie with wrong cred"
-
-echo ""
-echo "Connecting with correct password and OTP... "
-( echo -e "testuser123\n328482\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||#>/dev/null 2>&1 ) ||
+echo "Connecting with correct password... "
+( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||#>/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 cleanup

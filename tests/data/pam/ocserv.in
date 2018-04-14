@@ -1,6 +1,5 @@
 #%PAM-1.0
 auth       required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam/passdb
-auth       requisite    @PAMDIR@/pam_oath.so debug usersfile=./data/pam/users.oath window=20
 account    required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam/passdb
 account    required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam/passdb
 session    required	@PAMWRAPDIR@/pam_matrix.so passdb=./data/pam/passdb

@@ -730,98 +730,18 @@ error:
 }
 
 #if GNUTLS_VERSION_NUMBER >= 0x030600
-/* This returns the public key algorithm of the key;
- * in addition it stores it to the userdata.
- */
-static
-int key_cb_get_pk (gnutls_privkey_t key, void* userdata)
-{
-	struct key_cb_data* cdata = userdata;
-	int sd = -1, ret, e;
-	SecGetPkMsg msg = SEC_GET_PK_MSG__INIT;
-	SecGetPkMsg *reply = NULL;
-	PROTOBUF_ALLOCATOR(pa, userdata);
-	unsigned pk;
-
-	sd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sd == -1) {
-		e = errno;
-		syslog(LOG_ERR, "error opening socket: %s", strerror(e));
-		return GNUTLS_E_INTERNAL_ERROR;
-	}
-
-	ret = connect(sd, (struct sockaddr *)&cdata->sa, cdata->sa_len);
-	if (ret == -1) {
-		e = errno;
-		syslog(LOG_ERR, "error connecting to sec-mod socket '%s': %s",
-			cdata->sa.sun_path, strerror(e));
-		goto error;
-	}
-
-	msg.key_idx = cdata->idx;
-	msg.vhost = (void*)cdata->vhost;
-	msg.pk = 0;
-	msg.bits = 0;
-
-	ret = send_msg(userdata, sd, CMD_SEC_GET_PK, &msg,
-			(pack_size_func)sec_get_pk_msg__get_packed_size,
-			(pack_func)sec_get_pk_msg__pack);
-	if (ret < 0) {
-		goto error;
-	}
-
-	ret = recv_msg(userdata, sd, CMD_SEC_GET_PK, (void*)&reply,
-		       (unpack_func)sec_get_pk_msg__unpack,
-		       DEFAULT_SOCKET_TIMEOUT);
-	if (ret < 0) {
-		e = errno;
-		syslog(LOG_ERR, "error receiving sec-mod reply: %s",
-				strerror(e));
-		goto error;
-	}
-	close(sd);
-	sd = -1;
-
-	pk = reply->pk;
-	cdata->pk = pk;
-	cdata->bits = reply->bits;
-
-	sec_get_pk_msg__free_unpacked(reply, &pa);
-	if (pk == 0) {
-		syslog(LOG_ERR, "error in public key algorithm!\n");
-		goto error;
-	}
-	return pk;
-
-error:
-	if (sd != -1)
-		close(sd);
-	if (reply != NULL)
-		sec_get_pk_msg__free_unpacked(reply, &pa);
-	return 0;
-}
-
 static int key_cb_info_func(gnutls_privkey_t key, unsigned int flags, void *userdata)
 {
 	struct key_cb_data *p = userdata;
 
 	if (flags & GNUTLS_PRIVKEY_INFO_PK_ALGO) {
-		if (p->pk)
-			return p->pk;
-		return key_cb_get_pk(key, p);
+		return p->pk;
 #if GNUTLS_VERSION_NUMBER >= 0x030603
 	} else if (flags & GNUTLS_PRIVKEY_INFO_PK_ALGO_BITS) {
-		if (p->bits)
-			return p->bits;
-
-		key_cb_get_pk(key, p);
 		return p->bits;
 #endif
 	} else if (flags & GNUTLS_PRIVKEY_INFO_HAVE_SIGN_ALGO) {
 		unsigned sig = GNUTLS_FLAGS_TO_SIGN_ALGO(flags);
-
-		if (!p->pk)
-			key_cb_get_pk(key, p);
 
 		if (gnutls_sign_supports_pk_algorithm(sig, p->pk))
 			return 1;
@@ -937,8 +857,11 @@ int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 		secmod_socket_file_name(&vhost->perm_config, cdata->sa.sun_path, sizeof(cdata->sa.sun_path));
 		cdata->sa_len = SUN_LEN(&cdata->sa);
 
+
 		/* load the private key */
+
 #if GNUTLS_VERSION_NUMBER >= 0x030600
+		cdata->pk = gnutls_pubkey_get_pk_algorithm(pcert_list[0].pubkey, &cdata->bits);
 		ret = gnutls_privkey_import_ext4(key, cdata, key_cb_sign_data_func,
 			key_cb_sign_hash_func,key_cb_decrypt_func,
 			key_cb_deinit_func, key_cb_info_func,

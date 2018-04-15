@@ -564,6 +564,17 @@ struct ini_ctx_st {
 	void *pool;
 };
 
+#define WARN_ON_VHOST_ONLY(vname, oname) \
+	({int rval; \
+		if (vname) { \
+			fprintf(stderr, WARNSTR"%s is ignored on %s virtual host\n", oname, vname); \
+			rval = 1; \
+		} else { \
+			rval = 0; \
+		} \
+	rval; \
+	})
+
 #define WARN_ON_VHOST(vname, oname, member) \
 	({int rval; \
 		if (vname) { \
@@ -854,6 +865,12 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		READ_TF(config->match_dtls_and_tls);
 	} else if (strcmp(name, "compression") == 0) {
 		READ_TF(config->enable_compression);
+	} else if (strcmp(name, "compression-algo-priority") == 0) {
+		if (!WARN_ON_VHOST_ONLY(vhost->name, "compression-algo-priority")) {
+			if (switch_comp_priority(pool, value) == 0) {
+				fprintf(stderr, WARNSTR"invalid compression modstring %s\n", value);
+			}
+		}
 	} else if (strcmp(name, "no-compress-limit") == 0) {
 		READ_NUMERIC(config->no_compress_limit);
 	} else if (strcmp(name, "use-seccomp") == 0) {

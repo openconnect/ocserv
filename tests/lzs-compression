@@ -69,7 +69,7 @@ USERNAME=test
 . `dirname $0`/ns.sh
 
 # Run servers
-update_config test-compression.config
+update_config test-compression-lzs.config
 if test "$VERBOSE" = 1;then
 DEBUG="-d 3"
 fi
@@ -138,7 +138,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-grep "DTLS compression: oc-lz4" ${OUTFILE} || grep "DTLS compression: lzs" ${OUTFILE}
+grep "DTLS compression: lzs" ${OUTFILE}
 if test $? != 0;then
 	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
 	echo "occtl show user didn't show compression!"

@@ -49,7 +49,7 @@ extern char **saved_argv;
 extern struct ev_loop *loop;
 extern ev_timer maintainance_watcher;
 
-#define MAIN_MAINTAINANCE_TIME (900)
+#define MAIN_MAINTENANCE_TIME (900)
 
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head);
 

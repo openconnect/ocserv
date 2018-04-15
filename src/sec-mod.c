@@ -55,6 +55,8 @@ static int need_maintainance = 0;
 static int need_reload = 0;
 static int need_exit = 0;
 
+static void reload_server(sec_mod_st *sec);
+
 static int load_keys(sec_mod_st *sec, unsigned force);
 
 static
@@ -496,6 +498,16 @@ int process_packet_from_main(void *pool, int fd, sec_mod_st * sec, cmd_request_t
 	data.size = buffer_size;
 
 	switch (cmd) {
+	case CMD_SECM_RELOAD:
+		reload_server(sec);
+
+		ret = send_msg(pool, fd, CMD_SECM_RELOAD_REPLY, NULL,
+			       NULL, NULL);
+		if (ret < 0) {
+			seclog(sec, LOG_ERR, "could not send reload reply to main!\n");
+			return ERR_BAD_COMMAND;
+		}
+		break;
 	case CMD_SECM_LIST_COOKIES:
 		handle_secm_list_cookies_reply(pool, fd, sec);
 
@@ -561,11 +573,6 @@ static void handle_alarm(int signo)
 	need_maintainance = 1;
 }
 
-static void handle_sighup(int signo)
-{
-	need_reload = 1;
-}
-
 static void handle_sigterm(int signo)
 {
 	need_exit = 1;
@@ -608,6 +615,22 @@ static void send_stats_to_main(sec_mod_st *sec)
 	return;
 }
 
+static void reload_server(sec_mod_st *sec)
+{
+	vhost_cfg_st *vhost = NULL;
+
+	seclog(sec, LOG_DEBUG, "reloading configuration");
+	reload_cfg_file(sec, sec->vconfig, 1);
+	load_keys(sec, 0);
+
+	list_for_each(sec->vconfig, vhost, list) {
+		sec_auth_init(vhost);
+	}
+	sup_config_init(sec);
+
+	need_reload = 0;
+}
+
 static void check_other_work(sec_mod_st *sec)
 {
 	vhost_cfg_st *vhost = NULL;
@@ -631,16 +654,7 @@ static void check_other_work(sec_mod_st *sec)
 	}
 
 	if (need_reload) {
-		seclog(sec, LOG_DEBUG, "reloading configuration");
-		reload_cfg_file(sec, sec->vconfig, 1);
-		load_keys(sec, 0);
-
-		list_for_each(sec->vconfig, vhost, list) {
-			sec_auth_init(vhost);
-		}
-		sup_config_init(sec);
-
-		need_reload = 0;
+		reload_server(sec);
 	}
 
 	if (need_maintainance) {
@@ -933,7 +947,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	/* we no longer need the main pool after this point. */
 	talloc_free(main_pool);
 
-	ocsignal(SIGHUP, handle_sighup);
+	ocsignal(SIGHUP, SIG_IGN);
 	ocsignal(SIGINT, handle_sigterm);
 	ocsignal(SIGTERM, handle_sigterm);
 	ocsignal(SIGALRM, handle_alarm);

@@ -1026,6 +1026,7 @@ static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
+	int ret;
 
 	mslog(s, NULL, LOG_INFO, "reloading configuration");
 	kill(s->sec_mod_pid, SIGHUP);
@@ -1033,7 +1034,12 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revent
 	/* Reload on main needs to happen later than sec-mod.
 	 * That's because of a test that the certificate matches the
 	 * used key. */
-	ms_sleep(1500);
+	ret = secmod_reload(s);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "could not reload sec-mod!\n");
+		ev_feed_signal_event (loop, SIGTERM);
+	}
+
 	reload_cfg_file(s->config_pool, s->vconfig, 0);
 }
 

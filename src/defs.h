@@ -96,6 +96,8 @@ typedef enum {
 	CMD_SECM_LIST_COOKIES,
 	CMD_SECM_LIST_COOKIES_REPLY,
 	CMD_SECM_STATS, /* sent periodically */
+	CMD_SECM_RELOAD,
+	CMD_SECM_RELOAD_REPLY,
 
 	MAX_SECM_CMD,
 } cmd_request_t;

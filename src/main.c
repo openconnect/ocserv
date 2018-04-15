@@ -1216,7 +1216,7 @@ static void maintainance_watcher_cb(EV_P_ ev_timer *w, int revents)
 	clear_old_configs(s->vconfig);
 
 	list_for_each_rev(s->vconfig, vhost, list) {
-		tls_reload_crl(s->config_pool, vhost, 0);
+		tls_reload_crl(s, vhost, 0);
 	}
 }
 

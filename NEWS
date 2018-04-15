@@ -1,4 +1,4 @@
-* Version 0.11.12 (unreleased)
+* Version 0.11.12 (released 2018-04-22)
 - Corrected crash on certain cases when proxy protocol is in use (#146).
 - Corrected use of new features in GnuTLS 3.6.x
 - Include crypt.h when necessary for crypt() - new glibc systems

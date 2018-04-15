@@ -29,6 +29,7 @@
 #include <time.h>
 #include <string.h>
 #include <nettle/base64.h>
+#include <errno.h>
 
 void _talloc_free2(void *ctx, void *ptr);
 void *_talloc_size2(void *ctx, size_t size);
@@ -109,6 +110,7 @@ inline static
 void ms_sleep(unsigned ms)
 {
   struct timespec tv;
+  int ret;
 
   tv.tv_sec = 0;
   tv.tv_nsec = ms * 1000 * 1000;
@@ -117,8 +119,10 @@ void ms_sleep(unsigned ms)
   	tv.tv_nsec -= 1000000000;
   	tv.tv_sec++;
   }
-  
-  nanosleep(&tv, NULL);
+
+  do {
+	ret = nanosleep(&tv, NULL);
+  } while(ret == -1 && errno == EINTR);
 }
 
 const char *ps_status_to_str(int status, unsigned cookie);

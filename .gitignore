@@ -97,3 +97,7 @@ tests/data/pam/ocserv
 tests/data/pam/users.oath
 tests/data/pam-single/passdb
 tests/data/pam-single/ocserv
+tests/cstp-recv
+tests/html-escape
+tests/proxyproto-v1
+tests/url-escape

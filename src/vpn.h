@@ -432,6 +432,8 @@ void clear_old_configs(struct list_head *configs);
 void write_pid_file(void);
 void remove_pid_file(void);
 
+unsigned switch_comp_priority(void *pool, const char *modstring);
+
 extern sigset_t sig_default_set;
 
 #endif

@@ -163,6 +163,47 @@ struct compression_method_st comp_methods[] = {
 };
 #endif
 
+unsigned switch_comp_priority(void *pool, const char *modstring)
+{
+	unsigned i, ret;
+	char *token, *str;
+	const char *algo = NULL;
+	long priority = -1;
+
+	str = talloc_strdup(pool, modstring);
+	if (!str)
+		return 0;
+
+	token = str;
+	token = strtok(token, ":");
+
+	algo = token;
+
+	token = strtok(NULL, ":");
+	if (token)
+		priority = strtol(token, NULL, 10);
+
+	if (algo == NULL || priority <= 0) {
+		ret = 0;
+		goto finish;
+	}
+	for (i = 0;
+	     i < sizeof(comp_methods) / sizeof(comp_methods[0]);
+	     i++) {
+		if (c_strcasecmp(algo, comp_methods[i].name) == 0) {
+			comp_methods[i].server_prio = priority;
+			ret = 1;
+			goto finish;
+		}
+	}
+
+	ret = 0;
+
+ finish:
+	talloc_free(str);
+	return ret;
+}
+
 static
 void header_value_check(struct worker_st *ws, struct http_req_st *req)
 {

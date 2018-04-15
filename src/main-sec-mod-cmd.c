@@ -668,6 +668,31 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	return 0;
 }
 
+int secmod_reload(main_server_st * s)
+{
+	int ret, e;
+
+	mslog(s, NULL, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_RELOAD));
+
+	ret = send_msg(s->main_pool, s->sec_mod_fd_sync, CMD_SECM_RELOAD,
+		       NULL, NULL, NULL);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR,
+		      "error sending message to sec-mod cmd socket");
+		return -1;
+	}
+
+	ret = recv_msg(s->main_pool, s->sec_mod_fd_sync, CMD_SECM_RELOAD_REPLY,
+		       NULL, NULL, MAIN_SEC_MOD_TIMEOUT);
+	if (ret < 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR, "error receiving reload reply message from sec-mod cmd socket: %s", strerror(e));
+		return ret;
+	}
+
+	return 0;
+}
+
 void secmod_socket_file_name(struct perm_cfg_st *perm_config, char *name, unsigned max_name_size)
 {
 	/* make socket name and full socket name */

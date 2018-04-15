@@ -49,7 +49,7 @@ extern char **saved_argv;
 extern struct ev_loop *loop;
 extern ev_timer maintainance_watcher;
 
-#define MAIN_MAINTAINANCE_TIME (900)
+#define MAIN_MAINTENANCE_TIME (900)
 
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head);
 
@@ -345,6 +345,8 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 	mslog(s, proc, LOG_DEBUG, "sending (socket) message %u to worker", (unsigned)cmd);
 	return send_socket_msg(proc, proc->fd, cmd, socketfd, msg, get_size, pack);
 }
+
+int secmod_reload(main_server_st * s);
 
 void secmod_socket_file_name(struct perm_cfg_st *perm_config, char *name, unsigned max_name_size);
 void clear_vhosts(struct list_head *head);

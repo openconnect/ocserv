@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2015 Red Hat, Inc.
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
 #
 # This file is part of ocserv.
 #
@@ -20,11 +20,11 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4441
+PORT=4434
 
 . `dirname $0`/common.sh
 
-echo "Testing ocserv and SIGHUP behavior... "
+echo "Testing ocserv and SIGUSR2/forced maintenance behavior... "
 
 update_config test-sighup.config
 launch_simple_sr_server -d 1 -f -c ${CONFIG}
@@ -38,8 +38,11 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 
 echo ok
 sleep 5
-echo "Reloading server"
+echo "Reloadig server"
 kill -HUP $PID
+
+echo "Performing maintenance cycle"
+kill -USR2 $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "
@@ -48,11 +51,9 @@ echo -n "Connecting to obtain cookie (with certificate)... "
 
 echo ok
 
-sed -i 's/^auth = "certificate"/#auth = "certificate"/g' ${CONFIG}
-sed -i 's|^#auth = "plain[.\/data/test1.passwd]"|auth = "plain[.\/data/test1.passwd]"|g' ${CONFIG}
 sleep 10
-echo "Reloading server"
-kill -HUP $PID
+echo "Performing maintenance cycle"
+kill -USR2 $PID
 sleep 5
 
 echo -n "Connecting to obtain cookie (with certificate)... "

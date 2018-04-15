@@ -146,6 +146,10 @@ const char *cmd_request_to_str(unsigned _cmd)
 		return "sm: ban IP";
 	case CMD_SECM_BAN_IP_REPLY:
 		return "sm: ban IP reply";
+	case CMD_SECM_RELOAD:
+		return "sm: reload";
+	case CMD_SECM_RELOAD_REPLY:
+		return "sm: reload reply";
 	case CMD_SECM_LIST_COOKIES:
 		return "sm: list cookies";
 	case CMD_SECM_LIST_COOKIES_REPLY:
@@ -682,7 +686,7 @@ int recv_socket_msg(void *pool, int fd, uint8_t cmd,
 		}
 	}
 
-	if (length > 0) {
+	if (length > 0 && msg) {
 		data = talloc_size(pool, length);
 		if (data == NULL) {
 			ret = ERR_MEM;

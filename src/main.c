@@ -82,7 +82,8 @@ struct ev_loop *loop = NULL;
 /* EV watchers */
 ev_io ctl_watcher;
 ev_io sec_mod_watcher;
-ev_timer maintainance_watcher;
+ev_timer maintenance_watcher;
+ev_signal maintenance_sig_watcher;
 ev_signal term_sig_watcher;
 ev_signal int_sig_watcher;
 ev_signal reload_sig_watcher;
@@ -635,7 +636,7 @@ void clear_lists(main_server_st *s)
 		ev_io_stop (loop, &ctl_watcher);
 		ev_io_stop (loop, &sec_mod_watcher);
 		ev_child_stop (loop, &child_watcher);
-		ev_timer_stop(loop, &maintainance_watcher);
+		ev_timer_stop(loop, &maintenance_watcher);
 		/* free memory and descriptors by the event loop */
 		ev_loop_destroy (loop);
 	}
@@ -1025,6 +1026,7 @@ static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
+	int ret;
 
 	mslog(s, NULL, LOG_INFO, "reloading configuration");
 	kill(s->sec_mod_pid, SIGHUP);
@@ -1032,7 +1034,12 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revent
 	/* Reload on main needs to happen later than sec-mod.
 	 * That's because of a test that the certificate matches the
 	 * used key. */
-	ms_sleep(1500);
+	ret = secmod_reload(s);
+	if (ret < 0) {
+		mslog(s, NULL, LOG_ERR, "could not reload sec-mod!\n");
+		ev_feed_signal_event (loop, SIGTERM);
+	}
+
 	reload_cfg_file(s->config_pool, s->vconfig, 0);
 }
 
@@ -1205,9 +1212,8 @@ static void ctl_watcher_cb (EV_P_ ev_io *w, int revents)
 	ctl_handler_run_pending(s, w);
 }
 
-static void maintainance_watcher_cb(EV_P_ ev_timer *w, int revents)
+static void perform_maintenance(main_server_st *s)
 {
-	main_server_st *s = ev_userdata(loop);
 	vhost_cfg_st *vhost = NULL;
 
 	/* Check if we need to expire any data */
@@ -1219,6 +1225,22 @@ static void maintainance_watcher_cb(EV_P_ ev_timer *w, int revents)
 		tls_reload_crl(s, vhost, 0);
 	}
 }
+
+static void maintenance_watcher_cb(EV_P_ ev_timer *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	perform_maintenance(s);
+}
+
+static void maintenance_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	mslog(s, NULL, LOG_INFO, "forcing maintenance cycle");
+	perform_maintenance(s);
+}
+
 
 static void syserr_cb (const char *msg)
 {
@@ -1428,9 +1450,14 @@ int main(int argc, char** argv)
 	ev_child_init(&child_watcher, sec_mod_child_watcher_cb, s->sec_mod_pid, 0);
 	ev_child_start (loop, &child_watcher);
 
-	ev_init(&maintainance_watcher, maintainance_watcher_cb);
-	ev_timer_set(&maintainance_watcher, MAIN_MAINTAINANCE_TIME, MAIN_MAINTAINANCE_TIME);
-	ev_timer_start(loop, &maintainance_watcher);
+	ev_init(&maintenance_watcher, maintenance_watcher_cb);
+	ev_timer_set(&maintenance_watcher, MAIN_MAINTENANCE_TIME, MAIN_MAINTENANCE_TIME);
+	ev_timer_start(loop, &maintenance_watcher);
+
+	/* allow forcing maintenance with SIGUSR2 */
+	ev_init (&maintenance_sig_watcher, maintenance_sig_watcher_cb);
+	ev_signal_set (&maintenance_sig_watcher, SIGUSR2);
+	ev_signal_start (loop, &maintenance_sig_watcher);
 
 	/* Main server loop */
 	ev_run (loop, 0);

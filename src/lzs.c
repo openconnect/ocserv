@@ -159,6 +159,10 @@ do {								\
 	}							\
 } while (0)
 
+struct oc_packed_uint16_t {
+	uint16_t d;
+} __attribute__((packed));
+
 /*
  * Much of the compression algorithm used here is based very loosely on ideas
  * from isdn_lzscomp.c by Andre Beck: http://micky.ibh.de/~beck/stuff/lzs4i4l/
@@ -179,7 +183,7 @@ int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int s
 	 */
 #define HASH_BITS 16
 #define HASH_TABLE_SIZE (1ULL << HASH_BITS)
-#define HASH(p) (*(uint16_t *)(p))
+#define HASH(p) (((struct oc_packed_uint16_t *)(p))->d)
 
 	/*
 	 * There are two data structures for tracking the history. The first

@@ -1,7 +1,7 @@
 EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd \
 	systemd/socket-activated/ocserv.service  systemd/standalone/ocserv.service \
 	systemd/socket-activated/ocserv.socket README-radius.md \
-	profile.xml sample.otp DCO.txt
+	profile.xml sample.otp DCO.txt ocserv.8.md ocpasswd.8.md occtl.8.md
 
 if !SKIP_MANPAGES
 

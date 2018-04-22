@@ -1,4 +1,4 @@
-* Version 0.12.0 (unreleased)
+* Version 0.12.0 (released 2018-04-22)
 - Allow DTLS stream to come from different IP from TLS stream.
   There are situations where internet providers send the UDP 
   stream from different IP (#61).

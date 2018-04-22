@@ -78,9 +78,9 @@ typedef enum {
 /** count of all options for ocpasswd */
 #define OPTION_CT    8
 /** ocpasswd version */
-#define OCPASSWD_VERSION       "0.11.11"
+#define OCPASSWD_VERSION       "0.11.12"
 /** Full ocpasswd version text */
-#define OCPASSWD_FULL_VERSION  "ocpasswd 0.11.11"
+#define OCPASSWD_FULL_VERSION  "ocpasswd 0.11.12"
 
 /**
  *  Interface defines for all options.  Replace "n" with the UPPER_CASED

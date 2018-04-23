@@ -28,7 +28,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/vhost.hosts data/multiple-routes.config data/haproxy-auth.cfg data/test-haproxy-auth.config \
 	data/haproxy-connect.cfg data/test-haproxy-connect.config scripts/vpnc-script \
 	data/test-traffic.config data/test-compression-lzs.config data/test-compression-lz4.config \
-	certs/crl.pem
+	certs/crl.pem server-cert-rsa-pss
 
 SUBDIRS = docker-ocserv docker-kerberos
 

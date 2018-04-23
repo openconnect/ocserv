@@ -5,7 +5,18 @@ EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd \
 
 dist_man_MANS = ocserv.8 ocpasswd.8 occtl.8
 
-if !SKIP_MANPAGES
+if SKIP_MANPAGES
+
+ocserv.8:
+	touch $@
+
+occtl.8:
+	touch $@
+
+ocpasswd.8:
+	touch $@
+
+else
 
 ocserv.8: ocserv.8.md sample.config
 	sed -e '/@CONFIGFILE@/{r sample.config' -e 'd}' <$< >ocserv.tmp

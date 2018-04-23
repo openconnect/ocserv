@@ -8,7 +8,7 @@ dist_man_MANS = ocserv.8 ocpasswd.8 occtl.8
 if !SKIP_MANPAGES
 
 ocserv.8: ocserv.8.md sample.config
-	sed -e '/@CONFIGFILE@/{r sample.config.tmp' -e 'd}' <$< >ocserv.tmp
+	sed -e '/@CONFIGFILE@/{r sample.config' -e 'd}' <$< >ocserv.tmp
 	ronn -r ocserv.tmp > $@
 
 occtl.8: occtl.8.md

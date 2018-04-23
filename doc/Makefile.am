@@ -3,9 +3,9 @@ EXTRA_DIST = design.dia sample.config scripts/ocserv-script sample.passwd \
 	systemd/socket-activated/ocserv.socket README-radius.md \
 	profile.xml sample.otp DCO.txt ocserv.8.md ocpasswd.8.md occtl.8.md
 
-if !SKIP_MANPAGES
-
 dist_man_MANS = ocserv.8 ocpasswd.8 occtl.8
+
+if !SKIP_MANPAGES
 
 ocserv.8: ocserv.8.md sample.config
 	sed -e '/@CONFIGFILE@/{r sample.config.tmp' -e 'd}' <$< >ocserv.tmp

@@ -6,6 +6,7 @@ variables:
   BUILD_IMAGES_PROJECT: ocserv/build-images
   DEBIAN_BUILD: buildenv-debian-stretch
   FEDORA_BUILD: buildenv-fedora
+  UBUNTU_BUILD: buildenv-ubuntu
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
 
@@ -15,6 +16,25 @@ Build/Debian:
   script:
   - git submodule update --init && autoreconf -fvi &&
     ./configure --without-nuttcp-tests --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
+  tags:
+  - shared
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
+Build/Ubuntu:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU_BUILD
+  script:
+  - git submodule update --init && autoreconf -fvi
+  - "! ./configure"
+  - ./configure --without-nuttcp-tests --with-broken-gnutls --without-docker-tests
+  - make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   except:

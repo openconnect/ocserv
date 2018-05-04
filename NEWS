@@ -1,3 +1,9 @@
+* Version 0.12.1 (unreleased)
+- Reject compilation on systems which have gnutls with a broken
+  gnutls_certificate_set_key(). Provide --with-broken-gnutls option
+  which work-arounds the issues at the cost of a memory leak.
+
+
 * Version 0.12.0 (released 2018-04-22)
 - Allow DTLS stream to come from different IP from TLS stream.
   There are situations where internet providers send the UDP 

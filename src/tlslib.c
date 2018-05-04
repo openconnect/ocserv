@@ -537,8 +537,11 @@ void tls_vhost_init(struct vhost_cfg_st *vhost)
 
 void tls_vhost_deinit(struct vhost_cfg_st *vhost)
 {
+#ifndef GNUTLS_BROKEN_CERTIFICATE_SET_KEY
 	if (vhost->creds.xcred != NULL)
 		gnutls_certificate_free_credentials(vhost->creds.xcred);
+#endif
+
 	if (vhost->creds.pskcred != NULL)
 		gnutls_psk_free_server_credentials(vhost->creds.pskcred);
 	if (vhost->creds.cprio != NULL)
@@ -942,8 +945,10 @@ void tls_load_files(main_server_st *s, struct vhost_cfg_st *vhost)
 
 	vhost->params_last_access = time(0);
 
+#ifndef GNUTLS_BROKEN_CERTIFICATE_SET_KEY
 	if (vhost->creds.xcred != NULL)
 		gnutls_certificate_free_credentials(vhost->creds.xcred);
+#endif
 
 	ret = gnutls_certificate_allocate_credentials(&vhost->creds.xcred);
 	GNUTLS_FATAL_ERR(ret);

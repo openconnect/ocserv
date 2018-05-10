@@ -1345,7 +1345,7 @@ int main(int argc, char** argv)
 #endif
 
 	if (GETPCONFIG(s)->foreground == 0) {
-		if (daemon(0, 0) == -1) {
+		if (daemon(GETPCONFIG(s)->no_chdir, 0) == -1) {
 			e = errno;
 			fprintf(stderr, "daemon failed: %s\n", strerror(e));
 			exit(1);

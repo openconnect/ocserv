@@ -1371,12 +1371,14 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 }
 
+#define OPT_NO_CHDIR 1
 static const struct option long_options[] = {
 	{"debug", 1, 0, 'd'},
 	{"config", 1, 0, 'c'},
 	{"pid-file", 1, 0, 'p'},
 	{"test-config", 0, 0, 't'},
 	{"foreground", 0, 0, 'f'},
+	{"no-chdir", 0, 0, OPT_NO_CHDIR},
 	{"help", 0, 0, 'h'},
 	{"version", 0, 0, 'v'},
 	{NULL, 0, 0, 0}
@@ -1395,6 +1397,7 @@ void usage(void)
 	fprintf(stderr, "   -c, --config=file          Configuration file for the server\n");
 	fprintf(stderr, "				- file must exist\n");
 	fprintf(stderr, "   -t, --test-config          Test the provided configuration file\n");
+	fprintf(stderr, "       --no-chdir             Do not perform a chdir on daemonize\n");
 	fprintf(stderr, "   -p, --pid-file=file        Specify pid file for the server\n");
 	fprintf(stderr, "   -v, --version              output version information and exit\n");
 	fprintf(stderr, "   -h, --help                 display extended usage information and exit\n\n");
@@ -1434,6 +1437,9 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head)
 				break;
 			case 't':
 				test_only = 1;
+				break;
+			case OPT_NO_CHDIR:
+				vhost->perm_config.no_chdir = 1;
 				break;
 			case 'h':
 				usage();

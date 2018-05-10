@@ -348,7 +348,7 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 
 int secmod_reload(main_server_st * s);
 
-void secmod_socket_file_name(struct perm_cfg_st *perm_config, char *name, unsigned max_name_size);
+const char *secmod_socket_file_name(struct perm_cfg_st *perm_config);
 void clear_vhosts(struct list_head *head);
 
 void request_reload(int signo);

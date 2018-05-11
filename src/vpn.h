@@ -378,6 +378,7 @@ struct perm_cfg_st {
 
 	unsigned int stats_reset_time;
 	unsigned foreground;
+	unsigned no_chdir;
 	unsigned debug;
 
 	char *ca;

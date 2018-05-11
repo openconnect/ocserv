@@ -1,4 +1,5 @@
 * Version 0.12.1 (unreleased)
+- Fixed crash on initialization when server was running on background.
 - Reject compilation on systems which have gnutls with a broken
   gnutls_certificate_set_key(). Provide a configure option (--with-broken-gnutls)
   which work-arounds the issues at the cost of a memory leak.

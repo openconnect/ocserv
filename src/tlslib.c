@@ -857,7 +857,7 @@ int load_cert_files(main_server_st *s, struct vhost_cfg_st *vhost)
 
 		/* when called here configuration may not be populated, so avoid using it */
 		cdata->sa.sun_family = AF_UNIX;
-		secmod_socket_file_name(&vhost->perm_config, cdata->sa.sun_path, sizeof(cdata->sa.sun_path));
+		strlcpy(cdata->sa.sun_path, secmod_socket_file_name(&vhost->perm_config), sizeof(cdata->sa.sun_path));
 		cdata->sa_len = SUN_LEN(&cdata->sa);
 
 

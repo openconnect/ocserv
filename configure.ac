@@ -52,23 +52,13 @@ AC_C_BIGENDIAN
 PKG_CHECK_MODULES([LIBNETTLE], [nettle >= 2.7])
 PKG_CHECK_MODULES([LIBGNUTLS], [gnutls >= 3.3.0])
 
-AC_ARG_WITH(broken-gnutls,
-  AS_HELP_STRING([--with-broken-gnutls], [allow the use of gnutls versions which have known bugs]),
-  skip_test_for_gnutls=$withval,
-  skip_test_for_gnutls=no)
-
-if test "$skip_test_for_gnutls" = "no";then
-  if $PKG_CONFIG --max-version=3.5.4 gnutls;then
-    if $PKG_CONFIG --atleast-version=3.3.99 gnutls || $PKG_CONFIG --max-version=3.3.24 gnutls; then
-	AC_MSG_ERROR([[***
-*** a broken version of gnutls was found; please update to the latest version of a supported
-*** gnutls branch (e.g. as 3.3.x, 3.5.x, or 3.6.x), or compile with --with-broken-gnutls
-***]])
-    fi
+warn_leak=no
+if $PKG_CONFIG --max-version=3.5.4 gnutls;then
+  if $PKG_CONFIG --atleast-version=3.3.99 gnutls || $PKG_CONFIG --max-version=3.3.24 gnutls; then
+    warn_leak=yes
+    AC_DEFINE([GNUTLS_BROKEN_CERTIFICATE_SET_KEY], [1],
+		  [gnutls has a broken gnutls_certificate_set_key()])
   fi
-else
-  AC_DEFINE([GNUTLS_BROKEN_CERTIFICATE_SET_KEY], [1],
-	    [gnutls has a broken gnutls_certificate_set_key()])
 fi
 
 if ! $PKG_CONFIG --atleast-version=3.0 nettle; then
@@ -617,6 +607,14 @@ Summary of build options:
   local PCL library:    ${with_local_pcl}
   local http-parser:    ${with_local_http_parser}
 ])
+
+if test "${warn_leak}" = "yes";then
+    AC_MSG_WARN([[***
+*** a broken version of gnutls was found; will work around but server will leak memory;
+*** please update to the latest version of a supported gnutls branch (e.g. as 3.3.x, 3.5.x, or 3.6.x)
+*** for better server performance.
+***]])
+fi
 
 if test "x${isolation}" = xnone;then
 	AC_MSG_WARN([[

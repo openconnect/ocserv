@@ -1,4 +1,4 @@
-* Version 0.12.1 (unreleased)
+* Version 0.12.1 (released 2018-05-12)
 - Fixed crash on initialization when server was running on background.
 - Reject compilation on systems which have gnutls with a broken
   gnutls_certificate_set_key(). Provide a configure option (--with-broken-gnutls)

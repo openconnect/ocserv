@@ -92,7 +92,8 @@ ATTRIBUTE	Framed-IP-Netmask	9	ipaddr
 ATTRIBUTE	Framed-Route		22	string
 
 # Sets group name using format "OU=group1;group2"
-# Note that the groups sent by the server must be made known
+# Note that this works only when groupconfig is set to
+# true, and if the groups sent by the server are made known
 # to ocserv, via the select-group variable.
 ATTRIBUTE	Class			25	string
 

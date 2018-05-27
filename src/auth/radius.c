@@ -214,6 +214,7 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 
 	pctx->groupnames_size = 0;
 
+	syslog(LOG_DEBUG, "radius-auth: found group string %s", full);
 	if (strncmp(full, "OU=", 3) == 0) {
 		full += 3;
 
@@ -228,6 +229,7 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 			pctx->groupnames_size = i;
 
 			trim_trailing_whitespace(p2);
+			syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
 
 			p2 = strsep(&p, ";"); 
 		}

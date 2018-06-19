@@ -1243,7 +1243,7 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 		}
 	}
 	if (dpd > 0 && now - ws->last_msg_tcp > DPD_TRIES * dpd) {
-		oclog(ws, LOG_ERR,
+		oclog(ws, LOG_DEBUG,
 		      "have not received TCP DPD for long (%d secs)",
 		      (int)(now - ws->last_msg_tcp));
 		ws->buffer[0] = 'S';
@@ -1260,7 +1260,7 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 
 		if (now - ws->last_msg_tcp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
-			      "have not received TCP DPD for very long; tearing down connection");
+			      "connection timeout (DPD); tearing down connection");
 			exit_worker_reason(ws, REASON_DPD_TIMEOUT);
 		}
 	}
@@ -1443,6 +1443,12 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 	void *packet = NULL;
 
 	ret = cstp_recv_packet(ws, &data, &packet);
+	if (ret == GNUTLS_E_PREMATURE_TERMINATION) {
+		oclog(ws, LOG_DEBUG, "client disconnected prematurely");
+		ret = -1;
+		goto cleanup;
+	}
+
 	CSTP_FATAL_ERR_CMD(ws, ret, exit_worker_reason(ws, REASON_ERROR));
 
 	if (ret == 0) {		/* disconnect */

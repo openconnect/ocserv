@@ -4,7 +4,7 @@ stages:
 
 variables:
   BUILD_IMAGES_PROJECT: openconnect/build-images
-  DEBIAN_BUILD: buildenv-debian-stretch
+  DEBIAN_BUILD: buildenv-debian
   FEDORA_BUILD: buildenv-fedora
   UBUNTU_BUILD: buildenv-ubuntu
   CENTOS7_BUILD: buildenv-centos7

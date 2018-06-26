@@ -264,7 +264,7 @@ file at _/etc/ocserv/ocserv.conf_. An example configuration file follows.
 
 ## SEE ALSO
 
-occtl(8), ocpasswd(8)
+occtl(8), ocpasswd(8), openconnect(8)
 
 ## COPYRIGHT
 Copyright (C) 2013-2018 Nikos Mavrogiannopoulos and others, all rights reserved.

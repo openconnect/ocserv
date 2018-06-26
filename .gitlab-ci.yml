@@ -3,7 +3,7 @@ stages:
  - deploy
 
 variables:
-  BUILD_IMAGES_PROJECT: ocserv/build-images
+  BUILD_IMAGES_PROJECT: openconnect/build-images
   DEBIAN_BUILD: buildenv-debian-stretch
   FEDORA_BUILD: buildenv-fedora
   UBUNTU_BUILD: buildenv-ubuntu
@@ -176,7 +176,7 @@ Build/FreeBSD:
   tags:
   - freebsd
   only:
-  - branches@ocserv/ocserv
+  - branches@openconnect/ocserv
   except:
   - tags
   artifacts:

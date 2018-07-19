@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([ocserv], [0.12.1], [openconnect-devel@lists.infradead.org])
+AC_INIT([ocserv], [0.12.2], [openconnect-devel@lists.infradead.org])
 PKG_PROG_PKG_CONFIG
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])

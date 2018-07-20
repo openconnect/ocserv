@@ -91,7 +91,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
 	 .txt_version = "3.2.7",
-	 .server_prio = 90},
+	 .server_prio = 80},
 	{
 	 .oc_name = CS_AES256_GCM,
 	 .gnutls_name =
@@ -100,8 +100,18 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
-	 .server_prio = 80,
+	 .server_prio = 90,
 	 .txt_version = "3.2.7",
+	 },
+	{
+	 .oc_name = "AES256-SHA",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-256-CBC:+SHA1:+RSA:%COMPAT",
+	 .gnutls_version = GNUTLS_DTLS0_9,
+	 .gnutls_mac = GNUTLS_MAC_SHA1,
+	 .gnutls_kx = GNUTLS_KX_RSA,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_CBC,
+	 .server_prio = 60,
 	 },
 	{
 	 .oc_name = "AES128-SHA",

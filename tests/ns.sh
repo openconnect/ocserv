@@ -89,9 +89,9 @@ ${IP} netns exec ${NSNAME2} ip addr
 ${IP} netns exec ${NSNAME2} ip route
 ${IP} netns exec ${NSNAME1} ip route
 
-${IP} netns exec ${NSNAME1} ping -c 1 ${ADDRESS}
-${IP} netns exec ${NSNAME2} ping -c 1 ${ADDRESS}
-${IP} netns exec ${NSNAME2} ping -c 1 ${CLI_ADDRESS}
+${IP} netns exec ${NSNAME1} ping -c 1 ${ADDRESS} >/dev/null
+${IP} netns exec ${NSNAME2} ping -c 1 ${ADDRESS} >/dev/null
+${IP} netns exec ${NSNAME2} ping -c 1 ${CLI_ADDRESS} >/dev/null
 set +e
 
 CMDNS1="${IP} netns exec ${NSNAME1}"

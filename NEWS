@@ -1,3 +1,8 @@
+* Version 0.12.2 (unreleased)
+- Added support for AES256-SHA legacy cipher. This allows the anyconnect
+  clients to use AES256.
+
+
 * Version 0.12.1 (released 2018-05-12)
 - Fixed crash on initialization when server was running on background (#154)
 - Work around issues with GnuTLS 3.4.x on ubuntu 16.04, at the cost

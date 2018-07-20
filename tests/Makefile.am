@@ -28,7 +28,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/vhost.hosts data/multiple-routes.config data/haproxy-auth.cfg data/test-haproxy-auth.config \
 	data/haproxy-connect.cfg data/test-haproxy-connect.config scripts/vpnc-script \
 	data/test-traffic.config data/test-compression-lzs.config data/test-compression-lz4.config \
-	certs/crl.pem server-cert-rsa-pss data/test-gssapi-opt-cert.config
+	certs/crl.pem server-cert-rsa-pss data/test-gssapi-opt-cert.config data/test-ciphers.config \
+	cipher-common.sh
 
 SUBDIRS = docker-ocserv docker-kerberos
 
@@ -59,7 +60,8 @@ dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 
 #other tests requiring nuttcp for traffic
 if ENABLE_NUTTCP_TESTS
-dist_check_SCRIPTS += traffic lz4-compression lzs-compression
+dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
+	aes256-cipher aes128-cipher aes256-gcm-cipher aes128-gcm-cipher
 endif
 
 endif

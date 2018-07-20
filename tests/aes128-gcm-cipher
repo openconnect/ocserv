@@ -20,8 +20,8 @@
 
 # This tests operation/traffic under compression (lzs or lz4).
 
-CIPHER_NAME="AES256-SHA"
-GNUTLS_NAME="(DTLS0.9)-(RSA)-(AES-256-CBC)-(SHA1)"
+CIPHER_NAME="OC-DTLS1_2-AES128-GCM"
+GNUTLS_NAME="(DTLS1.2)-(RSA)-(AES-128-GCM)"
 
 . cipher-common.sh
 

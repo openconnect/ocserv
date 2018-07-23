@@ -115,7 +115,7 @@ Build/minimal:
 
 # We do not compile with PAM under address sanitizer since we are using co-routines
 # without instrumentation for sanitizer.
-asan/Fedora:
+.asan/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:

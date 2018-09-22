@@ -180,3 +180,9 @@ already authenticated session).
 
 ```
 
+## Cookies
+
+Cookies are valid for the value configured in `cookie-timeout` option, after
+a client disconnects due to timeout. Their purpose is to allow mobile clients to
+roam between networks without significant disruption in the VPN service.
+

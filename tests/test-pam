@@ -40,6 +40,11 @@ echo "Connecting with wrong password... "
 	fail $PID "Received cookie with wrong cred"
 
 echo ""
+echo "Connecting with empty password... "
+( echo -e "\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u testuser --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie with wrong cred"
+
+echo ""
 echo "Connecting with wrong username... "
 ( echo -e "testuser123\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -v $ADDRESS:$PORT --authgroup group2 -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
 	fail $PID "Received cookie with wrong cred"

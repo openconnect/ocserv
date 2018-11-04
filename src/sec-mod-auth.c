@@ -373,6 +373,10 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 					     sizeof(e->acct_info.username));
 		}
 
+		seclog(sec, LOG_DEBUG, "auth complete %sfor user '%s' "SESSION_STR" of group: '%s'",
+		       (e->auth_type & AUTH_TYPE_CERTIFICATE)?"(with cert)":"",
+		       e->acct_info.username, e->acct_info.safe_id, e->acct_info.groupname);
+
 		ret = send_sec_auth_reply(cfd, sec, e, AUTH__REP__OK);
 		if (ret < 0) {
 			e->status = PS_AUTH_FAILED;

@@ -129,6 +129,11 @@ break_group_list(void *pool, char *text,
 					p2--;
 				}
 			}
+
+			if (strlen(broken_text[(*elements)-1]) == 1) {
+				/* skip the group */
+				(*elements)--;
+			}
 		}
 	}
 	while (p != NULL && *elements < MAX_GROUPS);

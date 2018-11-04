@@ -1,0 +1,180 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This tests operation/traffic under compression (lzs or lz4).
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=8447
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(which ip)
+OUTFILE=traffic.$$.tmp
+
+. `dirname $0`/common.sh
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing ocserv connection via haproxy... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PIDFILE}" && kill $(cat ${PIDFILE}) && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  rm -f ${OUTFILE} 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.204.2.1
+CLI_ADDRESS=10.204.1.1
+VPNNET=192.168.4.0/24
+VPNADDR=192.168.4.1
+VPNNET6=fd91:6d87:7344:dc6a::/112
+VPNADDR6=fd91:6d87:7344:dc6a::1
+OCCTL_SOCKET=./occtl-cpg-$$.socket
+ROUTE1=192.168.4.0/24
+USERNAME=test2
+PASSWORD=test2
+
+. `dirname $0`/ns.sh
+
+# Run servers
+update_config config-per-group.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 6"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} &
+
+sleep 4
+
+echo " * Connecting with user NOT in group..."
+( echo "${PASSWORD}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+${CMDNS1} ping -c 3 ${VPNADDR} >/dev/null 2>&1
+
+${CMDNS1} ping -c 3 ${VPNADDR6} >/dev/null 2>&1
+set +e
+
+${OCCTL} -s ${OCCTL_SOCKET} show users|grep ${USERNAME}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show users|grep ${USERNAME}
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+cat $OUTFILE
+
+grep "DNS: 1.1.1.1" ${OUTFILE} >/dev/null
+if test $? = 0;then
+cat $OUTFILE
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't the right DNS address!"
+	exit 1
+fi
+
+grep "1.1.1.0/24" ${OUTFILE}|grep Routes >/dev/null
+if test $? = 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't the right routes!"
+	exit 1
+fi
+
+test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+sleep 2
+
+USERNAME=test
+PASSWORD=test
+echo " * Connecting with user in group to ${ADDRESS}:${PORT}..."
+( echo "${PASSWORD}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+${CMDNS1} ping -c 3 ${VPNADDR} >/dev/null 2>&1
+
+${CMDNS1} ping -c 3 ${VPNADDR6} >/dev/null 2>&1
+set +e
+
+${OCCTL} -s ${OCCTL_SOCKET} show users|grep ${USERNAME}
+if test $? != 0;then
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+cat $OUTFILE
+
+grep "DNS: 1\.1\.1\.1" ${OUTFILE} >/dev/null
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't the right DNS address!"
+	exit 1
+fi
+
+grep "1\.1\.1\.0/255\.255\.255\.0" ${OUTFILE}|grep Routes >/dev/null
+if test $? != 0;then
+cat $OUTFILE
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't the right routes!"
+	exit 1
+fi
+
+
+grep ${CLI_ADDRESS} ${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't find client address!"
+	exit 1
+fi
+
+exit 0

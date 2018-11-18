@@ -59,6 +59,8 @@ update_config() {
 	       -e 's|@ADDRESS@|'${ADDRESS}'|g' "$file.$$.tmp" \
 	       -e 's|@VPNNET@|'${VPNNET}'|g' "$file.$$.tmp" \
 	       -e 's|@VPNNET6@|'${VPNNET6}'|g' "$file.$$.tmp" \
+	       -e 's|@ROUTE1@|'${ROUTE1}'|g' "$file.$$.tmp" \
+	       -e 's|@ROUTE2@|'${ROUTE2}'|g' "$file.$$.tmp" \
 	       -e 's|@OCCTL_SOCKET@|'${OCCTL_SOCKET}'|g' "$file.$$.tmp"
 	CONFIG="$file.$$.tmp"
 }

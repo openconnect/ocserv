@@ -2208,8 +2208,9 @@ static int connect_handler(worker_st * ws)
 			oclog(ws, LOG_INFO, "DTLS ciphersuite: %s",
 			      ws->req.selected_ciphersuite->oc_name);
 			ret =
-			    cstp_printf(ws, "X-DTLS-CipherSuite: %s\r\n",
-				       ws->req.selected_ciphersuite->oc_name);
+			    cstp_printf(ws, "X-DTLS%s-CipherSuite: %s\r\n",
+				        (ws->req.selected_ciphersuite->dtls12_mode!=0)?"12":"",
+				        ws->req.selected_ciphersuite->oc_name);
 			SEND_ERR(ret);
 
 			/* only send the X-DTLS-MTU in the legacy protocol, as there

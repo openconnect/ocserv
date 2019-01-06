@@ -37,10 +37,7 @@ xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
 
 if GNUTLS_WITH_NEW_CERTS
-dist_check_SCRIPTS += server-cert-ed25519
-
-# gnutls 3.6.2 doesn't enable support for rsa-pss yet
-xfail_scripts += server-cert-rsa-pss
+dist_check_SCRIPTS += server-cert-ed25519 server-cert-rsa-pss
 endif
 
 

@@ -663,9 +663,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	char *value;
 
 	defvhost = vhost = default_vhost(ctx->head);
-	if (vhost == NULL) {
-		vhost = vhost_add(ctx->pool, ctx->head, NULL, ctx->reload);
-	}
+
+	assert(defvhost != NULL);
 
 	if (section != NULL && section[0] != 0) {
 		char *vname;
@@ -1416,6 +1415,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head)
 	vhost_cfg_st *vhost;
 
 	vhost = vhost_add(pool, head, NULL, 0);
+	assert(vhost != NULL);
 
 	while (1) {
 		c = getopt_long(argc, argv, "d:c:p:ftvh", long_options, NULL);

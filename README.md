@@ -39,7 +39,7 @@ Dependencies for development, testing, or dependencies that can be skipped
 in an embedded system (e.g., because a replacement library is included):
 
 ```
-libprotobuf-c0-dev / protobuf-c-devel
+libprotobuf-c-dev  / protobuf-c-devel
 libtalloc-dev      / libtalloc-devel
 libhttp-parser-dev / http-parser-devel
 libpcl1-dev        / pcllib-devel

@@ -274,7 +274,7 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 	return 0;
 }
 
-static int setup_dtls0_9_keys(gnutls_session_t session, struct worker_st *ws)
+static int setup_legacy_dtls_keys(gnutls_session_t session, struct worker_st *ws)
 {
 	int ret;
 	gnutls_datum_t master =
@@ -351,8 +351,8 @@ static int setup_dtls_connection(struct worker_st *ws)
 			oclog(ws, LOG_INFO, "CISCO client compatibility (dtls-legacy) is disabled; will not setup a DTLS session");
 			goto fail;
 		}
-		oclog(ws, LOG_INFO, "setting up DTLS-0.9 connection");
-		ret = setup_dtls0_9_keys(session, ws);
+		oclog(ws, LOG_INFO, "setting up legacy DTLS (resumption) connection");
+		ret = setup_legacy_dtls_keys(session, ws);
 	}
 
 	if (ret < 0) {

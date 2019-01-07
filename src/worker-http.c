@@ -90,7 +90,6 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
-	 .txt_version = "3.2.7",
 	 .server_prio = 80},
 	{
 	 .oc_name = CS_AES256_GCM,
@@ -101,7 +100,6 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
 	 .server_prio = 90,
-	 .txt_version = "3.2.7",
 	 },
 	{
 	 .oc_name = "AES256-SHA",
@@ -410,10 +408,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
 			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
-					if (ciphersuites[i].txt_version != NULL && gnutls_check_version(ciphersuites[i].txt_version) == NULL) {
-						continue; /* not supported */
-					}
-
 					if (cand == NULL ||
 					    cand->server_prio < ciphersuites[i].server_prio ||
 					    (want_cipher != -1 && want_cipher == ciphersuites[i].gnutls_cipher &&
@@ -481,10 +475,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			     i < sizeof(ciphersuites12) / sizeof(ciphersuites12[0]);
 			     i++) {
 				if (strcmp(token, ciphersuites12[i].oc_name) == 0) {
-					if (ciphersuites12[i].txt_version != NULL && gnutls_check_version(ciphersuites12[i].txt_version) == NULL) {
-						continue; /* not supported */
-					}
-
 					if (cand == NULL ||
 					    cand->server_prio < ciphersuites12[i].server_prio ||
 					    (want_cipher != -1 && want_cipher == ciphersuites12[i].gnutls_cipher &&

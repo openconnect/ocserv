@@ -1,6 +1,7 @@
 * Version 0.12.2 (unreleased)
 - Added support for AES256-SHA legacy cipher. This allows the anyconnect
   clients to use AES256.
+- Added support for the DTLS1.2 protocol hack used by in Anyconnect clients.
 
 
 * Version 0.12.1 (released 2018-05-12)

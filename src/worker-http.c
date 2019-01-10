@@ -90,7 +90,6 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
-	 .txt_version = "3.2.7",
 	 .server_prio = 80},
 	{
 	 .oc_name = CS_AES256_GCM,
@@ -101,7 +100,6 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_kx = GNUTLS_KX_RSA,
 	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
 	 .server_prio = 90,
-	 .txt_version = "3.2.7",
 	 },
 	{
 	 .oc_name = "AES256-SHA",
@@ -133,6 +131,39 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 .gnutls_cipher = GNUTLS_CIPHER_3DES_CBC,
 	 .server_prio = 1,
 	 }
+};
+
+/* In the following we use %NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION because certain
+ * versions of openssl send the extended master secret extension in this
+ * resumed session. Since the state of this extension is undefined
+ * (it's not a real session we are resuming), we explicitly disable this
+ * extension to avoid interop issues. Furthermore gnutls does seem to
+ * be sending the renegotiation extension which openssl doesn't like (see #193) */
+
+#define WORKAROUND_STR "%NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION"
+static const dtls_ciphersuite_st ciphersuites12[] = {
+	{
+	 .oc_name = "AES128-GCM-SHA256",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:+SIGN-ALL:"WORKAROUND_STR,
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_RSA,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_128_GCM,
+	 .dtls12_mode = 1,
+	 .server_prio = 50
+	},
+	{
+	 .oc_name = "AES256-GCM-SHA384",
+	 .gnutls_name =
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:+SIGN-ALL:"WORKAROUND_STR,
+	 .gnutls_version = GNUTLS_DTLS1_2,
+	 .gnutls_mac = GNUTLS_MAC_AEAD,
+	 .gnutls_kx = GNUTLS_KX_RSA,
+	 .gnutls_cipher = GNUTLS_CIPHER_AES_256_GCM,
+	 .dtls12_mode = 1,
+	 .server_prio = 90
+	}
 };
 
 #ifdef HAVE_LZ4
@@ -223,6 +254,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	char *token, *value;
 	char *str, *p;
 	const dtls_ciphersuite_st *cand = NULL;
+	const dtls_ciphersuite_st *saved_ciphersuite;
 	const compression_method_st *comp_cand = NULL;
 	const compression_method_st **selected_comp;
 	int want_cipher;
@@ -344,7 +376,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
-		req->selected_ciphersuite = NULL;
+		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
+			break;
+
 		str = (char *)value;
 
 		p = strstr(str, DTLS_PROTO_INDICATOR);
@@ -353,9 +387,13 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			if (WSCONFIG(ws)->dtls_psk) {
 				req->use_psk = 1;
 				req->master_secret_set = 1; /* we don't need it */
+				req->selected_ciphersuite = NULL;
 				break;
 			}
 		}
+
+		if (req->selected_ciphersuite) /* if set via HEADER_DTLS12_CIPHERSUITE */
+			break;
 
 		if (ws->session != NULL) {
 			want_mac = gnutls_mac_get(ws->session);
@@ -370,10 +408,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			     i < sizeof(ciphersuites) / sizeof(ciphersuites[0]);
 			     i++) {
 				if (strcmp(token, ciphersuites[i].oc_name) == 0) {
-					if (ciphersuites[i].txt_version != NULL && gnutls_check_version(ciphersuites[i].txt_version) == NULL) {
-						continue; /* not supported */
-					}
-
 					if (cand == NULL ||
 					    cand->server_prio < ciphersuites[i].server_prio ||
 					    (want_cipher != -1 && want_cipher == ciphersuites[i].gnutls_cipher &&
@@ -395,6 +429,76 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		}
  ciphersuite_finish:
 	        req->selected_ciphersuite = cand;
+
+		break;
+
+	case HEADER_DTLS12_CIPHERSUITE:
+		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
+			break;
+
+		/* in gnutls 3.6.0+ there is a regression which makes
+		 * anyconnect's openssl fail: https://gitlab.com/gnutls/gnutls/merge_requests/868
+		 */
+#ifdef gnutls_check_version_numeric
+		if (!gnutls_check_version_numeric(3,6,6) &&
+		    (!gnutls_check_version_numeric(3,3,0) || gnutls_check_version_numeric(3,6,0))) {
+			break;
+		}
+#endif
+
+		str = (char *)value;
+
+		p = strstr(str, DTLS_PROTO_INDICATOR);
+		if (p != NULL && (p[sizeof(DTLS_PROTO_INDICATOR)-1] == 0 || p[sizeof(DTLS_PROTO_INDICATOR)-1] == ':')) {
+			/* OpenConnect DTLS setup was detected. */
+			if (WSCONFIG(ws)->dtls_psk) {
+				req->use_psk = 1;
+				req->master_secret_set = 1; /* we don't need it */
+				req->selected_ciphersuite = NULL;
+				break;
+			}
+		}
+
+		saved_ciphersuite = req->selected_ciphersuite;
+		req->selected_ciphersuite = NULL;
+
+		if (ws->session != NULL) {
+			want_mac = gnutls_mac_get(ws->session);
+			want_cipher = gnutls_cipher_get(ws->session);
+		} else {
+			want_mac = -1;
+			want_cipher = -1;
+		}
+
+		while ((token = strtok(str, ":")) != NULL) {
+			for (i = 0;
+			     i < sizeof(ciphersuites12) / sizeof(ciphersuites12[0]);
+			     i++) {
+				if (strcmp(token, ciphersuites12[i].oc_name) == 0) {
+					if (cand == NULL ||
+					    cand->server_prio < ciphersuites12[i].server_prio ||
+					    (want_cipher != -1 && want_cipher == ciphersuites12[i].gnutls_cipher &&
+					     want_mac == ciphersuites12[i].gnutls_mac)) {
+						cand =
+						    &ciphersuites12[i];
+
+						/* if our candidate matches the TLS session
+						 * ciphersuite, we are finished */
+						if (want_cipher != -1) {
+							if (want_cipher == cand->gnutls_cipher &&
+							    want_mac == cand->gnutls_mac)
+							    goto ciphersuite12_finish;
+						}
+					}
+				}
+			}
+			str = NULL;
+		}
+ ciphersuite12_finish:
+	        req->selected_ciphersuite = cand;
+
+	        if (req->selected_ciphersuite == NULL && saved_ciphersuite)
+			req->selected_ciphersuite = saved_ciphersuite;
 
 		break;
 #ifdef ENABLE_COMPRESSION

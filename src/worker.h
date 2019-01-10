@@ -57,6 +57,7 @@ enum {
 	HEADER_DEVICE_TYPE,
 	HEADER_PLATFORM,
 	HEADER_DTLS_CIPHERSUITE,
+	HEADER_DTLS12_CIPHERSUITE,
 	HEADER_CONNECTION,
 	HEADER_FULL_IPV6,
 	HEADER_USER_AGENT,
@@ -100,12 +101,12 @@ typedef struct compression_method_st {
 typedef struct dtls_ciphersuite_st {
 	const char* oc_name;
 	const char* gnutls_name; /* the gnutls priority string to set */
+	unsigned dtls12_mode;
 	unsigned server_prio; /* the highest the more we want to negotiate that */
 	unsigned gnutls_cipher;
 	unsigned gnutls_kx;
 	unsigned gnutls_mac;
 	unsigned gnutls_version;
-	const char *txt_version;
 } dtls_ciphersuite_st;
 
 #ifdef HAVE_GSSAPI

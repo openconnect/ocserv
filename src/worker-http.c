@@ -77,6 +77,15 @@ static const struct known_urls_st known_urls[] = {
 	{NULL, 0, 0, NULL, NULL}
 };
 
+/* In the following we use %NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION because certain
+ * versions of openssl send the extended master secret extension in this
+ * resumed session. Since the state of this extension is undefined
+ * (it's not a real session we are resuming), we explicitly disable this
+ * extension to avoid interop issues. Furthermore gnutls does seem to
+ * be sending the renegotiation extension which openssl doesn't like (see #193) */
+
+#define WORKAROUND_STR "%NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION"
+
 /* Consider switching to gperf when this table grows significantly.
  * These tables are used for the custom DTLS cipher negotiation via
  * HTTP headers (WTF), and the compression negotiation.
@@ -85,7 +94,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = CS_AES128_GCM,
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-128-GCM:+AEAD:+RSA:+SIGN-ALL:"WORKAROUND_STR,
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_kx = GNUTLS_KX_RSA,
@@ -94,7 +103,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = CS_AES256_GCM,
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:%COMPAT:+SIGN-ALL",
+	 "NONE:+VERS-DTLS1.2:+COMP-NULL:+AES-256-GCM:+AEAD:+RSA:+SIGN-ALL:"WORKAROUND_STR,
 	 .gnutls_version = GNUTLS_DTLS1_2,
 	 .gnutls_mac = GNUTLS_MAC_AEAD,
 	 .gnutls_kx = GNUTLS_KX_RSA,
@@ -104,7 +113,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = "AES256-SHA",
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-256-CBC:+SHA1:+RSA:%COMPAT",
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-256-CBC:+SHA1:+RSA:"WORKAROUND_STR,
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
 	 .gnutls_kx = GNUTLS_KX_RSA,
@@ -114,7 +123,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = "AES128-SHA",
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:%COMPAT",
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+AES-128-CBC:+SHA1:+RSA:"WORKAROUND_STR,
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
 	 .gnutls_kx = GNUTLS_KX_RSA,
@@ -124,7 +133,7 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	{
 	 .oc_name = "DES-CBC3-SHA",
 	 .gnutls_name =
-	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:%COMPAT",
+	 "NONE:+VERS-DTLS0.9:+COMP-NULL:+3DES-CBC:+SHA1:+RSA:"WORKAROUND_STR,
 	 .gnutls_version = GNUTLS_DTLS0_9,
 	 .gnutls_mac = GNUTLS_MAC_SHA1,
 	 .gnutls_kx = GNUTLS_KX_RSA,
@@ -133,14 +142,6 @@ static const dtls_ciphersuite_st ciphersuites[] = {
 	 }
 };
 
-/* In the following we use %NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION because certain
- * versions of openssl send the extended master secret extension in this
- * resumed session. Since the state of this extension is undefined
- * (it's not a real session we are resuming), we explicitly disable this
- * extension to avoid interop issues. Furthermore gnutls does seem to
- * be sending the renegotiation extension which openssl doesn't like (see #193) */
-
-#define WORKAROUND_STR "%NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION"
 static const dtls_ciphersuite_st ciphersuites12[] = {
 	{
 	 .oc_name = "AES128-GCM-SHA256",

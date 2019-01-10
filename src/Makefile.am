@@ -164,4 +164,6 @@ noinst_LIBRARIES += libprotobuf.a
 
 libprotobuf_a_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/protobuf/
 libprotobuf_a_SOURCES = protobuf/protobuf-c/protobuf-c.c  protobuf/protobuf-c/protobuf-c.h
+
+AM_CPPFLAGS += -I$(srcdir)/protobuf/
 endif

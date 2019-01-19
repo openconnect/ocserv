@@ -1751,7 +1751,7 @@ static void calc_mtu_values(worker_st * ws)
 						gnutls_cipher_get(ws->session),
 						gnutls_mac_get(ws->session));
 			}
-		} else {
+		} else if (ws->req.selected_ciphersuite) {
 			ws->dtls_crypto_overhead =
 			    tls_get_overhead(ws->req.
 					     selected_ciphersuite->gnutls_version,
@@ -2199,7 +2199,7 @@ static int connect_handler(worker_st * ws)
 			oclog(ws, LOG_INFO, "DTLS ciphersuite: "DTLS_PROTO_INDICATOR);
 			ret =
 			    cstp_printf(ws, "X-DTLS-CipherSuite: "DTLS_PROTO_INDICATOR"\r\n");
-		} else {
+		} else if (ws->req.selected_ciphersuite) {
 			ret =
 			    cstp_printf(ws, "X-DTLS-Session-ID: %s\r\n",
 				       ws->buffer);

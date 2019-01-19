@@ -144,11 +144,20 @@ if test $? != 0;then
 	exit 1
 fi
 
-grep "DTLS cipher: ${GNUTLS_NAME}" ${OUTFILE}
-if test $? != 0;then
-	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
-	echo "occtl show user didn't show cipher!"
-	exit 1
+if test -z "${GNUTLS_NAME}";then
+	grep "DTLS cipher:" ${OUTFILE}
+	if test $? = 0;then
+		${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+		echo "occtl show user did show a cipher!"
+		exit 1
+	fi
+else
+	grep "DTLS cipher: ${GNUTLS_NAME}" ${OUTFILE}
+	if test $? != 0;then
+		${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+		echo "occtl show user didn't show cipher!"
+		exit 1
+	fi
 fi
 
 grep ${CLI_ADDRESS} ${OUTFILE}

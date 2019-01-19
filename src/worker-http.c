@@ -432,7 +432,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	        req->selected_ciphersuite = cand;
 
 		break;
-
 	case HEADER_DTLS12_CIPHERSUITE:
 		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
 			break;

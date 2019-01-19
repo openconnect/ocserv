@@ -78,16 +78,22 @@ ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 
 sleep 4
 
+if test -n "${CIPHER12_NAME}";then
+	CSTR="--dtls12-ciphers ${CIPHER12_NAME} --dtls-ciphers UNKNOWN"
+else
+	CSTR="--dtls-ciphers ${CIPHER_NAME}"
+fi
+
 # Run clients
 echo " * Getting cookie from ${ADDRESS}:${PORT}..."
-( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --dtls-ciphers=${CIPHER_NAME} --cookieonly )
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 ${CSTR} --cookieonly )
 if test $? != 0;then
 	echo "Could not get cookie from server"
 	exit 1
 fi
 
 echo " * Connecting to ${ADDRESS}:${PORT}..."
-( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --dtls-ciphers=${CIPHER_NAME} -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 ${CSTR} -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1

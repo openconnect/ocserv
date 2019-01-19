@@ -432,7 +432,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	        req->selected_ciphersuite = cand;
 
 		break;
-
 	case HEADER_DTLS12_CIPHERSUITE:
 		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
 			break;
@@ -441,8 +440,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		 * anyconnect's openssl fail: https://gitlab.com/gnutls/gnutls/merge_requests/868
 		 */
 #ifdef gnutls_check_version_numeric
-		if (!gnutls_check_version_numeric(3,6,6) &&
-		    (!gnutls_check_version_numeric(3,3,0) || gnutls_check_version_numeric(3,6,0))) {
+		if (req->user_agent_type != AGENT_OPENCONNECT &&
+		    (!gnutls_check_version_numeric(3,6,6) &&
+		    (!gnutls_check_version_numeric(3,3,0) || gnutls_check_version_numeric(3,6,0)))) {
 			break;
 		}
 #endif

@@ -58,8 +58,9 @@ dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 #other tests requiring nuttcp for traffic
 if ENABLE_NUTTCP_TESTS
 dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
-	aes256-cipher aes128-cipher aes256-gcm-cipher aes128-gcm-cipher \
-	test-config-per-group
+	aes256-cipher aes128-cipher oc-aes256-gcm-cipher oc-aes128-gcm-cipher \
+	test-config-per-group ac-aes128-gcm-cipher ac-aes256-gcm-cipher \
+	no-dtls-cipher
 endif
 
 endif

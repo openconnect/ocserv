@@ -226,18 +226,18 @@ static int setup_dtls_psk_keys(gnutls_session_t session, struct worker_st *ws)
 
 	gnutls_psk_set_server_credentials_function(WSCREDS(ws)->pskcred, get_psk_key);
 
-	if (ws->session && WSCONFIG(ws)->match_dtls_and_tls) {
+	if (!ws->session) {
+		oclog(ws, LOG_ERR, "cannot setup PSK keys without an encrypted CSTP channel");
+		return -1;
+	}
+
+	if (WSCONFIG(ws)->match_dtls_and_tls) {
 		cipher = gnutls_cipher_get(ws->session);
 		mac = gnutls_mac_get(ws->session);
 
 		snprintf(prio_string, sizeof(prio_string), "%s:"VERS_STRING":-CIPHER-ALL:-MAC-ALL:-KX-ALL:+PSK:+VERS-DTLS-ALL:+%s:+%s",
 			 WSCONFIG(ws)->priorities, gnutls_mac_get_name(mac), gnutls_cipher_get_name(cipher));
 	} else {
-		if (WSCONFIG(ws)->match_dtls_and_tls) {
-			oclog(ws, LOG_ERR, "cannot determine ciphersuite from CSTP channel (unset match-tls-dtls-ciphers)");
-			return -1;
-		}
-
 		/* if we haven't an associated session, enable all ciphers we would have enabled
 		 * otherwise for TLS. */
 		snprintf(prio_string, sizeof(prio_string), "%s:"VERS_STRING":-KX-ALL:+PSK:+VERS-DTLS-ALL",
@@ -801,6 +801,8 @@ void vpn_server(struct worker_st *ws)
 		oclog(ws, LOG_DEBUG, "Accepted unix connection");
 	}
 
+	ws->session = session;
+
 	session_info_send(ws);
 
 	memset(&settings, 0, sizeof(settings));
@@ -823,7 +825,6 @@ void vpn_server(struct worker_st *ws)
 		oclog(ws, LOG_DEBUG, "proxy-hdr: peer is %s\n", ws->remote_ip_str);
 	}
 
-	ws->session = session;
 	ws->parser = &parser;
 
  restart:

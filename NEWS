@@ -1,5 +1,7 @@
 * Version 0.12.3 (unreleased)
 - Prevented crash when no DTLS ciphersuite is negotiated
+- occtl: print the TLS session information, even if the DTLS channel
+  is not established.
 
 
 * Version 0.12.2 (released 2019-01-10)

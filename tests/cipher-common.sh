@@ -137,7 +137,7 @@ if test $? != 0;then
 	exit 1
 fi
 
-grep "Username: ${USERNAME}" ${OUTFILE}
+grep "Username: ${USERNAME}" ${OUTFILE} >/dev/null
 if test $? != 0;then
 	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
 	echo "occtl show user didn't find connected user!"
@@ -145,14 +145,14 @@ if test $? != 0;then
 fi
 
 if test -z "${GNUTLS_NAME}";then
-	grep "DTLS cipher:" ${OUTFILE}
+	grep "DTLS cipher:" ${OUTFILE} >/dev/null
 	if test $? = 0;then
 		${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
 		echo "occtl show user did show a cipher!"
 		exit 1
 	fi
 else
-	grep "DTLS cipher: ${GNUTLS_NAME}" ${OUTFILE}
+	grep "DTLS cipher: ${GNUTLS_NAME}" ${OUTFILE} >/dev/null
 	if test $? != 0;then
 		${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
 		echo "occtl show user didn't show cipher!"
@@ -160,7 +160,14 @@ else
 	fi
 fi
 
-grep ${CLI_ADDRESS} ${OUTFILE}
+grep -E '[[:space:]]+TLS ciphersuite:' ${OUTFILE} >/dev/null
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user did not show a TLS cipher!"
+	exit 1
+fi
+
+grep ${CLI_ADDRESS} ${OUTFILE} >/dev/null
 if test $? != 0;then
 	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
 	echo "occtl show user didn't find client address!"

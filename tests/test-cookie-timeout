@@ -51,7 +51,7 @@ if [ ! -f "${PIDFILE}" ];then
 fi
 
 CPID=`cat "${PIDFILE}"`
-kill $CPID
+kill -9 $CPID
 rm -f "${PIDFILE}"
 
 sleep 16
@@ -81,7 +81,7 @@ if [ ! -f "${PIDFILE}" ];then
 fi
 
 CPID=`cat "${PIDFILE}"`
-kill $CPID
+kill -9 $CPID
 rm -f "${PIDFILE}"
 
 

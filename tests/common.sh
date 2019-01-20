@@ -49,10 +49,20 @@ update_config() {
 	file=$1
 	username=$(whoami)
 	group=$(groups|cut -f 1 -d ' ')
+
+	if test -z "${ISOLATE_WORKERS}";then
+		if test "${COVERAGE}" = "1";then
+			ISOLATE_WORKERS=false
+		else
+			ISOLATE_WORKERS=true
+		fi
+	fi
+
 	cp "${srcdir}/data/${file}" "$file.$$.tmp"
 	sed -i -e 's|@USERNAME@|'${username}'|g' "$file.$$.tmp" \
 	       -e 's|@GROUP@|'${group}'|g' "$file.$$.tmp" \
 	       -e 's|@SRCDIR@|'${srcdir}'|g' "$file.$$.tmp" \
+	       -e 's|@ISOLATE_WORKERS@|'${ISOLATE_WORKERS}'|g' "$file.$$.tmp" \
 	       -e 's|@OTP_FILE@|'${OTP_FILE}'|g' "$file.$$.tmp" \
 	       -e 's|@CRLNAME@|'${CRLNAME}'|g' "$file.$$.tmp" \
 	       -e 's|@PORT@|'${PORT}'|g' "$file.$$.tmp" \

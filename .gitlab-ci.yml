@@ -66,8 +66,10 @@ Build/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
+  # ensure gcov scripts are writable
+  - umask 000
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage && make -j$(nproc) && make check -j$(nproc)
+    ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) COVERAGE=1
     && make files-update && make dist && make local-code-coverage-output
   tags:
   - shared
@@ -190,7 +192,7 @@ pages:
   stage: deploy
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
-    mkdir -p public/coverage && make V=1 CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage CODE_COVERAGE_BRANCH_COVERAGE=1 code-coverage-capture &&
+  - mkdir -p public/coverage && make V=1 CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage CODE_COVERAGE_BRANCH_COVERAGE=1 code-coverage-capture &&
     make CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage local-code-coverage-output
   tags:
   - shared

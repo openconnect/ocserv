@@ -566,29 +566,6 @@ static void drop_privileges(main_server_st* s)
 		mslog(s, NULL, LOG_ERR, "cannot enforce NPROC limit: %s\n",
 		       strerror(e));
 	}
-
-#if 0
-	rl.rlim_cur = 0;
-	rl.rlim_max = 0;
-	ret = setrlimit(RLIMIT_FSIZE, &rl);
-	if (ret < 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot enforce FSIZE limit: %s\n",
-		       strerror(e));
-	}
-
-#define MAX_WORKER_MEM (16*1024*1024)
-	if (GETPCONFIG(s)->debug == 0) {
-		rl.rlim_cur = MAX_WORKER_MEM;
-		rl.rlim_max = MAX_WORKER_MEM;
-		ret = setrlimit(RLIMIT_AS, &rl);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot enforce AS limit: %s\n",
-			       strerror(e));
-		}
-	}
-#endif
 }
 
 /* clears the server listen_list and proc_list. To be used after fork().

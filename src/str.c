@@ -103,9 +103,9 @@ int str_append_size(str_st * dest, size_t data_size)
  */
 int str_append_data(str_st * dest, const void *data, size_t data_size)
 {
-int ret;
+    int ret;
 
-	ret = str_append_size(dest, data_size);
+	ret = str_append_size(dest, data_size+1);
 	if (ret < 0)
 		return ret;
 	

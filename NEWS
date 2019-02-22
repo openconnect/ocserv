@@ -1,7 +1,7 @@
 * Version 0.12.3 (unreleased)
 - Fixed crash when no DTLS ciphersuite is negotiated.
 - Fixed crash happening arbitrarily depending on handled string
-  sizes.
+  sizes (#197).
 - occtl: print the TLS session information, even if the DTLS channel
   is not established.
 

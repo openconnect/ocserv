@@ -84,7 +84,11 @@ static const struct known_urls_st known_urls[] = {
  * extension to avoid interop issues. Furthermore gnutls does seem to
  * be sending the renegotiation extension which openssl doesn't like (see #193) */
 
-#define WORKAROUND_STR "%NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION"
+#if GNUTLS_VERSION_NUMBER >= 0x030400
+# define WORKAROUND_STR "%NO_SESSION_HASH:%DISABLE_SAFE_RENEGOTIATION"
+#else
+# define WORKAROUND_STR "%DISABLE_SAFE_RENEGOTIATION"
+#endif
 
 /* Consider switching to gperf when this table grows significantly.
  * These tables are used for the custom DTLS cipher negotiation via

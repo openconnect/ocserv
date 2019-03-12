@@ -103,7 +103,7 @@ Build/minimal:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD
   script:
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$(nproc) && make check -j$(nproc) XFAIL_TESTS="lz4-compression"
   tags:
   - shared
   except:

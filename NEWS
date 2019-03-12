@@ -1,7 +1,8 @@
-* Version 0.12.3 (unreleased)
+* Version 0.12.3 (released 2019-03-12)
 - Fixed crash when no DTLS ciphersuite is negotiated.
 - Fixed crash happening arbitrarily depending on handled string
   sizes (#197).
+- Fixed compatibility issue with GnuTLS 3.3.x.
 - occtl: print the TLS session information, even if the DTLS channel
   is not established.
 

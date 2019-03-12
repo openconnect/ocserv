@@ -89,7 +89,7 @@ fi
 set -e
 ${CMDNS1} ping -c 3 ${VPNADDR} >/dev/null 2>&1
 
-${CMDNS1} ping -c 3 ${VPNADDR6} >/dev/null 2>&1
+${CMDNS1} ping -6 -c 3 ${VPNADDR6} >/dev/null 2>&1
 set +e
 
 ${OCCTL} -s ${OCCTL_SOCKET} show users|grep ${USERNAME}
@@ -137,7 +137,7 @@ fi
 set -e
 ${CMDNS1} ping -c 3 ${VPNADDR} >/dev/null 2>&1
 
-${CMDNS1} ping -c 3 ${VPNADDR6} >/dev/null 2>&1
+${CMDNS1} ping -6 -c 3 ${VPNADDR6} >/dev/null 2>&1
 set +e
 
 ${OCCTL} -s ${OCCTL_SOCKET} show users|grep ${USERNAME}

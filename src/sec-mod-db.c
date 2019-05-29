@@ -198,7 +198,7 @@ void expire_client_entry(sec_mod_st *sec, client_entry_st * e)
 		e->in_use--;
 	if (e->in_use == 0) {
 		if (e->vhost->perm_config.config->persistent_cookies == 0 && (e->discon_reason == REASON_SERVER_DISCONNECT ||
-		    e->discon_reason == REASON_SESSION_TIMEOUT)) {
+		    e->discon_reason == REASON_SESSION_TIMEOUT || (e->session_is_open && e->discon_reason == REASON_USER_DISCONNECT))) {
 			seclog(sec, LOG_INFO, "invalidating session of user '%s' "SESSION_STR,
 			       e->acct_info.username, e->acct_info.safe_id);
 			/* immediately disconnect the user */

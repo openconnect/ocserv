@@ -59,6 +59,8 @@
 # define CHALLENGE_RC 3
 #endif
 
+#define MAX_CHALLENGES 16
+
 static void radius_vhost_init(void **_vctx, void *pool, void *additional)
 {
 	radius_cfg_st *config = additional;
@@ -452,10 +454,10 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			vp = vp->next;
 		}
 
-		/* PW_STATE or PW_REPLY_MESSAGE is empty*/
-		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL)) {
+		/* PW_STATE or PW_REPLY_MESSAGE is empty or MAX_CHALLENGES limit exceeded*/
+		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL) || (pctx->passwd_counter >= MAX_CHALLENGES)) {
 			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
-			syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message");
+			syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
 			ret = ERR_AUTH_FAIL;
 		}
 		goto cleanup;

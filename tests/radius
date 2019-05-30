@@ -1,0 +1,215 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This tests operation/traffic under compression (lzs or lz4).
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4569
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(which ip)
+OUTFILE=traffic.$$.tmp
+RADIUSLOG=log.$$.tmp
+RADIUSD=$(which radiusd)
+
+if test -z "${RADIUSD}";then
+	RADIUSD=$(which freeradius)
+fi 
+
+. `dirname $0`/common.sh
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test -z "${RADIUSD}";then
+	echo "no radiusd is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing ocserv with radius (basic)... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${RADIUSPID}" && kill ${RADIUSPID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${RADIUSLOG}" && rm -f ${RADIUSLOG} >/dev/null 2>&1
+  rm -f ${OUTFILE} 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.203.2.1
+CLI_ADDRESS=10.203.1.1
+VPNNET=192.168.7.0/24
+VPNADDR=192.168.7.1
+VPNNET6=fd3e:4469:d98:ff54:e437:c9ee:52ac:0/112
+VPNADDR6=fd3e:4469:d98:ff54:e437:c9ee:52ac:1
+OCCTL_SOCKET=./occtl-radius-$$.socket
+USERNAME=test
+
+. `dirname $0`/ns.sh
+
+${CMDNS2} ${IP} link set dev lo up
+
+# Run servers
+${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -x -l ${RADIUSLOG} &
+RADIUSPID=$!
+
+update_config radius.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+# Run clients
+echo " * Testing wrong username at ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u xxx --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? = 0;then
+	echo "Connected with incorrect username"
+	exit 1
+fi
+
+echo " * Testing wrong password at ${ADDRESS}:${PORT}..."
+( echo "xxx" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? = 0;then
+	echo "Connected with incorrect password"
+	exit 1
+fi
+
+echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+echo " * Connecting to ${ADDRESS}:${PORT} with special IP..."
+USERNAME=test-arb
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 3
+
+${CMDNS1} ${IP} addr show|grep $(echo ${VPNADDR}|cut -d '.' -f 1-3)
+if test $? != 0;then
+	${CMDNS1} ${IP} addr show
+	echo "Did not find expected special IP in VPN"
+	exit 1
+fi
+
+${CMDNS1} ping -w 3 ${VPNADDR}
+if test $? != 0;then
+	echo "Could not ping server special IP"
+	exit 1
+fi
+
+kill $(cat ${CLIPID})
+rm -f ${CLIPID}
+
+sleep 3
+
+echo " * Connecting to ${ADDRESS}:${PORT}..."
+USERNAME=test
+( echo "${USERNAME}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+${CMDNS2} nuttcp -1
+
+echo " * ping remote address"
+
+${CMDNS1} ping -c 3 ${VPNADDR}
+
+# IPv6
+
+${CMDNS1} ping -6 -c 3 ${VPNADDR6}
+
+echo " * traffic"
+${CMDNS1} nuttcp -T 6 -t ${VPNADDR}
+
+set +e
+
+${OCCTL} -s ${OCCTL_SOCKET} show users|grep ${USERNAME}
+if test $? != 0;then
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl didn't find connected user!"
+	exit 1
+fi
+
+grep "Username: ${USERNAME}" ${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't find connected user!"
+	exit 1
+fi
+
+grep ${CLI_ADDRESS} ${OUTFILE}
+if test $? != 0;then
+	${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+	echo "occtl show user didn't find client address!"
+	exit 1
+fi
+
+echo "Waiting for accounting report"
+sleep 35
+
+test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+test -n "${CLIPID}" && rm -f ${CLIPID}
+CLIPID=""
+
+OCTETS=$(cat ${RADIUSLOG}|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g')
+if test -z "$OCTETS" || test "$OCTETS" = 0;then
+	cat ${RADIUSLOG}
+	echo "Interim update showed no data!"
+	exit 1
+fi
+echo "Transferred ${OCTETS} bytes"
+
+exit 0

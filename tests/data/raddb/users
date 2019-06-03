@@ -6,9 +6,8 @@
 test	Cleartext-Password := "test"
 	Service-Type = Framed-User,
 	Framed-Protocol = PPP,
-	Framed-Route = 192.168.100.5/24,
-	Framed-IPv6-Prefix = "2000:0:0:106::/64",
-	Framed-IP-Address = 192.168.55.190,
+	Framed-Route = 192.168.100.0/24,
+	Framed-IP-Address = 192.168.7.2,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
 	Framed-MTU = 1500
@@ -95,9 +94,7 @@ test-arb	Cleartext-Password := "test-arb"
 test-class	Cleartext-Password := "test-class"
 	Service-Type = Framed-User,
 	Framed-Protocol = PPP,
-	Framed-Route = 192.168.100.0/24,
-	Framed-Route = 192.168.1.0/8,
-	Framed-IP-Address = 192.168.35.190,
+	Framed-IP-Address = 192.168.93.190,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
 	Class = "OU=group1;group2",
@@ -110,6 +107,6 @@ testtime	Cleartext-Password := "test"
 	Framed-Route = 192.168.67.0/24,
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-MTU = 1500,
-	Session-Timeout = 120,
-	Acct-Interim-Interval = 60
+	Session-Timeout = 60,
+	Acct-Interim-Interval = 20
 

@@ -231,7 +231,10 @@ static void parse_groupnames(struct radius_ctx_st *pctx, const char *full)
 			trim_trailing_whitespace(p2);
 			syslog(LOG_DEBUG, "radius-auth: found group %s", p2);
 
-			p2 = strsep(&p, ";"); 
+			p2 = strsep(&p, ";");
+
+			if (i == MAX_GROUPS)
+				break;
 		}
 	} else {
 		pctx->groupnames[0] = talloc_strdup(pctx, full);

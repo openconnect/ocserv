@@ -55,6 +55,8 @@ libsocket-wrapper  / socket_wrapper
 gss-ntlmssp        / gssntlmssp
 haproxy            / haproxy
 iputils-ping       / iputils
+freeradius	   / freeradius
+gawk		   / gawk
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

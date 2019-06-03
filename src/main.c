@@ -1329,6 +1329,9 @@ int main(int argc, char** argv)
 		}
 	}
 
+	/* create our process group */
+	setpgid(0, 0);
+
 	/* we don't need them */
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);

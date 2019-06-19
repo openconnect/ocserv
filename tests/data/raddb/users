@@ -110,3 +110,26 @@ testtime	Cleartext-Password := "test"
 	Session-Timeout = 60,
 	Acct-Interim-Interval = 20
 
+test1-otp            Cleartext-Password := "test1-otp-stage%{string:State}", Tmp-Integer-0 := 3
+        Service-Type = Framed-User,
+        Framed-Protocol = PPP,
+        Framed-IP-Address = 192.168.55.190,
+        Framed-IP-Netmask = 255.255.255.0,
+        Framed-Routing = Broadcast-Listen,
+        Framed-MTU = 1500
+
+test2-otp            Cleartext-Password := "test2-otp-stage%{string:State}", Tmp-Integer-0 := 17
+        Service-Type = Framed-User,
+        Framed-Protocol = PPP,
+        Framed-IP-Address = 192.168.55.191,
+        Framed-IP-Netmask = 255.255.255.0,
+        Framed-Routing = Broadcast-Listen,
+        Framed-MTU = 1500
+
+test3-otp            Cleartext-Password := "test3-otp-stage%{string:State}", Tmp-Integer-0 := 3
+        Service-Type = Framed-User,
+        Framed-Protocol = PPP,
+        Framed-IP-Address = 192.168.55.192,
+        Framed-IP-Netmask = 255.255.255.0,
+        Framed-Routing = Broadcast-Listen,
+        Framed-MTU = 1500

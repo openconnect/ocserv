@@ -328,6 +328,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 {
 	int ret;
 	passwd_msg_st pst;
+	int passwd_retries = 1;
 
 	if ((result == ERR_AUTH_CONTINUE || result == 0) && e->module) {
 		memset(&pst, 0, sizeof(pst));
@@ -338,12 +339,15 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			return ret;
 		}
 		e->msg_str = pst.msg_str;
+		
+		/* password requested for the next stage in multifactor auth OR password is requested again at the same stage */
+		passwd_retries = (e->passwd_counter < pst.counter) ? 0 : 1;
 		e->passwd_counter = pst.counter;
 	}
 
 	if (result == ERR_AUTH_CONTINUE) {
-		/* if the module allows multiple retries for the password */
-		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries) {
+		/* if the module allows multiple retries for the password and the password refers to the same stage */
+		if (e->status != PS_AUTH_INIT && e->module && e->module->allows_retries && passwd_retries == 1) {
 			sec_mod_add_score_to_ip(sec, e, e->acct_info.remote_ip, e->vhost->perm_config.config->ban_points_wrong_password);
 		}
 

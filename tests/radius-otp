@@ -1,0 +1,276 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This tests operation/traffic under compression (lzs or lz4).
+
+PKG_CONFIG="${PKG_CONFIG:-/usr/bin/pkg-config}"
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4569
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(which ip)
+OUTFILE=traffic.$$.tmp
+RADIUSLOG=log.$$.tmp
+RADIUSD=$(which radiusd)
+
+if test -z "${RADIUSD}";then
+	RADIUSD=$(which freeradius)
+fi 
+
+. `dirname $0`/common.sh
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test -z "${RADIUSD}";then
+	echo "no radiusd is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+${PKG_CONFIG} --atleast-version=1.2.7 radcli
+if test $? != 0;then
+	echo "radcli version less than 1.2.7 does not support Access-Challenge server response"
+	exit 77
+fi
+
+echo "Testing ocserv and radius (otp authentication)... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${RADIUSPID}" && kill ${RADIUSPID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${RADIUSLOG}" && rm -f ${RADIUSLOG} >/dev/null 2>&1
+  rm -f ${OUTFILE} 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.173.78.1
+CLI_ADDRESS=10.173.79.1
+
+# These must match the data/raddb/users:test-class user
+VPNNET=192.168.55.0/24
+VPNADDR=192.168.55.1
+VPNNET6=fc7d:b139:f7ba:5f53:c634:e98e:b777:0/112
+VPNADDR6=fc7d:b139:f7ba:5f53:c634:e98e:b777:1
+OCCTL_SOCKET=./occtl-radius-otp-$$.socket
+
+. `dirname $0`/ns.sh
+
+${CMDNS2} ${IP} link set dev lo up
+
+# Run servers
+${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -Xx -l ${RADIUSLOG} &
+RADIUSPID=$!
+
+update_config radius-otp.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+echo " * Connecting with correct password and OTP..."
+USERNAME=test1-otp
+( { echo "$USERNAME-stage"
+for (( COUNT=1; COUNT <= 3; COUNT++ )); do
+    sleep 0.5
+    echo "$USERNAME-stage$COUNT"
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b >/dev/null 2>&1)
+if test $? != 0; then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+test "$VERBOSE" = 1 && ${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME}
+test "$VERBOSE" = 1 && ${OCCTL} -s ${OCCTL_SOCKET} show ip ban points
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS} >/dev/null 2>&1
+
+sleep 3
+
+${CMDNS1} ${IP} addr show|grep $(echo ${VPNADDR}|cut -d '.' -f 1-3)
+if test $? != 0; then
+	${CMDNS1} ${IP} addr show
+	echo "Did not find expected IP in VPN"
+	exit 1
+fi
+
+${CMDNS1} ping -w 3 ${VPNADDR}
+if test $? != 0; then
+	echo "Could not ping server VPN IP"
+	exit 1
+fi
+
+test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+
+sleep 3
+
+echo " * Connecting with wrong username"
+# Since MAX_PASSWORD_TRIES = 3, we try 3 attempts. In the ban system, it will accumulate 30 ban-points,
+# which corresponds to the maximum value of ban-points by default. To distinguish the cause of access
+# denial, option "max-ban-score = 40" explicitly set in the used configuration.
+USERNAME=test0-otp
+( {
+for (( COUNT=1; COUNT <= 3; COUNT++ )); do
+    sleep 0.5
+    echo "$USERNAME-stage"
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+if test $? == 0; then
+	echo "Connected with wrong username"
+	exit 1
+fi
+
+test "$VERBOSE" = 1 && ${OCCTL} -s ${OCCTL_SOCKET} show ip ban points
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS} >/dev/null 2>&1
+
+sleep 3
+
+echo " * Connecting with wrong OTP"
+USERNAME=test1-otp
+( { echo "$USERNAME-stage"
+for (( COUNT=1; COUNT <= 3; COUNT++ )); do
+    sleep 0.5
+    if [ $COUNT -eq 2 ]; then
+        echo "$USERNAME-stage5"
+    else
+        echo "$USERNAME-stage$COUNT"
+    fi
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+if test $? == 0; then
+	echo "Connected with wrong OTP"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS} >/dev/null 2>&1
+
+sleep 3
+
+echo " * Connecting with empty password and wrong OTP... "
+# Since MAX_PASSWORD_TRIES = 3, we only make the first attempt with a blank password, and enter the wrong OTP on third stage
+USERNAME=test1-otp
+( { echo ""
+sleep 2
+echo "$USERNAME-stage"
+for (( COUNT=1; COUNT <= 3; COUNT++ )); do
+    sleep 0.5
+    if [ $COUNT -eq 3 ]; then
+        echo "$USERNAME-stage5"
+    else
+        echo "$USERNAME-stage$COUNT"
+    fi
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+if test $? == 0; then
+	echo "Connected with wrong OTP"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS} >/dev/null 2>&1
+
+sleep 3
+
+echo " * Connecting with blank OTP... "
+USERNAME=test1-otp
+( { echo "$USERNAME-stage"
+for (( COUNT=1; COUNT <= 3; COUNT++ )); do
+    sleep 0.5
+    if [ $COUNT -eq 3 ]; then
+        echo -e "\n"
+    else
+        echo "$USERNAME-stage$COUNT"
+    fi
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+if test $? == 0; then
+	echo "Connected with blank OTP"
+	exit 1
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS} >/dev/null 2>&1
+
+sleep 3
+
+echo " * Connecting with wrong OTP; check banning with same stage password retries"
+# Ban-points are summarized - for the wrong password and wrong OTP.
+# For clarity, we send a wrong password and three wrong OTP - a total of 40 ban-points,
+# which corresponds to the option "max-ban-score = 40" in the used configuration.
+USERNAME=test3-otp
+RETRY=0
+( { echo ""
+sleep 2
+echo "$USERNAME-stage"
+for (( COUNT=1; COUNT <= 3; COUNT++ )); do
+    sleep 0.5
+    if [ $COUNT -eq 2 ] && [ $RETRY -lt 3 ]; then
+        echo "$USERNAME-stage5"
+        (( COUNT-- ))
+        (( RETRY++ ))
+    else
+        echo "$USERNAME-stage$COUNT"
+    fi
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+if test $? == 0; then
+	echo "Successful connection with the number of OTP retries greater than allowed by the ban system (default 30)."
+	${OCCTL} -s ${OCCTL_SOCKET} show ip ban points
+	exit 1
+fi
+test "$VERBOSE" = 1 && ${OCCTL} -s ${OCCTL_SOCKET} show ip ban points
+${OCCTL} -s ${OCCTL_SOCKET} unban ip ${CLI_ADDRESS} >/dev/null 2>&1
+
+sleep 3
+
+echo " * Check MAX_CHALLENGES=16 hard limit for password requests"
+USERNAME=test2-otp
+( { echo "${USERNAME}-stage"
+for (( COUNT=1; COUNT <= 17; COUNT++ )); do
+    sleep 0.5
+    echo "$USERNAME-stage$COUNT"
+done
+} | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} -b --cookieonly >/dev/null 2>&1)
+if test $? == 0; then
+	echo "Connected to server - MAX_CHALLENGES test failed"
+	exit 1
+fi
+
+sleep 3
+
+exit 0

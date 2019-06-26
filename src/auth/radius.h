@@ -68,6 +68,9 @@ struct radius_ctx_st {
 	unsigned id;
 
 	struct radius_vhost_ctx *vctx;
+	char *state;
+	unsigned passwd_counter;
+	size_t prev_prompt_hash;
 };
 
 extern const struct auth_mod_st radius_auth_funcs;

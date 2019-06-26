@@ -30,6 +30,7 @@
 #include "radius.h"
 #include "auth/common.h"
 #include "str.h"
+#include <ccan/hash/hash.h>
 
 #ifdef HAVE_RADIUS
 
@@ -57,6 +58,8 @@
 #if RADCLI_VERSION_NUMBER < 0x010207
 # define CHALLENGE_RC 3
 #endif
+
+#define MAX_CHALLENGES 16
 
 static void radius_vhost_init(void **_vctx, void *pool, void *additional)
 {
@@ -124,6 +127,7 @@ static int radius_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 
 	pctx->pass_msg[0] = 0;
 	pctx->vctx = vctx;
+	pctx->passwd_counter = 0;
 
 	default_realm = rc_conf_str(pctx->vctx->rh, "default_realm");
 
@@ -331,6 +335,18 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 		goto cleanup;
 	}
 
+	if (pctx->state != NULL) {
+		if (rc_avpair_add(pctx->vctx->rh, &send, PW_STATE, pctx->state, -1, 0) == NULL) {
+			syslog(LOG_ERR,
+			       "%s:%u: error in constructing radius message for user '%s'", __func__, __LINE__,
+			       pctx->username);
+			ret = ERR_AUTH_FAIL;
+			goto cleanup;
+		}
+		talloc_free(pctx->state);
+		pctx->state = NULL;
+	}
+
 	pctx->pass_msg[0] = 0;
 	ret = rc_aaa(pctx->vctx->rh, pctx->id, send, &recvd, pctx->pass_msg, 1, PW_ACCESS_REQUEST);
 
@@ -421,12 +437,36 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 
 		ret = 0;
 		goto cleanup;
+	} else if (ret == CHALLENGE_RC) {
+
+		vp = recvd;
+
+		while(vp != NULL) {
+			if (vp->attribute == PW_STATE && vp->type == PW_TYPE_STRING) {
+				/* State */
+				if (vp->lvalue > 0)
+					pctx->state = talloc_strdup(pctx, vp->strvalue);
+
+				pctx->id++;
+				syslog(LOG_DEBUG, "radius-auth: Access-Challenge response stage %u, State %s", pctx->passwd_counter, vp->strvalue);
+				ret = ERR_AUTH_CONTINUE;
+			}
+			vp = vp->next;
+		}
+
+		/* PW_STATE or PW_REPLY_MESSAGE is empty or MAX_CHALLENGES limit exceeded*/
+		if ((pctx->pass_msg[0] == 0) || (pctx->state == NULL) || (pctx->passwd_counter >= MAX_CHALLENGES)) {
+			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
+			syslog(LOG_ERR, "radius-auth: Access-Challenge with invalid State or Reply-Message, or max number of password requests exceeded");
+			ret = ERR_AUTH_FAIL;
+		}
+		goto cleanup;
 	} else {
  fail:
 		if (pctx->pass_msg[0] == 0)
 			strlcpy(pctx->pass_msg, pass_msg_failed, sizeof(pctx->pass_msg));
 
-		if (pctx->retries++ < MAX_PASSWORD_TRIES-1) {
+		if (pctx->retries++ < MAX_PASSWORD_TRIES-1 && pctx->passwd_counter == 0) {
 			ret = ERR_AUTH_CONTINUE;
 			goto cleanup;
 		}
@@ -449,9 +489,22 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 static int radius_auth_msg(void *ctx, void *pool, passwd_msg_st *pst)
 {
 	struct radius_ctx_st *pctx = ctx;
+	size_t prompt_hash = 0;
 
 	if (pctx->pass_msg[0] != 0)
 		pst->msg_str = talloc_strdup(pool, pctx->pass_msg);
+
+	if (pctx->state != NULL) {
+
+		/* differentiate password prompts, if the hash of the prompt
+		 * is different.
+		 */
+		prompt_hash = hash_any(pctx->pass_msg, strlen(pctx->pass_msg), 0);
+		if (pctx->prev_prompt_hash != prompt_hash)
+			pctx->passwd_counter++;
+		pctx->prev_prompt_hash = prompt_hash;
+		pst->counter = pctx->passwd_counter;
+	}
 
 	/* use default prompt */
 	return 0;

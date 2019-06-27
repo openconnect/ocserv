@@ -29,7 +29,7 @@ cscope:
 cref: ctags cscope
 
 ChangeLog:
-	git log --pretty --numstat --summary -- | git2cl > ChangeLog
+	git log --pretty > ChangeLog
 .PHONY: ChangeLog
 
 files-update:

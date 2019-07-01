@@ -430,9 +430,17 @@ int main(int argc, char **argv)
 
 		switch(c) {
 			case 'c':
+				if (fpasswd) {
+					fprintf(stderr, "-c option cannot be specified multiple time\n");
+					exit(1);
+				}
 				fpasswd = strdup(optarg);
 				break;
 			case 'g':
+				if (groupname) {
+					fprintf(stderr, "-g option cannot be specified multiple time\n");
+					exit(1);
+				}
 				groupname = strdup(optarg);
 				break;
 			case 'd':

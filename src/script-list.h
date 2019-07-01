@@ -57,6 +57,7 @@ inline static pid_t remove_from_script_list(main_server_st* s, struct proc_st* p
 	list_for_each_safe(&s->script_list.head, stmp, spos, list) {
 		if (stmp->proc == proc) {
 			list_del(&stmp->list);
+			ev_child_stop(loop, &stmp->ev_child);
 			if (stmp->pid > 0) {
 				kill(stmp->pid, SIGTERM);
 				ret = stmp->pid;

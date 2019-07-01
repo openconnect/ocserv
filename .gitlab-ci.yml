@@ -63,6 +63,31 @@ Build/Centos7:
       - ./*.log
       - ./tests/*.log
 
+RPM/el7:
+  stage: deploy
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD
+  script:
+  - git submodule update --init && autoreconf -fvi && ./configure && touch ChangeLog && make dist
+  - CURDIR=$(pwd)
+  - TARFILE=$(find ./ -name '*.tar.xz')
+  - RPMVERSION=$(cat /usr/local/rpms/ocserv/*.spec|grep ^Version|awk '{print $2}')
+  - NEWVERSION=$(echo $TARFILE|sed -e 's/ocserv-//' -e 's/\.tar\.xz//' -e 's|./||')
+  - echo "tarfile $TARFILE" && echo "rpm $RPMVERSION" && echo "new $NEWVERSION"
+  - cp $TARFILE /usr/local/rpms/ocserv
+  - cd /usr/local/rpms/ocserv && sed -i -e "s/$RPMVERSION/$NEWVERSION/" -e 's/have_gpgv2 1/have_gpgv2 0/g' *.spec &&
+    cat sources|grep -v "ocserv-$RPMVERSION" >sources.tmp && sha512sum --tag ocserv-$NEWVERSION.tar.xz >>sources.tmp &&
+    mv sources.tmp sources && touch ocserv-$NEWVERSION.tar.xz.sig && fedpkg --release el7 local
+  - cd $CURDIR && find /usr/local/rpms/ocserv -name '*.rpm' -exec cp '{}' ./ ';'
+  tags:
+  - shared
+  except:
+   - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_success
+    paths:
+     - ./*.rpm
+
 Build/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD

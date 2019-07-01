@@ -56,10 +56,9 @@ That value will be overridden by Acct-Interim-Interval if sent
 by the server.
 
 Note that the accounting session is reported as terminated as soon as
-possible (there is a periodic server cleanup of old entries every 5mins)
-when the user disconnects explicitly. Users which their session
-disconnected due to timeout, have their connection remain valid
-until the `cookie-timeout` value expires.
+possible when the user disconnects explicitly. When the disconnection
+is due to timeout or other network reasons, the users have their connection
+remain valid until the `cookie-timeout` value expires.
 
 
 Dictionary

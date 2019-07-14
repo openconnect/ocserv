@@ -9,7 +9,7 @@ protocol between them.
 
 # VPN overview
 
-See http://www.infradead.org/ocserv/technical.html
+See https://ocserv.gitlab.io/www/technical.html
 
 
 ## The main process

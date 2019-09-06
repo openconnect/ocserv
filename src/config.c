@@ -720,6 +720,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			vhost->acct = talloc_strdup(pool, value);
 		} else if (strcmp(name, "listen-host") == 0) {
 			PREAD_STRING(pool, vhost->perm_config.listen_host);
+		} else if (strcmp(name, "udp-listen-host") == 0) {
+			PREAD_STRING(pool, vhost->perm_config.udp_listen_host);
 		} else if (strcmp(name, "listen-clear-file") == 0) {
 			if (!PWARN_ON_VHOST_STRDUP(vhost->name, "listen-clear-file", unix_conn_file))
 				PREAD_STRING(pool, vhost->perm_config.unix_conn_file);
@@ -785,7 +787,6 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		} else {
 			stage1_found = 0;
 		}
-
 		if (stage1_found)
 			goto exit;
 	}
@@ -1327,6 +1328,11 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 	if (config->no_compress_limit < MIN_NO_COMPRESS_LIMIT)
 		config->no_compress_limit = MIN_NO_COMPRESS_LIMIT;
+
+	/* use tcp listen host by default */
+	if (vhost->perm_config.udp_listen_host ==  NULL) {
+		vhost->perm_config.udp_listen_host = vhost->perm_config.listen_host;
+	}
 
 #if !defined(HAVE_LIBSECCOMP)
 	if (config->isolate != 0 && !silent) {

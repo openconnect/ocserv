@@ -57,6 +57,7 @@ haproxy            / haproxy
 iputils-ping       / iputils
 freeradius	   / freeradius
 gawk		   / gawk
+yajl-tools	   / yajl
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

@@ -57,7 +57,7 @@ endif
 dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
-	multiple-routes haproxy-connect radius-group radius-otp
+	multiple-routes haproxy-connect radius-group radius-otp json
 
 #other tests requiring nuttcp for traffic
 if ENABLE_NUTTCP_TESTS

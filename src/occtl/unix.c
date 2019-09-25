@@ -234,7 +234,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 		print_single_value(stdout, params, "Status", rep->status != 0 ? "online" : "error", 1);
 		print_single_value_int(stdout, params, "Server PID", rep->pid, 1);
-		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 0);
+		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 1);
 
 		t = rep->start_time;
 		tm = localtime(&t);
@@ -282,15 +282,15 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		print_time_ival7(buf, rep->max_session_mins*60, 0);
 		print_single_value(stdout, params, "Max session time", buf, 1);
 
-		bytes2human(rep->kbytes_in*1000, buf, sizeof(buf), "");
-		print_single_value(stdout, params, "RX", buf, 1);
-		bytes2human(rep->kbytes_out*1000, buf, sizeof(buf), "");
-		print_single_value(stdout, params, "TX", buf, 1);
-
 		if (rep->min_mtu > 0)
 			print_single_value_int(stdout, params, "Min MTU", rep->min_mtu, 1);
 		if (rep->max_mtu > 0)
 			print_single_value_int(stdout, params, "Max MTU", rep->max_mtu, 1);
+
+		bytes2human(rep->kbytes_in*1000, buf, sizeof(buf), "");
+		print_single_value(stdout, params, "RX", buf, 1);
+		bytes2human(rep->kbytes_out*1000, buf, sizeof(buf), "");
+		print_single_value(stdout, params, "TX", buf, 0);
 	}
 
 	print_end_block(stdout, params, 0);

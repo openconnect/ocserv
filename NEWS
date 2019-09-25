@@ -1,3 +1,8 @@
+* Version 0.12.5 (unreleased)
+- occtl: fixed json output of show status command. Introduced tests
+  for checking its json output using yajl (#220).
+
+
 * Version 0.12.4 (released 2019-07-03)
 - Added support for radius access-challenge (multifactor) authentication.
 - Fixed race condition when connect-script and disconnect-script are

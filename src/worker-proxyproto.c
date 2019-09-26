@@ -181,12 +181,13 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 		sa = (void*)&ws->remote_addr;
 		sa->sin_port = htons(atoi(line));
 
-		line = strchr(line, ' ');
-		if (line == NULL) {
+		next = strchr(line, ' ');
+		if (next == NULL) {
 			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
-		line++;
+
+		line = next+1;
 
 		sa = (void*)&ws->our_addr;
 		sa->sin_port = htons(atoi(line));
@@ -236,12 +237,13 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 		sa = (void*)&ws->remote_addr;
 		sa->sin6_port = htons(atoi(line));
 
-		line = strchr(line, ' ');
-		if (line == NULL) {
+		next = strchr(line, ' ');
+		if (next == NULL) {
 			oclog(ws, LOG_ERR, "proxy-hdr: error parsing v1 header %s", line);
 			return -1;
 		}
-		line++;
+
+		line = next+1;
 
 		sa = (void*)&ws->our_addr;
 		sa->sin6_port = htons(atoi(line));
@@ -392,7 +394,7 @@ int parse_proxy_proto_header(struct worker_st *ws, int fd)
 		struct sockaddr_in6 *sa = (void*)&ws->remote_addr;
 
 		if (data_size < 36) {
-			oclog(ws, LOG_INFO, "proxy-hdr: received not enough IPv6 data");
+			oclog(ws, LOG_INFO, "proxy-hdr: did not receive enough IPv6 data");
 			return 0;
 		}
 

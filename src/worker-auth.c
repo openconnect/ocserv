@@ -170,7 +170,7 @@ static int append_group_idx(worker_st * ws, str_st *str, unsigned i)
 
 static int append_group_str(worker_st * ws, str_st *str, const char *group)
 {
-	char temp[128];
+	char temp[256];
 	const char *name;
 	const char *value;
 	unsigned i;

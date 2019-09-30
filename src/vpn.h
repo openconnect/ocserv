@@ -385,6 +385,7 @@ struct perm_cfg_st {
 	char *dh_params_file;
 
 	char *listen_host;
+	char *udp_listen_host;
 	char* unix_conn_file;
 	unsigned int port;
 	unsigned int udp_port;

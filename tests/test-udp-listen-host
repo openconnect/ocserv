@@ -1,0 +1,130 @@
+#!/bin/bash
+#
+# Copyright (C) 2019 Lele Long
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+OUTFILE=occtl-show-user.$$.tmp
+CLIPID="${srcdir:-.}/ci$$-1.pid.tmp"
+CLIPID2="${srcdir:-.}/ci$$-2.pid.tmp"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4566
+HAPORT=4567
+PIDFILE=ocserv-pid.$$.tmp
+CONFIG_UDP_LISTEN_LOCAL=ocserv_udp_listen_local.conf.$$.tmp
+HACONFIG=haproxy.conf.$$.tmp
+PATH=${PATH}:/usr/sbin
+HAPROXY=$(command -v haproxy)
+IP=$(command -v ip)
+
+. "$(dirname "$0")/common.sh"
+
+if test -z "${HAPROXY}";then
+	echo "no haproxy present"
+	exit 77
+fi
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+echo "Testing ocserv udp-listen-host"
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${CONFIG}" && rm -f "${CONFIG}" >/dev/null 2>&1
+  test -n "${HACONFIG}" && rm -f "${HACONFIG}" >/dev/null 2>&1
+  test -n "${HAPID}" && kill "${HAPID}" >/dev/null 2>&1
+  test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+
+  rm "${OUTFILE}" "${CONFIG_UDP_LISTEN_LOCAL}"
+  # first openconnect cli will exit after ocserv is killed/restarted
+  kill "$(cat "${CLIPID2}")"
+  rm "${CLIPID2}"
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.200.2.1
+CLI_ADDRESS=10.200.1.1
+VPNNET=192.168.1.0/24
+VPNADDR=192.168.1.1
+OCCTL_SOCKET=./occtl-udp-listen-host-$$.socket
+USERNAME=test
+
+. "$(dirname "$0")/ns.sh"
+
+# Run servers
+update_config test-udp-listen-host.config
+if test "$VERBOSE" = 1;then
+  DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 1
+
+rm -f ${HACONFIG}
+sed -e 's|@HAPORT@|'${HAPORT}'|g' -e 's|@PORT@|'${PORT}'|g' -e 's|@ADDRESS@|'${ADDRESS}'|g' ${srcdir}/data/haproxy-connect.cfg >${HACONFIG}
+${CMDNS2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+
+sleep 3
+
+echo " * Connecting to haproxy and using dtls ... "
+echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${CLIPID}" --background
+
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+
+sleep 3
+
+grep "DTLS cipher:" ${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user didn't find DTLS cipher!"
+	exit 1
+fi
+
+test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+sed -e "s/^udp-listen-host = ${ADDRESS}/udp-listen-host = 127.0.0.1/" "${CONFIG}" >${CONFIG_UDP_LISTEN_LOCAL}
+kill -9 "${PID}" >/dev/null
+sleep 1
+echo "restart ocsev with udp-listen-host set to 127.0.0.1"
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG_UDP_LISTEN_LOCAL} ${DEBUG} & PID=$!
+
+echo " * Connecting to haproxy and using dtls again ... "
+echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${CLIPID2}" --background
+
+sleep 3
+
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+
+grep "Username: ${USERNAME}" ${OUTFILE}
+if test $? != 0;then
+	echo "occtl show user didn't find user ${USERNAME} connected"
+	exit 1
+fi
+
+grep "DTLS cipher:" ${OUTFILE}
+if test $? == 0;then
+	echo "occtl show user find DTLS cipher!"
+	exit 1
+fi
+
+exit 0

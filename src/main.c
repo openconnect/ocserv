@@ -419,7 +419,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 #endif
 		    ;
 
-		ret = getaddrinfo(config->listen_host, portname, &hints, &res);
+		ret = getaddrinfo(config->udp_listen_host, portname, &hints, &res);
 		if (ret != 0) {
 			fprintf(stderr, "getaddrinfo() failed: %s\n",
 				gai_strerror(ret));

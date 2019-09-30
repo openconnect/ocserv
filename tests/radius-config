@@ -150,7 +150,7 @@ fi
 echo "Transferred ${OCTETS} bytes"
 
 echo "Waiting for disconnection report"
-sleep 50
+sleep 60
 
 DISC=$(cat ${RADIUSLOG}|grep "Acct-Status-Type = Start"|tail -1)
 if test -z "$DISC";then

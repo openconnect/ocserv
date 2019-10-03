@@ -1,4 +1,8 @@
 * Version 0.12.5 (unreleased)
+- Fixed issue with FreeBSD tun devices closing (#213).
+- Added configuration option udp-listen-host. This option supports different
+  listen addresses for tcp and udp such as haproxy for tcp, but support dtls
+  at the same time.
 - occtl: fixed json output of show status command. Introduced tests
   for checking its json output using yajl (#220).
 

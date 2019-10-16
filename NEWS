@@ -1,4 +1,4 @@
-* Version 0.12.5 (unreleased)
+* Version 0.12.5 (released 2019-10-16)
 - Fixed issue with FreeBSD tun devices closing (#213).
 - Added configuration option udp-listen-host. This option supports different
   listen addresses for tcp and udp such as haproxy for tcp, but support dtls

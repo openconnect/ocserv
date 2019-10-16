@@ -5,6 +5,7 @@
   at the same time.
 - occtl: fixed json output of show status command. Introduced tests
   for checking its json output using yajl (#220).
+- occtl: use maxminddb when available.
 
 
 * Version 0.12.4 (released 2019-07-03)

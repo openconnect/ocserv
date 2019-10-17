@@ -115,24 +115,31 @@ launch_sr_server() {
 	fi
 }
 
-launch_sr_pam_server() {
+launch_pam_server() {
 	test -z "${TEST_PAMDIR}" && exit 2
 	export PAM_WRAPPER_DEBUGLEVEL=3
 	export PAM_WRAPPER_SERVICE_DIR="${builddir}/pam.$$.tmp/"
 	mkdir -p "${PAM_WRAPPER_SERVICE_DIR}"
 	test -f "${srcdir}/${TEST_PAMDIR}/users.oath.templ" && cp "${srcdir}/${TEST_PAMDIR}/users.oath.templ" "${PAM_WRAPPER_SERVICE_DIR}/users.oath"
 	test -f "${srcdir}/${TEST_PAMDIR}/passdb.templ" && cp "${srcdir}/${TEST_PAMDIR}/passdb.templ" "${PAM_WRAPPER_SERVICE_DIR}/passdb"
-	test -f "${builddir}/${TEST_PAMDIR}/ocserv" && cp "${builddir}/${TEST_PAMDIR}/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
+	if test -f "${builddir}/${TEST_PAMDIR}/ocserv";then
+		cp "${builddir}/${TEST_PAMDIR}/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
+	else
+		cp "${builddir}/data/pam/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
+	fi
 	sed -i -e 's|%PAM_WRAPPER_SERVICE_DIR%|'${PAM_WRAPPER_SERVICE_DIR}'|g' "${PAM_WRAPPER_SERVICE_DIR}/ocserv"
 
 	cp "${builddir}/data/pam/nss-passwd" "${PAM_WRAPPER_SERVICE_DIR}/"
 	cp "${builddir}/data/pam/nss-group" "${PAM_WRAPPER_SERVICE_DIR}/"
 	export NSS_WRAPPER_PASSWD=${PAM_WRAPPER_SERVICE_DIR}/nss-passwd
 	export NSS_WRAPPER_GROUP=${PAM_WRAPPER_SERVICE_DIR}/nss-group
+	if test "$SOCKET_WRAPPER" != 0;then
+		SR="libsocket_wrapper.so:"
+	fi
 	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
-		LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER=1 UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
+		LD_PRELOAD=libnss_wrapper.so:${SR}libpam_wrapper.so:libuid_wrapper.so PAM_WRAPPER=1 UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
 	else
-		LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER=1 UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+		LD_PRELOAD=libnss_wrapper.so:${SR}libpam_wrapper.so:libuid_wrapper.so PAM_WRAPPER=1 UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
 	fi
 	LOCALPID="$!";
 	unset NSS_WRAPPER_PASSWD
@@ -144,6 +151,10 @@ launch_sr_pam_server() {
 		 # Houston, we'v got a problem...
 		 exit 1
 	fi
+}
+
+launch_sr_pam_server() {
+	SOCKET_WRAPPER=1 launch_pam_server $*
 }
 
 launch_simple_sr_server() {

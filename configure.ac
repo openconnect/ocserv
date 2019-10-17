@@ -116,6 +116,13 @@ AC_ARG_WITH(docker-tests,
 
 AM_CONDITIONAL(ENABLE_DOCKER_TESTS, test "x$docker_tests" = xyes)
 
+AC_ARG_WITH(kerberos-tests,
+  AS_HELP_STRING([--with-kerberos-tests], [enable any tests requiring kerberos setup]),
+  kerberos_tests=$withval,
+  kerberos_tests=no)
+
+AM_CONDITIONAL(ENABLE_KERBEROS_TESTS, test "x$kerberos_tests" = xyes)
+
 AC_ARG_WITH(nuttcp-tests,
   AS_HELP_STRING([--without-nuttcp-tests], [disable any tests requiring nuttcp]),
   nuttcp_tests=$withval,
@@ -582,9 +589,7 @@ AC_CONFIG_FILES([
 	doc/Makefile
 	gl/Makefile
 	tests/docker-ocserv/Makefile
-	tests/docker-kerberos/Makefile
 	tests/data/pam/ocserv
-	tests/data/pam-single/ocserv
 	tests/data/pam/nss-passwd
 	tests/data/pam/nss-group
 	tests/Makefile

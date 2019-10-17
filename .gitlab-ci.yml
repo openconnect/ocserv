@@ -123,9 +123,10 @@ Build/Fedora:
   # ensure gcov scripts are writable
   - umask 000
   - chmod -R o-w tests/data/raddb
-  - git submodule update --init && autoreconf -fvi &&
-    CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage && make -j$(nproc) && make check -j$(nproc) COVERAGE=1
-    && make files-update && make dist && make local-code-coverage-output
+  - git submodule update --init && autoreconf -fvi
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage --enable-kerberos-tests
+  - make -j$(nproc) && make check -j$(nproc) COVERAGE=1
+  - make files-update && make dist && make local-code-coverage-output
   tags:
   - shared
   except:

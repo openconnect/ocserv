@@ -88,6 +88,34 @@ RPM/el7:
     paths:
      - ./*.rpm
 
+Coverity:
+  stage: deploy
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  only:
+    refs:
+       - master
+       - coverity
+  script:
+  - wget https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_SCAN_TOKEN&project=$COVERITY_SCAN_PROJECT_NAME" -O /tmp/coverity_tool.tgz
+  - tar xfz /tmp/coverity_tool.tgz
+  - git submodule update --init && autoreconf -fvi
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror
+  - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$(nproc)
+  - tar cfz cov-int.tar.gz cov-int
+  - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
+    --form token=$COVERITY_SCAN_TOKEN --form email=n.mavrogiannopoulos@gmail.com
+    --form file=@cov-int.tar.gz --form version="`git describe --tags`"
+    --form description="CI build"
+  tags:
+  - shared
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - cov-int/*.txt
+
 Build/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD

@@ -1973,9 +1973,9 @@ static int connect_handler(worker_st * ws)
 	if (ws->full_ipv6 == 0) {
 		req->no_ipv6 = 1;
 		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because IPv6 support was not requested.");
-	} else if (req->user_agent_type != AGENT_OPENCONNECT) {
+	} else if (req->user_agent_type != AGENT_OPENCONNECT && req->user_agent_type != AGENT_ANYCONNECT) {
 		req->no_ipv6 = 1;
-		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not openconnect.");
+		oclog(ws, LOG_INFO, "IPv6 routes/DNS disabled because the agent is not known.");
 	}
 
 	for (i = 0; i < ws->user_config->n_dns; i++) {
@@ -1990,9 +1990,18 @@ static int connect_handler(worker_st * ws)
 			continue;
 
 		oclog(ws, LOG_INFO, "adding DNS %s", ws->user_config->dns[i]);
-		ret =
-		    cstp_printf(ws, "X-CSTP-DNS: %s\r\n",
-			       ws->user_config->dns[i]);
+		if (req->user_agent_type == AGENT_ANYCONNECT) {
+			ret =
+			    cstp_printf(ws, "X-CSTP-%s: %s\r\n",
+				       ip6 ? "DNS-IP6" : "DNS",
+				       ws->user_config->dns[i]);
+		} else { /* openconnect does not require the split
+			  * of DNS and DNS-IP6 and only recent versions
+			  * understand the IP6 variant. */
+			ret =
+			    cstp_printf(ws, "X-CSTP-DNS: %s\r\n",
+				        ws->user_config->dns[i]);
+		}
 		SEND_ERR(ret);
 	}
 

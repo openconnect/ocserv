@@ -84,7 +84,8 @@ enum {
 enum {
 	AGENT_UNKNOWN,
 	AGENT_OPENCONNECT_V3,
-	AGENT_OPENCONNECT
+	AGENT_OPENCONNECT,
+	AGENT_ANYCONNECT
 };
 
 typedef int (*decompress_fn)(void* dst, int maxDstSize, const void* src, int src_size);

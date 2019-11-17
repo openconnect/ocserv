@@ -4,3 +4,5 @@ keepalive = 14400
 max-same-clients = 1
 dns = 8.8.8.8
 hostname = xxxx
+split-dns = example5.com
+split-dns = example6.com

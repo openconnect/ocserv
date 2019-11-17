@@ -2023,8 +2023,8 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
-	for (i = 0; i < WSCONFIG(ws)->split_dns_size; i++) {
-		if (strchr(WSCONFIG(ws)->split_dns[i], ':') != 0)
+	for (i = 0; i < ws->user_config->n_split_dns; i++) {
+		if (strchr(ws->user_config->split_dns[i], ':') != 0)
 			ip6 = 1;
 		else
 			ip6 = 0;
@@ -2035,10 +2035,10 @@ static int connect_handler(worker_st * ws)
 			continue;
 
 		oclog(ws, LOG_INFO, "adding split DNS %s",
-		      WSCONFIG(ws)->split_dns[i]);
+		      ws->user_config->split_dns[i]);
 		ret =
 		    cstp_printf(ws, "X-CSTP-Split-DNS: %s\r\n",
-			       WSCONFIG(ws)->split_dns[i]);
+			       ws->user_config->split_dns[i]);
 		SEND_ERR(ret);
 	}
 

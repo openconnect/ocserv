@@ -324,6 +324,11 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 		gc->n_nbns = vhost->perm_config.config->network.nbns_size;
 	}
 
+	if (gc->split_dns == NULL) {
+		gc->split_dns = vhost->perm_config.config->split_dns;
+		gc->n_split_dns = vhost->perm_config.config->split_dns_size;
+	}
+
 	if (!gc->has_interim_update_secs) {
 		gc->interim_update_secs = vhost->perm_config.config->stats_report_time;
 		gc->has_interim_update_secs = 1;

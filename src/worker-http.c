@@ -379,6 +379,22 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 			req->user_agent_type = AGENT_OPENCONNECT;
 		} else if (strncasecmp(req->user_agent, "Cisco AnyConnect", 16) == 0) {
 			req->user_agent_type = AGENT_ANYCONNECT;
+		} else if (strncasecmp(req->user_agent, "AnyConnect", 10) == 0) {
+			req->user_agent_type = AGENT_ANYCONNECT;
+		}
+
+		switch (req->user_agent_type) {
+			case AGENT_OPENCONNECT_V3:
+				oclog(ws, LOG_DEBUG, "Detected OpenConnect v3 or older");
+				break;
+			case AGENT_OPENCONNECT:
+				oclog(ws, LOG_DEBUG, "Detected OpenConnect v4 or newer");
+				break;
+			case AGENT_ANYCONNECT:
+				oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
+				break;
+			default:
+				oclog(ws, LOG_DEBUG, "Unknown client");
 		}
 		break;
 

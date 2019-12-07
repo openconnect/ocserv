@@ -111,6 +111,8 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 		READ_TF(msg->config->deny_roaming, msg->config->has_deny_roaming);
 	} else if (strcmp(name, "route") == 0) {
 		READ_RAW_MULTI_LINE(msg->config->routes, msg->config->n_routes);
+	} else if (strcmp(name, "split-dns") == 0) {
+		READ_RAW_MULTI_LINE(msg->config->split_dns, msg->config->n_split_dns);
 	} else if (strcmp(name, "no-route") == 0) {
 		READ_RAW_MULTI_LINE(msg->config->no_routes, msg->config->n_no_routes);
 	} else if (strcmp(name, "iroute") == 0) {

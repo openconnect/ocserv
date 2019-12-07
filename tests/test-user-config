@@ -83,7 +83,7 @@ echo -n "Checking if proper dns was sent... "
 
 CONTENTS=`cat ${TMPFILE1}|grep "X-CSTP-DNS: 8.8.8.8"`
 if test -z "$CONTENTS";then
-	cat ${TMPFILE1}
+	cat ${TMPFILE1}|grep X-CSTP-DNS
 	fail $PID "Expected DNS was not sent"
 fi
 
@@ -95,6 +95,26 @@ CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Split-Include|grep 192.168.1.0`
 if test -z "$CONTENTS";then
 	cat ${TMPFILE1}|grep X-CSTP-Split-Include
 	fail $PID "Temporary file contents are not correct; iroute was not found"
+fi
+
+echo ok
+
+echo -n "Checking if split-dns has been sent... "
+
+CONTENTS=`cat ${TMPFILE1}|grep X-CSTP-Split-DNS|grep example6.com`
+if test -z "$CONTENTS";then
+	cat ${TMPFILE1}|grep X-CSTP-Split-DNS
+	fail $PID "Temporary file contents are not correct; X-CSTP-Split-DNS was not found"
+fi
+
+echo ok
+
+echo -n "Checking if split-dns has not been sent... "
+
+cat ${TMPFILE1}|grep X-CSTP-Split-DNS|grep example.com >/dev/null
+if test $? = 0;then
+	cat ${TMPFILE1}|grep X-CSTP-Split-DNS
+	fail $PID "Temporary file contents are not correct; X-CSTP-Split-DNS contained main config value"
 fi
 
 echo ok
@@ -149,6 +169,16 @@ if test -z "$CONTENTS";then
 	cat ${TMPFILE1}|grep X-CSTP-Address
 	fail $PID "Temporary file contents are not correct; address was not the expected (10.9.)"
 fi
+
+echo -n "Checking if main config split-dns has been sent... "
+
+cat ${TMPFILE1}|grep X-CSTP-Split-DNS|grep example.com >/dev/null
+if test $? != 0;then
+	cat ${TMPFILE1}|grep X-CSTP-Split-DNS
+	fail $PID "Temporary file contents are not correct; X-CSTP-Split-DNS did not contain main config value"
+fi
+
+echo ok
 
 
 kill $kpid3

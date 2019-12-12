@@ -21,7 +21,7 @@
 # along with this file; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-#this test can only be run as root
+builddir=${builddir:-.}
 
 OPENCONNECT=${OPENCONNECT:-/usr/sbin/openconnect}
 
@@ -115,17 +115,31 @@ launch_sr_server() {
 	fi
 }
 
-launch_sr_pam_server() {
-	mkdir -p "data/$PAMDIR/"
-	test -f "${srcdir}/data/$PAMDIR/users.oath.templ" && cp "${srcdir}/data/$PAMDIR/users.oath.templ" "data/$PAMDIR/users.oath"
-	test -f "${srcdir}/data/$PAMDIR/passdb.templ" && cp "${srcdir}/data/$PAMDIR/passdb.templ" "data/$PAMDIR/passdb"
-	export PAM_WRAPPER_SERVICE_DIR=pam.$$.tmp
-	export NSS_WRAPPER_PASSWD=${srcdir}/data/pam/nss-passwd
-	export NSS_WRAPPER_GROUP=${srcdir}/data/pam/nss-group
-	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
-		LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
+launch_pam_server() {
+	test -z "${TEST_PAMDIR}" && exit 2
+	export PAM_WRAPPER_DEBUGLEVEL=3
+	export PAM_WRAPPER_SERVICE_DIR="${builddir}/pam.$$.tmp/"
+	mkdir -p "${PAM_WRAPPER_SERVICE_DIR}"
+	test -f "${srcdir}/${TEST_PAMDIR}/users.oath.templ" && cp "${srcdir}/${TEST_PAMDIR}/users.oath.templ" "${PAM_WRAPPER_SERVICE_DIR}/users.oath"
+	test -f "${srcdir}/${TEST_PAMDIR}/passdb.templ" && cp "${srcdir}/${TEST_PAMDIR}/passdb.templ" "${PAM_WRAPPER_SERVICE_DIR}/passdb"
+	if test -f "${builddir}/${TEST_PAMDIR}/ocserv";then
+		cp "${builddir}/${TEST_PAMDIR}/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
 	else
-		LD_PRELOAD=libnss_wrapper.so:libpam_wrapper.so:libsocket_wrapper.so:libuid_wrapper.so PAM_WRAPPER_SERVICE_DIR="data/$PAMDIR" PAM_WRAPPER=1  UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
+		cp "${builddir}/data/pam/ocserv" "${PAM_WRAPPER_SERVICE_DIR}/"
+	fi
+	sed -i -e 's|%PAM_WRAPPER_SERVICE_DIR%|'${PAM_WRAPPER_SERVICE_DIR}'|g' "${PAM_WRAPPER_SERVICE_DIR}/ocserv"
+
+	cp "${builddir}/data/pam/nss-passwd" "${PAM_WRAPPER_SERVICE_DIR}/"
+	cp "${builddir}/data/pam/nss-group" "${PAM_WRAPPER_SERVICE_DIR}/"
+	export NSS_WRAPPER_PASSWD=${PAM_WRAPPER_SERVICE_DIR}/nss-passwd
+	export NSS_WRAPPER_GROUP=${PAM_WRAPPER_SERVICE_DIR}/nss-group
+	if test "$SOCKET_WRAPPER" != 0;then
+		SR="libsocket_wrapper.so:"
+	fi
+	if test -n "${VERBOSE}" && test "${VERBOSE}" -ge 1;then
+		LD_PRELOAD=libnss_wrapper.so:${SR}libpam_wrapper.so:libuid_wrapper.so PAM_WRAPPER=1 UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* &
+	else
+		LD_PRELOAD=libnss_wrapper.so:${SR}libpam_wrapper.so:libuid_wrapper.so PAM_WRAPPER=1 UID_WRAPPER=1 UID_WRAPPER_ROOT=1 $SERV $* >/dev/null 2>&1 &
 	fi
 	LOCALPID="$!";
 	unset NSS_WRAPPER_PASSWD
@@ -137,6 +151,10 @@ launch_sr_pam_server() {
 		 # Houston, we'v got a problem...
 		 exit 1
 	fi
+}
+
+launch_sr_pam_server() {
+	SOCKET_WRAPPER=1 launch_pam_server $*
 }
 
 launch_simple_sr_server() {
@@ -179,7 +197,8 @@ cleanup() {
 		ret=1
 	fi
 	wait
-	test -n "$SOCKDIR" && rm -rf $SOCKDIR
+	test -n "${PAM_WRAPPER_SERVICE_DIR}" && rm -rf ${PAM_WRAPPER_SERVICE_DIR}
+	test -n "${SOCKDIR}" && rm -rf ${SOCKDIR}
 	rm -f ${CONFIG}
 	return $ret
 }

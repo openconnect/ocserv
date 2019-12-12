@@ -27,7 +27,7 @@ PORT=6552
 
 echo "Testing PAM acct backend with username-password... "
 
-export PAMDIR=pam-single
+export TEST_PAMDIR=data/pam-single
 
 update_config test-pam-noauth.config
 launch_sr_pam_server -d 1 -f -c ${CONFIG} & PID=$!

@@ -29,7 +29,7 @@ VERBOSE=1
 
 echo "Testing PAM backend with username-password... "
 
-export PAMDIR=pam
+export TEST_PAMDIR=data/pam
 update_config test-pam.config
 launch_sr_pam_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID

@@ -1,0 +1,150 @@
+#!/bin/bash
+#
+# Copyright (C) 2019 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This tests operation/traffic under compression (lzs or lz4).
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=5647
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+PATH=${PATH}:/usr/sbin
+IP=$(which ip)
+OUTFILE=traffic.$$.tmp
+
+USERNAME=krb5user
+USERPASS=krb5user123
+
+
+. `dirname $0`/common.sh
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+if ! test -f /etc/krb5.conf && ! test -f /var/kerberos/krb5kdc/kdc.conf;then
+	echo "This test must be run on a KDC-running system"
+	exit 1
+fi
+
+echo "Testing ocserv with kerberos... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${KRB5PID}" && kill ${KRB5PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  rm -f ${OUTFILE} 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.97.216.1
+CLI_ADDRESS=10.97.217.1
+
+VPNNET=192.168.1.0/24
+VPNADDR=192.168.1.1
+VPNNET6=fd91:6d87:7341:db6a::/112
+VPNADDR6=fd91:6d87:7341:db6a::1
+OCCTL_SOCKET=./occtl-radius-$$.socket
+
+. `dirname $0`/ns.sh
+
+${CMDNS2} ${IP} link set dev lo up
+
+# Run KDC
+# This is destructive at the moment as it changes the system that it is being run.
+echo -e "secret123\nsecret123"|/usr/sbin/kdb5_util create -s
+
+echo " * added ${USERNAME}"
+echo -e "${USERPASS}\n${USERPASS}" | /usr/sbin/kadmin.local -q "addprinc ${USERNAME}"
+echo -e "test123\ntest123" | /usr/sbin/kadmin.local -q "addprinc HTTP/kerberos.test"
+/usr/sbin/kadmin.local -q "xst -norandkey -k /etc/krb5-keytab HTTP/kerberos.test@KERBEROS.TEST"
+
+${CMDNS2} /usr/sbin/krb5kdc &
+KRB5PID=$!
+
+sleep 2
+
+export TEST_PAMDIR=data/pam-kerberos
+update_config kerberos.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+# Run ocserv
+PREPEND_CMD=${CMDNS2}
+launch_pam_server -d 1 -f -c ${CONFIG} & PID=$!
+PREPEND_CMD=""
+
+sleep 5
+
+echo " * Getting cookie via PAM from ${ADDRESS}:${PORT}..."
+( echo "${USERPASS}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+${CMDNS1} echo ${USERPASS}|kinit ${USERNAME}@KERBEROS.TEST
+
+echo " * Connecting via krb5 to ${ADDRESS}:${PORT}..."
+( ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+sleep 3
+
+${CMDNS1} ping -w 5 ${VPNADDR}
+if test $? != 0;then
+	echo "Could not ping server IP"
+	exit 1
+fi
+
+${CMDNS2} ping -w 3 ${CLIVPNADDR}
+if test $? != 0;then
+	echo "Could not ping client IP"
+	exit 1
+fi
+
+sleep 60
+
+echo " * Connecting via krb5 and non-fresh ticket to ${ADDRESS}:${PORT}..."
+( ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? = 0;then
+	echo "Could connect to server although not expected"
+	exit 1
+fi
+
+
+exit 0

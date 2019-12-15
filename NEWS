@@ -1,7 +1,8 @@
 * Version 0.12.6 (unreleased)
 - Improved IPv6 support for anyconnect clients. Patch by Leendert van Doorn.
 - The 'split-dns' configuration directive can be used per-user (#229).
-
+- The max-same-clients=1 configuration option no longer refuses the
+  reconnection of an already connected user (#223).
 
 * Version 0.12.5 (released 2019-10-16)
 - Fixed issue with FreeBSD tun devices closing (#213).

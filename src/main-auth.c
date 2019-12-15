@@ -205,8 +205,9 @@ struct proc_st *old_proc;
 		/* steal its leases */
 		steal_ip_leases(old_proc, proc);
 
-		if (old_proc->pid > 0)
-			kill(old_proc->pid, SIGTERM);
+		if (old_proc->pid > 0) {
+			kill_proc(old_proc);
+		}
 		mslog(s, proc, LOG_DEBUG, "re-using session");
 	} else {
 		mslog(s, proc, LOG_INFO, "new user session");
@@ -237,9 +238,9 @@ struct proc_st *old_proc;
  */
 int check_multiple_users(main_server_st *s, struct proc_st* proc)
 {
-struct proc_st *ctmp = NULL, *cpos;
-unsigned int entries = 1; /* that one */
-unsigned max;
+	struct proc_st *ctmp = NULL, *cpos;
+	unsigned int entries = 1; /* that one */
+	unsigned max;
 
 	max = proc->config->max_same_clients;
 
@@ -248,7 +249,7 @@ unsigned max;
 
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp != proc && ctmp->pid != -1) {
-			if (strcmp(proc->username, ctmp->username) == 0) {
+			if (!ctmp->pid_killed && strcmp(proc->username, ctmp->username) == 0) {
 				entries++;
 
 				if (entries > max)

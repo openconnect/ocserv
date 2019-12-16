@@ -121,6 +121,7 @@ int disable_system_calls(struct worker_st *ws)
 		if (vhost->perm_config.config->xml_config_file) {
 			ADD_SYSCALL(stat, 0);
 			ADD_SYSCALL(open, 0);
+			ADD_SYSCALL(openat, 0);
 			break;
 		}
 	}

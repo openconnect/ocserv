@@ -1,4 +1,4 @@
-[![Build status](https://gitlab.com/openconnect/ocserv/badges/master/build.svg)](https://gitlab.com/openconnect/ocserv/commits/master)
+[![Build status](https://gitlab.com/openconnect/ocserv/badges/master/pipeline.svg)](https://gitlab.com/openconnect/ocserv/commits/master)
 [![coverage report](https://gitlab.com/openconnect/ocserv/badges/master/coverage.svg)](https://openconnect.gitlab.io/ocserv/coverage/)
 
 # About

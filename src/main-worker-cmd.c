@@ -381,8 +381,9 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 					/* If the address is in the BAN list, terminate it */
 					if (check_if_banned(s, &proc->remote_addr, proc->remote_addr_len) != 0) {
-						if (proc->pid != -1 && proc->pid != 0)
-							kill(proc->pid, SIGTERM);
+						if (proc->pid != -1 && proc->pid != 0) {
+							kill_proc(proc);
+						}
 					}
 				}
 

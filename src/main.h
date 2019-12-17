@@ -32,6 +32,7 @@
 #include <common.h>
 #include <sys/un.h>
 #include <sys/uio.h>
+#include <signal.h>
 #include <ev.h>
 
 #include "vhost.h"
@@ -90,6 +91,8 @@ typedef struct proc_st {
 	struct list_node list;
 	int fd; /* the command file descriptor */
 	pid_t pid;
+	unsigned pid_killed; /* if explicitly disconnected */
+
 	time_t udp_fd_receive_time; /* when the corresponding process has received a UDP fd */
 	
 	time_t conn_time; /* the time the user connected */
@@ -159,6 +162,12 @@ typedef struct proc_st {
 	 * vhosts never get deleted, this pointer is always valid */
 	vhost_cfg_st *vhost;
 } proc_st;
+
+inline static void kill_proc(proc_st *proc)
+{
+	kill(proc->pid, SIGTERM);
+	proc->pid_killed = 1;
+}
 
 struct ip_lease_db_st {
 	struct htable ht;

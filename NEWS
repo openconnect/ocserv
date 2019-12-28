@@ -1,4 +1,4 @@
-* Version 0.12.6 (unreleased)
+* Version 0.12.6 (released 2019-12-28)
 - Improved IPv6 support for anyconnect clients. Patch by Leendert van Doorn.
 - The 'split-dns' configuration directive can be used per-user (#229).
 - The max-same-clients=1 configuration option no longer refuses the

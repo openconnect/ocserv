@@ -19,6 +19,7 @@ Build/Debian:
     ./configure --without-nuttcp-tests --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -37,6 +38,7 @@ Build/Ubuntu:
   - make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -54,6 +56,7 @@ Build/Centos7:
     ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -80,6 +83,7 @@ RPM/el7:
   - cd $CURDIR && find /usr/local/rpms/ocserv -name '*.rpm' -exec cp '{}' ./ ';'
   tags:
   - shared
+  - linux
   except:
    - tags
   artifacts:
@@ -108,6 +112,7 @@ Coverity:
     --form description="CI build"
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -129,6 +134,7 @@ Build/Fedora:
   - make files-update && make dist && make local-code-coverage-output
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -145,6 +151,7 @@ Build/Centos6:
   - CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ./configure --disable-systemd --enable-local-libopts --without-docker-tests && make && make check -j$(nproc)
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -162,6 +169,7 @@ Build/minimal:
     ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$(nproc) && make check -j$(nproc) XFAIL_TESTS="lz4-compression"
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -182,6 +190,7 @@ Build/minimal:
     ./configure --without-pam --without-docker-tests && make -j$(nproc) && make check -j$(nproc) VERBOSE=1
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -200,6 +209,7 @@ ubsan/Fedora:
     ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -219,6 +229,7 @@ static-analyzers/Fedora:
   - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i src/inih
   tags:
   - shared
+  - linux
   except:
   - tags
   artifacts:
@@ -254,6 +265,7 @@ pages:
     make CODE_COVERAGE_OUTPUT_DIRECTORY=public/coverage local-code-coverage-output
   tags:
   - shared
+  - linux
   dependencies:
   - Build/Fedora
   only:

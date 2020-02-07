@@ -32,6 +32,7 @@ fi
 
 if test -z "$NO_NEED_ROOT";then
 	if test "$(id -u)" != "0";then
+		echo "You need to run this script as root"
 		exit 77
 	fi
 else

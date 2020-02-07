@@ -1,5 +1,9 @@
 /* inih -- simple .INI file parser
 
+SPDX-License-Identifier: BSD-3-Clause
+
+Copyright (C) 2009-2019, Ben Hoyt
+
 inih is released under the New BSD license (see LICENSE.txt). Go to the project
 home page for more info:
 
@@ -73,9 +77,15 @@ int ini_parse_string(const char* string, ini_handler handler, void* user);
 #endif
 
 /* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of
-   the file. See http://code.google.com/p/inih/issues/detail?id=21 */
+   the file. See https://github.com/benhoyt/inih/issues/21 */
 #ifndef INI_ALLOW_BOM
 #define INI_ALLOW_BOM 1
+#endif
+
+/* Chars that begin a start-of-line comment. Per Python configparser, allow
+   both ; and # comments at the start of a line by default. */
+#ifndef INI_START_COMMENT_PREFIXES
+#define INI_START_COMMENT_PREFIXES ";#"
 #endif
 
 /* Nonzero to allow inline comments (with valid inline comment characters
@@ -115,6 +125,20 @@ int ini_parse_string(const char* string, ini_handler handler, void* user);
 /* Stop parsing on first error (default is to keep parsing). */
 #ifndef INI_STOP_ON_FIRST_ERROR
 #define INI_STOP_ON_FIRST_ERROR 0
+#endif
+
+/* Nonzero to call the handler at the start of each new section (with
+   name and value NULL). Default is to only call the handler on
+   each name=value pair. */
+#ifndef INI_CALL_HANDLER_ON_NEW_SECTION
+#define INI_CALL_HANDLER_ON_NEW_SECTION 0
+#endif
+
+/* Nonzero to allow a name without a value (no '=' or ':' on the line) and
+   call the handler with value NULL in this case. Default is to treat
+   no-value lines as an error. */
+#ifndef INI_ALLOW_NO_VALUE
+#define INI_ALLOW_NO_VALUE 0
 #endif
 
 #ifdef __cplusplus

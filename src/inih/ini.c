@@ -1,5 +1,9 @@
 /* inih -- simple .INI file parser
 
+SPDX-License-Identifier: BSD-3-Clause
+
+Copyright (C) 2009-2019, Ben Hoyt
+
 inih is released under the New BSD license (see LICENSE.txt). Go to the project
 home page for more info:
 
@@ -70,7 +74,7 @@ static char* find_chars_or_comment(const char* s, const char* chars)
 /* Version of strncpy that ensures dest (size bytes) is null-terminated. */
 static char* strncpy0(char* dest, const char* src, size_t size)
 {
-    strncpy(dest, src, size);
+    strncpy(dest, src, size - 1);
     dest[size - 1] = '\0';
     return dest;
 }
@@ -85,11 +89,11 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
     int max_line = INI_MAX_LINE;
 #else
     char* line;
-    int max_line = INI_INITIAL_ALLOC;
+    size_t max_line = INI_INITIAL_ALLOC;
 #endif
-#if INI_ALLOW_REALLOC
+#if INI_ALLOW_REALLOC && !INI_USE_STACK
     char* new_line;
-    int offset;
+    size_t offset;
 #endif
     char section[MAX_SECTION] = "";
     char prev_name[MAX_NAME] = "";
@@ -115,8 +119,8 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
 #endif
 
     /* Scan through stream line by line */
-    while (reader(line, max_line, stream) != NULL) {
-#if INI_ALLOW_REALLOC
+    while (reader(line, (int)max_line, stream) != NULL) {
+#if INI_ALLOW_REALLOC && !INI_USE_STACK
         offset = strlen(line);
         while (offset == max_line - 1 && line[offset - 1] != '\n') {
             max_line *= 2;
@@ -128,7 +132,7 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
                 return -2;
             }
             line = new_line;
-            if (reader(line + offset, max_line - offset, stream) == NULL)
+            if (reader(line + offset, (int)(max_line - offset), stream) == NULL)
                 break;
             if (max_line >= INI_MAX_LINE)
                 break;
@@ -148,9 +152,8 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
 #endif
         start = lskip(rstrip(start));
 
-        if (*start == ';' || *start == '#') {
-            /* Per Python configparser, allow both ; and # comments at the
-               start of a line */
+        if (strchr(INI_START_COMMENT_PREFIXES, *start)) {
+            /* Start-of-line comment */
         }
 #if INI_ALLOW_MULTILINE
         else if (*prev_name && *start && start > line) {
@@ -167,6 +170,10 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
                 *end = '\0';
                 strncpy0(section, start + 1, sizeof(section));
                 *prev_name = '\0';
+#if INI_CALL_HANDLER_ON_NEW_SECTION
+                if (!HANDLER(user, section, NULL, NULL) && !error)
+                    error = lineno;
+#endif
             }
             else if (!error) {
                 /* No ']' found on section line */
@@ -195,7 +202,14 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
             }
             else if (!error) {
                 /* No '=' or ':' found on name[=:]value line */
+#if INI_ALLOW_NO_VALUE
+                *end = '\0';
+                name = rstrip(start);
+                if (!HANDLER(user, section, name, NULL) && !error)
+                    error = lineno;
+#else
                 error = lineno;
+#endif
             }
         }
 

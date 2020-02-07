@@ -100,7 +100,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 
 #define PREAD_STRING(pool, varname) { \
 	unsigned len = strlen(value); \
-	while(c_isspace(value[len-1])) \
+	while(len > 0 && c_isspace(value[len-1])) \
 		len--; \
 	varname = talloc_strndup(pool, value, len); \
 	}

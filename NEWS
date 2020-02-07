@@ -1,3 +1,8 @@
+* Version 1.0.0 (unreleased)
+- Avoid crash on invalid configuration values.
+- Updated manpage generation to work with newer versions of ronn.
+
+
 * Version 0.12.6 (released 2019-12-28)
 - Improved IPv6 support for anyconnect clients. Patch by Leendert van Doorn.
 - The 'split-dns' configuration directive can be used per-user (#229).

@@ -1,0 +1,55 @@
+#!/bin/sh
+#
+# Copyright (C) 2020 Microsoft Corporation
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4503
+PIDFILE=ocserv-pid.$$.tmp
+OCCTL_SOCKET=./occtl-oidc-$$.socket
+
+. `dirname $0`/common.sh
+
+echo "Testing local backend with oidc token auth... "
+
+update_config test-oidc-auth.config
+launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+for token in data/success_*; do
+    http_result=$(LD_PRELOAD=libsocket_wrapper.so curl --insecure https://$ADDRESS:$PORT --request POST --data config-auth.xml --header "Authorization:Bearer=`cat $token`" --output /dev/null --write-out "%{http_code}")
+    if [ "$http_result" != "200" ]; then
+        fail $PID "Token incorrectly rejected returned $http_result"  
+    fi
+done
+for token in data/fail_*; do
+    http_result=$(LD_PRELOAD=libsocket_wrapper.so curl --insecure https://$ADDRESS:$PORT --request POST --data config-auth.xml --header "Authorization:Bearer=`cat $token`" --output /dev/null --silent --write-out "%{http_code}")
+    if [ "$http_result" != "401" ]; then
+        fail $PID "Token incorrectly accepted returned $http_result"
+    fi
+done
+
+if ! test -f ${PIDFILE};then
+	fail $PID "Could not find pid file ${PIDFILE}"
+fi
+
+cleanup
+
+exit 0

@@ -37,6 +37,7 @@
 #include <acct/radius.h>
 #include <auth/plain.h>
 #include <auth/gssapi.h>
+#include <auth/openidconnect.h>
 #include <auth/common.h>
 #include <sec-mod-sup-config.h>
 #include <sec-mod-acct.h>
@@ -177,6 +178,9 @@ static auth_types_st avail_auth_types[] =
 #endif
 	{NAME("plain"), &plain_auth_funcs, AUTH_TYPE_PLAIN, plain_get_brackets_string},
 	{NAME("certificate"), NULL, AUTH_TYPE_CERTIFICATE, NULL},
+#ifdef 	SUPPORT_OIDC_AUTH
+	{NAME("oidc"), &oidc_auth_funcs, AUTH_TYPE_OIDC, oidc_get_brackets_string},
+#endif
 };
 
 static void figure_auth_funcs(void *pool, const char *vhostname,
@@ -1574,6 +1578,9 @@ static void print_version(void)
 	append("PKCS#11");
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	append("AnyConnect");
+#endif
+#ifdef SUPPORT_OIDC_AUTH
+	append("oidc_auth");
 #endif
 	fprintf(stderr, "\n");
 

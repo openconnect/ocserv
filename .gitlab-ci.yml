@@ -19,7 +19,7 @@ Debian:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-nuttcp-tests --without-docker-tests && make -j$JOBS && make check -j$JOBS
+    ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth && make -j$JOBS && make check -j$JOBS
   tags:
   - shared
   - linux
@@ -61,7 +61,7 @@ Ubuntu18.04:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests --without-docker-tests
+  - ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -231,7 +231,7 @@ Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage --enable-kerberos-tests
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage --enable-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1
   - make files-update

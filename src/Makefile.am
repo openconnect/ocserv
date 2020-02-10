@@ -8,6 +8,10 @@ AM_CPPFLAGS += -I$(srcdir)/../gl/ -I$(builddir)/../gl/ \
 	$(LIBTALLOC_CFLAGS) $(LIBDBUS_CFLAGS) $(LIBOATH_CFLAGS) \
 	$(LIBKRB5_CFLAGS) $(LIBTASN1_CFLAGS) $(RADCLI_CFLAGS) $(SRC_CFLAGS)
 
+if ENABLE_OIDC_AUTH
+AM_CPPFLAGS += $(LIBCURL_CFLAGS) $(CJOSE_CFLAGS) $(JANSSON_CFLAGS)
+endif
+
 BUILT_SOURCES = ipc.pb-c.c ipc.pb-c.h \
 	http-heads.h kkdcp_asn1_tab.c ctl.pb-c.c ctl.pb-c.h
 
@@ -23,7 +27,11 @@ noinst_LIBRARIES = libipc.a
 # Authentication module sources
 AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
 	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c auth-unix.c \
-	auth-unix.h
+	auth-unix.h 
+
+if ENABLE_OIDC_AUTH
+AUTH_SOURCES += auth/openidconnect.c auth/openidconnect.h
+endif
 
 ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
 
@@ -69,8 +77,11 @@ ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
 	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
 	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
-	$(CODE_COVERAGE_LDFLAGS)
-
+	$(CODE_COVERAGE_LDFLAGS) 
+	
+if ENABLE_OIDC_AUTH
+ocserv_LDADD += $(LIBCURL_LIBS) $(CJOSE_LIBS) $(JANSSON_LIBS)
+endif
 
 ocserv_SOURCES += main-ctl-unix.c
 

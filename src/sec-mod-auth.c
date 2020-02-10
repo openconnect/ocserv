@@ -836,8 +836,11 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	if (req->user_agent != NULL)
 		strlcpy(e->acct_info.user_agent, req->user_agent, sizeof(e->acct_info.user_agent));
 
-	if (req->user_name != NULL) {
-		strlcpy(e->acct_info.username, req->user_name, sizeof(e->acct_info.username));
+	// Real user name is retrieved after auth.
+	if (!(req->auth_type & CONFIDENTIAL_USER_NAME_AUTH_TYPES)) {
+		if (req->user_name != NULL) {
+			strlcpy(e->acct_info.username, req->user_name, sizeof(e->acct_info.username));
+		}
 	}
 
 	if (req->our_ip != NULL) {

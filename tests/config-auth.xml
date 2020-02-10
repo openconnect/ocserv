@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE config-auth SYSTEM "config-auth.dtd">
+<config-auth client="vpn" type="init">
+    <version who="vpn">v5.01</version>
+</config-auth>
+
+

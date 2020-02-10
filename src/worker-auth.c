@@ -102,11 +102,19 @@ static const char login_msg_user[] =
 #define OCV3_LOGIN_MSG_START _OCV3_LOGIN_MSG_START("main")
 #define OCV3_PASSWD_MSG_START _OCV3_LOGIN_MSG_START("passwd")
 
+#ifdef SUPPORT_OIDC_AUTH
+#define HTTP_AUTH_OIDC_PREFIX "Bearer"
+#endif
+
 static const char ocv3_login_msg_end[] =
     "</form></auth>\n";
 
 static int get_cert_info(worker_st * ws);
 static int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg);
+
+#ifdef SUPPORT_OIDC_AUTH
+static int oidc_auth_handler(worker_st * ws, unsigned http_ver);
+#endif 
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 {
@@ -1330,6 +1338,49 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	return ret;
 }
 
+#ifdef SUPPORT_OIDC_AUTH
+static
+int oidc_auth_handler(worker_st * ws, unsigned http_ver)
+{
+	int ret;
+
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: 401 Unauthorized");
+	cstp_cork(ws);
+	ret = cstp_printf(ws, "HTTP/1.%u 401 Unauthorized\r\n", http_ver);
+	if (ret < 0)
+		return -1;
+
+	oclog(ws, LOG_HTTP_DEBUG, "HTTP sending: WWW-Authenticate: %s", HTTP_AUTH_OIDC_PREFIX);
+	ret = cstp_printf(ws, "WWW-Authenticate: %s\r\n", HTTP_AUTH_OIDC_PREFIX);
+
+	if (ret < 0)
+		return -1;
+
+	ret = cstp_puts(ws, "Content-Length: 0\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_puts(ws, "\r\n");
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = cstp_uncork(ws);
+	if (ret < 0) {
+		ret = -1;
+		goto cleanup;
+	}
+
+	ret = 0;
+
+ cleanup:
+	return ret;
+}
+#endif
+
 #define USERNAME_FIELD "username"
 #define GROUPNAME_FIELD "group%5flist"
 #define GROUPNAME_FIELD2 "group_list"
@@ -1386,6 +1437,21 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 			}
 		}
 		talloc_free(groupname);
+
+#ifdef SUPPORT_OIDC_AUTH
+		if (ws->selected_auth->type & AUTH_TYPE_OIDC) {
+			if (req->authorization == NULL || req->authorization_size == 0)
+				return oidc_auth_handler(ws, http_ver);
+
+			if ((req->authorization_size > (sizeof(HTTP_AUTH_OIDC_PREFIX) - 1)) && strncasecmp(req->authorization, HTTP_AUTH_OIDC_PREFIX, sizeof(HTTP_AUTH_OIDC_PREFIX) - 1) == 0) {
+				ireq.auth_type |= AUTH_TYPE_OIDC;
+				ireq.user_name = req->authorization + sizeof(HTTP_AUTH_OIDC_PREFIX);
+			} else {
+				oclog(ws, LOG_HTTP_DEBUG, "Invalid authorization data: %.*s", req->authorization_size, req->authorization);
+				goto auth_fail;
+			}
+		}
+#endif
 
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			if (req->authorization == NULL || req->authorization_size == 0)
@@ -1484,7 +1550,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		SecAuthContMsg areq = SEC_AUTH_CONT_MSG__INIT;
 
 		areq.ip = ws->remote_ip_str;
-
 		if (ws->selected_auth->type & AUTH_TYPE_GSSAPI) {
 			if (req->authorization == NULL || req->authorization_size <= 10) {
 				if (req->authorization != NULL)
@@ -1555,6 +1620,7 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	}
 
 	if (ret == ERR_AUTH_CONTINUE) {
+		
 		oclog(ws, LOG_DEBUG, "continuing authentication for '%s'",
 		      ws->username);
 		ws->auth_state = S_AUTH_REQ;

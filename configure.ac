@@ -577,6 +577,23 @@ if test "$have_cwrap_pam" = yes; then
 	fi
 fi
 
+AC_ARG_ENABLE([oidc-auth],
+  [AS_HELP_STRING([--oidc-auth],
+                  [whether to support OpenID Connect auth (default is no)])],
+  [enable_oidc_auth=$enableval],
+  [enable_oidc_auth=no]
+)
+
+if test "x$enable_oidc_auth" = xyes; then
+  AC_DEFINE([SUPPORT_OIDC_AUTH], 1, [Enable support for OpenID Connect auth])
+  PKG_CHECK_MODULES([LIBCURL], [libcurl])
+  PKG_CHECK_MODULES([CJOSE], [cjose])
+  PKG_CHECK_MODULES([JANSSON], [jansson])
+fi
+
+AM_CONDITIONAL(ENABLE_OIDC_AUTH,  test "x$enable_oidc_auth" = xyes)
+AM_CONDITIONAL(ENABLE_OIDC_AUTH_TESTS, test "x$enable_oidc_auth" = xyes)
+
 uid=$(id -u)
 gid=$(id -g)
 AC_SUBST([ROOTUID], [$uid])
@@ -610,6 +627,7 @@ Summary of build options:
   PAM auth backend:     ${pam_enabled}
   Radius auth backend:  ${radius_enabled}
   GSSAPI auth backend:  ${enable_gssapi}
+  OIDC Auth backend:    ${enable_oidc_auth}
   Anyconnect compat:    ${anyconnect_enabled}
   TCP wrappers:         ${libwrap_enabled}
   systemd:              ${systemd_enabled}

@@ -7,6 +7,7 @@ variables:
   DEBIAN_BUILD: buildenv-debian
   FEDORA_BUILD: buildenv-fedora
   UBUNTU_BUILD: buildenv-ubuntu
+  CENTOS8_BUILD: buildenv-centos8
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
 
@@ -36,6 +37,24 @@ Build/Ubuntu:
   - git submodule update --init && autoreconf -fvi
   - ./configure --without-nuttcp-tests --without-docker-tests
   - make -j$(nproc) && make check -j$(nproc)
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
+Build/Centos8:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
+  script:
+  - git submodule update --init && autoreconf -fvi &&
+    ./configure --without-http-parser && make -j$(nproc) && make check -j$(nproc)
   tags:
   - shared
   - linux

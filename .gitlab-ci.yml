@@ -7,8 +7,10 @@ variables:
   DEBIAN_BUILD: buildenv-debian
   FEDORA_BUILD: buildenv-fedora
   UBUNTU_BUILD: buildenv-ubuntu
+  CENTOS8_BUILD: buildenv-centos8
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
+  JOBS: 2
 
 Build/Debian:
   stage: testing
@@ -16,7 +18,7 @@ Build/Debian:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-nuttcp-tests --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-nuttcp-tests --without-docker-tests && make -j$JOBS && make check -j$JOBS
   tags:
   - shared
   - linux
@@ -35,7 +37,30 @@ Build/Ubuntu:
   script:
   - git submodule update --init && autoreconf -fvi
   - ./configure --without-nuttcp-tests --without-docker-tests
-  - make -j$(nproc) && make check -j$(nproc)
+  - make -j$JOBS && make check -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
+Build/Centos8:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
+  script:
+  - git submodule update --init
+  - autoreconf -fvi
+  - ./configure --without-http-parser
+  - chmod og-w tests/data/raddb
+  - chmod og-w tests/data/raddb/*
+  - make -j$JOBS
+  - make check VERBOSE=1 -j$JOBS
   tags:
   - shared
   - linux
@@ -53,7 +78,7 @@ Build/Centos7:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD
   script:
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-docker-tests && make -j$JOBS && make check -j$JOBS
   tags:
   - shared
   - linux
@@ -104,7 +129,7 @@ Coverity:
   - tar xfz /tmp/coverity_tool.tgz
   - git submodule update --init && autoreconf -fvi
   - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror
-  - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$(nproc)
+  - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$JOBS
   - tar cfz cov-int.tar.gz cov-int
   - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
     --form token=$COVERITY_SCAN_TOKEN --form email=n.mavrogiannopoulos@gmail.com
@@ -130,7 +155,7 @@ Build/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi
   - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage --enable-kerberos-tests
-  - make -j$(nproc) && make check -j$(nproc) COVERAGE=1
+  - make -j$JOBS && make check -j$JOBS COVERAGE=1
   - make files-update && make dist && make local-code-coverage-output
   tags:
   - shared
@@ -148,7 +173,7 @@ Build/Centos6:
   script:
   - sed -i 's/AM_PROG_AR//g' configure.ac
   - git submodule update --init && autoreconf -fvi
-  - CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ./configure --disable-systemd --enable-local-libopts --without-docker-tests && make && make check -j$(nproc)
+  - CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ./configure --disable-systemd --enable-local-libopts --without-docker-tests && make && make check -j$JOBS
   tags:
   - shared
   - linux
@@ -166,7 +191,7 @@ Build/minimal:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD
   script:
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$(nproc) && make check -j$(nproc) XFAIL_TESTS="lz4-compression"
+    ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf && make -j$JOBS && make check -j$JOBS XFAIL_TESTS="lz4-compression"
   tags:
   - shared
   - linux
@@ -187,7 +212,7 @@ Build/minimal:
   script:
   - chmod o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan"
-    ./configure --without-pam --without-docker-tests && make -j$(nproc) && make check -j$(nproc) VERBOSE=1
+    ./configure --without-pam --without-docker-tests && make -j$JOBS && make check -j$JOBS VERBOSE=1
   tags:
   - shared
   - linux
@@ -206,7 +231,7 @@ ubsan/Fedora:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi && CFLAGS="-fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2"
-    ./configure --without-docker-tests && make -j$(nproc) && make check -j$(nproc)
+    ./configure --without-docker-tests && make -j$JOBS && make check -j$JOBS
   tags:
   - shared
   - linux
@@ -225,7 +250,7 @@ static-analyzers/Fedora:
   script:
   - autoreconf -fvi
   - scan-build ./configure
-  - scan-build --status-bugs -o scan-build-src make -j$(nproc)
+  - scan-build --status-bugs -o scan-build-src make -j$JOBS
   - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i src/inih
   tags:
   - shared
@@ -243,7 +268,7 @@ Build/FreeBSD:
   script:
   - git submodule update --init && sh autogen.sh && mkdir build
   - cd build && LIBS="-L/usr/local/lib" ../configure --disable-nls --without-root-tests &&
-    gmake -j$(sysctl hw.ncpu | awk '{print $2}') && gmake check -j$(sysctl hw.ncpu | awk '{print $2}')
+    gmake -j$JOBS && gmake check -j$JOBS
   tags:
   - freebsd
   only:

@@ -55,7 +55,7 @@ Build/Centos8:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   script:
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-http-parser && make -j$JOBS && make check -j$JOBS
+    ./configure --without-http-parser && make -j$JOBS && make check VERBOSE=1 -j$JOBS
   tags:
   - shared
   - linux

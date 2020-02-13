@@ -29,7 +29,7 @@ CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
 IP=$(which ip)
 OUTFILE=traffic.$$.tmp
-RADIUSLOG=log.$$.tmp
+RADIUSLOG=radius-group.$$.log
 RADIUSD=$(which radiusd)
 
 if test -z "${RADIUSD}";then
@@ -64,7 +64,6 @@ function finish {
   test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
   test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
-  test -n "${RADIUSLOG}" && rm -f ${RADIUSLOG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
 }
 trap finish EXIT

@@ -54,8 +54,13 @@ Build/Centos8:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   script:
-  - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-http-parser && make -j$JOBS && make check VERBOSE=1 -j$JOBS
+  - git submodule update --init
+  - autoreconf -fvi
+  - ./configure --without-http-parser
+  - chmod og-w tests/data/raddb
+  - chmod og-w tests/data/raddb/*
+  - make -j$JOBS
+  - make check VERBOSE=1 -j$JOBS
   tags:
   - shared
   - linux

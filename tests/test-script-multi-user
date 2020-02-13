@@ -1,0 +1,75 @@
+#!/bin/sh
+#
+# Copyright (C) 2013-2016 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+srcdir=${srcdir:-.}
+builddir=${builddir:-.}
+PORT=4472
+PIDFILE=ocserv-pid.$$.tmp
+VPNNET=172.29.205.0/24
+OUTFILE=out.$$.tmp
+USERNAME=test
+
+. `dirname $0`/common.sh
+
+rm -f test-sleep.tmp
+
+OCCTL_SOCKET=./occtl-test-script-$$.socket
+
+echo "Testing whether ocserv blocks when script blocks..."
+update_config test-script-multi-user.config
+
+launch_sr_server -d 1 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo "Connecting to force script block... "
+echo "!@#$%^&*()<>" | timeout 60 $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true &
+
+sleep 3
+
+echo "Connecting to obtain cookie... "
+( echo "${USERNAME}" | $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
+echo "Connecting in background... "
+( echo "${USERNAME}" | timeout 15 $OPENCONNECT -q localhost:$PORT -u "${USERNAME}" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --background >/dev/null 2>&1 ) ||
+	fail $PID "Could not connect to server; probably blocked"
+
+sleep 3
+
+echo "Calling occtl"
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >$OUTFILE
+
+kill $PID
+wait
+
+grep ${USERNAME} ${OUTFILE}
+if test $? != 0;then
+	ret=1
+else
+	ret=0
+fi
+
+rm -f $OUTFILE
+rm -f test-sleep.tmp
+
+exit $ret
+

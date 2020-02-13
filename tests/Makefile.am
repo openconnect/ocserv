@@ -35,7 +35,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/radiusclient/dictionary data/radiusclient/radiusclient.conf \
 	data/radiusclient/servers data/radius.config data/radius-group.config data/radius-otp.config \
 	data/test-udp-listen-host.config data/pam-kerberos/passdb.templ \
-	data/test-max-same-1.config
+	data/test-max-same-1.config data/test-script-multi-user.config \
+	sleep-connect-script
 
 SUBDIRS = docker-ocserv
 
@@ -60,7 +61,7 @@ dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
 	multiple-routes haproxy-connect radius-group radius-otp json test-udp-listen-host \
-	test-max-same-1
+	test-max-same-1 test-script-multi-user
 
 #other tests requiring nuttcp for traffic
 if ENABLE_NUTTCP_TESTS

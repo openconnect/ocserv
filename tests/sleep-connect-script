@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if ! test -f test-sleep.tmp;then
+	touch test-sleep.tmp
+	sleep 600
+fi
+
+case "$REASON" in
+  connect)
+	;;
+  disconnect)
+	;;
+esac
+
+exit 0

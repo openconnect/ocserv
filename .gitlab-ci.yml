@@ -171,7 +171,7 @@ Coverity:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   only:
     refs:
-       - master
+       - master@openconnect/ocserv
        - coverity
   script:
   - wget https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_SCAN_TOKEN&project=$COVERITY_SCAN_PROJECT_NAME" -O /tmp/coverity_tool.tgz
@@ -365,7 +365,7 @@ pages:
   dependencies:
   - Build/Fedora
   only:
-  - master
+  - master@openconnect/ocserv
   artifacts:
     paths:
     - public

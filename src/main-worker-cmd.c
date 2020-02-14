@@ -256,6 +256,13 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 	length = ret;
 
+	if (length > MAX_MSG_SIZE) {
+		mslog(s, proc, LOG_DEBUG,
+		      "received too big message (%d)", (int)length);
+		ret = ERR_BAD_COMMAND;
+		return ret;
+	}
+
 	mslog(s, proc, LOG_DEBUG, "main received worker's message '%s' of %u bytes\n",
 	      cmd_request_to_str(cmd), (unsigned)length);
 

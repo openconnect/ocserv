@@ -26,6 +26,10 @@
 #include <netinet/in.h>
 
 #define MAX_IP_STR 46
+// Lower MTU bound is the value defined in RFC 791
+#define RFC_791_MTU (68)
+// Upper bound is the maximum DTLS frame size
+#define MAX_DTLS_MTU (1<<14)
 
 void set_mtu_disc(int fd, int family, int val);
 int ip_route_sanity_check(void *pool, char **_route);

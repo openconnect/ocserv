@@ -317,6 +317,11 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 		break;
 	case CMD_TUN_MTU:{
 			TunMtuMsg *tmsg;
+			unsigned minimum_mtu = RFC_791_MTU;
+			unsigned maximum_mtu =
+			    proc->vhost->perm_config.config->default_mtu != 0 ?
+			    proc->vhost->perm_config.config->default_mtu :
+			    MAX_DTLS_MTU;
 
 			if (proc->status != PS_AUTH_COMPLETED) {
 				mslog(s, proc, LOG_ERR,
@@ -328,6 +333,13 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 			tmsg = tun_mtu_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
 				mslog(s, proc, LOG_ERR, "error unpacking data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
+			if (tmsg->mtu < minimum_mtu || tmsg->mtu > maximum_mtu) {
+				mslog(s, proc, LOG_ERR,
+				      "worker process invalid MTU %d", (int)tmsg->mtu);
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}

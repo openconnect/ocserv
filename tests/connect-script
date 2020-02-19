@@ -2,28 +2,32 @@
 
 #echo $USERNAME : $REASON : $DEVICE
 
+env >/tmp/out.$REASON.tmp
+
+if test -z "${IP_REMOTE}";then
+	echo "Remote IP environment variable was not set"
+	exit 1
+fi
+
 case "$REASON" in
   connect)
 	test "${OCSERV_DNS}" = "192.168.1.1 192.168.5.1 " && \
 	test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \
 	test "${OCSERV_ROUTES}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
 	test "${OCSERV_ROUTES4}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
-	echo > connect.ok
+	echo "${IP_REMOTE}" > connect.ok
 	;;
   disconnect)
-  	if ! test -z "$DEVICE";then
-	  	#ifconfig $DEVICE
-	  	#if test "$?" = "0";then
+	if ! test -z "$DEVICE";then
 		test "${OCSERV_DNS}" = "192.168.1.1 192.168.5.1 " && \
 		test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \
 		test "${OCSERV_ROUTES}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
 		test "${OCSERV_ROUTES4}" = "192.168.1.0/255.255.255.0 192.168.5.0/255.255.255.0 " && \
-	  	echo > disconnect.ok
-		#fi
+		echo "${IP_REMOTE}" > disconnect.ok
 	fi
 	;;
   "host-update")
-  	echo > host-update.ok
+	echo > host-update.ok
 	;;
 esac
 

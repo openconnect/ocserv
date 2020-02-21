@@ -787,7 +787,7 @@ int run_sec_mod(main_server_st *s, int *sync_fd)
 		set_cloexec_flag (fd[0], 1);
 		set_cloexec_flag (sfd[0], 1);
 		clear_unneeded_mem(s->vconfig);
-		sec_mod_server(s->main_pool, s->config_pool, s->vconfig, p, fd[0], sfd[0]);
+		sec_mod_server(s->main_pool, s->config_pool, s->vconfig, p, fd[0], sfd[0], sizeof(s->hmac_key), s->hmac_key);
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);

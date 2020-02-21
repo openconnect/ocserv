@@ -62,6 +62,7 @@
 #include <grp.h>
 #include <ip-lease.h>
 #include <ccan/list/list.h>
+#include <hmac.h>
 
 #ifdef HAVE_GSSAPI
 # include <libtasn1.h>
@@ -1042,6 +1043,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 	int fd, ret;
 	int cmd_fd[2];
 	pid_t pid;
+	hmac_component_st hmac_components[3];
 
 	if (ltmp->sock_type == SOCK_TYPE_TCP || ltmp->sock_type == SOCK_TYPE_UNIX) {
 		/* connection on TCP port */
@@ -1120,6 +1122,22 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			ws->dtls_tptr.fd = -1;
 			ws->conn_fd = fd;
 			ws->conn_type = stype;
+			ws->session_start_time = time(0);
+
+			human_addr2((const struct sockaddr *)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
+			human_addr2((const struct sockaddr *)&ws->our_addr, ws->our_addr_len, ws->our_ip_str, sizeof(ws->our_ip_str), 0);
+
+			hmac_components[0].data = ws->remote_ip_str;
+			hmac_components[0].length = ws->remote_ip_str ? strlen(ws->remote_ip_str) : 0;
+			hmac_components[1].data = ws->our_ip_str;
+			hmac_components[1].length = ws->our_ip_str ?  strlen(ws->our_ip_str) : 0;
+			hmac_components[2].data = &ws->session_start_time;
+			hmac_components[2].length = sizeof(ws->session_start_time);
+
+			generate_hmac(sizeof(s->hmac_key), s->hmac_key, sizeof(hmac_components) / sizeof(hmac_components[0]), hmac_components, (uint8_t*) ws->sec_auth_init_hmac);
+			
+			// Clear the HMAC key
+			safe_memset((uint8_t*)s->hmac_key, 0, sizeof(s->hmac_key));
 
 			/* Drop privileges after this point */
 			drop_privileges(s);
@@ -1267,6 +1285,11 @@ int main(int argc, char** argv)
 	s->stats.start_time = s->stats.last_reset = time(0);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
+
+	if (!hmac_init_key(sizeof(s->hmac_key), (uint8_t*)(s->hmac_key))) {
+		fprintf(stderr, "unable to generate hmac key\n");
+		exit(1);
+	}
 
 	list_head_init(&s->proc_list.head);
 	list_head_init(&s->script_list.head);

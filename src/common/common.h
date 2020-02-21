@@ -36,6 +36,7 @@ void *_talloc_size2(void *ctx, size_t size);
 
 #define MAX_IP_STR 46
 
+
 #define PROTOBUF_ALLOCATOR(name, pool) \
 	ProtobufCAllocator name = {.alloc = _talloc_size2, .free = _talloc_free2, .allocator_data = pool}
 

@@ -25,6 +25,7 @@ Debian:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -46,6 +47,7 @@ Ubuntu16.04:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -90,6 +92,7 @@ Centos8:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -111,6 +114,7 @@ Centos7:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -146,7 +150,8 @@ RPM/epel7:
   - shared
   - linux
   except:
-   - tags
+  - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_success
@@ -181,7 +186,8 @@ RPM/epel8:
   - shared
   - linux
   except:
-   - tags
+  - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_success
@@ -189,8 +195,10 @@ RPM/epel8:
      - ./*.rpm
 
 Coverity:
-  stage: deploy
+  stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  only:
+  - schedules
   only:
     refs:
        - master@openconnect/ocserv
@@ -210,8 +218,6 @@ Coverity:
   tags:
   - shared
   - linux
-  except:
-  - tags
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -237,6 +243,7 @@ Fedora:
   - shared
   - linux
   except:
+  - schedules
   - tags
   artifacts:
     expire_in: 1 day
@@ -258,6 +265,7 @@ Centos6:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -279,6 +287,7 @@ minimal:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -303,6 +312,7 @@ minimal:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -325,6 +335,7 @@ ubsan/Fedora:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -345,6 +356,7 @@ static-analyzers/Fedora:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -367,6 +379,7 @@ FreeBSD:
   - branches@openconnect/ocserv
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure

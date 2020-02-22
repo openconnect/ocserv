@@ -6,13 +6,14 @@ variables:
   BUILD_IMAGES_PROJECT: openconnect/build-images
   DEBIAN_BUILD: buildenv-debian
   FEDORA_BUILD: buildenv-fedora
-  UBUNTU_BUILD: buildenv-ubuntu
+  UBUNTU16_BUILD: buildenv-ubuntu
+  UBUNTU18_BUILD: buildenv-ubuntu18
   CENTOS8_BUILD: buildenv-centos8
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
   JOBS: 2
 
-Build/Debian:
+Debian:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$DEBIAN_BUILD
   script:
@@ -31,9 +32,9 @@ Build/Debian:
       - ./*.log
       - ./tests/*.log
 
-Build/Ubuntu:
+Ubuntu16.04:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU16_BUILD
   script:
   - git submodule update --init
   - autoreconf -fvi
@@ -52,7 +53,28 @@ Build/Ubuntu:
       - ./*.log
       - ./tests/*.log
 
-Build/Centos8:
+Ubuntu18.04:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU18_BUILD
+  script:
+  - git submodule update --init
+  - autoreconf -fvi
+  - ./configure --without-nuttcp-tests --without-docker-tests
+  - make -j$JOBS
+  - make check -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
+Centos8:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   script:
@@ -75,7 +97,7 @@ Build/Centos8:
       - ./*.log
       - ./tests/*.log
 
-Build/Centos7:
+Centos7:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD
   script:
@@ -196,7 +218,7 @@ Coverity:
     paths:
       - cov-int/*.txt
 
-Build/Fedora:
+Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
@@ -221,7 +243,7 @@ Build/Fedora:
     untracked: true
     when: always
 
-Build/Centos6:
+Centos6:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS6_BUILD
   script:
@@ -243,7 +265,7 @@ Build/Centos6:
       - ./*.log
       - ./tests/*.log
 
-Build/minimal:
+minimal:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD
   script:
@@ -329,7 +351,7 @@ static-analyzers/Fedora:
     paths:
       - scan-build-src/*
 
-Build/FreeBSD:
+FreeBSD:
   stage: testing
   script:
   - git submodule update --init
@@ -363,7 +385,7 @@ pages:
   - shared
   - linux
   dependencies:
-  - Build/Fedora
+  - Fedora
   only:
   - master@openconnect/ocserv
   artifacts:

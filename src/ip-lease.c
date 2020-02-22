@@ -113,6 +113,30 @@ void steal_ip_leases(struct proc_st* proc, struct proc_st *thief)
 
 	thief->ipv4 = talloc_move(thief, &proc->ipv4);
 	thief->ipv6 = talloc_move(thief, &proc->ipv6);
+
+	/* we make sure that the original client has a copy so that during
+	 * disconnection the scripts will receive the right information */
+	if (thief->ipv4)
+		proc->ipv4 = talloc_zero(proc, struct ip_lease_st);
+	if (thief->ipv6)
+		proc->ipv6 = talloc_zero(proc, struct ip_lease_st);
+
+	if (proc->ipv4 != NULL) {
+		proc->ipv4->rip_len = thief->ipv4->rip_len;
+		proc->ipv4->lip_len = thief->ipv4->lip_len;
+		memcpy(&proc->ipv4->rip, &thief->ipv4->rip, thief->ipv4->rip_len);
+		memcpy(&proc->ipv4->lip, &thief->ipv4->lip, thief->ipv4->lip_len);
+		memcpy(&proc->ipv4->sig, &thief->ipv4->sig, thief->ipv4->sig_len);
+	}
+
+	if (proc->ipv6 != NULL) {
+		proc->ipv6->prefix = thief->ipv6->prefix;
+		proc->ipv6->rip_len = thief->ipv6->rip_len;
+		proc->ipv6->lip_len = thief->ipv6->lip_len;
+		memcpy(&proc->ipv6->rip, &thief->ipv6->rip, thief->ipv6->rip_len);
+		memcpy(&proc->ipv6->lip, &thief->ipv6->lip, thief->ipv6->lip_len);
+		memcpy(&proc->ipv6->sig, &thief->ipv6->sig, thief->ipv6->sig_len);
+	}
 }
 
 static int is_ipv6_ok(main_server_st *s, struct sockaddr_storage *ip, struct sockaddr_storage *net, struct sockaddr_storage *subnet)

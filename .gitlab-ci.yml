@@ -199,10 +199,7 @@ Coverity:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   only:
   - schedules
-  only:
-    refs:
-       - master@openconnect/ocserv
-       - coverity
+  - coverity
   script:
   - wget https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_SCAN_TOKEN&project=$COVERITY_SCAN_PROJECT_NAME" -O /tmp/coverity_tool.tgz
   - tar xfz /tmp/coverity_tool.tgz

@@ -69,6 +69,7 @@ Ubuntu18.04:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -240,7 +241,6 @@ Fedora:
   - shared
   - linux
   except:
-  - schedules
   - tags
   artifacts:
     expire_in: 1 day

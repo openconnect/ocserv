@@ -142,6 +142,7 @@ int handle_sec_mod_commands(main_server_st * s)
 				ret = ERR_BAD_COMMAND;
 				goto cleanup;
 			}
+			/* No need to authenticate tmsg->ip as sec-mod is trusted */
 			ret = add_str_ip_to_ban_list(s, tmsg->ip, tmsg->score);
 			if (ret < 0) {
 				reply.reply =

@@ -286,6 +286,7 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 	case CMD_BAN_IP:{
 			BanIpMsg *tmsg;
 			BanIpReplyMsg reply = BAN_IP_REPLY_MSG__INIT;
+			char remote_address[MAX_IP_STR];
 
 			tmsg = ban_ip_msg__unpack(&pa, raw_len, raw);
 			if (tmsg == NULL) {
@@ -294,7 +295,9 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 				goto cleanup;
 			}
 
-			ret = add_str_ip_to_ban_list(s, tmsg->ip, tmsg->score);
+			human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len, remote_address, sizeof(remote_address), 0);
+
+			ret = add_str_ip_to_ban_list(s, remote_address, tmsg->score);
 
 			ban_ip_msg__free_unpacked(tmsg, &pa);
 

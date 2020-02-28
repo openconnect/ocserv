@@ -47,6 +47,7 @@
 #include <worker-bandwidth.h>
 #include <signal.h>
 #include <poll.h>
+#include <math.h>
 
 #if defined(__linux__) && !defined(IPV6_PATHMTU)
 # define IPV6_PATHMTU 61
@@ -56,8 +57,13 @@
 #include "ipc.pb-c.h"
 #include <worker.h>
 #include <tlslib.h>
-
 #include <http_parser.h>
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+#include <linux/net_tstamp.h>
+#include <linux/errqueue.h>
+#include <worker-latency.h>
+#endif
 
 #define MIN_MTU(ws) (((ws)->vinfo.ipv6!=NULL)?1280:800)
 
@@ -330,6 +336,9 @@ static int setup_dtls_connection(struct worker_st *ws)
 {
 	int ret;
 	gnutls_session_t session;
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	int ts_socket_opt = SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
+#endif
 
 	/* DTLS cookie verified.
 	 * Initialize session.
@@ -360,7 +369,11 @@ static int setup_dtls_connection(struct worker_st *ws)
 	}
 
 	gnutls_transport_set_push_function(session, dtls_push);
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	gnutls_transport_set_pull_function(session, dtls_pull_latency);
+#else
 	gnutls_transport_set_pull_function(session, dtls_pull);
+#endif
 	gnutls_transport_set_pull_timeout_function(session, dtls_pull_timeout);
 	gnutls_transport_set_ptr(session, &ws->dtls_tptr);
 
@@ -370,6 +383,12 @@ static int setup_dtls_connection(struct worker_st *ws)
 	gnutls_dtls_set_timeouts(session, 400, 60*1000);
 
 	ws->udp_state = UP_HANDSHAKE;
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	ret = setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_TIMESTAMPING, &ts_socket_opt, sizeof(ts_socket_opt));
+	if (ret == -1)
+		oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_TIMESTAMPING), failed.");
+#endif
 
 	/* Setup the fd settings */
 	if (WSCONFIG(ws)->output_buffer > 0) {
@@ -1223,6 +1242,12 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 	    ws->sid_set) {
 		send_stats_to_secmod(ws, now, 0);
 	}
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	if (now - ws->latency.last_stats_msg >= LATENCY_WORKER_AGGREGATION_TIME) {
+		send_latency_stats_delta_to_main(ws, now);
+	}
+#endif
 
 	/* check DPD. Otherwise exit */
 	if (ws->udp_state == UP_ACTIVE &&
@@ -2432,6 +2457,14 @@ static int connect_handler(worker_st * ws)
 				terminate_reason = REASON_ERROR;
 				goto exit;
 			}
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+			if (ws->dtls_tptr.rx_time.tv_sec != 0) {
+				capture_latency_sample(ws, &ws->dtls_tptr.rx_time);
+				ws->dtls_tptr.rx_time.tv_sec = 0;
+				ws->dtls_tptr.rx_time.tv_nsec = 0;
+			}
+#endif
 		}
 
 		/* read commands from command fd */

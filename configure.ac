@@ -540,6 +540,28 @@ AC_CHECK_FUNCS(sigaction)
 AC_CHECK_FUNCS(longjmp setjmp)
 AC_CHECK_FUNCS(sigaltstack)
 
+AC_CHECK_HEADERS([linux/net_tstamp.h], [net_tstamp_header=yes], [net_tstamp_header=no])
+AC_CHECK_TYPES([struct scm_timestamping],[scm_timestamping_defined=yes],[scm_timestamping_defined=no],
+[#include <time.h>
+#include <linux/errqueue.h>])
+
+AC_ARG_ENABLE([latency-stats],
+  [AS_HELP_STRING([--enable-latency-stats],
+                  [enable capturing latency stats (default is no)])],
+  [enable_latency_stats=$enableval],
+  [enable_latency_stats=no]
+)
+
+have_latency_stats=no
+
+if test "x$enable_latency_stats" = xyes && test "x$net_tstamp_header" = xyes && test "x$scm_timestamping_defined" = xyes; then
+  AC_DEFINE([CAPTURE_LATENCY_SUPPORT], [1], [Enable capturing latency stats])
+  AC_LIB_HAVE_LINKFLAGS([m])
+  have_latency_stats=yes
+fi
+
+AM_CONDITIONAL(ENABLE_LATENCY_SUPPORT,  test "x$have_latency_stats" = xyes)
+
 AC_ARG_WITH(pcl-lib,
   AS_HELP_STRING([--without-pcl-lib], [use the included PCL library]),
   test_for_pcl_lib=$withval,
@@ -672,6 +694,7 @@ Summary of build options:
   local PCL library:    ${with_local_pcl}
   local http-parser:    ${with_local_http_parser}
   seccomp trap:		${use_seccomp_trap}
+  capture latency stats ${have_latency_stats}
 ])
 
 if test "${warn_leak}" = "yes";then

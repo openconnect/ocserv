@@ -212,6 +212,14 @@ message ban_ip_reply_msg
 	optional bytes sid = 2; /* sec-mod needs it */
 }
 
+/* WORKER_LATENCY_STATS_DELTA: sent from worker to main */
+message latency_stats_delta
+{
+	required uint64 median_delta = 1;
+	required uint64 rms_delta = 2;
+	required uint64 sample_count_delta = 3;
+}
+
 /* Messages to and from the security module */
 
 /*

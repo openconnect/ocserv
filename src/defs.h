@@ -74,6 +74,7 @@ typedef enum {
 	CMD_SESSION_INFO = 13,
 	CMD_BAN_IP = 16,
 	CMD_BAN_IP_REPLY = 17,
+	CMD_LATENCY_STATS_DELTA = 18,	
 
 	/* from worker to sec-mod */
 	CMD_SEC_AUTH_INIT = 120,

@@ -44,6 +44,9 @@ void print_pair_value(FILE *out, cmd_params_st *params, const char *name1, const
 void
 bytes2human(unsigned long bytes, char* output, unsigned output_size, const char* suffix);
 
+void
+time2human(uint64_t microseconds, char* output, unsigned output_size);
+
 char* search_for_id(unsigned idx, const char* match, int match_size);
 char* search_for_user(unsigned idx, const char* match, int match_size);
 void entries_add(void *pool, const char* user, unsigned user_size, unsigned id);

@@ -161,6 +161,9 @@ typedef struct dtls_transport_ptr {
 	int fd;
 	UdpFdMsg *msg; /* holds the data of the first client hello */
 	int consumed;
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	struct timespec rx_time;
+#endif
 } dtls_transport_ptr;
 
 /* Given a base MTU, this macro provides the DTLS plaintext data we can send;
@@ -295,6 +298,18 @@ typedef struct worker_st {
 	unsigned default_route;
 	
 	void *main_pool; /* to be used only on deinitialization */
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	/* latency stats */
+	struct {
+		uint64_t median_total;
+		uint64_t rms_total;
+		uint64_t sample_set_count;
+		size_t next_sample;
+		time_t last_stats_msg;
+		uint32_t samples[LATENCY_SAMPLE_SIZE];
+	} latency;
+#endif
 } worker_st;
 
 void vpn_server(struct worker_st* ws);

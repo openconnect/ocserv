@@ -252,8 +252,30 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		print_single_value_int(stdout, params, "IPs in ban list", rep->banned_ips, 1);
 		if (params && params->debug) {
 			print_single_value_int(stdout, params, "Sec-mod client entries", rep->secmod_client_entries, 1);
+#if defined(CAPTURE_LATENCY_SUPPORT)
 			print_single_value_int(stdout, params, "TLS DB entries", rep->stored_tls_sessions, 1);
+#else
+			print_single_value_int(stdout, params, "TLS DB entries", rep->stored_tls_sessions, 0);
+#endif
 		}
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+		if (rep->has_latency_sample_count) {
+			unsigned int median_latency = (unsigned int)(rep->latency_sample_count ? rep->latency_median_total / rep->latency_sample_count : 0);
+			unsigned int stdev_latency = (unsigned int)(rep->latency_sample_count ? rep->latency_rms_total / rep->latency_sample_count : 0);
+
+			time2human(median_latency, buf, sizeof(buf));
+			print_single_value(stdout, params, "Median latency", buf, 1);
+			if (HAVE_JSON(params)) 
+				print_single_value_int(stdout, params, "raw_median_latency", median_latency, 1);
+
+			time2human(stdev_latency, buf, sizeof(buf));
+			print_single_value(stdout, params, "STDEV latency", buf, 1);
+			if (HAVE_JSON(params)) 
+				print_single_value_int(stdout, params, "raw_stdev_latency", stdev_latency, 1);
+
+		}
+#endif
 
 		print_separator(stdout, params);
 		if (NO_JSON(params))

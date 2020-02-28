@@ -240,6 +240,21 @@ double data;
 	}
 }
 
+void
+time2human(uint64_t microseconds, char* output, unsigned output_size)
+{
+	if (microseconds < 1000) {
+		snprintf(output, output_size, "<1ms");
+		return;
+	} else if (microseconds < 1000000) {
+		snprintf(output, output_size, "%ldms", microseconds / 1000);
+		return;
+	} else {
+		snprintf(output, output_size, "%lds", microseconds / 1000000);
+		return;
+	}
+}
+
 static int handle_help_cmd(CONN_TYPE * conn, const char *arg, cmd_params_st *params)
 {
 	print_commands(1);

@@ -2,6 +2,8 @@
 - Avoid crash on invalid configuration values.
 - Updated manpage generation to work with newer versions of ronn.
 - Ensure scripts have all the information on all disconnection types (#231)
+- Several updates to further restrict the control that worker processes have
+  on the main process. Patches by Alan Jowett (#251, #252, #245, #247, #246)
 
 
 * Version 0.12.6 (released 2019-12-28)

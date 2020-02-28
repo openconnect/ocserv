@@ -53,6 +53,7 @@
 #include <sec-mod-sup-config.h>
 #include <sec-mod-acct.h>
 #include <c-strcase.h>
+#include <hmac.h>
 
 #ifdef HAVE_GSSAPI
 # include <gssapi/gssapi.h>
@@ -768,8 +769,36 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	unsigned i;
 	unsigned need_continue = 0;
 	vhost_cfg_st *vhost;
+	hmac_component_st hmac_components[3];
+	uint8_t computed_hmac[HMAC_DIGEST_SIZE];
+	time_t now = time(0);
+
+	if (req->hmac.len != HMAC_DIGEST_SIZE || !req->hmac.data) {
+		seclog(sec, LOG_AUTH, "hmac is the wrong size");
+		return -1;
+	}
+
+	/* Authenticate the client parameters */
+	hmac_components[0].data =  req->ip;
+	hmac_components[0].length = req->ip ? strlen(req->ip) : 0;
+	hmac_components[1].data = req->our_ip;
+	hmac_components[1].length = req->our_ip ? strlen(req->our_ip) : 0;
+	hmac_components[2].data = (void*)&req->session_start_time;
+	hmac_components[2].length = sizeof(req->session_start_time);
+	
+	generate_hmac(sizeof(sec->hmac_key), sec->hmac_key, sizeof(hmac_components) / sizeof(hmac_components[0]), hmac_components, computed_hmac);
+
+	if (memcmp(computed_hmac, req->hmac.data, req->hmac.len) != 0) {
+		seclog(sec, LOG_AUTH, "hmac presented by client doesn't match parameters provided - possible replay");
+		return -1;
+	}
 
 	vhost = find_vhost(sec->vconfig, req->vhost);
+
+	if ((now - req->session_start_time) > vhost->perm_config.config->auth_timeout) {
+		seclog(sec, LOG_AUTH, "hmac presented by client expired - possible replay");
+		return -1;
+	}
 
 	e = new_client_entry(sec, vhost, req->ip, pid);
 	if (e == NULL) {

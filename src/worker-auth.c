@@ -1330,27 +1330,6 @@ int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg)
 	return ret;
 }
 
-static char *get_our_ip(worker_st * ws, char str[MAX_IP_STR])
-{
-	int ret;
-	struct sockaddr_storage sockaddr;
-	socklen_t socklen;
-
-	if (ws->our_addr_len > 0) {
-		return human_addr2((struct sockaddr*)&ws->our_addr, ws->our_addr_len, str, MAX_IP_STR, 0);
-	}
-
-	if (ws->udp_state != UP_ACTIVE)
-		return NULL;
-
-	socklen = sizeof(sockaddr);
-	ret = getsockname(ws->dtls_tptr.fd, (struct sockaddr*)&sockaddr, &socklen);
-	if (ret == -1)
-		return NULL;
-
-	return human_addr2((struct sockaddr*)&sockaddr, socklen, str, MAX_IP_STR, 0);
-}
-
 #define USERNAME_FIELD "username"
 #define GROUPNAME_FIELD "group%5flist"
 #define GROUPNAME_FIELD2 "group_list"
@@ -1369,7 +1348,6 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 	char *username = NULL;
 	char *password = NULL;
 	char *groupname = NULL;
-	char our_ip_str[MAX_IP_STR];
 	char *msg = NULL;
 	unsigned def_group = 0;
 	unsigned pcounter = 0;
@@ -1475,7 +1453,10 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 
 		ireq.vhost = ws->vhost->name;
 		ireq.ip = ws->remote_ip_str;
-		ireq.our_ip = get_our_ip(ws, our_ip_str);
+		ireq.our_ip = ws->our_ip_str;
+		ireq.session_start_time = ws->session_start_time;
+		ireq.hmac.data = (uint8_t*)ws->sec_auth_init_hmac;
+		ireq.hmac.len = sizeof(ws->sec_auth_init_hmac);
 		if (req->user_agent[0] != 0)
 			ireq.user_agent = req->user_agent;
 

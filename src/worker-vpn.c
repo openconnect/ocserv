@@ -736,7 +736,6 @@ void vpn_server(struct worker_st *ws)
 			      "could not disable system calls, kernel might not support seccomp");
 		}
 	}
-	ws->session_start_time = time(0);
 
 	if (ws->remote_addr_len == sizeof(struct sockaddr_in))
 		ws->proto = AF_INET;
@@ -818,8 +817,6 @@ void vpn_server(struct worker_st *ws)
 	settings.on_message_complete = http_message_complete_cb;
 	settings.on_body = http_body_cb;
 	http_req_init(ws);
-
-	human_addr2((void*)&ws->remote_addr, ws->remote_addr_len, ws->remote_ip_str, sizeof(ws->remote_ip_str), 0);
 
 	if (WSCONFIG(ws)->listen_proxy_proto) {
 		oclog(ws, LOG_DEBUG, "proxy-hdr: peer is %s\n", ws->remote_ip_str);

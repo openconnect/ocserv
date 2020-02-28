@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include <sys/un.h>
 #include <sys/uio.h>
+#include <hmac.h>
 #include "vhost.h"
 
 typedef enum {
@@ -201,7 +202,9 @@ typedef struct worker_st {
 	socklen_t our_addr_len;
 	struct sockaddr_storage remote_addr;	/* peer's address */
 	socklen_t remote_addr_len;
+	char our_ip_str[MAX_IP_STR];
 	char remote_ip_str[MAX_IP_STR];
+	const uint8_t sec_auth_init_hmac[HMAC_DIGEST_SIZE];
 
 	int proto; /* AF_INET or AF_INET6 */
 

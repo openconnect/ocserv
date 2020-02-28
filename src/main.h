@@ -34,7 +34,7 @@
 #include <sys/uio.h>
 #include <signal.h>
 #include <ev.h>
-
+#include <hmac.h>
 #include "vhost.h"
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
@@ -254,6 +254,8 @@ typedef struct main_server_st {
 	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
 	void *main_pool; /* talloc main pool */
 	void *config_pool; /* talloc config pool */
+
+	const uint8_t hmac_key[HMAC_DIGEST_SIZE];
 
 	/* used as temporary buffer (currently by forward_udp_to_owner) */
 	uint8_t msg_buffer[MAX_MSG_SIZE];

@@ -215,6 +215,8 @@ message sec_auth_init_msg
 	optional string our_ip = 10;
 	optional string user_agent = 11;
 	optional string vhost = 12;
+	required uint64 session_start_time = 13;
+	required bytes hmac = 14;
 }
 
 /* SEC_AUTH_CONT */

@@ -981,6 +981,22 @@ static void kill_children(main_server_st* s)
 	kill(s->sec_mod_pid, SIGTERM);
 }
 
+static void kill_children_auth_timeout(main_server_st* s)
+{
+	struct proc_st *ctmp = NULL, *cpos;
+	time_t oldest_permitted_session = time(NULL) - GETCONFIG(s)->auth_timeout;
+
+	/* kill the security module server */
+	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
+		/* If the worker has not completed it's auth within auth_timeout seconds, kill it */
+		if ((ctmp->status < PS_AUTH_COMPLETED) &&
+		    (ctmp->conn_time < oldest_permitted_session) && 
+			(ctmp->pid != -1)) {
+			remove_proc(s, ctmp, RPROC_KILL);
+		}
+	}
+}
+
 static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
@@ -1215,6 +1231,8 @@ static void perform_maintenance(main_server_st *s)
 	mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
 	cleanup_banned_entries(s);
 	clear_old_configs(s->vconfig);
+	
+	kill_children_auth_timeout(s);
 
 	list_for_each_rev(s->vconfig, vhost, list) {
 		tls_reload_crl(s, vhost, 0);

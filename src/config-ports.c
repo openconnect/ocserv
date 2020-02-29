@@ -134,7 +134,7 @@ int cfg_parse_ports(void *pool, FwPortSt ***fw_ports, size_t *n_fw_ports, const 
 
 		p2 = strchr(p, ')');
 		if (p2 == NULL) {
-			syslog(LOG_ERR, "expected closing parenthesis on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p2-str), str);
+			syslog(LOG_ERR, "expected closing parenthesis on restrict-user-to-ports at %d '%s'", (int)(ptrdiff_t)(p-str), str);
 			return -1;
 		}
 

@@ -342,6 +342,10 @@ const char* script, *next_script = NULL;
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
 		setenv("DEVICE", proc->tun_lease.name, 1);
+		setenv("USER_AGENT", proc->user_agent, 1);
+		setenv("DEVICE_TYPE", proc->device_type, 1);
+		setenv("DEVICE_PLATFORM", proc->device_platform, 1);
+
 		if (type == SCRIPT_CONNECT) {
 			setenv("REASON", "connect", 1);
 		} else if (type == SCRIPT_HOST_UPDATE) {

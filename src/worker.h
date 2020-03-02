@@ -125,6 +125,7 @@ struct http_req_st {
 	unsigned int header_state;
 
 	char devtype[MAX_AGENT_NAME]; /* Device-Type */
+	char devplatform[MAX_AGENT_NAME]; /* Device-Platform */
 	char hostname[MAX_HOSTNAME_SIZE];
 	char user_agent[MAX_AGENT_NAME];
 	unsigned user_agent_type;

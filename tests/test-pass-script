@@ -51,6 +51,8 @@ trap finish EXIT
 rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
 
+OPENCONNECT="$OPENCONNECT --os=android"
+
 $OPENCONNECT --help|grep local-hostname >/dev/null
 if test $? != 0;then
 	echo "Openconnect doesn't support --local-hostname"

@@ -6,7 +6,8 @@
   on the main process. Patches by Alan Jowett (#251, #252, #245, #247, #246)
 - Add support for RFC6750 bearer tokens. This adds the "auth=oidc" config
   option. See doc/README-oidc.md for more information (#240).
-
+- Add USER_AGENT, DEVICE_TYPE and DEVICE_PLATFORM environment variables when
+  connect/disconnect scripts execute.
 
 * Version 0.12.6 (released 2019-12-28)
 - Improved IPv6 support for anyconnect clients. Patch by Leendert van Doorn.

@@ -318,7 +318,7 @@ int check_group(sec_mod_st * sec, client_entry_st * e)
 	return 0;
 }
 
-/* Performs the required steps based on the result from the 
+/* Performs the required steps based on the result from the
  * authentication function (e.g. handle_auth_init).
  *
  * @cmd: the command received
@@ -340,7 +340,7 @@ int handle_sec_auth_res(int cfd, sec_mod_st * sec, client_entry_st * e, int resu
 			return ret;
 		}
 		e->msg_str = pst.msg_str;
-		
+
 		/* password requested for the next stage in multifactor auth OR password is requested again at the same stage */
 		passwd_retries = (e->passwd_counter < pst.counter) ? 0 : 1;
 		e->passwd_counter = pst.counter;
@@ -495,6 +495,9 @@ int handle_secm_session_open_cmd(sec_mod_st *sec, int fd, const SecmSessionOpenM
 
 	rep.username = e->acct_info.username;
 	rep.groupname = e->acct_info.groupname;
+	rep.user_agent = e->acct_info.user_agent;
+	rep.device_platform = e->acct_info.device_platform;
+	rep.device_type = e->acct_info.device_type;
 	rep.ip = e->acct_info.remote_ip;
 	rep.tls_auth_ok = e->tls_auth_ok;
 	rep.vhost = e->vhost->name;
@@ -786,7 +789,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	hmac_components[1].length = req->our_ip ? strlen(req->our_ip) : 0;
 	hmac_components[2].data = (void*)&req->session_start_time;
 	hmac_components[2].length = sizeof(req->session_start_time);
-	
+
 	generate_hmac(sizeof(sec->hmac_key), sec->hmac_key, sizeof(hmac_components) / sizeof(hmac_components[0]), hmac_components, computed_hmac);
 
 	if (memcmp(computed_hmac, req->hmac.data, req->hmac.len) != 0) {
@@ -833,6 +836,14 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 
 	e->tls_auth_ok = req->tls_auth_ok;
 
+	if (req->device_platform != NULL) {
+		strlcpy(e->acct_info.device_platform, req->device_platform, sizeof(e->acct_info.device_platform));
+	}
+
+	if (req->device_type != NULL) {
+		strlcpy(e->acct_info.device_type, req->device_type, sizeof(e->acct_info.device_type));
+	}
+
 	if (req->user_agent != NULL)
 		strlcpy(e->acct_info.user_agent, req->user_agent, sizeof(e->acct_info.user_agent));
 
@@ -865,7 +876,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	}
 
 	e->status = PS_AUTH_INIT;
-	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' "SESSION_STR" of group: '%s' from '%s'", 
+	seclog(sec, LOG_DEBUG, "auth init %sfor user '%s' "SESSION_STR" of group: '%s' from '%s'",
 	       req->tls_auth_ok?"(with cert) ":"",
 	       e->acct_info.username, e->acct_info.safe_id, e->acct_info.groupname, req->ip);
 

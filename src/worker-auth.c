@@ -114,7 +114,7 @@ static int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg
 
 #ifdef SUPPORT_OIDC_AUTH
 static int oidc_auth_handler(worker_st * ws, unsigned http_ver);
-#endif 
+#endif
 
 int ws_switch_auth_to(struct worker_st *ws, unsigned auth)
 {
@@ -839,7 +839,7 @@ int get_cert_info(worker_st * ws)
 			return -1;
 	}
 
-	/* this is superflous. Verification has already been performed 
+	/* this is superflous. Verification has already been performed
 	 * during handshake. */
 	cert = gnutls_certificate_get_peers(ws->session, &ncerts);
 
@@ -1525,6 +1525,12 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 		ireq.hmac.len = sizeof(ws->sec_auth_init_hmac);
 		if (req->user_agent[0] != 0)
 			ireq.user_agent = req->user_agent;
+
+		if (req->devtype[0] != 0)
+			ireq.device_type = req->devtype;
+
+		if (req->devplatform[0] != 0)
+			ireq.device_platform = req->devplatform;
 
 		sd = connect_to_secmod(ws);
 		if (sd == -1) {

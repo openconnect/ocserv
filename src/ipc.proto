@@ -214,9 +214,11 @@ message sec_auth_init_msg
 	required uint32 auth_type = 9 [default = 0];
 	optional string our_ip = 10;
 	optional string user_agent = 11;
-	optional string vhost = 12;
-	required uint64 session_start_time = 13;
-	required bytes hmac = 14;
+	optional string device_platform = 12;
+	optional string device_type = 13;
+	optional string vhost = 14;
+	required uint64 session_start_time = 15;
+	required bytes hmac = 16;
 }
 
 /* SEC_AUTH_CONT */
@@ -307,6 +309,9 @@ message secm_session_reply_msg
 	required bytes sid = 9;
 	required bool tls_auth_ok = 10;
 	optional string vhost = 11;
+	optional string user_agent = 12;
+	optional string device_platform = 13;
+	optional string device_type = 14;
 }
 
 /* internal struct */

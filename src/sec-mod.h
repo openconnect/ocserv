@@ -71,6 +71,8 @@ typedef struct common_acct_info_st {
 	char safe_id[SAFE_ID_SIZE]; /* an ID to be sent to external apps - printable */
 	char remote_ip[MAX_IP_STR];
 	char user_agent[MAX_AGENT_NAME];
+	char device_type[MAX_DEVICE_TYPE];
+	char device_platform[MAX_DEVICE_PLATFORM];
 	char our_ip[MAX_IP_STR];
 	char ipv4[MAX_IP_STR];
 	char ipv6[MAX_IP_STR];

@@ -133,6 +133,8 @@ typedef struct proc_st {
 	/* the following are copied here from the worker process for reporting
 	 * purposes (from main-ctl-handler). */
 	char user_agent[MAX_AGENT_NAME];
+	char device_type[MAX_DEVICE_TYPE];
+	char device_platform[MAX_DEVICE_PLATFORM];
 	char tls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char dtls_ciphersuite[MAX_CIPHERSUITE_NAME];
 	char cstp_compr[8];

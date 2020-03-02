@@ -331,6 +331,13 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		      "Device-type: '%s'", value);
 		break;
 	case HEADER_PLATFORM:
+		if (value_length + 1 > sizeof(req->devplatform)) {
+			req->devplatform[0] = 0;
+			goto cleanup;
+		}
+		memcpy(req->devplatform, value, value_length);
+		req->devplatform[value_length] = 0;
+
 		if (strncasecmp(value, "apple-ios", 9) == 0 ||
 		    strncasecmp(value, "android", 7) == 0) {
 

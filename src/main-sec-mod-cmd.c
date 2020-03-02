@@ -503,6 +503,18 @@ int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie,
 	}
 	strlcpy(proc->username, msg->username, sizeof(proc->username));
 
+	if (msg->user_agent != NULL) {
+		strlcpy(proc->user_agent, msg->user_agent, sizeof(proc->user_agent));
+	}
+
+	if (msg->device_type != NULL) {
+		strlcpy(proc->device_type, msg->device_type, sizeof(proc->device_type));
+	}
+
+	if (msg->device_platform != NULL) {
+		strlcpy(proc->device_platform, msg->device_platform, sizeof(proc->device_platform));
+	}
+
 	/* override the group name in order to load the correct configuration in
 	 * case his group is specified in the certificate */
 	if (msg->groupname)

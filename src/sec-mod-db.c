@@ -98,7 +98,8 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 		return NULL;
 	}
 
-	strlcpy(e->acct_info.remote_ip, ip, sizeof(e->acct_info.remote_ip));
+	if (ip)
+		strlcpy(e->acct_info.remote_ip, ip, sizeof(e->acct_info.remote_ip));
 	e->acct_info.id = pid;
 	e->vhost = vhost;
 

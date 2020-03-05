@@ -780,7 +780,8 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 
 	/* Authenticate the client parameters */
 	hmac_components[0].data =  req->ip;
-	hmac_components[0].length = req->ip ? strlen(req->ip) : 0;
+	// req->ip is required and protobuf doesn't permit null for required parameters
+	hmac_components[0].length = strlen(req->ip);
 	hmac_components[1].data = req->our_ip;
 	hmac_components[1].length = req->our_ip ? strlen(req->our_ip) : 0;
 	hmac_components[2].data = (void*)&req->session_start_time;

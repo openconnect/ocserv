@@ -1146,7 +1146,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			hmac_components[0].data = ws->remote_ip_str;
 			hmac_components[0].length = strlen(ws->remote_ip_str);
 			hmac_components[1].data = ws->our_ip_str;
-			hmac_components[1].length = ws->our_ip_str ?  strlen(ws->our_ip_str) : 0;
+			hmac_components[1].length = strlen(ws->our_ip_str);
 			hmac_components[2].data = &ws->session_start_time;
 			hmac_components[2].length = sizeof(ws->session_start_time);
 

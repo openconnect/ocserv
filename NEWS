@@ -4,6 +4,8 @@
 - Ensure scripts have all the information on all disconnection types (#231)
 - Several updates to further restrict the control that worker processes have
   on the main process. Patches by Alan Jowett (#251, #252, #245, #247, #246)
+- Add support for RFC6750 bearer tokens. This adds the "auth=oidc" config
+  option. See doc/README-oidc.md for more information (#240).
 
 
 * Version 0.12.6 (released 2019-12-28)

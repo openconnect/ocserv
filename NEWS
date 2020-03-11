@@ -10,6 +10,7 @@
   connect/disconnect scripts execute.
 - Corrected issue with DTLS-PSK negotiation which prevented it from being
   enabled.
+- Improved IPv6 handling of AnyConnect client for Apple ios (#254).
 
 
 * Version 0.12.6 (released 2019-12-28)

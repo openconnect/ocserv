@@ -341,6 +341,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		if (strncasecmp(value, "apple-ios", 9) == 0 ||
 		    strncasecmp(value, "android", 7) == 0) {
 
+			if (strncasecmp(value, "apple-ios", 9) == 0)
+				req->is_ios = 1;
+
 			oclog(ws, LOG_DEBUG,
 			      "Platform: '%s' (mobile)", value);
 			req->is_mobile = 1;
@@ -378,30 +381,28 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 
 		if (strncasecmp(req->user_agent, "Open AnyConnect VPN Agent v", 27) == 0) {
 			unsigned version = atoi(&req->user_agent[27]);
-			if (version <= 3)
+			if (version <= 3) {
+				oclog(ws, LOG_DEBUG, "Detected OpenConnect v3 or older");
 				req->user_agent_type = AGENT_OPENCONNECT_V3;
-			else
+			} else {
+				oclog(ws, LOG_DEBUG, "Detected OpenConnect v4 or newer");
 				req->user_agent_type = AGENT_OPENCONNECT;
+			}
+		} else if (strncasecmp(req->user_agent, "Cisco AnyConnect VPN Agent for Apple", 36) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect on iOS");
+			req->user_agent_type = AGENT_ANYCONNECT;
+			req->is_ios = 1;
 		} else if (strncasecmp(req->user_agent, "OpenConnect VPN Agent", 21) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected OpenConnect v4 or newer");
 			req->user_agent_type = AGENT_OPENCONNECT;
 		} else if (strncasecmp(req->user_agent, "Cisco AnyConnect", 16) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
 			req->user_agent_type = AGENT_ANYCONNECT;
 		} else if (strncasecmp(req->user_agent, "AnyConnect", 10) == 0) {
+			oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
 			req->user_agent_type = AGENT_ANYCONNECT;
-		}
-
-		switch (req->user_agent_type) {
-			case AGENT_OPENCONNECT_V3:
-				oclog(ws, LOG_DEBUG, "Detected OpenConnect v3 or older");
-				break;
-			case AGENT_OPENCONNECT:
-				oclog(ws, LOG_DEBUG, "Detected OpenConnect v4 or newer");
-				break;
-			case AGENT_ANYCONNECT:
-				oclog(ws, LOG_DEBUG, "Detected Cisco AnyConnect");
-				break;
-			default:
-				oclog(ws, LOG_DEBUG, "Unknown client");
+		} else {
+			oclog(ws, LOG_DEBUG, "Unknown client (%s)", req->user_agent);
 		}
 		break;
 

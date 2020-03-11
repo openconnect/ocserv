@@ -133,6 +133,7 @@ struct http_req_st {
 	unsigned int next_header;
 
 	bool is_mobile;
+	bool is_ios;
 	bool spnego_set;
 
 	unsigned char master_secret[TLS_MASTER_SIZE];

@@ -266,7 +266,8 @@ int main(int argc, char **argv)
 	if (!getcwd(working_directory, sizeof(working_directory))) {
 		return 1;
 	}
-	strncat(working_directory, "/data", sizeof(working_directory));
+	strncat(working_directory, "/data", sizeof(working_directory)-1);
+	working_directory[sizeof(working_directory)-1] = 0;
 
 	cjose_jwk_t *key = create_key("My Fake Key");
 

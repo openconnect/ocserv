@@ -406,9 +406,6 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 		break;
 
 	case HEADER_DTLS_CIPHERSUITE:
-		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
-			break;
-
 		str = (char *)value;
 
 		p = strstr(str, DTLS_PROTO_INDICATOR);
@@ -421,6 +418,9 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 				break;
 			}
 		}
+
+		if (req->use_psk || !WSCONFIG(ws)->dtls_legacy)
+			break;
 
 		if (req->selected_ciphersuite) /* if set via HEADER_DTLS12_CIPHERSUITE */
 			break;

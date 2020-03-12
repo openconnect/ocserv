@@ -8,6 +8,9 @@
   option. See doc/README-oidc.md for more information (#240).
 - Add USER_AGENT, DEVICE_TYPE and DEVICE_PLATFORM environment variables when
   connect/disconnect scripts execute.
+- Corrected issue with DTLS-PSK negotiation which prevented it from being
+  enabled.
+
 
 * Version 0.12.6 (released 2019-12-28)
 - Improved IPv6 support for anyconnect clients. Patch by Leendert van Doorn.

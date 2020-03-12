@@ -255,6 +255,8 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 	if (db == NULL || GETCONFIG(s)->max_ban_score == 0)
 		return 0;
 
+	(void)(txt);
+
 	in_size = SA_IN_SIZE(addr_size);
 	if (in_size != 4 && in_size != 16) {
 	    	mslog(s, NULL, LOG_ERR, "unknown address type for %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), 0));

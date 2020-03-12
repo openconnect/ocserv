@@ -206,7 +206,7 @@ Coverity:
   - tar xfz /tmp/coverity_tool.tgz
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests
   - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$JOBS
   - tar cfz cov-int.tar.gz cov-int
   - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
@@ -231,7 +231,7 @@ Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --with-werror --enable-code-coverage --enable-kerberos-tests --enable-oidc-auth
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-code-coverage --enable-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1
   - make files-update
@@ -324,9 +324,10 @@ ubsan/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2" ./configure --without-docker-tests
+  - export UBCFLAGS="-Wall -Wextra -fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2 -Werror"
+  - CFLAGS="$UBCFLAGS" ./configure --without-docker-tests
   - make -j$JOBS
-  - make check -j$JOBS
+  - make check -j$JOBS CFLAGS="$UBCFLAGS -Wno-unused-function -Wno-unused-parameter"
   tags:
   - shared
   - linux

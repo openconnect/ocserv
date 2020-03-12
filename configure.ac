@@ -323,8 +323,16 @@ fi
 
 gl_INIT
 
+AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h crypt.h], [], [], [])
+
+if test "$ac_cv_header_crypt_h" = yes;then
+	crypt_header="crypt.h"
+else
+	crypt_header="unistd.h"
+fi
+
 AC_LIB_HAVE_LINKFLAGS(crypt,, [#define _XOPEN_SOURCE
-#include <unistd.h>], [crypt(0,0);])
+#include <${crypt_header}>], [crypt(0,0);])
 
 AC_ARG_WITH(utmp,
   AS_HELP_STRING([--without-utmp], [do not use libutil for utmp support]),
@@ -357,8 +365,6 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 #include <sys/types.h>
 #include <sys/socket.h>
 ])
-
-AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h crypt.h], [], [], [])
 
 AC_CHECK_FUNCS([setproctitle vasprintf clock_gettime isatty pselect ppoll getpeereid sigaltstack])
 AC_CHECK_FUNCS([strlcpy posix_memalign malloc_trim strsep])

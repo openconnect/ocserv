@@ -430,6 +430,8 @@ static void tls_audit_log_func(gnutls_session_t session, const char *str)
 {
 	worker_st * ws;
 
+	(void)(ws);
+
 	if (session == NULL)
 		syslog(LOG_AUTH, "warning: %s", str);
 	else {
@@ -567,6 +569,8 @@ static void certificate_check(main_server_st *s, const char *vhostname, gnutls_p
 	gnutls_datum_t dn = {NULL, 0};
 	const char *cert_name = "unnamed";
 	time_t t;
+
+	(void)cert_name;
 
 	ret = gnutls_x509_crt_init(&crt);
 	GNUTLS_FATAL_ERR(ret);

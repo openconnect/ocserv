@@ -36,7 +36,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/radiusclient/servers data/radius.config data/radius-group.config data/radius-otp.config \
 	data/test-udp-listen-host.config data/pam-kerberos/passdb.templ \
 	data/test-max-same-1.config data/test-script-multi-user.config \
-	sleep-connect-script
+	sleep-connect-script data/test-psk-negotiate.config
 
 SUBDIRS = docker-ocserv
 
@@ -68,7 +68,7 @@ if ENABLE_NUTTCP_TESTS
 dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
 	aes256-cipher aes128-cipher oc-aes256-gcm-cipher oc-aes128-gcm-cipher \
 	test-config-per-group ac-aes128-gcm-cipher ac-aes256-gcm-cipher \
-	no-dtls-cipher radius radius-config
+	no-dtls-cipher radius radius-config psk-negotiate
 endif
 
 endif

@@ -68,10 +68,14 @@ USERNAME=test
 
 . `dirname $0`/ns.sh
 
+if test -z "${TEST_CONFIG}";then
+	TEST_CONFIG=test-ciphers.config
+fi
+
 # Run servers
-update_config test-ciphers.config
+update_config ${TEST_CONFIG}
 if test "$VERBOSE" = 1;then
-DEBUG="-d 3"
+DEBUG="-d 4"
 fi
 
 ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!

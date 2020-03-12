@@ -268,7 +268,7 @@ struct cfg_st {
 	unsigned rekey_method; /* REKEY_METHOD_ */
 
 	time_t min_reauth_time;	/* after a failed auth, how soon one can reauthenticate -> in seconds */
-	int max_ban_score;	/* the score allowed before a user is banned (see vpn.h) */
+	unsigned max_ban_score;	/* the score allowed before a user is banned (see vpn.h) */
 	int ban_reset_time;
 
 	unsigned ban_points_wrong_password;

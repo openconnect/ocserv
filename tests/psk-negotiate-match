@@ -23,6 +23,7 @@
 CIPHER_NAME="PSK-NEGOTIATE"
 GNUTLS_NAME="(DTLS1.2)-(PSK)"
 TEST_CONFIG="test-psk-negotiate.config"
-MATCH_CIPHERS=false
+MATCH_CIPHERS=true
 
 . cipher-common.sh
+

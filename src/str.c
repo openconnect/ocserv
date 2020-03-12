@@ -174,7 +174,8 @@ int str_replace_str(str_st *str, const str_rep_tab *tab)
 	unsigned length;
 	char *final;
 	unsigned final_len;
-	int ret, pos;
+	int ret;
+	size_t pos;
 
 	p = str->data;
 	pos = 0;

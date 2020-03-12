@@ -40,6 +40,9 @@
 # endif
 #endif
 
+/* On certain cases gnulib defines gettimeofday as macro; avoid that */
+#undef gettimeofday
+
 int disable_system_calls(struct worker_st *ws)
 {
 	int ret;

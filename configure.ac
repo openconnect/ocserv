@@ -513,6 +513,12 @@ fi
 
 AM_CONDITIONAL(HAVE_GSSAPI, test "$enable_gssapi" = yes)
 
+if test "x$kerberos_tests" = xyes && test "$enable_gssapi" != yes;then
+	AC_MSG_ERROR([[***
+*** libkrb5 was not found and enable-kerberos-tests was specified.
+***]])
+fi
+
 dnl needed in the included PCL
 AC_C_VOLATILE
 AC_C_CONST

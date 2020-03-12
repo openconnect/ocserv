@@ -236,7 +236,7 @@ Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-code-coverage --enable-kerberos-tests --enable-oidc-auth
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1
   - make files-update

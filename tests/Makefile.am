@@ -37,7 +37,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/test-udp-listen-host.config data/pam-kerberos/passdb.templ \
 	data/test-max-same-1.config data/test-script-multi-user.config \
 	sleep-connect-script data/test-psk-negotiate.config \
-	connect-ios-script data/apple-ios.config
+	connect-ios-script data/apple-ios.config certs/kerberos-cert.pem \
+	data/kdc.conf data/krb5.conf data/k5.KERBEROS.TEST data/kadm5.acl
 
 SUBDIRS = docker-ocserv
 

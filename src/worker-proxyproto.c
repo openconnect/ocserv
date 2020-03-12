@@ -70,7 +70,7 @@ typedef struct pp2_tlv_ssl {
 	uint32_t verify;
 } _ATTR_PACKED pp2_tlv_ssl;
 
-static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, int data_size)
+static void parse_ssl_tlvs(struct worker_st *ws, uint8_t *data, size_t data_size)
 {
 	pp2_tlv tlv;
 
@@ -272,7 +272,7 @@ static int parse_proxy_proto_header_v1(struct worker_st *ws, char *line)
 int parse_proxy_proto_header(struct worker_st *ws, int fd)
 {
 	proxy_hdr_v2 hdr;
-	int data_size;
+	size_t data_size;
 	uint8_t cmd, family, proto;
 	uint8_t ver;
 	uint8_t *p;

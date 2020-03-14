@@ -1,0 +1,126 @@
+#!/bin/bash
+#
+# Copyright (C) 2013-2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+builddir=${builddir:-.}
+PORT=4358
+VPNNET=172.23.115.0/24
+TMPFILE=ios.$$.tmp
+VERBOSE=1
+
+. `dirname $0`/common.sh
+
+echo "Testing environment under apple ios client"
+
+function finish {
+  echo " * Cleaning up..."
+  rm -f ${builddir}/connect.ios.ok
+  rm -f ${builddir}/disconnect.ios.ok
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  rm -f ${TMPFILE}
+}
+trap finish EXIT
+
+rm -f ${builddir}/connect.ios.ok
+rm -f ${builddir}/disconnect.ios.ok
+
+OPENCONNECT="$OPENCONNECT --os=apple-ios"
+
+echo " * Testing connection with username-password... "
+
+update_config apple-ios.config
+launch_server -d 1 -f -c "${CONFIG}" & PID=$!
+wait_server $PID
+
+sleep 2
+
+echo " * Connecting to obtain cookie... "
+( echo "!@#$%^&*()<>" | $OPENCONNECT localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null ) ||
+	fail $PID "Could not receive cookie from server"
+
+echo " * Re-connect to force script run with platform... "
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT --verbose localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >${TMPFILE} 2>&1
+
+sleep 5
+
+if ! test -f ${builddir}/connect.ios.ok;then
+	cat ${TMPFILE}
+	echo "Connect script was not run (1)"
+	exit 1
+fi
+
+if ! test -f ${builddir}/disconnect.ios.ok;then
+	cat ${TMPFILE}
+	echo "Disconnect script was not run properly (1)"
+	exit 1
+fi
+
+rm -f ${builddir}/connect.ios.ok
+rm -f ${builddir}/disconnect.ios.ok
+
+grep 'X-CSTP-Split-Include-IP6: 2000::/3' ${TMPFILE} >/dev/null
+if test $? != 0;then
+	cat ${TMPFILE}
+	echo "Did not find the expected route"
+	exit 1
+fi
+
+rm -f ${TMPFILE}
+
+echo " * Re-connecting to force script run with user agent... "
+echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT --verbose --useragent="Cisco AnyConnect VPN Agent for Apple" localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >${TMPFILE} 2>&1
+
+sleep 5
+
+if ! test -f ${builddir}/connect.ios.ok;then
+	echo "Connect script was not run (2)"
+	exit 1
+fi
+
+if ! test -f ${builddir}/disconnect.ios.ok;then
+	echo "Disconnect script was not run properly (2)"
+	exit 1
+fi
+
+rm -f ${builddir}/connect.ios.ok
+rm -f ${builddir}/disconnect.ios.ok
+
+grep 'X-CSTP-Split-Include-IP6: 2000::/3' ${TMPFILE} >/dev/null
+if test $? != 0;then
+	cat ${TMPFILE}
+	echo "Did not find the expected route"
+	exit 1
+fi
+
+sleep 5
+echo " - Check server status"
+
+( echo "!@#$%^&*()<>" | $OPENCONNECT localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
+echo " - Killing server"
+kill $PID
+PID=""
+wait
+
+echo "Script tests were successful"
+
+exit 0

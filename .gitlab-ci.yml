@@ -265,10 +265,8 @@ Centos6:
   - schedules
   artifacts:
     expire_in: 1 week
+    untracked: true
     when: on_failure
-    paths:
-      - ./*.log
-      - ./tests/*.log
 
 minimal:
   stage: testing

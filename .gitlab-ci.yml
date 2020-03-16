@@ -247,27 +247,6 @@ Fedora:
     untracked: true
     when: always
 
-Centos6:
-  stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS6_BUILD
-  script:
-  - sed -i 's/AM_PROG_AR//g' configure.ac
-  - git submodule update --init
-  - autoreconf -fvi
-  - CFLAGS="$CFLAGS -I/usr/include/libev -I/usr/include/gnutls30" LIBGNUTLS_LIBS="-L/usr/lib64/gnutls30/ -lgnutls" PKG_CONFIG_LIBDIR="/usr/lib64/gnutls30/pkgconfig:/usr/lib64/pkgconfig" ./configure --disable-systemd --enable-local-libopts --without-docker-tests
-  - make -j$JOBS
-  - make check -j$JOBS
-  tags:
-  - shared
-  - linux
-  except:
-  - tags
-  - schedules
-  artifacts:
-    expire_in: 1 week
-    untracked: true
-    when: on_failure
-
 minimal:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS7_BUILD

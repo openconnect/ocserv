@@ -2,11 +2,10 @@
 
 #echo $USERNAME : $REASON : $DEVICE
 
-env >/tmp/out.$REASON.tmp
-
 verify_env_set() {
 	if test -z "${!1}";then
-		echo "$1 environment variable was not set" > /tmp/out.$REASON.fail.tmp
+		env >out.$REASON.fail.tmp
+		echo "$1 environment variable was not set" >>out.$REASON.fail.tmp
 		exit 1
 	fi
 }

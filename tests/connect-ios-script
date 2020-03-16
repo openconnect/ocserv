@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#echo $USERNAME : $REASON : $DEVICE
+
+env >apple-ios.$REASON.tmp
+
+verify_env_set() {
+	if test -z "${!1}";then
+		echo "Fail: $1 environment variable was not set" >>apple-ios.$REASON.tmp
+		exit 1
+	fi
+}
+
+verify_env_set "IP_REMOTE"
+verify_env_set "REASON"
+
+case "$REASON" in
+  connect)
+	verify_env_set "USERNAME"
+	verify_env_set "USER_AGENT"
+	verify_env_set "DEVICE"
+	verify_env_set "DEVICE_PLATFORM"
+	verify_env_set "DEVICE_TYPE"
+
+	echo "${IP_REMOTE}" > connect.ios.ok
+	;;
+  disconnect)
+	if ! test -z "$DEVICE";then
+		echo "${IP_REMOTE}" > disconnect.ios.ok
+	fi
+	;;
+  "host-update")
+	;;
+esac
+
+exit 0

@@ -185,7 +185,7 @@ static void radius_acct_session_stats(void *_vctx, unsigned auth_method, const c
 	append_acct_standard(vctx, vctx->rh, ai, &send);
 	append_stats(vctx->rh, &send, stats);
 
-	ret = rc_aaa(vctx->rh, ai->id, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(vctx->rh, 0, send, &recvd, NULL, 0, PW_ACCOUNTING_REQUEST);
 
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
@@ -227,7 +227,7 @@ static int radius_acct_open_session(void *_vctx, unsigned auth_method, const com
 
 	append_acct_standard(vctx, vctx->rh, ai, &send);
 
-	ret = rc_aaa(vctx->rh, ai->id, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(vctx->rh, 0, send, &recvd, NULL, 0, PW_ACCOUNTING_REQUEST);
 
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
@@ -276,7 +276,7 @@ static void radius_acct_close_session(void *_vctx, unsigned auth_method, const c
 	append_acct_standard(vctx, vctx->rh, ai, &send);
 	append_stats(vctx->rh, &send, stats);
 
-	ret = rc_aaa(vctx->rh, ai->id, send, &recvd, NULL, 1, PW_ACCOUNTING_REQUEST);
+	ret = rc_aaa(vctx->rh, 0, send, &recvd, NULL, 0, PW_ACCOUNTING_REQUEST);
 	if (recvd != NULL)
 		rc_avpair_free(recvd);
 

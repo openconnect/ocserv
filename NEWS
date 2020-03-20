@@ -1,4 +1,4 @@
-* Version 1.0.0 (unreleased)
+* Version 1.0.0 (released 2020-03-20)
 - Avoid crash on invalid configuration values.
 - Updated manpage generation to work with newer versions of ronn.
 - Ensure scripts have all the information on all disconnection types (#231)

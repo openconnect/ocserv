@@ -348,7 +348,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 	}
 
 	pctx->pass_msg[0] = 0;
-	ret = rc_aaa(pctx->vctx->rh, pctx->id, send, &recvd, pctx->pass_msg, 1, PW_ACCESS_REQUEST);
+	ret = rc_aaa(pctx->vctx->rh, 0, send, &recvd, pctx->pass_msg, 0, PW_ACCESS_REQUEST);
 
 	if (ret == OK_RC) {
 		uint32_t ipv4;

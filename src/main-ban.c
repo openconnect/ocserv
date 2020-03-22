@@ -155,9 +155,9 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	 * periodically polls the server */
 	if (e->score < GETCONFIG(s)->max_ban_score) {
 		e->expires = expiration;
-		print_msg = 0;
-	} else
 		print_msg = 1;
+	} else
+		print_msg = 0;
 
 	/* prevent overflow */
 	e->score = (e->score + score) > e->score ? (e->score + score) : (e->score);

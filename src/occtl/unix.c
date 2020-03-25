@@ -242,6 +242,10 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		print_single_value_ex(stdout, params, "Up since", str_since, buf, 1);
+		if (HAVE_JSON(params)) {
+			print_single_value_int(stdout, params, "raw_up_since", rep->start_time, 1);
+			print_single_value_int(stdout, params, "uptime", ((long)time(0)) - ((long)rep->start_time), 1);
+		}
 		print_single_value_int(stdout, params, "Active sessions", rep->active_clients, 1);
 		print_single_value_int(stdout, params, "Total sessions", rep->total_sessions_closed, 1);
 		print_single_value_int(stdout, params, "Total authentication failures", rep->total_auth_failures, 1);
@@ -262,6 +266,8 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 			print_single_value_ex(stdout, params, "Last stats reset", str_since, buf, 1);
+			if (HAVE_JSON(params))
+				print_single_value_int(stdout, params, "raw_last_stats_reset", rep->last_reset, 1);
 		}
 
 		print_single_value_int(stdout, params, "Sessions handled", rep->sessions_closed, 1);
@@ -272,15 +278,23 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 		print_time_ival7(buf, rep->avg_auth_time, 0);
 		print_single_value(stdout, params, "Average auth time", buf, 1);
+		if (HAVE_JSON(params))
+			print_single_value_int(stdout, params, "raw_avg_auth_time", rep->avg_auth_time, 1);
 
 		print_time_ival7(buf, rep->max_auth_time, 0);
 		print_single_value(stdout, params, "Max auth time", buf, 1);
+		if (HAVE_JSON(params))
+			print_single_value_int(stdout, params, "raw_max_auth_time", rep->max_auth_time, 1);
 
 		print_time_ival7(buf, rep->avg_session_mins*60, 0);
 		print_single_value(stdout, params, "Average session time", buf, 1);
+		if (HAVE_JSON(params))
+			print_single_value_int(stdout, params, "raw_avg_session_time", rep->avg_session_mins*60, 1);
 
 		print_time_ival7(buf, rep->max_session_mins*60, 0);
 		print_single_value(stdout, params, "Max session time", buf, 1);
+		if (HAVE_JSON(params))
+			print_single_value_int(stdout, params, "raw_max_session_time", rep->max_session_mins*60, 1);
 
 		if (rep->min_mtu > 0)
 			print_single_value_int(stdout, params, "Min MTU", rep->min_mtu, 1);
@@ -289,8 +303,12 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 		bytes2human(rep->kbytes_in*1000, buf, sizeof(buf), "");
 		print_single_value(stdout, params, "RX", buf, 1);
+		if (HAVE_JSON(params))
+			print_single_value_int(stdout, params, "raw_rx", rep->kbytes_in*1000, 1);
 		bytes2human(rep->kbytes_out*1000, buf, sizeof(buf), "");
-		print_single_value(stdout, params, "TX", buf, 0);
+		print_single_value(stdout, params, "TX", buf, 1);
+		if (HAVE_JSON(params))
+			print_single_value_int(stdout, params, "raw_tx", rep->kbytes_out*1000, 0);
 	}
 
 	print_end_block(stdout, params, 0);

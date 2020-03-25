@@ -51,6 +51,7 @@ static co_ctx_t ctx_caller;
 #endif /* #if defined(CO_USE_SIGCONTEXT) */
 
 
+#if defined(CO_HAS_SIGSTACK)
 static int co_ctx_sdir(unsigned long psp)
 {
 	int nav = 0;
@@ -65,6 +66,7 @@ static int co_ctx_stackdir(void)
 
 	return co_ctx_sdir((unsigned long) &cav);
 }
+#endif
 
 #if defined(CO_USE_UCONEXT)
 
@@ -382,7 +384,7 @@ static void co_runner(void)
 
 coroutine_t co_create(void (*func)(void *), void *data, void *stack, int size)
 {
-	int alloc = 0, r = CO_STK_COROSIZE;
+	int alloc = 0;
 	coroutine *co;
 
 	if ((size &= ~(sizeof(long) - 1)) < CO_MIN_SIZE)

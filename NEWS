@@ -1,3 +1,7 @@
+* Version 1.0.1 (unreleased)
+- occtl: added machine-readable output for json output (#271)
+
+
 * Version 1.0.0 (released 2020-03-20)
 - Avoid crash on invalid configuration values.
 - Updated manpage generation to work with newer versions of ronn.

@@ -79,6 +79,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents);
 int syslog_open = 0;
 sigset_t sig_default_set;
 struct ev_loop *loop = NULL;
+static unsigned allow_broken_clients = 0;
 
 /* EV watchers */
 ev_io ctl_watcher;
@@ -639,6 +640,7 @@ void clear_lists(main_server_st *s)
 #define TLS_EXT_APP_ID 48018
 #define RECORD_PAYLOAD_POS 13
 #define HANDSHAKE_SESSION_ID_POS 46
+#define HANDSHAKE_RANDOM_POS 14
 
 /* This returns either the application-specific ID extension contents,
  * or the session ID contents. The former is used on the new protocol,
@@ -733,6 +735,30 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 	return 1;
 }
 
+static
+unsigned has_broken_random(main_server_st* s, uint8_t *buffer, size_t buffer_size)
+{
+	size_t pos,i;
+
+	if (allow_broken_clients)
+		return 0;
+
+	if (buffer_size < RECORD_PAYLOAD_POS+HANDSHAKE_RANDOM_POS+32)
+		return 0;
+
+	/* check whether the client hello contains a random value of all zeros;
+	 * if that's the case it indicates a broken DTLS client. Relates to:
+	 * https://gitlab.com/gnutls/gnutls/-/issues/960 */
+	pos = RECORD_PAYLOAD_POS+HANDSHAKE_RANDOM_POS;
+
+	for (i=0;i<32;i++) {
+		if (buffer[pos+i] != 0)
+			return 0;
+	}
+
+	return 1;
+}
+
 /* A UDP fd will not be forwarded to worker process before this number of
  * seconds has passed. That is to prevent a duplicate message messing the worker.
  */
@@ -803,6 +829,12 @@ int sfd = -1;
 		if (GETPCONFIG(s)->unix_conn_file)
 			goto fail;
 	} else {
+		if (has_broken_random(s, s->msg_buffer, buffer_size)) {
+			mslog(s, NULL, LOG_INFO, "%s: detected broken DTLS client hello (no randomness); ignoring",
+			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
+			goto fail;
+		}
+
 		if (!get_session_id(s, s->msg_buffer, buffer_size, &session_id, &session_id_size)) {
 			mslog(s, NULL, LOG_INFO, "%s: too short handshake packet",
 			      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));
@@ -1272,6 +1304,7 @@ int main(int argc, char** argv)
 	void *worker_pool;
 	void *main_pool, *config_pool;
 	main_server_st *s;
+	char *str;
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
@@ -1308,6 +1341,10 @@ int main(int argc, char** argv)
 		fprintf(stderr, "unable to generate hmac key\n");
 		exit(1);
 	}
+
+	str = getenv("OCSERV_ALLOW_BROKEN_CLIENTS");
+	if (str && str[0] == '1' && str[1] == 0)
+		allow_broken_clients = 1;
 
 	list_head_init(&s->proc_list.head);
 	list_head_init(&s->script_list.head);

@@ -19,7 +19,10 @@ Debian:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth && make -j$JOBS && make check -j$JOBS
+    ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth
+  - make -j$JOBS
+  - export OCSERV_ALLOW_BROKEN_CLIENTS=1
+  - make check -j$JOBS
   tags:
   - shared
   - linux
@@ -87,6 +90,7 @@ Centos8:
   - chmod og-w tests/data/raddb
   - chmod og-w tests/data/raddb/*
   - make -j$JOBS
+  - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - make check VERBOSE=1 -j$JOBS
   tags:
   - shared
@@ -180,6 +184,7 @@ RPM/epel8:
   - sha512sum --tag ocserv-$NEWVERSION.tar.xz >>sources.tmp
   - mv sources.tmp sources
   - touch ocserv-$NEWVERSION.tar.xz.sig
+  - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - fedpkg --release el8 local
   - cd $CURDIR
   - find /usr/local/rpms/ocserv -name '*.rpm' -exec cp '{}' ./ ';'

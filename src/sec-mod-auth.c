@@ -775,6 +775,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	hmac_component_st hmac_components[3];
 	uint8_t computed_hmac[HMAC_DIGEST_SIZE];
 	time_t now = time(0);
+	time_t session_start_time;
 
 	if (req->hmac.len != HMAC_DIGEST_SIZE || !req->hmac.data) {
 		seclog(sec, LOG_AUTH, "hmac is the wrong size");
@@ -782,13 +783,15 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 	}
 
 	/* Authenticate the client parameters */
+	session_start_time = (time_t)req->session_start_time; // avoid time_t size problem
+
 	hmac_components[0].data =  req->ip;
 	// req->ip is required and protobuf doesn't permit null for required parameters
 	hmac_components[0].length = strlen(req->ip);
 	hmac_components[1].data = req->our_ip;
 	hmac_components[1].length = req->our_ip ? strlen(req->our_ip) : 0;
-	hmac_components[2].data = (void*)&req->session_start_time;
-	hmac_components[2].length = sizeof(req->session_start_time);
+	hmac_components[2].data = (void*)&session_start_time;
+	hmac_components[2].length = sizeof(session_start_time);
 
 	generate_hmac(sizeof(sec->hmac_key), sec->hmac_key, sizeof(hmac_components) / sizeof(hmac_components[0]), hmac_components, computed_hmac);
 
@@ -799,7 +802,7 @@ int handle_sec_auth_init(int cfd, sec_mod_st *sec, const SecAuthInitMsg *req, pi
 
 	vhost = find_vhost(sec->vconfig, req->vhost);
 
-	if ((now - req->session_start_time) > vhost->perm_config.config->auth_timeout) {
+	if ((now - session_start_time) > vhost->perm_config.config->auth_timeout) {
 		seclog(sec, LOG_AUTH, "hmac presented by client expired - possible replay");
 		return -1;
 	}

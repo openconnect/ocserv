@@ -71,9 +71,12 @@ error:
 static void
 value2speed(unsigned long bytes, time_t time, char* output, unsigned output_size)
 {
-unsigned long speed;
+	unsigned long speed;
 
-	speed = bytes / time;
+	if (time == 0)
+		speed = 0;
+	else
+		speed = bytes / time;
 	bytes2human(speed, output, output_size, "/sec");
 }
 

@@ -1,4 +1,6 @@
 * Version 1.0.1 (unreleased)
+- Prevent clients that use broken versions of gnutls from
+  connecting using DTLS (#277)
 - occtl: added machine-readable output for json output (#271)
 
 

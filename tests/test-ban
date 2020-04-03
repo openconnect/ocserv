@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2015 Red Hat
 #
@@ -18,38 +18,78 @@
 # along with GnuTLS; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PORT=4497
+OCCTL_SOCKET=./occtl-ban-$$.socket
+PIDFILE=ocserv-pid.$$.tmp
+OUTFILE=ban.$$.tmp
+
+ADDRESS=10.213.2.1
+CLI_ADDRESS=10.213.1.1
+VPNNET=172.17.215.0/24
+VPNADDR=172.17.215.1
+VPNNET6=fc39:d561:62c6:861b:9f38:9734:9fa1:0/112
+VPNADDR6=fc39:d561:62c6:861b:9f38:9734:9fa1:0
 
 . `dirname $0`/common.sh
+. `dirname $0`/ns.sh
+
+update_config test-ban.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
+}
+trap finish EXIT
 
 echo "Testing whether ban operates as expected... "
 
-launch_server -d 1 -f -c ${srcdir}/data/test-ban.config & PID=$!
-wait_server $PID
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
 
 echo "Connecting with wrong password 5 times... "
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
 
 echo ""
 echo "Connecting with correct password... "
-eval `echo "test" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
 
 if [ -n "$COOKIE" ];then
 	fail $PID "Obtained cookie although should have been banned"
 fi
 
-#echo "Cookie: $COOKIE"
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	echo "occtl couldn't run!"
+	exit 1
+fi
+
+grep "IPs in ban list: 1$" ${OUTFILE}
+if test $? != 0;then
+	echo "The banned list didn't contain the expected (1) entries!"
+	cat ${OUTFILE}
+	exit 1
+fi
+
 sleep 25
 echo ""
 
 echo "Connecting with correct password after ban time... "
-eval `echo "test" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie even though ban should be lifted"
@@ -58,20 +98,34 @@ fi
 echo ""
 echo "Checking ban reset time... "
 
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
 sleep 11
-echo "notest" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
 
 echo ""
 echo "Connecting with correct password after ban reset time... "
-eval `echo "test" | $OPENCONNECT --passwd-on-stdin -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+eval `echo "test" | ${CMDNS1} ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
 
 if [ -z "$COOKIE" ];then
 	fail $PID "Could not obtain cookie even though ban should be lifted"
 fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	echo "occtl couldn't run!"
+	exit 1
+fi
+
+grep "IPs in ban list: 0$" ${OUTFILE}
+if test $? != 0;then
+	echo "The banned list didn't contain the expected (0) entries!"
+	cat ${OUTFILE}
+	exit 1
+fi
+
 
 kill $PID
 wait

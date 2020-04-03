@@ -80,7 +80,7 @@ void *main_ban_db_init(main_server_st *s)
 
 void main_ban_db_deinit(main_server_st *s)
 {
-struct htable *db = s->ban_db;
+	struct htable *db = s->ban_db;
 
 	if (db != NULL) {
 		htable_clear(db);
@@ -88,14 +88,27 @@ struct htable *db = s->ban_db;
 	}
 }
 
+#define IS_BANNED(main, entry) (entry->score >= GETCONFIG(main)->max_ban_score)
+
 unsigned main_ban_db_elems(main_server_st *s)
 {
-struct htable *db = s->ban_db;
+	struct htable *db = s->ban_db;
+	ban_entry_st *t;
+	struct htable_iter iter;
+	time_t now = time(0);
+	unsigned banned = 0;
 
-	if (db)
-		return db->elems;
-	else
+	if (db == NULL || GETCONFIG(s)->max_ban_score == 0)
 		return 0;
+
+	t = htable_first(db, &iter);
+	while (t != NULL) {
+		if (t->expires > now && IS_BANNED(s, t)) {
+			banned++;
+		}
+		t = htable_next(db, &iter);
+	}
+	return banned;
 }
 
 static void massage_ipv6_address(ban_entry_st *t)
@@ -167,7 +180,7 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 	else
 		p_str_ip = inet_ntop(AF_INET6, ip, str_ip, sizeof(str_ip));
 
-	if (GETCONFIG(s)->max_ban_score > 0 && e->score >= GETCONFIG(s)->max_ban_score) {
+	if (GETCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e)) {
 		if (print_msg && p_str_ip) {
 			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", str_ip, e->score, ctime(&e->expires));
 		}

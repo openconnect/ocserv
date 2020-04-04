@@ -1260,7 +1260,7 @@ static void perform_maintenance(main_server_st *s)
 	vhost_cfg_st *vhost = NULL;
 
 	/* Check if we need to expire any data */
-	mslog(s, NULL, LOG_DEBUG, "performing maintenance (banned IPs: %d)", main_ban_db_elems(s));
+	mslog(s, NULL, LOG_DEBUG, "performing maintenance");
 	cleanup_banned_entries(s);
 	clear_old_configs(s->vconfig);
 	

@@ -37,6 +37,7 @@
 #define REASON_DPD_TIMEOUT 5
 #define REASON_ERROR 6
 #define REASON_SESSION_TIMEOUT 7
+#define REASON_TEMP_DISCONNECT 8
 
 /* Timeout (secs) for communication between main and sec-mod */
 #define MAIN_SEC_MOD_TIMEOUT 120

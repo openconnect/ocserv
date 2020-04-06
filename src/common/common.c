@@ -170,6 +170,8 @@ const char *discon_reason_to_str(unsigned reason)
 		return "unspecified";
 	case REASON_USER_DISCONNECT:
 		return "user disconnected";
+	case REASON_TEMP_DISCONNECT:
+		return "anyconnect client disconnected";
 	case REASON_SERVER_DISCONNECT:
 		return "server disconnected";
 	case REASON_IDLE_TIMEOUT:

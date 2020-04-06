@@ -455,6 +455,7 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 	int ret;
 	unsigned i;
 	size_t size;
+	char cert_username[MAX_USERNAME_SIZE];
 
 	if (ws->cert_username[0] != 0 || ws->cert_groups_size > 0)
 		return 0; /* already read, nothing to do */
@@ -478,29 +479,37 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 			size = sizeof(ws->cert_username);
 			ret =
 			    gnutls_x509_crt_get_subject_alt_name(crt, i,
-								 ws->
 								 cert_username,
 								 &size, NULL);
-			if (ret < 0)
+			if (ret < 0) {
+				if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE)
+					ret = 1;
 				break;
+			}
+
 			if (ret == GNUTLS_SAN_RFC822NAME) {
+				strlcpy(ws->cert_username, cert_username, sizeof(ws->cert_username));
 				oclog(ws, LOG_INFO,
 				      "RFC822NAME (%s) retrieved",
-				      ws->cert_username);
+				      cert_username);
 				break;
 			}
 		}
-		if (ret != 0) {
-			ret = 1;
-		}
-	} else if (WSCONFIG(ws)->cert_user_oid) {	/* otherwise certificate username is ignored */
+
+	} else if (WSCONFIG(ws)->cert_user_oid) { /* otherwise we check at the DN */
 		size = sizeof(ws->cert_username);
 		ret =
 		    gnutls_x509_crt_get_dn_by_oid(crt,
 					  WSCONFIG(ws)->cert_user_oid, 0,
-					  0, ws->cert_username, &size);
+					  0, cert_username, &size);
+		if (ret >= 0)
+			strlcpy(ws->cert_username, cert_username, sizeof(ws->cert_username));
+
 	} else {
-		ret = gnutls_x509_crt_get_dn(crt, ws->cert_username, &size);
+		size = sizeof(ws->cert_username);
+		ret = gnutls_x509_crt_get_dn(crt, cert_username, &size);
+		if (ret >= 0)
+			strlcpy(ws->cert_username, cert_username, sizeof(ws->cert_username));
 	}
 
 	if (ret < 0) {

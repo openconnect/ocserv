@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2019 Nikos Mavrogiannopoulos
 #
@@ -20,7 +20,7 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4500
+PORT=4516
 
 . `dirname $0`/common.sh
 
@@ -30,46 +30,52 @@ PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
 PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
-launch_server -d 1 -f -c "${srcdir}/data/test-max-same-1.config" & PID=$!
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -f "${PIDFILE1}" && kill $(cat ${PIDFILE1}) >/dev/null 2>&1
+  test -f "${PIDFILE2}" && kill $(cat ${PIDFILE2}) >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  rm -f "${PIDFILE1}" "${PIDFILE2}" 2>&1
+}
+trap finish EXIT
+
+update_config test-max-same-1.config
+launch_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
 eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
 
 if [ -z "$COOKIE" ];then
-	fail $PID "Could not obtain cookie"
+	echo "Could not obtain cookie"
+	exit 1
 fi
 
 #echo "Cookie: $COOKIE"
 
 echo "Connecting with cookie... "
 echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE1}" --background
-CPID=$!
 
 sleep 4
 
 echo "Connecting again with same cookie... "
 echo "test" | $OPENCONNECT -q localhost:$PORT -b -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${PIDFILE2}" --background
-C2PID=$!
 
 sleep 4
 
 if [ ! -f "${PIDFILE2}" ];then
-	fail $PID "It was not possible to establish session!"
+	echo "It was not possible to establish session!"
+	exit 1
 fi
 
 # checking whether server has already terminated $CPID
 sleep 1
 
 if [ -f "${PIDFILE1}" ];then
-	fail $PID "Initial connection was still running!"
+	echo "Initial connection was still running!"
+	exit 1
 fi
-
-rm -f "${PIDFILE1}" "${PIDFILE2}"
-
-kill $C2PID >/dev/null 2>&1
-kill $CPID >/dev/null 2>&1
-kill $PID
-wait
 
 exit 0

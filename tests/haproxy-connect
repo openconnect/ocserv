@@ -63,8 +63,8 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.200.2.1
-CLI_ADDRESS=10.200.1.1
+ADDRESS=10.214.2.1
+CLI_ADDRESS=10.214.1.1
 VPNNET=192.168.1.0/24
 VPNADDR=192.168.1.1
 

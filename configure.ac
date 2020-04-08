@@ -321,6 +321,8 @@ if test "$test_for_radius" = yes;then
 	fi
 fi
 
+AM_CONDITIONAL(RADIUS_ENABLED, test "$radius_enabled" != no)
+
 gl_INIT
 
 AC_CHECK_HEADERS([net/if_tun.h linux/if_tun.h netinet/in_systm.h crypt.h], [], [], [])

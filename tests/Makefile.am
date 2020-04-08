@@ -58,20 +58,27 @@ dist_check_SCRIPTS += unix-test \
 endif
 
 #other root requiring tests
-dist_check_SCRIPTS += test-iroute test-multi-cookie test-pass-script \
+dist_check_SCRIPTS += haproxy-connect test-iroute test-multi-cookie test-pass-script \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
-	multiple-routes haproxy-connect radius-group radius-otp json test-udp-listen-host \
-	test-max-same-1 test-script-multi-user apple-ios
+	multiple-routes json test-udp-listen-host test-max-same-1 test-script-multi-user \
+	apple-ios
+
+if RADIUS_ENABLED
+dist_check_SCRIPTS += radius-group radius-otp
+endif
 
 #other tests requiring nuttcp for traffic
 if ENABLE_NUTTCP_TESTS
 dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
 	aes256-cipher aes128-cipher oc-aes256-gcm-cipher oc-aes128-gcm-cipher \
 	test-config-per-group ac-aes128-gcm-cipher ac-aes256-gcm-cipher \
-	no-dtls-cipher radius radius-config psk-negotiate psk-negotiate-match
+	no-dtls-cipher psk-negotiate psk-negotiate-match
 endif
 
+if RADIUS_ENABLED
+dist_check_SCRIPTS += radius radius-config
+endif
 endif
 
 
@@ -148,7 +155,7 @@ str_test2_LDADD = $(LDADD)
 ipv6_prefix_SOURCES = ipv6-prefix.c
 ipv6_prefix_LDADD = $(LDADD)
 
-human_addr_CPPFLAGS = $(AM_CPPFLAGS) 
+human_addr_CPPFLAGS = $(AM_CPPFLAGS)
 human_addr_SOURCES = human_addr.c
 human_addr_LDADD = $(LDADD)
 

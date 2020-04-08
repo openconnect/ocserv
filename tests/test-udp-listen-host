@@ -24,8 +24,8 @@ CLIPID="${srcdir:-.}/ci$$-1.pid.tmp"
 CLIPID2="${srcdir:-.}/ci$$-2.pid.tmp"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4566
-HAPORT=4567
+PORT=4166
+HAPORT=4167
 PIDFILE=ocserv-pid.$$.tmp
 CONFIG_UDP_LISTEN_LOCAL=ocserv_udp_listen_local.conf.$$.tmp
 HACONFIG=haproxy.conf.$$.tmp
@@ -63,8 +63,8 @@ function finish {
 trap finish EXIT
 
 # server address
-ADDRESS=10.200.2.1
-CLI_ADDRESS=10.200.1.1
+ADDRESS=10.201.2.1
+CLI_ADDRESS=10.201.1.1
 VPNNET=192.168.1.0/24
 VPNADDR=192.168.1.1
 OCCTL_SOCKET=./occtl-udp-listen-host-$$.socket

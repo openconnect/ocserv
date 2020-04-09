@@ -1,9 +1,9 @@
 * Version 1.0.1 (unreleased)
 - Prevent clients that use broken versions of gnutls from
-  connecting using DTLS (#277)
-- occtl: added machine-readable output for json output (#271)
+  connecting using DTLS (#277).
+- occtl: added machine-readable fields in json output (#271).
 - occtl: IPs in ban list value is now reflecting the actual
-  banned IPs rather than the database size(#272).
+  banned IPs rather than the database size (#272).
 
 
 * Version 1.0.0 (released 2020-03-20)

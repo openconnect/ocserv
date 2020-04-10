@@ -570,6 +570,36 @@ static void drop_privileges(main_server_st* s)
 	}
 }
 
+void set_self_oom_score_adj(main_server_st* s)
+{
+#ifdef __linux__
+	const char proc_self_oom_adj_score_path[] = "/proc/self/oom_score_adj";
+	const char oom_adj_score_value[] = "1000";
+	size_t written = 0;
+	int fd;
+
+	fd = open(proc_self_oom_adj_score_path, O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (fd == -1) {
+		int e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot open %s: %s", proc_self_oom_adj_score_path, strerror(e));
+		goto cleanup;
+	}
+
+	written = write(fd, oom_adj_score_value, sizeof(oom_adj_score_value));
+	if (written != sizeof(oom_adj_score_value)) {
+		int e = errno;
+		mslog(s, NULL, LOG_ERR, "cannot write %s: %s", proc_self_oom_adj_score_path, strerror(e));
+		goto cleanup;
+	}
+
+cleanup:
+	if (fd) {
+		close(fd);
+	}
+#endif
+}
+
+
 /* clears the server listen_list and proc_list. To be used after fork().
  * It frees unused memory and descriptors.
  */
@@ -1156,6 +1186,8 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 
 			setproctitle(PACKAGE_NAME"-worker");
 			kill_on_parent_kill(SIGTERM);
+
+			set_self_oom_score_adj(s);
 
 			/* write sec-mod's address */
 			memcpy(&ws->secmod_addr, &s->secmod_addr, s->secmod_addr_len);

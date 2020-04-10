@@ -1278,6 +1278,22 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 	return 0;
 }
 
+/* Disable any TCP queuing on the TLS port. This allows a connection that works over
+ * TCP instead of UDP to still be interactive.
+ */
+static void set_no_delay(worker_st * ws, int fd)
+{
+	int flag = 1;
+	int ret;
+
+	ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+	if (ret == -1) {
+		oclog(ws, LOG_DEBUG,
+		      "setsockopt(IP_TOS) to %x, failed.", (unsigned)flag);
+		return;
+	}
+}
+
 #define TOSCLASS(x) (IPTOS_CLASS_CS##x)
 
 static void set_net_priority(worker_st * ws, int fd, int priority)
@@ -2165,6 +2181,7 @@ static int connect_handler(worker_st * ws)
 	set_socket_timeout(ws, ws->conn_fd);
 	set_non_block(ws->conn_fd);
 	set_net_priority(ws, ws->conn_fd, ws->user_config->net_priority);
+	set_no_delay(ws, ws->conn_fd);
 
 	if (ws->udp_state != UP_DISABLED) {
 

@@ -23,8 +23,9 @@
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=5647
+PORT=443
 PIDFILE=ocserv-pid.$$.tmp
+KRB5PIDFILE=krb5-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
 IP=$(which ip)
@@ -33,20 +34,21 @@ OUTFILE=traffic.$$.tmp
 USERNAME=krb5user
 USERPASS=krb5user123
 
+export KRB5_TRACE=/dev/stderr
 
 . `dirname $0`/common.sh
 
 if test -z "${IP}";then
 	echo "no IP tool is present"
-	exit 77
+	exit 1
 fi
 
 if test "$(id -u)" != "0";then
-	echo "This test must be run as root"
-	exit 77
+	echo "This test must be run as root, and is a destructive one"
+	exit 1
 fi
 
-if ! test -f /etc/krb5.conf && ! test -f /var/kerberos/krb5kdc/kdc.conf;then
+if ! test -x /usr/sbin/kadmin.local;then
 	echo "This test must be run on a KDC-running system"
 	exit 1
 fi
@@ -57,7 +59,8 @@ function finish {
   set +e
   echo " * Cleaning up..."
   test -n "${PID}" && kill ${PID} >/dev/null 2>&1
-  test -n "${KRB5PID}" && kill ${KRB5PID} >/dev/null 2>&1
+  test -e "${KRB5PIDFILE}" && kill $(cat ${KRB5PIDFILE}) >/dev/null 2>&1
+  test -e "${KRB5PIDFILE}" && rm -f ${KRB5PIDFILE} >/dev/null 2>&1
   test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
   test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
   test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
@@ -82,42 +85,83 @@ ${CMDNS2} ${IP} link set dev lo up
 
 # Run KDC
 # This is destructive at the moment as it changes the system that it is being run.
+mkdir -p /var/kerberos/krb5kdc/
+cp ${srcdir}/data/krb5.conf /etc/
+cp ${srcdir}/data/kdc.conf /var/kerberos/krb5kdc/
+cp ${srcdir}/data/k5.KERBEROS.TEST /var/kerberos/krb5kdc/
+cp ${srcdir}/data/kadm5.acl /var/kerberos/krb5kdc/
+chmod 750 /var/kerberos/krb5kdc/
+chmod 640 /var/kerberos/krb5kdc/*
+
+echo " * creating database"
 echo -e "secret123\nsecret123"|/usr/sbin/kdb5_util create -s
 
-echo " * added ${USERNAME}"
+echo " * addprinc ${USERNAME}"
 echo -e "${USERPASS}\n${USERPASS}" | /usr/sbin/kadmin.local -q "addprinc ${USERNAME}"
+test $? = 0 || exit 1
+
+echo " * addprinc HTTP"
 echo -e "test123\ntest123" | /usr/sbin/kadmin.local -q "addprinc HTTP/kerberos.test"
+test $? = 0 || exit 1
+
+echo " * addprinc keytab"
 /usr/sbin/kadmin.local -q "xst -norandkey -k /etc/krb5-keytab HTTP/kerberos.test@KERBEROS.TEST"
+test $? = 0 || exit 1
 
-${CMDNS2} /usr/sbin/krb5kdc &
-KRB5PID=$!
+grep kerberos.test /etc/hosts || echo "${ADDRESS} kerberos.test" >> /etc/hosts
 
-sleep 2
+mkdir -p /etc/ocserv
+cp ${srcdir}/certs/ca.pem /etc/ocserv
+
+
+echo " * Starting KDC..."
+${CMDNS2} /usr/sbin/krb5kdc -P ${KRB5PIDFILE}
+test $? = 0 || exit 1
+
+sleep 4
 
 export TEST_PAMDIR=data/pam-kerberos
 update_config kerberos.config
-if test "$VERBOSE" = 1;then
-DEBUG="-d 3"
-fi
 
 # Run ocserv
-PREPEND_CMD=${CMDNS2}
-launch_pam_server -d 1 -f -c ${CONFIG} & PID=$!
-PREPEND_CMD=""
+PRELOAD_CMD=${CMDNS2}
+echo " * Starting ocserv..."
+launch_pam_server -d 3 -f -c ${CONFIG} & PID=$!
+PRELOAD_CMD=""
 
 sleep 5
 
+echo ""
 echo " * Getting cookie via PAM from ${ADDRESS}:${PORT}..."
-( echo "${USERPASS}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+( echo "${USERPASS}" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly )
 if test $? != 0;then
 	echo "Could not get cookie from server"
 	exit 1
 fi
 
-${CMDNS1} echo ${USERPASS}|kinit ${USERNAME}@KERBEROS.TEST
+echo ""
+echo " * Running kinit"
+echo ${USERPASS}|${CMDNS1} kinit -V ${USERNAME}@KERBEROS.TEST
+if test $? != 0;then
+	echo "Error in kinit"
+	exit 1
+fi
 
-echo " * Connecting via krb5 to ${ADDRESS}:${PORT}..."
-( ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+echo ""
+echo " * Running klist"
+${CMDNS1} klist
+
+echo ""
+echo " * Getting cookie via kerberos from kerberos.test:${PORT}..."
+${CMDNS1} ${OPENCONNECT} kerberos.test:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+echo ""
+echo " * Connecting via krb5 to kerberos.test:${PORT}..."
+( ${CMDNS1} ${OPENCONNECT} kerberos.test:${PORT} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --verbose -b )
 if test $? != 0;then
 	echo "Could not connect to server"
 	exit 1
@@ -131,16 +175,11 @@ if test $? != 0;then
 	exit 1
 fi
 
-${CMDNS2} ping -w 3 ${CLIVPNADDR}
-if test $? != 0;then
-	echo "Could not ping client IP"
-	exit 1
-fi
-
 sleep 60
 
-echo " * Connecting via krb5 and non-fresh ticket to ${ADDRESS}:${PORT}..."
-( ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+echo ""
+echo " * Connecting via krb5 and non-fresh ticket to kerberos.test:${PORT}..."
+${CMDNS1} ${OPENCONNECT} kerberos.test:${PORT} -u ${USERNAME} --servercert=pin-sha256:xp3scfzy3rOQsv9NcOve/8YVVv+pHr4qNCXEXrNl5s8= --cookieonly
 if test $? = 0;then
 	echo "Could connect to server although not expected"
 	exit 1

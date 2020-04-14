@@ -65,6 +65,10 @@ json_t *create_oidc_config(const char *openid_configuration_url,
 		goto cleanup;
 	}
 
+	if (json_object_set_new(config, "minimum_jwk_refresh_time", json_integer(0))) {
+		goto cleanup;
+	}
+
 	required_claims = NULL;
 
 	result = true;
@@ -257,11 +261,13 @@ int main(int argc, char **argv)
 	const char audience[] = "SomeAudience";
 	const char issuer[] = "SomeIssuer";
 	const char user_name_claim[] = "preferred_user_name";
-	const char kid[] = "My Fake Key";
+	char kid[64];
 	const char user_name[] = "SomeUser";
 	const char typ[] = "JWT";
 	const char alg[] = "ES256";
 	time_t now = time(NULL);
+
+	snprintf(kid, sizeof(kid), "key_%ld", now);
 
 	if (!getcwd(working_directory, sizeof(working_directory))) {
 		return 1;
@@ -269,7 +275,7 @@ int main(int argc, char **argv)
 	strncat(working_directory, "/data", sizeof(working_directory)-1);
 	working_directory[sizeof(working_directory)-1] = 0;
 
-	cjose_jwk_t *key = create_key("My Fake Key");
+	cjose_jwk_t *key = create_key(kid);
 
 	generate_config_files(working_directory, key, audience, issuer,
 			      user_name_claim);

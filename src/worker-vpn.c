@@ -1289,7 +1289,7 @@ static void set_no_delay(worker_st * ws, int fd)
 	ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 	if (ret == -1) {
 		oclog(ws, LOG_DEBUG,
-		      "setsockopt(IP_TOS) to %x, failed.", (unsigned)flag);
+		      "setsockopt(TCP_NODELAY) to %x, failed.", (unsigned)flag);
 		return;
 	}
 }

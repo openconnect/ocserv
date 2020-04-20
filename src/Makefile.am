@@ -19,15 +19,33 @@ EXTRA_DIST = version.inc.in version.inc \
 	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw
 
 
-sbin_PROGRAMS = ocserv
+sbin_PROGRAMS = ocserv ocserv-worker
 bin_SCRIPTS = ocserv-fw
+
+ocserv_SOURCES = $(CORE_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
+	main.c main-auth.c main-ban.c main-ban.h main-ctl-unix.c main-proc.c \
+	main-sec-mod-cmd.c main-user.c main-worker-cmd.c proc-search.c \
+	proc-search.h route-add.c route-add.h sec-mod.c sec-mod.h sec-mod-acct.h \
+	sec-mod-auth.c sec-mod-auth.h sec-mod-cookies.c sec-mod-db.c \
+	sec-mod-resume.c sec-mod-resume.h sec-mod-sup-config.c sec-mod-sup-config.h
+
+ocserv_LDADD = $(CORE_LDADD)
+
+ocserv_worker_CPPFLAGS = $(AM_CPPFLAGS) -DOCSERV_WORKER_PROCESS
+ocserv_worker_SOURCES = $(CORE_SOURCES) \
+	html.c html.h http-heads.h worker.c worker.h worker-auth.c \
+	worker-bandwidth.c worker-bandwidth.h worker-http.c worker-http-handlers.c \
+	worker-kkdcp.c worker-misc.c worker-privs.c worker-proxyproto.c \
+	worker-resume.c worker-vpn.c
+
+ocserv_worker_LDADD = $(CORE_LDADD)
 
 noinst_LIBRARIES = libipc.a
 
 # Authentication module sources
-AUTH_SOURCES=auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c auth/radius.h \
-	auth/common.c auth/common.h auth/gssapi.h auth/gssapi.c auth-unix.c \
-	auth-unix.h 
+AUTH_SOURCES=auth/common.c auth/common.h auth/gssapi.c auth/gssapi.h \
+	auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c \
+	auth/radius.h auth-unix.c auth-unix.h
 
 if ENABLE_OIDC_AUTH
 AUTH_SOURCES += auth/openidconnect.c auth/openidconnect.h
@@ -35,43 +53,30 @@ endif
 
 ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
 
-ocserv_SOURCES = main.c main-auth.c worker-vpn.c worker-auth.c tlslib.c \
-	main-worker-cmd.c ip-lease.c ip-lease.h vhost.h main-proc.c \
-	vpn.h tlslib.h log.c tun.c tun.h config-kkdcp.c \
-	config.c worker-resume.c worker.h sec-mod-resume.c main.h \
-	worker-http-handlers.c html.c html.h worker-http.c \
-	main-user.c worker-misc.c route-add.c route-add.h worker-privs.c \
-	sec-mod.c sec-mod-db.c sec-mod-auth.c sec-mod-auth.h sec-mod.h \
-	script-list.h $(AUTH_SOURCES) $(ACCT_SOURCES) \
-	icmp-ping.c icmp-ping.h worker-kkdcp.c subconfig.c \
-	sec-mod-sup-config.c sec-mod-sup-config.h \
-	sup-config/file.c sup-config/file.h main-sec-mod-cmd.c \
-	sup-config/radius.c sup-config/radius.h \
-	worker-bandwidth.c worker-bandwidth.h main-ctl.h \
-	vasprintf.c vasprintf.h worker-proxyproto.c config-ports.c \
-	proc-search.c proc-search.h http-heads.h ip-util.c ip-util.h \
-	main-ban.c main-ban.h common-config.h valid-hostname.c \
-	str.c str.h gettime.h $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	sec-mod-acct.h setproctitle.c setproctitle.h sec-mod-resume.h \
-	sec-mod-cookies.c defs.h inih/ini.c inih/ini.h \
-	common/hmac.h common/hmac.c
-
-
+CORE_SOURCES = $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
+	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
+	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
+	icmp-ping.c icmp-ping.h inih/ini.c inih/ini.h ip-lease.c ip-lease.h \
+	ip-util.c ip-util.h isolate.h isolate.c log.c main.h main-ctl.h \
+	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
+	sup-config/file.c sup-config/file.h sup-config/radius.c \
+	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
+	vasprintf.c vasprintf.h vhost.h vpn.h 
 
 if ENABLE_COMPRESSION
-ocserv_SOURCES += lzs.c lzs.h
+CORE_SOURCES += lzs.c lzs.h
 endif
 
 if HAVE_GSSAPI
-ocserv_SOURCES += kkdcp_asn1_tab.c kkdcp.asn
+CORE_SOURCES += kkdcp_asn1_tab.c kkdcp.asn
 endif
 
 if LOCAL_HTTP_PARSER
 HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
 endif
 
-ocserv_LDADD = ../gl/libgnu.a libccan.a libcommon.a
-ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
+CORE_LDADD = ../gl/libgnu.a libccan.a libcommon.a
+CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
 	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
 	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
@@ -80,10 +85,8 @@ ocserv_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(CODE_COVERAGE_LDFLAGS) 
 	
 if ENABLE_OIDC_AUTH
-ocserv_LDADD += $(LIBCURL_LIBS) $(CJOSE_LIBS) $(JANSSON_LIBS)
+CORE_LDADD += $(LIBCURL_LIBS) $(CJOSE_LIBS) $(JANSSON_LIBS)
 endif
-
-ocserv_SOURCES += main-ctl-unix.c
 
 libipc_a_SOURCES=ctl.pb-c.c ctl.pb-c.h ipc.pb-c.h ipc.pb-c.c
 
@@ -164,9 +167,9 @@ endif
 
 # libpcl
 if PCL
-ocserv_LDADD += $(PCL_LIBS)
+CORE_LDADD += $(PCL_LIBS)
 else
-ocserv_LDADD += libpcl.a
+CORE_LDADD += libpcl.a
 AM_CPPFLAGS += -I$(srcdir)/pcl/
 
 noinst_LIBRARIES += libpcl.a

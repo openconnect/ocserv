@@ -5,7 +5,7 @@
  *
  * This file is part of ocserv.
  *
- * The GnuTLS is free software; you can redistribute it and/or
+ * ocserv is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation; either version 2.1 of
  * the License, or (at your option) any later version.
@@ -42,5 +42,7 @@ void kill_on_parent_kill(int sig);
 SIGHANDLER_T ocsignal(int signum, SIGHANDLER_T handler);
 
 int check_upeer_id(const char *mod, int debug, int cfg, uid_t uid, uid_t gid, uid_t *ruid, pid_t *pid);
+
+
 
 #endif

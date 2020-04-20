@@ -6,7 +6,7 @@
  *
  * This file is part of ocserv.
  *
- * The GnuTLS is free software; you can redistribute it and/or
+ * ocserv is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation; either version 2.1 of
  * the License, or (at your option) any later version.
@@ -52,7 +52,7 @@ extern ev_timer maintainance_watcher;
 
 #define MAIN_MAINTENANCE_TIME (900)
 
-int cmd_parser (void *pool, int argc, char **argv, struct list_head *head);
+int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker);
 
 struct listener_st {
 	ev_io io;
@@ -261,6 +261,10 @@ typedef struct main_server_st {
 
 	/* used as temporary buffer (currently by forward_udp_to_owner) */
 	uint8_t msg_buffer[MAX_MSG_SIZE];
+
+#ifdef RLIMIT_NOFILE
+	struct rlimit fd_limits_default_set;
+#endif
 } main_server_st;
 
 void clear_lists(main_server_st *s);
@@ -362,6 +366,7 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 int secmod_reload(main_server_st * s);
 
 const char *secmod_socket_file_name(struct perm_cfg_st *perm_config);
+void restore_secmod_socket_file_name(const char * save_path);
 void clear_vhosts(struct list_head *head);
 
 void request_reload(int signo);

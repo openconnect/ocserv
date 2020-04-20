@@ -29,6 +29,7 @@
 #include <sys/syscall.h>
 #include <seccomp.h>
 #include <sys/ioctl.h>
+#include <sys/signal.h>
 #include <errno.h>
 
 /* libseccomp 2.4.2 broke accidentally the API. Work around it. */
@@ -45,15 +46,45 @@
 
 #ifdef USE_SECCOMP_TRAP
 # define _SECCOMP_ERR SCMP_ACT_TRAP
+#include <execinfo.h>
+#include <signal.h>
+void sigsys_action(int sig, siginfo_t * info, void* ucontext)
+{
+	char * call_addr = *backtrace_symbols(&info->si_call_addr, 1);
+	fprintf(stderr, "Function %s called disabled syscall %d\n", call_addr, info->si_syscall);
+	exit(1);
+}
+
+int set_sigsys_handler(struct worker_st *ws)
+{
+	struct sigaction sa = {};
+
+	sa.sa_sigaction = sigsys_action;
+	sa.sa_flags = SA_SIGINFO;
+
+	return sigaction(SIGSYS, &sa, NULL);
+}
 #else
 # define _SECCOMP_ERR SCMP_ACT_ERRNO(ENOSYS)
+int set_sigsys_handler(struct worker_st *ws)
+{
+	return 0;
+}
 #endif
+
+
 
 int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
 	vhost_cfg_st *vhost = NULL;
+
+	if (set_sigsys_handler(ws))
+	{
+		oclog(ws, LOG_ERR, "set_sigsys_handler");
+		return -1;
+	}
 
 	ctx = seccomp_init(_SECCOMP_ERR);
 	if (ctx == NULL) {
@@ -129,6 +160,10 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(exit_group, 0);
 	ADD_SYSCALL(socket, 0);
 	ADD_SYSCALL(connect, 0);
+
+	ADD_SYSCALL(openat, 0);
+	ADD_SYSCALL(fstat, 0);
+	ADD_SYSCALL(lseek, 0);
 
 	ADD_SYSCALL(getsockopt, 0);
 	ADD_SYSCALL(setsockopt, 0);

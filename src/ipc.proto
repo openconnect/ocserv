@@ -147,6 +147,37 @@ message udp_fd_msg
 	required bytes data = 2; /* the first packet in the fd */
 }
 
+message snapshot_entry_msg
+{
+	required uint32 file_descriptor = 1;
+	required string file_name = 2;
+}
+
+/* WORKER_STARTUP */
+message worker_startup_msg
+{
+	enum CONN_TYPE {
+		TCP = 0;
+		UDP = 1;
+		UNIX = 2;
+	}
+
+	required bytes secmod_addr = 1;
+	required uint32 cmd_fd = 2;
+	required uint32 conn_fd = 3;
+	required CONN_TYPE conn_type = 4;
+	required string remote_ip_str = 5;
+	required string our_ip_str = 6;
+	required uint64 session_start_time = 7;
+	required bytes remote_addr = 8;
+	required bytes our_addr = 9;
+	required bytes sec_auth_init_hmac = 10;
+	repeated snapshot_entry_msg snapshot_entries = 11;
+	repeated string pam_auth_group_list = 12;
+	repeated string gssapi_auth_group_list = 13;
+	repeated string plain_auth_group_list = 14;
+}
+
 /* SESSION_INFO */
 message session_info_msg
 {
@@ -341,3 +372,10 @@ message secm_list_cookies_reply_msg
 
 /* SECM_BAN_IP: sent from sec-mod to main */
 /* same as: ban_ip_msg */
+
+
+/* snapshot_state */
+message snapshot_state_msg
+{
+	
+}

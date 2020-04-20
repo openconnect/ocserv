@@ -713,28 +713,6 @@ int secmod_reload(main_server_st * s)
 	return 0;
 }
 
-/* Creates a permanent filename to use for secmod to main communication
- */
-const char *secmod_socket_file_name(struct perm_cfg_st *perm_config)
-{
-	unsigned int rnd;
-	int ret;
-	static char socket_file[_POSIX_PATH_MAX] = {0};
-
-	if (socket_file[0] != 0)
-		return socket_file;
-
-	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
-	if (ret < 0)
-		exit(1);
-
-	/* make socket name */
-	snprintf(socket_file, sizeof(socket_file), "%s.%x",
-		 perm_config->socket_file_prefix, rnd);
-
-	return socket_file;
-}
-
 static void clear_unneeded_mem(struct list_head *vconfig)
 {
 	vhost_cfg_st *vhost = NULL;

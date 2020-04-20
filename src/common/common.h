@@ -6,7 +6,7 @@
  *
  * This file is part of ocserv.
  *
- * The GnuTLS is free software; you can redistribute it and/or
+ * ocserv is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation; either version 2.1 of
  * the License, or (at your option) any later version.
@@ -137,5 +137,9 @@ size_t oc_strlcpy(char *dst, char const *src, size_t siz);
 
 #define SAFE_ID_SIZE (BASE64_ENCODE_RAW_LENGTH(20)+1)
 char *calc_safe_id(const uint8_t *data, unsigned size, char *output, unsigned output_size);
+
+
+extern int saved_argc;
+extern char **saved_argv;
 
 #endif

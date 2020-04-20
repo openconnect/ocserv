@@ -16,8 +16,11 @@ See https://ocserv.gitlab.io/www/technical.html
 
 The main component consists of the process which is tasked to:
  
- * Listen for incoming TCP connections and fork a new worker process
+ * Listen for incoming TCP connections and fork/exec a new worker process
    to handle it. - See main.c
+
+ * State is passed between main process and worker via an environment 
+   variable.
 
  * Listen for incomping UDP "connections" and forward the packet stream
    to the appropriate worker process. - See main.c

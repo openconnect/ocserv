@@ -53,9 +53,11 @@
 #include <main.h>
 #include <tlslib.h>
 #include <occtl/ctl.h>
+#include <gnutls/crypto.h>
 #include "common-config.h"
 
 #include <getopt.h>
+#include <snapshot.h>
 
 #define OLD_DEFAULT_CFG_FILE "/etc/ocserv.conf"
 #define DEFAULT_CFG_FILE "/etc/ocserv/ocserv.conf"
@@ -133,6 +135,15 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		varname++; \
 	}
 
+struct snapshot_t * config_snapshot = NULL;
+
+char ** pam_auth_group_list = NULL;
+char ** gssapi_auth_group_list = NULL;
+char ** plain_auth_group_list = NULL;
+unsigned pam_auth_group_list_size = 0;
+unsigned gssapi_auth_group_list_size = 0;
+unsigned plain_auth_group_list_size = 0;
+
 
 /* Parses the string ::1/prefix, to return prefix
  * and modify the string to contain the network only.
@@ -182,6 +193,7 @@ static auth_types_st avail_auth_types[] =
 	{NAME("oidc"), &oidc_auth_funcs, AUTH_TYPE_OIDC, oidc_get_brackets_string},
 #endif
 };
+
 
 static void figure_auth_funcs(void *pool, const char *vhostname,
 			      struct perm_cfg_st *config, char **auth, unsigned auth_size,
@@ -767,10 +779,12 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			READ_STRING(vhost->perm_config.srk_pin_file);
 		} else if (strcmp(name, "ca-cert") == 0) {
 			READ_STRING(vhost->perm_config.ca);
+#if !defined(OCSERV_WORKER_PROCESS)
 		} else if (strcmp(name, "key-pin") == 0) {
 			READ_STRING(vhost->perm_config.key_pin);
 		} else if (strcmp(name, "srk-pin") == 0) {
 			READ_STRING(vhost->perm_config.srk_pin);
+#endif
 		} else if (strcmp(name, "socket-file") == 0) {
 			if (!PWARN_ON_VHOST_STRDUP(vhost->name, "socket-file", socket_file_prefix))
 				PREAD_STRING(pool, vhost->perm_config.socket_file_prefix);
@@ -876,9 +890,11 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		READ_TF(config->enable_compression);
 	} else if (strcmp(name, "compression-algo-priority") == 0) {
 		if (!WARN_ON_VHOST_ONLY(vhost->name, "compression-algo-priority")) {
+#if defined(OCSERV_WORKER_PROCESS)
 			if (switch_comp_priority(pool, value) == 0) {
 				fprintf(stderr, WARNSTR"invalid compression modstring %s\n", value);
 			}
+#endif
 		}
 	} else if (strcmp(name, "no-compress-limit") == 0) {
 		READ_NUMERIC(config->no_compress_limit);
@@ -1077,8 +1093,28 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 
 enum {
 	CFG_FLAG_RELOAD = (1<<0),
-	CFG_FLAG_SECMOD = (1<<1)
+	CFG_FLAG_SECMOD = (1<<1),
+	CFG_FLAG_WORKER = (1<<2)
 };
+
+static void replace_file_with_snapshot(char ** file_name)
+{
+	char * snapshot_file_name;
+	if (*file_name == NULL) {
+		return;
+	}
+
+	if (snapshot_lookup_filename(
+			config_snapshot, 
+			*file_name, 
+			&snapshot_file_name) < 0) {
+		fprintf(stderr, ERRSTR"cannot find snapshot for file %s\n", *file_name);
+		exit(1);
+	}
+
+	talloc_free(*file_name);
+	*file_name = snapshot_file_name;
+}
 
 static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			   unsigned flags)
@@ -1094,15 +1130,62 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 	ctx.reload = (flags&CFG_FLAG_RELOAD)?1:0;
 	ctx.head = head;
 
-	/* parse configuration
-	 */
-	ret = ini_parse(file, cfg_ini_handler, &ctx);
-	if (ret < 0 && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0)
-		ret = ini_parse(OLD_DEFAULT_CFG_FILE, cfg_ini_handler, &ctx);
+	// Worker always reads from snapshot
+	if ((flags & CFG_FLAG_WORKER) == CFG_FLAG_WORKER) {
+		char * snapshot_file = NULL;
 
-	if (ret < 0) {
-		fprintf(stderr, ERRSTR"cannot load config file %s\n", file);
-		exit(1);
+		if ((snapshot_lookup_filename(config_snapshot, file, &snapshot_file) < 0) && 
+			(snapshot_lookup_filename(config_snapshot, OLD_DEFAULT_CFG_FILE, &snapshot_file) < 0)) {
+			fprintf(stderr, ERRSTR"snapshot_lookup failed for file %s\n", file);
+			exit(1);
+		}
+
+		ret = ini_parse(snapshot_file, cfg_ini_handler, &ctx);
+		if (ret < 0) {
+			fprintf(stderr, ERRSTR"cannot load config file %s\n", file);
+			exit(1);
+		}
+		talloc_free(snapshot_file);
+
+		// Walk the config, replacing filename with the snapshot equivalent
+		list_for_each(head, vhost, list) {
+			size_t index;
+			replace_file_with_snapshot(&vhost->perm_config.dh_params_file);
+			replace_file_with_snapshot(&vhost->perm_config.config->ocsp_response);
+			for (index = 0; index < vhost->perm_config.cert_size; index ++) {
+				replace_file_with_snapshot(&vhost->perm_config.cert[index]);
+			}
+		}
+	} else {
+		const char * cfg_file = file;
+
+		/* parse configuration
+		*/
+		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+		if (ret < 0 && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0) {
+			cfg_file = OLD_DEFAULT_CFG_FILE;
+			ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+		}
+
+		if (ret < 0) {
+			fprintf(stderr, ERRSTR"cannot load config file %s\n", cfg_file);
+			exit(1);
+		}
+		
+		ret = snapshot_create(config_snapshot, cfg_file);
+		if (ret < 0){
+			fprintf(stderr, ERRSTR"cannot snapshot config file %s\n", cfg_file);
+			exit(1);
+		}
+		list_for_each(head, vhost, list) {
+			size_t index;
+			snapshot_create(config_snapshot, vhost->perm_config.dh_params_file);
+			snapshot_create(config_snapshot, vhost->perm_config.config->ocsp_response);
+			for (index = 0; index < vhost->perm_config.cert_size; index ++) {
+				snapshot_create(config_snapshot, vhost->perm_config.cert[index]);
+			}
+		}
+
 	}
 
 	/* apply configuration not yet applied.
@@ -1128,6 +1211,20 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 		if (vhost->auto_select_group != 0 && vhost->perm_config.auth[0].amod != NULL && vhost->perm_config.auth[0].amod->group_list != NULL) {
 			vhost->perm_config.auth[0].amod->group_list(config, vhost->perm_config.auth[0].additional, &config->group_list, &config->group_list_size);
+			switch (vhost->perm_config.auth[0].amod->type) {
+			case AUTH_TYPE_PAM|AUTH_TYPE_USERNAME_PASS:
+				pam_auth_group_list = config->group_list;
+				pam_auth_group_list_size = config->group_list_size;
+				break;
+			case AUTH_TYPE_GSSAPI:
+				gssapi_auth_group_list = config->group_list;
+				gssapi_auth_group_list_size = config->group_list_size;
+				break;
+			case AUTH_TYPE_PLAIN|AUTH_TYPE_USERNAME_PASS:
+				plain_auth_group_list = config->group_list;
+				plain_auth_group_list_size = config->group_list_size;
+				break;
+			}
 		}
 
 		if (vhost->expose_iroutes != 0) {
@@ -1428,7 +1525,7 @@ void usage(void)
 	fprintf(stderr, "Please send bug reports to:  "PACKAGE_BUGREPORT"\n");
 }
 
-int cmd_parser (void *pool, int argc, char **argv, struct list_head *head)
+int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker)
 {
 	unsigned test_only = 0;
 	int c;
@@ -1481,7 +1578,7 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head)
 		exit(1);
 	}
 
-	parse_cfg_file(pool, cfg_file, head, 0);
+	parse_cfg_file(pool, cfg_file, head, worker ? CFG_FLAG_WORKER : 0);
 
 	if (test_only)
 		exit(0);
@@ -1695,4 +1792,155 @@ void clear_old_configs(struct list_head *head)
 			}
 		}
 	}
+}
+
+// ocserv and ocserv-worker both load and parse the configuration files.
+// As part of the process of loading the config files, auth / acct methods 
+// are enabled based on the content of the acct_mod_st and auth_mod_st tables.
+// These auth tables are present in the auth sub-subsystem. Linking against
+// the auth subsystem pulls in a very large set of dependent binaries which
+// increases the overall memory footprint. To avoid this, we provide stub 
+// versions of acct_mod_st and auth_mod_st tables that the ocserv-worker
+// process can link against.
+#if defined(OCSERV_WORKER_PROCESS)
+
+// Group information is populated by the auth subsystem. 
+// When compiles as part of ocserv-worker, the auth subsystem is not present.
+// To work around this, the group information is passed from ocserv-main to
+// ocserv-worker, which then caches it and returns it when queried.
+static void pam_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+{
+	*groupname = pam_auth_group_list;
+	*groupname_size = pam_auth_group_list_size;
+}
+
+static void gssapi_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+{
+	*groupname = gssapi_auth_group_list;
+	*groupname_size = gssapi_auth_group_list_size;
+}
+
+static void plain_group_list(void *pool, void *_additional, char ***groupname, unsigned *groupname_size)
+{
+	*groupname = plain_auth_group_list;
+	*groupname_size = plain_auth_group_list_size;
+}
+
+const struct acct_mod_st radius_acct_funcs = {
+	.type = ACCT_TYPE_RADIUS,
+	.auth_types = ALL_AUTH_TYPES,
+	.vhost_init = NULL,
+	.vhost_deinit = NULL,
+	.open_session = NULL,
+	.close_session = NULL,
+	.session_stats = NULL
+};
+
+const struct acct_mod_st pam_acct_funcs = {
+  .type = ACCT_TYPE_PAM,
+  .auth_types = ALL_AUTH_TYPES,
+  .open_session = NULL,
+  .close_session = NULL,
+};
+
+const struct auth_mod_st pam_auth_funcs = {
+  .type = AUTH_TYPE_PAM | AUTH_TYPE_USERNAME_PASS,
+  .auth_init = NULL,
+  .auth_deinit = NULL,
+  .auth_msg = NULL,
+  .auth_pass = NULL,
+  .auth_group = NULL,
+  .auth_user = NULL,
+  .group_list = pam_group_list
+};
+
+const struct auth_mod_st gssapi_auth_funcs = {
+	.type = AUTH_TYPE_GSSAPI,
+	.auth_init = NULL,
+	.auth_deinit = NULL,
+	.auth_msg = NULL,
+	.auth_pass = NULL,
+	.auth_user = NULL,
+	.auth_group = NULL,
+	.vhost_init = NULL,
+	.vhost_deinit = NULL,
+	.group_list = gssapi_group_list
+};
+
+const struct auth_mod_st plain_auth_funcs = {
+	.type = AUTH_TYPE_PLAIN | AUTH_TYPE_USERNAME_PASS,
+	.allows_retries = 1,
+	.vhost_init = NULL,
+	.auth_init = NULL,
+	.auth_deinit = NULL,
+	.auth_msg = NULL,
+	.auth_pass = NULL,
+	.auth_user = NULL,
+	.auth_group = NULL,
+	.group_list = plain_group_list
+};
+
+
+const struct auth_mod_st radius_auth_funcs = {
+	.type = AUTH_TYPE_RADIUS | AUTH_TYPE_USERNAME_PASS,
+	.allows_retries = 1,
+	.vhost_init = NULL,
+	.vhost_deinit = NULL,
+	.auth_init = NULL,
+	.auth_deinit = NULL,
+	.auth_msg = NULL,
+	.auth_pass = NULL,
+	.auth_user = NULL,
+	.auth_group = NULL,
+	.group_list = NULL
+};
+
+const struct auth_mod_st oidc_auth_funcs = {
+	.type = AUTH_TYPE_OIDC,
+	.allows_retries = 1,
+	.vhost_init = NULL,
+	.vhost_deinit = NULL,
+	.auth_init = NULL,
+	.auth_deinit = NULL,
+	.auth_msg = NULL,
+	.auth_pass = NULL,
+	.auth_user = NULL,
+	.auth_group = NULL,
+	.group_list = NULL
+};
+
+
+#else
+int get_cert_names(struct worker_st * ws, const gnutls_datum_t * raw)
+{
+	return -1;
+}
+#endif
+
+char secmod_socket_file_name_socket_file[_POSIX_PATH_MAX] = {0};
+
+void restore_secmod_socket_file_name(const char * save_path)
+{
+	strlcpy(secmod_socket_file_name_socket_file, save_path, sizeof(secmod_socket_file_name_socket_file));
+}
+
+/* Creates a permanent filename to use for secmod to main communication
+ */
+const char *secmod_socket_file_name(struct perm_cfg_st *perm_config)
+{
+	unsigned int rnd;
+	int ret;
+
+	if (secmod_socket_file_name_socket_file[0] != 0)
+		return secmod_socket_file_name_socket_file;
+
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
+	if (ret < 0)
+		exit(1);
+
+	/* make socket name */
+	snprintf(secmod_socket_file_name_socket_file, sizeof(secmod_socket_file_name_socket_file), "%s.%x",
+		 perm_config->socket_file_prefix, rnd);
+
+	return secmod_socket_file_name_socket_file;
 }

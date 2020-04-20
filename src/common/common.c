@@ -35,6 +35,9 @@
 #include "defs.h"
 #include "common/base64-helper.h"
 
+int saved_argc = 0;
+char **saved_argv = NULL;
+
 const char *_vhost_prefix(const char *name)
 {
 	static char tmp[128];
@@ -878,3 +881,4 @@ size_t oc_strlcpy(char *dst, char const *src, size_t siz)
 }
 
 #endif
+

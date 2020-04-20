@@ -140,6 +140,7 @@ RPM/epel7:
   - CURDIR=$(pwd)
   - TARFILE=$(find ./ -name '*.tar.xz')
   - RPMVERSION=$(cat /usr/local/rpms/ocserv/*.spec|grep ^Version|awk '{print $2}')
+  - sed -i '/^%{_sbindir}\/ocserv$/ a %{_sbindir}/ocserv-worker' /usr/local/rpms/ocserv/ocserv.spec
   - NEWVERSION=$(echo $TARFILE|sed -e 's/ocserv-//' -e 's/\.tar\.xz//' -e 's|./||')
   - echo "tarfile $TARFILE" && echo "rpm $RPMVERSION" && echo "new $NEWVERSION"
   - cp $TARFILE /usr/local/rpms/ocserv
@@ -176,6 +177,7 @@ RPM/epel8:
   - CURDIR=$(pwd)
   - TARFILE=$(find ./ -name '*.tar.xz')
   - RPMVERSION=$(cat /usr/local/rpms/ocserv/*.spec|grep ^Version|awk '{print $2}')
+  - sed -i '/^%{_sbindir}\/ocserv$/ a %{_sbindir}/ocserv-worker' /usr/local/rpms/ocserv/ocserv.spec
   - NEWVERSION=$(echo $TARFILE|sed -e 's/ocserv-//' -e 's/\.tar\.xz//' -e 's|./||')
   - echo "tarfile $TARFILE" && echo "rpm $RPMVERSION" && echo "new $NEWVERSION"
   - cp $TARFILE /usr/local/rpms/ocserv

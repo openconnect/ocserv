@@ -63,6 +63,9 @@
 #include <ip-lease.h>
 #include <ccan/list/list.h>
 #include <hmac.h>
+#include <base64-helper.h>
+#include <snapshot.h>
+#include <isolate.h>
 
 #ifdef HAVE_GSSAPI
 # include <libtasn1.h>
@@ -71,8 +74,15 @@ extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
 ASN1_TYPE _kkdcp_pkix1_asn = ASN1_TYPE_EMPTY;
 #endif
 
-int saved_argc = 0;
-char **saved_argv = NULL;
+// Name of environment variable used to pass worker_startup_msg 
+// between ocserv-main and ocserv-worker.
+#define OCSERV_ENV_WORKER_STARTUP_MSG "OCSERV_WORKER_STARTUP_MSG"
+
+extern struct snapshot_t * config_snapshot;
+
+
+int worker_argc = 0;
+char **worker_argv = NULL;
 
 static void listen_watcher_cb (EV_P_ ev_io *w, int revents);
 
@@ -90,6 +100,8 @@ ev_signal term_sig_watcher;
 ev_signal int_sig_watcher;
 ev_signal reload_sig_watcher;
 ev_child child_watcher;
+
+static int set_env_from_ws(main_server_st * ws);
 
 static void add_listener(void *pool, struct listen_list_st *list,
 	int fd, int family, int socktype, int protocol,
@@ -466,139 +478,6 @@ int y;
 
 	return;
 }
-
-/* Adjusts the file descriptor limits for the main or worker processes
- */
-static void update_fd_limits(main_server_st *s, unsigned main)
-{
-#ifdef RLIMIT_NOFILE
-	static struct rlimit def_set;
-	struct rlimit new_set;
-	unsigned max;
-	int ret;
-
-	if (main) {
-		ret = getrlimit(RLIMIT_NOFILE, &def_set);
-		if (ret < 0) {
-			fprintf(stderr, "error in getrlimit: %s\n", strerror(errno));
-			exit(1);
-		}
-
-		if (GETCONFIG(s)->max_clients > 0 && GETCONFIG(s)->max_clients > def_set.rlim_cur)
-			max = GETCONFIG(s)->max_clients + 32;
-		else
-			max = MAX(4*1024, def_set.rlim_cur);
-
-		if (max > def_set.rlim_cur) {
-			new_set.rlim_cur = max;
-			new_set.rlim_max = def_set.rlim_max;
-			ret = setrlimit(RLIMIT_NOFILE, &new_set);
-			if (ret < 0) {
-				fprintf(stderr, "error in setrlimit(%u): %s (cur: %u)\n", max, strerror(errno), (unsigned)def_set.rlim_cur);
-			}
-		}
-	} else {
-		/* set limits for worker processes */
-		ret = setrlimit(RLIMIT_NOFILE, &def_set);
-		if (ret < 0) {
-			mslog(s, NULL, LOG_INFO, "cannot update file limit(%u): %s\n", (unsigned)def_set.rlim_cur, strerror(errno));
-		}
-	}
-#endif
-}
-
-
-static void drop_privileges(main_server_st* s)
-{
-	int ret, e;
-	struct rlimit rl;
-
-	if (GETPCONFIG(s)->chroot_dir) {
-		ret = chdir(GETPCONFIG(s)->chroot_dir);
-		if (ret != 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chdir to %s: %s", GETPCONFIG(s)->chroot_dir, strerror(e));
-			exit(1);
-		}
-
-		ret = chroot(GETPCONFIG(s)->chroot_dir);
-		if (ret != 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot chroot to %s: %s", GETPCONFIG(s)->chroot_dir, strerror(e));
-			exit(1);
-		}
-	}
-
-	if (GETPCONFIG(s)->gid != -1 && (getgid() == 0 || getegid() == 0)) {
-		ret = setgid(GETPCONFIG(s)->gid);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot set gid to %d: %s\n",
-			       (int) GETPCONFIG(s)->gid, strerror(e));
-			exit(1);
-		}
-
-		ret = setgroups(1, &GETPCONFIG(s)->gid);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot set groups to %d: %s\n",
-			       (int) GETPCONFIG(s)->gid, strerror(e));
-			exit(1);
-		}
-	}
-
-	if (GETPCONFIG(s)->uid != -1 && (getuid() == 0 || geteuid() == 0)) {
-		ret = setuid(GETPCONFIG(s)->uid);
-		if (ret < 0) {
-			e = errno;
-			mslog(s, NULL, LOG_ERR, "cannot set uid to %d: %s\n",
-			       (int) GETPCONFIG(s)->uid, strerror(e));
-			exit(1);
-
-		}
-	}
-
-	update_fd_limits(s, 0);
-
-	rl.rlim_cur = 0;
-	rl.rlim_max = 0;
-	ret = setrlimit(RLIMIT_NPROC, &rl);
-	if (ret < 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot enforce NPROC limit: %s\n",
-		       strerror(e));
-	}
-}
-
-void set_self_oom_score_adj(main_server_st* s)
-{
-#ifdef __linux__
-	const char proc_self_oom_adj_score_path[] = "/proc/self/oom_score_adj";
-	const char oom_adj_score_value[] = "1000";
-	size_t written = 0;
-	int fd;
-
-	fd = open(proc_self_oom_adj_score_path, O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (fd == -1) {
-		int e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot open %s: %s", proc_self_oom_adj_score_path, strerror(e));
-		goto cleanup;
-	}
-
-	written = write(fd, oom_adj_score_value, sizeof(oom_adj_score_value));
-	if (written != sizeof(oom_adj_score_value)) {
-		int e = errno;
-		mslog(s, NULL, LOG_ERR, "cannot write %s: %s", proc_self_oom_adj_score_path, strerror(e));
-		goto cleanup;
-	}
-
-cleanup:
-	if (fd) {
-		close(fd);
-	}
-#endif
-}
-
 
 /* clears the server listen_list and proc_list. To be used after fork().
  * It frees unused memory and descriptors.
@@ -1122,6 +1001,9 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 	int cmd_fd[2];
 	pid_t pid;
 	hmac_component_st hmac_components[3];
+	char path[_POSIX_PATH_MAX];
+	char worker_path[_POSIX_PATH_MAX];
+	size_t path_length;
 
 	if (ltmp->sock_type == SOCK_TYPE_TCP || ltmp->sock_type == SOCK_TYPE_UNIX) {
 		/* connection on TCP port */
@@ -1200,6 +1082,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			ws->cmd_fd = cmd_fd[1];
 			ws->tun_fd = -1;
 			ws->dtls_tptr.fd = -1;
+			set_cloexec_flag(fd, false);
 			ws->conn_fd = fd;
 			ws->conn_type = stype;
 			ws->session_start_time = time(0);
@@ -1219,22 +1102,23 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			// Clear the HMAC key
 			safe_memset((uint8_t*)s->hmac_key, 0, sizeof(s->hmac_key));
 
-			/* Drop privileges after this point */
-			drop_privileges(s);
+			set_env_from_ws(s);
+			path_length = readlink("/proc/self/exe", path, sizeof(path)-1);
+			if (path_length == -1) {
+				mslog(s, NULL, LOG_ERR, "readlink failed %s", strerror(ret));
+				exit(1);
+			}
+			path[path_length] = '\0';
+			if (snprintf(worker_path, sizeof(worker_path), "%s-worker", path) >= sizeof(worker_path)) {
+				mslog(s, NULL, LOG_ERR, "snprint of path %s and ocserv-worker failed", path);
+				exit(1);
+			}
 
-			/* creds and config are not allocated
-			 * under s.
-			 */
-			talloc_free(s);
-#ifdef HAVE_MALLOC_TRIM
-			/* try to return all the pages we've freed to
-			 * the operating system, to prevent the child from
-			 * accessing them. That's totally unreliable, so
-			 * sensitive data have to be overwritten anyway. */
-			malloc_trim(0);
-#endif
-			vpn_server(ws);
-			exit(0);
+			worker_argv[0] = worker_path;
+			execv(worker_path, worker_argv);
+			ret = errno;
+			mslog(s, NULL, LOG_ERR, "exec %s failed %s", worker_path, strerror(ret));
+			exit(1);
 		} else if (pid == -1) {
 fork_failed:
 			mslog(s, NULL, LOG_ERR, "fork failed");
@@ -1327,6 +1211,8 @@ static void syserr_cb (const char *msg)
 	abort();
 }
 
+extern char secmod_socket_file_name_socket_file[_POSIX_PATH_MAX];
+
 int main(int argc, char** argv)
 {
 	int e;
@@ -1337,6 +1223,7 @@ int main(int argc, char** argv)
 	void *main_pool, *config_pool;
 	main_server_st *s;
 	char *str;
+	int i;
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
@@ -1358,6 +1245,11 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
+	if (snapshot_init(config_pool, &config_snapshot, "/tmp/ocserv_") < 0) {
+		fprintf(stderr, "failed to init snapshot");
+		exit(1);
+	}
+
 	s = talloc_zero(main_pool, main_server_st);
 	if (s == NULL) {
 		fprintf(stderr, "memory error\n");
@@ -1373,6 +1265,23 @@ int main(int argc, char** argv)
 		fprintf(stderr, "unable to generate hmac key\n");
 		exit(1);
 	}
+
+	// getopt processing mutates argv. Save a copy to pass to the child.
+	worker_argc = argc;
+	worker_argv = talloc_zero_array(main_pool, char*, worker_argc + 1);
+	if (!worker_argv) {
+		fprintf(stderr, "memory error\n");
+		exit(1);
+	}
+	for (i = 0; i < argc; i ++) {
+		worker_argv[i] = talloc_strdup(main_pool, argv[i]);
+		if (!worker_argv[i]) {
+			fprintf(stderr, "memory error\n");
+			exit(1);
+		}
+	}
+
+	init_fd_limits_default(s);
 
 	str = getenv("OCSERV_ALLOW_BROKEN_CLIENTS");
 	if (str && str[0] == '1' && str[1] == 0)
@@ -1399,7 +1308,7 @@ int main(int argc, char** argv)
 	}
 	list_head_init(s->vconfig);
 
-	ret = cmd_parser(config_pool, argc, argv, s->vconfig);
+	ret = cmd_parser(config_pool, argc, argv, s->vconfig, false);
 	if (ret < 0) {
 		fprintf(stderr, "Error in arguments\n");
 		exit(1);
@@ -1503,6 +1412,8 @@ int main(int argc, char** argv)
 	}
 #endif
 
+	init_fd_limits_default(s);
+
 	/* increase the number of our allowed file descriptors */
 	update_fd_limits(s, 1);
 
@@ -1559,6 +1470,8 @@ int main(int argc, char** argv)
 	remove(GETPCONFIG(s)->occtl_socket_file);
 	remove_pid_file();
 
+	snapshot_terminate(config_snapshot);
+
 	clear_lists(s);
 	clear_vhosts(s->vconfig);
 	talloc_free(s->config_pool);
@@ -1566,4 +1479,116 @@ int main(int argc, char** argv)
 	closelog();
 
 	return 0;
+}
+
+extern char ** pam_auth_group_list;
+extern char ** gssapi_auth_group_list;
+extern char ** plain_auth_group_list;
+extern unsigned pam_auth_group_list_size;
+extern unsigned gssapi_auth_group_list_size;
+extern unsigned plain_auth_group_list_size;
+
+static int set_env_from_ws(main_server_st *s)
+{
+	worker_st *ws = s->ws;
+	WorkerStartupMsg msg = WORKER_STARTUP_MSG__INIT;
+	size_t msg_size;
+	uint8_t *msg_buffer = NULL;
+	size_t string_size = 0;
+	char *string_buffer = NULL;
+	int ret = 0;
+	SnapshotEntryMsg **entries = NULL;
+	SnapshotEntryMsg entry_template = SNAPSHOT_ENTRY_MSG__INIT;
+	size_t entry_count;
+	size_t index = 0;
+	struct htable_iter iter;
+
+	msg.secmod_addr.data = (uint8_t *)&ws->secmod_addr;
+	msg.secmod_addr.len = ws->secmod_addr_len;
+	msg.cmd_fd = ws->cmd_fd;
+	msg.conn_fd = ws->conn_fd;
+	msg.conn_type = (WorkerStartupMsg__CONNTYPE)ws->conn_type;
+	msg.remote_ip_str = ws->remote_ip_str;
+	msg.our_ip_str = ws->our_ip_str;
+	msg.session_start_time = ws->session_start_time;
+	msg.remote_addr.data = (uint8_t *)&ws->remote_addr;
+	msg.remote_addr.len = ws->remote_addr_len;
+	msg.our_addr.data = (uint8_t *)&ws->our_addr;
+	msg.our_addr.len = ws->our_addr_len;
+	msg.sec_auth_init_hmac.data = (uint8_t *)ws->sec_auth_init_hmac;
+	msg.sec_auth_init_hmac.len = sizeof(ws->sec_auth_init_hmac);
+
+	entry_count = snapshot_entry_count(config_snapshot);
+
+	entries = talloc_zero_array(s, SnapshotEntryMsg *, entry_count);
+	if (!entries)
+		goto cleanup;
+
+	for (index = 0; index < entry_count; index++) {
+		int fd;
+		const char *file_name;
+		if (index == 0) {
+			snapshot_first(config_snapshot, &iter, &fd, &file_name);
+		} else {
+			snapshot_next(config_snapshot, &iter, &fd, &file_name);
+		}
+
+		entries[index] = talloc_zero(s, SnapshotEntryMsg);
+		*entries[index] = entry_template;
+		entries[index]->file_descriptor = fd;
+		entries[index]->file_name = (char *)file_name;
+	}
+
+	msg.n_snapshot_entries = entry_count;
+	msg.snapshot_entries = entries;
+
+	msg.n_gssapi_auth_group_list = gssapi_auth_group_list_size;
+	msg.gssapi_auth_group_list = gssapi_auth_group_list;
+	msg.n_pam_auth_group_list = pam_auth_group_list_size;
+	msg.pam_auth_group_list = pam_auth_group_list;
+	msg.n_plain_auth_group_list = plain_auth_group_list_size;
+	msg.plain_auth_group_list = plain_auth_group_list;
+
+	msg_size = worker_startup_msg__get_packed_size(&msg);
+	if (msg_size == 0) {
+		mslog(s, NULL, LOG_ERR, "worker_startup_msg__get_packed_size failed\n");
+		goto cleanup;
+	}
+
+	msg_buffer = talloc_size(ws, msg_size);
+	if (!msg_buffer) {
+		mslog(s, NULL, LOG_ERR, "talloc_size failed\n");
+		goto cleanup;
+	}
+	msg_size = worker_startup_msg__pack(&msg, msg_buffer);
+	if (msg_size == 0) {
+		mslog(s, NULL, LOG_ERR, "worker_startup_msg__pack failed\n");
+		goto cleanup;
+	}
+	string_size = BASE64_ENCODE_RAW_LENGTH(msg_size) + 1;
+	string_buffer = talloc_size(ws, string_size);
+	if (!msg_buffer) {
+		mslog(s, NULL, LOG_ERR, "talloc_size failed\n");
+		goto cleanup;
+	}
+
+	oc_base64_encode((const char *)msg_buffer, msg_size, string_buffer, string_size);
+	if (setenv(OCSERV_ENV_WORKER_STARTUP_MSG, string_buffer, 1)) {
+		mslog(s, NULL, LOG_ERR, "setenv failed\n");
+		goto cleanup;
+	}
+
+	ret = 1;
+
+cleanup:
+	if (entries)
+		talloc_free(entries);
+
+	if (msg_buffer)
+		talloc_free(msg_buffer);
+
+	if (string_buffer)
+		talloc_free(string_buffer);
+
+	return ret;
 }

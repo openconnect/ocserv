@@ -1,3 +1,9 @@
+* Version 1.0.2 (unreleased)
+- When Linux OOM takes control kill ocserv workers before ocserv-main
+  or ocserv-secmod (#283).
+- Disable TCP queuing on the TLS port.
+
+
 * Version 1.0.1 (released 2020-04-09)
 - Prevent clients that use broken versions of gnutls from
   connecting using DTLS (#277).

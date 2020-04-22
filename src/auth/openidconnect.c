@@ -35,9 +35,14 @@
 #include <cjose/cjose.h>
 #include <time.h>
 
+#define MINIMUM_KEY_REFRESH_INTERVAL (900)
+
 typedef struct oidc_vctx_st {
 	json_t *config;
 	json_t *jwks;
+	void * pool;
+	int minimum_jwk_refresh_time;
+	time_t last_jwks_load_time;
 } oidc_vctx_st;
 
 typedef struct oidc_ctx_st {
@@ -46,7 +51,7 @@ typedef struct oidc_ctx_st {
 	int token_verified;
 } oidc_ctx_st;
 
-static bool oidc_fetch_oidc_keys(void * pool, oidc_vctx_st * vctx);
+static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx);
 static bool oidc_verify_token(oidc_vctx_st * vctx, const char *token,
 				size_t token_length,
 				char user_name[MAX_USERNAME_SIZE]);
@@ -64,6 +69,7 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 	}
 	vc->config = NULL;
 	vc->jwks = NULL;
+	vc->pool = pool;
 
 	if (config == NULL) {
 		syslog(LOG_ERR, "ocserv-oidc: no configuration passed!\n");
@@ -94,7 +100,13 @@ static void oidc_vhost_init(void **vctx, void *pool, void *additional)
 		exit(1);
 	}
 
-	if (!oidc_fetch_oidc_keys(pool, vc)) {
+	if (json_object_get(vc->config, "minimum_jwk_refresh_time")) {
+		vc->minimum_jwk_refresh_time = json_integer_value(json_object_get(vc->config, "minimum_jwk_refresh_time"));
+	} else {
+		vc->minimum_jwk_refresh_time = MINIMUM_KEY_REFRESH_INTERVAL;
+	}
+
+	if (!oidc_fetch_oidc_keys(vc)) {
 		syslog(LOG_ERR, "ocserv-oidc: failed to load jwks\n");
 		exit(1);
 	}
@@ -303,12 +315,16 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 }
 
 // Download and parse the JWT keys for this virtual server context
-static bool oidc_fetch_oidc_keys(void * pool, oidc_vctx_st * vctx)
+static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 {
 	bool result = false;
 	json_t *jwks = NULL;
 	json_t *openid_configuration_url =
 	    json_object_get(vctx->config, "openid_configuration_url");
+
+	json_t *array;
+	size_t index;
+	json_t *value;
 
 	if (!openid_configuration_url) {
 		syslog(LOG_AUTH,
@@ -317,7 +333,7 @@ static bool oidc_fetch_oidc_keys(void * pool, oidc_vctx_st * vctx)
 	}
 	
 	json_t *oidc_config =
-	    oidc_fetch_json_from_uri(pool, 
+	    oidc_fetch_json_from_uri(vctx->pool, 
 					   json_string_value
 				       (openid_configuration_url));
 
@@ -334,7 +350,7 @@ static bool oidc_fetch_oidc_keys(void * pool, oidc_vctx_st * vctx)
 		goto cleanup;
 	}
 
-	jwks = oidc_fetch_json_from_uri(pool, json_string_value(jwks_uri));
+	jwks = oidc_fetch_json_from_uri(vctx->pool, json_string_value(jwks_uri));
 	if (!jwks) {
 		syslog(LOG_AUTH,
 		       "ocserv-oidc: failed to fetch keys from jwks_uri %s\n",
@@ -342,9 +358,26 @@ static bool oidc_fetch_oidc_keys(void * pool, oidc_vctx_st * vctx)
 		goto cleanup;
 	}
 
+	array = json_object_get(jwks, "keys");
+	if (array == NULL) {
+		syslog(LOG_AUTH, "ocserv-oidc: JWK keys malformed\n");
+		goto cleanup;
+	}
+
+	// Log the keys obtained
+	json_array_foreach(array, index, value) {
+		json_t *key_kid = json_object_get(value, "kid");
+		syslog(LOG_INFO,
+		       "ocserv-oidc: fetched new JWK %s\n",
+			   json_string_value(key_kid)
+		       );
+	}
+
 	if (vctx->jwks) {
 		json_decref(vctx->jwks);
 	}
+
+	vctx->last_jwks_load_time = time(0);
 
 	vctx->jwks = jwks;
 	jwks = NULL;
@@ -537,8 +570,20 @@ static bool oidc_verify_singature(oidc_vctx_st * vctx, cjose_jws_t * jws)
 	}
 
 	if (jwk == NULL) {
+		time_t now;
 		syslog(LOG_AUTH, "ocserv-oidc: JWK with kid=%s not found\n",
 		       json_string_value(token_kid));
+
+		syslog(LOG_AUTH, "ocserv-oidc: attempting to download new JWKs");
+		now = time(0);
+		if ((now - vctx->last_jwks_load_time) > vctx->minimum_jwk_refresh_time) {
+			oidc_fetch_oidc_keys(vctx);
+		}
+		else {
+			syslog(LOG_AUTH, "ocserv-oidc: skipping JWK refresh");
+		}
+
+		// Fail the request and let the client try again.
 		goto cleanup;
 	}
 

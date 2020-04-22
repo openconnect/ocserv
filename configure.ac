@@ -592,7 +592,7 @@ if test "$have_cwrap_pam" = yes; then
 fi
 
 AC_ARG_ENABLE([oidc-auth],
-  [AS_HELP_STRING([--oidc-auth],
+  [AS_HELP_STRING([--enable-oidc-auth],
                   [whether to support OpenID Connect auth (default is no)])],
   [enable_oidc_auth=$enableval],
   [enable_oidc_auth=no]

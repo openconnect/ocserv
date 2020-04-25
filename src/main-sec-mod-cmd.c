@@ -371,9 +371,11 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 		gc->cgroup = vhost->perm_config.config->cgroup;
 	}
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	if (!gc->xml_config_file) {
 		gc->xml_config_file = vhost->perm_config.config->xml_config_file;
 	}
+#endif 
 
 	if (!gc->has_rx_per_sec) {
 		gc->rx_per_sec = vhost->perm_config.config->rx_per_sec;

@@ -185,8 +185,10 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 		/* net-priority will contain the actual priority + 1,
 		 * to allow having zero as uninitialized. */
 		 READ_RAW_PRIO_TOS(msg->config->net_priority, msg->config->has_net_priority);
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	} else if (strcmp(name, "user-profile") == 0) {
 		READ_RAW_STRING(msg->config->xml_config_file);
+#endif		
 	} else if (strcmp(name, "restrict-user-to-ports") == 0) {
 		ret = cfg_parse_ports(pool, &msg->config->fw_ports, &msg->config->n_fw_ports, value);
 		if (ret < 0) {

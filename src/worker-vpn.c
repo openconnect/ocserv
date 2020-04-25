@@ -1558,6 +1558,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 		ws->udp_state = UP_INACTIVE;
 	}
 
+#ifdef ENABLE_COMPRESSION
 	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > WSCONFIG(ws)->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);
@@ -1585,6 +1586,7 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 			cstp_type = AC_PKT_COMPRESSED;
 		}
 	}
+#endif 
 
 	/* only transmit if allowed */
 	if (bandwidth_update(&ws->b_tx, dtls_to_send.size, tnow)

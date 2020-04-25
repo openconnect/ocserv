@@ -207,7 +207,6 @@ struct compression_method_st comp_methods[] = {
 		.server_prio = 80,
 	}
 };
-#endif
 
 unsigned switch_comp_priority(void *pool, const char *modstring)
 {
@@ -249,6 +248,7 @@ unsigned switch_comp_priority(void *pool, const char *modstring)
 	talloc_free(str);
 	return ret;
 }
+#endif
 
 static
 void header_value_check(struct worker_st *ws, struct http_req_st *req)

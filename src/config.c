@@ -498,7 +498,9 @@ static void apply_default_conf(vhost_cfg_st *vhost, unsigned reload)
 	}
 
 	vhost->perm_config.config->mobile_idle_timeout = (unsigned)-1;
+#ifdef ENABLE_COMPRESSION
 	vhost->perm_config.config->no_compress_limit = DEFAULT_NO_COMPRESS_LIMIT;
+#endif
 	vhost->perm_config.config->rekey_time = 24*60*60;
 	vhost->perm_config.config->cookie_timeout = DEFAULT_COOKIE_RECON_TIMEOUT;
 	vhost->perm_config.config->auth_timeout = DEFAULT_AUTH_TIMEOUT_SECS;
@@ -869,6 +871,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			READ_TF(config->dtls_psk);
 	} else if (strcmp(name, "match-tls-dtls-ciphers") == 0) {
 		READ_TF(config->match_dtls_and_tls);
+#ifdef ENABLE_COMPRESSION
 	} else if (strcmp(name, "compression") == 0) {
 		READ_TF(config->enable_compression);
 	} else if (strcmp(name, "compression-algo-priority") == 0) {
@@ -879,6 +882,7 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		}
 	} else if (strcmp(name, "no-compress-limit") == 0) {
 		READ_NUMERIC(config->no_compress_limit);
+#endif
 	} else if (strcmp(name, "use-seccomp") == 0) {
 		READ_TF(config->isolate);
 		if (config->isolate)
@@ -1334,8 +1338,10 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	if (config->mobile_idle_timeout == (unsigned)-1)
 		config->mobile_idle_timeout = config->idle_timeout;
 
+#ifdef ENABLE_COMPRESSION
 	if (config->no_compress_limit < MIN_NO_COMPRESS_LIMIT)
 		config->no_compress_limit = MIN_NO_COMPRESS_LIMIT;
+#endif
 
 	/* use tcp listen host by default */
 	if (vhost->perm_config.udp_listen_host ==  NULL) {

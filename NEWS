@@ -2,6 +2,7 @@
 - When Linux OOM takes control kill ocserv workers before ocserv-main
   or ocserv-secmod (#283).
 - Disable TCP queuing on the TLS port.
+- Fix leak of GnuTLS session when DTLS connection is re-established (#293).
 
 
 * Version 1.0.1 (released 2020-04-09)

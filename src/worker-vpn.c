@@ -387,6 +387,10 @@ static int setup_dtls_connection(struct worker_st *ws)
 	/* reset MTU */
 	link_mtu_set(ws, ws->adv_link_mtu);
 
+	if (ws->dtls_session != NULL) {
+		gnutls_deinit(ws->dtls_session);
+	}
+
 	ws->dtls_session = session;
 
 	return 0;

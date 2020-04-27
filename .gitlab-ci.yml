@@ -274,6 +274,30 @@ minimal:
       - ./*.log
       - tests/*.log
 
+# Build a minimal version with every optional feature disable
+# --disable-compression currently not supported due to issue #291
+Ubuntu18.04-minimal:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU18_BUILD
+  script:
+  - git submodule update --init
+  - autoreconf -fvi
+  - ./configure --without-protobuf --without-root-tests --without-docker-tests --without-nuttcp-tests --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat 
+  - make -j$JOBS
+  - make check -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  - schedules
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
 # We do not compile with PAM under address sanitizer since we are using co-routines
 # without instrumentation for sanitizer.
 .asan/Fedora:

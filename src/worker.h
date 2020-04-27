@@ -312,7 +312,9 @@ int get_ca_der_handler(worker_st * ws, unsigned http_ver);
 
 int response_404(worker_st *ws, unsigned http_ver);
 int get_empty_handler(worker_st *server, unsigned http_ver);
+#ifdef ANYCONNECT_CLIENT_COMPAT
 int get_config_handler(worker_st *ws, unsigned http_ver);
+#endif
 int get_string_handler(worker_st *ws, unsigned http_ver);
 int get_dl_handler(worker_st *ws, unsigned http_ver);
 int get_cert_names(worker_st * ws, const gnutls_datum_t * raw);

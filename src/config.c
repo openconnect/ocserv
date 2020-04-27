@@ -829,8 +829,10 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			READ_NUMERIC(config->rate_limit_ms);
 	} else if (strcmp(name, "ocsp-response") == 0) {
 		READ_STRING(config->ocsp_response);
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	} else if (strcmp(name, "user-profile") == 0) {
 		READ_STRING(config->xml_config_file);
+#endif 
 	} else if (strcmp(name, "default-domain") == 0) {
 		READ_STRING(config->default_domain);
 	} else if (strcmp(name, "crl") == 0) {
@@ -1256,6 +1258,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		}
 	}
 
+#ifdef ANYCONNECT_CLIENT_COMPAT
 	if (vhost->perm_config.cert && vhost->perm_config.cert_hash == NULL) {
 		vhost->perm_config.cert_hash = calc_sha1_hash(vhost->pool, vhost->perm_config.cert[0], 1);
 	}
@@ -1278,6 +1281,7 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 			exit(1);
 		}
 	}
+#endif
 
 	if (config->priorities == NULL) {
 		/* on vhosts assign the main host priorities */

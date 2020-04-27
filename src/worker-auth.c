@@ -970,10 +970,15 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 		success_msg_foot_size = strlen(success_msg_foot);
 	} else {
 		success_msg_head = oc_success_msg_head;
+		success_msg_foot = NULL;
+#ifdef ANYCONNECT_CLIENT_COMPAT
 		if (WSCONFIG(ws)->xml_config_file) {
 			success_msg_foot = talloc_asprintf(ws, OC_SUCCESS_MSG_FOOT_PROFILE,
 				WSCONFIG(ws)->xml_config_file, WSCONFIG(ws)->xml_config_hash);
-		} else {
+		} 
+#endif
+
+		if (success_msg_foot == NULL) {
 			success_msg_foot = talloc_strdup(ws, OC_SUCCESS_MSG_FOOT);
 		}
 
@@ -1062,6 +1067,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 	if (ret < 0)
 		goto fail;
 
+#ifdef ANYCONNECT_CLIENT_COMPAT	
 	if (WSCONFIG(ws)->xml_config_file) {
 		ret =
 		    cstp_printf(ws,
@@ -1075,6 +1081,7 @@ int post_common_handler(worker_st * ws, unsigned http_ver, const char *imsg)
 			       "Set-Cookie: webvpnc=bu:/&p:t&iu:1/&sh:%s; path=/; Secure\r\n",
 			       WSPCONFIG(ws)->cert_hash);
 	}
+#endif
 
 	if (ret < 0)
 		goto fail;

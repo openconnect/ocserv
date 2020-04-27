@@ -237,9 +237,10 @@ struct cfg_st {
 
 	gnutls_certificate_request_t cert_req;
 	char *priorities;
+#ifdef ENABLE_COMPRESSION
 	unsigned enable_compression;
 	unsigned no_compress_limit;	/* under this size (in bytes) of data there will be no compression */
-
+#endif
 	char *banner;
 	char *ocsp_response; /* file with the OCSP response */
 	char *default_domain; /* domain to be advertised */

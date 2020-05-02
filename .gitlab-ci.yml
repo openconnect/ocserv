@@ -366,7 +366,7 @@ static-analyzers/Fedora:
     paths:
       - scan-build-src/*
 
-FreeBSD:
+.FreeBSD:
   stage: testing
   script:
   - git submodule update --init

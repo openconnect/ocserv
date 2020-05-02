@@ -49,7 +49,7 @@ int disable_system_calls(struct worker_st *ws)
 	scmp_filter_ctx ctx;
 	vhost_cfg_st *vhost = NULL;
 
-	ctx = seccomp_init(SCMP_ACT_ERRNO(EPERM));
+	ctx = seccomp_init(SCMP_ACT_ERRNO(ENOSYS));
 	if (ctx == NULL) {
 		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
 		return -1;

@@ -221,7 +221,7 @@ void ocsigaltstack(struct worker_st *ws)
 	int e;
 
 	/* setup the stack for signal handlers */
-	if (posix_memalign((void**)&ss.ss_sp, getpagesize(), SIGSTKSZ) < 0) {
+	if (posix_memalign((void**)&ss.ss_sp, getpagesize(), SIGSTKSZ) != 0) {
 		oclog(ws, LOG_ERR,
 		      "could not allocate memory for signal stack");
 		exit(1);

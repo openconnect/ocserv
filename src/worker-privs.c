@@ -43,13 +43,19 @@
 /* On certain cases gnulib defines gettimeofday as macro; avoid that */
 #undef gettimeofday
 
+#ifdef USE_SECCOMP_TRAP
+# define _SECCOMP_ERR SCMP_ACT_TRAP
+#else
+# define _SECCOMP_ERR SCMP_ACT_ERRNO(ENOSYS)
+#endif
+
 int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
 	vhost_cfg_st *vhost = NULL;
 
-	ctx = seccomp_init(SCMP_ACT_ERRNO(ENOSYS));
+	ctx = seccomp_init(_SECCOMP_ERR);
 	if (ctx == NULL) {
 		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
 		return -1;

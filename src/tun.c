@@ -118,6 +118,21 @@ int os_set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 		goto cleanup;
 	}
 
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_addr.sa_family = AF_INET6;
+	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
+
+	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
+	if (ret != 0) {
+		e = errno;
+		mslog(s, NULL, LOG_ERR,
+		      "%s: Could not bring up IPv6 interface: %s\n",
+		      proc->tun_lease.name, strerror(e));
+		ret = -1;
+		goto cleanup;
+	}
+
 	/* route to our remote address */
 	memset(&rt6, 0, sizeof(rt6));
 	memcpy(&rt6.rtmsg_dst, SA_IN6_P(&proc->ipv6->rip),
@@ -133,21 +148,6 @@ int os_set_ipv6_addr(main_server_st * s, struct proc_st *proc)
 	if (ret != 0) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "%s: Error setting route to remote IPv6: %s\n",
-		      proc->tun_lease.name, strerror(e));
-		ret = -1;
-		goto cleanup;
-	}
-
-	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_addr.sa_family = AF_INET6;
-	ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
-	strlcpy(ifr.ifr_name, proc->tun_lease.name, IFNAMSIZ);
-
-	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
-	if (ret != 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR,
-		      "%s: Could not bring up IPv6 interface: %s\n",
 		      proc->tun_lease.name, strerror(e));
 		ret = -1;
 		goto cleanup;

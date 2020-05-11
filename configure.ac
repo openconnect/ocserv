@@ -68,6 +68,18 @@ fi
 
 AM_CONDITIONAL(GNUTLS_WITH_NEW_CERTS, $PKG_CONFIG --atleast-version=3.6.0 gnutls)
 
+dnl We want to detect failed syscalls when testing, but not necessarily when
+dnl running in production. This option is provided to enable during CI.
+AC_ARG_WITH(seccomp-trap,
+  AS_HELP_STRING([--with-seccomp-trap], [filtered syscalls will fail with a signal]),
+  use_seccomp_trap=$withval,
+  use_seccomp_trap=no)
+
+if test "$use_seccomp_trap" != no;then
+AC_DEFINE(USE_SECCOMP_TRAP, 1, [use signal on filtered calls])
+fi
+
+
 AC_ARG_WITH(protobuf,
   AS_HELP_STRING([--without-protobuf], [use the included protobuf library]),
   test_for_protobuf=$withval,
@@ -659,6 +671,7 @@ Summary of build options:
   local protobuf-c:     ${with_local_protobuf_c}
   local PCL library:    ${with_local_pcl}
   local http-parser:    ${with_local_http_parser}
+  seccomp trap:		${use_seccomp_trap}
 ])
 
 if test "${warn_leak}" = "yes";then

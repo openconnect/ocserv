@@ -43,13 +43,19 @@
 /* On certain cases gnulib defines gettimeofday as macro; avoid that */
 #undef gettimeofday
 
+#ifdef USE_SECCOMP_TRAP
+# define _SECCOMP_ERR SCMP_ACT_TRAP
+#else
+# define _SECCOMP_ERR SCMP_ACT_ERRNO(ENOSYS)
+#endif
+
 int disable_system_calls(struct worker_st *ws)
 {
 	int ret;
 	scmp_filter_ctx ctx;
 	vhost_cfg_st *vhost = NULL;
 
-	ctx = seccomp_init(SCMP_ACT_ERRNO(ENOSYS));
+	ctx = seccomp_init(_SECCOMP_ERR);
 	if (ctx == NULL) {
 		oclog(ws, LOG_DEBUG, "could not initialize seccomp");
 		return -1;
@@ -63,6 +69,12 @@ int disable_system_calls(struct worker_st *ws)
 		ret = -1; \
 		goto fail; \
 	}
+
+	/* These seem to be called by libc or some other dependent library;
+	 * they are not necessary for functioning, but we must allow them in order
+	 * to run under trap mode. */
+	ADD_SYSCALL(getcwd, 0);
+	ADD_SYSCALL(lstat, 0);
 
 	/* we use quite some system calls here, and in the end
 	 * we don't even know whether a newer libc will change the
@@ -110,6 +122,8 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(poll, 0);
 	ADD_SYSCALL(ppoll, 0);
 
+	/* allow setting non-blocking sockets */
+	ADD_SYSCALL(fcntl, 0);
 	ADD_SYSCALL(close, 0);
 	ADD_SYSCALL(exit, 0);
 	ADD_SYSCALL(exit_group, 0);

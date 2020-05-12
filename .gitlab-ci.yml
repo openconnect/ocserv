@@ -44,7 +44,8 @@ Ubuntu16.04:
   - autoreconf -fvi
   - ./configure --without-nuttcp-tests --without-docker-tests
   - make -j$JOBS
-  - make check -j$JOBS
+# this version of openconnect doesn't work with IPv6 only
+  - make check -j$JOBS XFAIL_TESTS=ipv6-iface
   tags:
   - shared
   - linux

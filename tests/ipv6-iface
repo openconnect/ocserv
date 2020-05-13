@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Red Hat, Inc.
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4313
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+IP=$(which ip)
+
+. `dirname $0`/common.sh
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+
+echo "Testing ocserv and ipv6 iface application... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+}
+trap finish EXIT
+
+ADDRESS=10.227.208.0
+CLI_ADDRESS=10.227.209.0
+VPNNET6=fcea:78de:9bb7:e4cd:3841:4827:3349:0/112
+VPNADDR6=fcea:78de:9bb7:e4cd:3841:4827:3349:1
+OCCTL_SOCKET=./ipv6-iface-$$.socket
+USERNAME=test
+
+. `dirname $0`/ns.sh
+
+update_config ipv6-iface.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+wait_server $PID
+
+echo -n "Connecting to setup interface... "
+echo "test" | ${CMDNS1} $OPENCONNECT -q $ADDRESS:$PORT -u ${USERNAME} --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+echo ok
+
+set -e
+echo " * ping remote address"
+
+${CMDNS2} ping -6 -c 3 ${VPNADDR6}
+
+echo ok
+
+kill $PID
+wait
+
+exit 0

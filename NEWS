@@ -1,9 +1,11 @@
 * Version 1.0.2 (unreleased)
+- Switch from fork to fork/exec model to achieve better scaling and ASLR
+  protection. This introduces an ocserv-worker application which should be
+  installed at the same path as ocserv (#285).
 - When Linux OOM takes control kill ocserv workers before ocserv-main
   or ocserv-secmod (#283).
 - Disable TCP queuing on the TLS port.
 - Fix leak of GnuTLS session when DTLS connection is re-established (#293).
-- Switch from fork to fork/exec model to achieve better scaling and ASLR protection (#285).
 
 
 * Version 1.0.1 (released 2020-04-09)

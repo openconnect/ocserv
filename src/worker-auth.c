@@ -1448,7 +1448,30 @@ int post_auth_handler(worker_st * ws, unsigned http_ver)
 				   strcmp(groupname, WSCONFIG(ws)->default_select_group) == 0) {
 				def_group = 1;
 			} else {
-				strlcpy(ws->groupname, groupname, sizeof(ws->groupname));
+				/* Some anyconnect clients send the group friendly name instead of
+				 * the actual value; see #267 */
+				ws->groupname[0] = 0;
+				if (WSCONFIG(ws)->friendly_group_list != NULL) {
+					unsigned found = 0, i;
+
+					for (i=0;i<WSCONFIG(ws)->group_list_size;i++) {
+						if (strcmp(WSCONFIG(ws)->group_list[i], groupname) == 0) {
+							found = 1;
+							break;
+						}
+					}
+
+					if (!found)
+						for (i=0;i<WSCONFIG(ws)->group_list_size;i++) {
+							if (WSCONFIG(ws)->friendly_group_list[i] != NULL && strcmp(WSCONFIG(ws)->friendly_group_list[i], groupname) == 0) {
+								strlcpy(ws->groupname, WSCONFIG(ws)->group_list[i], sizeof(ws->groupname));
+								break;
+							}
+						}
+				}
+
+				if (ws->groupname[0] == 0)
+					strlcpy(ws->groupname, groupname, sizeof(ws->groupname));
 				ireq.group_name = ws->groupname;
 			}
 		}

@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=443
+HEAD=$(mktemp)
+POST=$(mktemp)
+COOKIES=$(mktemp)
+OUTFILE=$(mktemp)
+
+. `dirname $0`/common.sh
+
+echo "Testing whether group labels are translated to groups... "
+
+# This is a necessary condition for some anyconnect clients
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  rm -f $HEAD $POST $COOKIES #$OUTFILE 2>&1
+  cleanup
+}
+trap finish EXIT
+
+update_config test-group-name.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+wait_server $PID
+
+TARGET=https://$ADDRESS
+
+cat >$HEAD <<_EOF
+Accept-Encoding:identity
+X-Transcend-Version:1
+X-AnyConnect-STRAP-Pubkey:MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0ZzFevkIYwkFXw9Q1u1W9H5NX6sLhU+IC19UWkXAjBljNxbBFK2/GoIgwPtbE7hDgWkTkQ1J4wPRlnBfCL4hzA==
+X-Aggregate-Auth:1
+Connection:close
+_EOF
+
+cat >$POST <<_EOF
+<?xml version: "1.0" encoding="UTF-8"?>
+<config-auth client="vpn" type="init" aggregate-auth-version="2">
+<version who="vpn">4.8.03036</version>
+<device-id computer-name="node.some.domain" device-type="MacBookPro11,1" platform-version="10.15.4" unique-id="1234567890123456789012345678901234567890123456789012345678901234"
+unique-id-global="1234567890123456789012345678901234567890">mac-intel</device-id>
+<mac-address-list>
+<mac-address public-interface="true">aa-bb-cc-dd-ee-ff</mac-address></mac-address-list>
+<group-select>Do not tunnel access LAN subnet</group-select>
+<group-access>'$TARGET'</group-access>
+<capabilities>
+<auth-method>multiple-cert</auth-method>
+<auth-method>single-sign-on</auth-method>
+<auth-method>single-sign-on-v2</auth-method></capabilities>
+</config-auth>
+_EOF
+
+LD_PRELOAD=libsocket_wrapper.so curl -A 'AnyConnect Darwin_i386 4.8.03036' -H @$HEAD -k -d@$POST $TARGET >$OUTFILE
+
+grep "value=\"Do not tunnel access LAN subnet\">Do not tunnel access LAN subnet" $OUTFILE >/dev/null
+if test $? = 0;then
+	echo "Name was not translated"
+	echo "======================="
+	cat $OUTFILE
+	exit 1
+fi
+
+grep "value=\"group3\">Do not tunnel access LAN subnet" $OUTFILE >/dev/null
+if test $? != 0;then
+	echo "Unknown state ($NR)"
+	echo "==================="
+	cat $OUTFILE
+	exit 1
+fi
+
+exit 0

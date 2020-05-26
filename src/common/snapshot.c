@@ -191,6 +191,7 @@ int snapshot_create(struct snapshot_t *snapshot, const char *filename)
 		goto cleanup;
 	}
 
+	umask(006);
 	fd_out = mkstemp(tmp_file_name);
 	if (fd_out == -1) {
 		int err = errno;

@@ -243,17 +243,18 @@ static int set_ws_from_env(worker_st * ws)
 	PROTOBUF_ALLOCATOR(pa, ws);
 	WorkerStartupMsg *msg = NULL;
 	const char *string_buffer = getenv(OCSERV_ENV_WORKER_STARTUP_MSG);
-	size_t string_size = strlen(string_buffer);
+	size_t string_size;
 	size_t msg_size;
 	uint8_t *msg_buffer = NULL;
 	int ret = 0;
-	int tmp_fd = -1;
 	size_t index;
 
 	if (string_buffer == NULL) {
-		fprintf(stderr, "environment variable not set\n");
+		fprintf(stderr, "This application must be called from ocserv (no env variable set)\n");
 		goto cleanup;
 	}
+
+	string_size = strlen(string_buffer);
 
 	if (!oc_base64_decode_alloc
 	    (ws, string_buffer, string_size, (char **)&msg_buffer, &msg_size)) {
@@ -331,9 +332,6 @@ static int set_ws_from_env(worker_st * ws)
 	ret = 1;
 
  cleanup:
-	if (tmp_fd != -1)
-		close(tmp_fd);
-
 	if (msg_buffer)
 		talloc_free(msg_buffer);
 

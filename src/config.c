@@ -1159,6 +1159,11 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 	} else {
 		const char * cfg_file = file;
 
+		if (cfg_file == NULL) {
+			fprintf(stderr, ERRSTR"no config file!\n");
+			exit(1);
+		}
+
 		/* parse configuration
 		*/
 		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);

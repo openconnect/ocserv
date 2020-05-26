@@ -271,6 +271,7 @@ int _listen_unix_ports(void *pool, struct perm_cfg_st* config,
 			e = errno;
 			fprintf(stderr, "could not bind socket '%s': %s", sa.sun_path,
 			       strerror(e));
+			close(s);
 			return -1;
 		}
 
@@ -405,11 +406,12 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 		}
 
 		ret = _listen_ports(pool, config, res, list);
+		freeaddrinfo(res);
+
 		if (ret < 0) {
 			return -1;
 		}
 
-		freeaddrinfo(res);
 	}
 
 	ret = _listen_unix_ports(pool, config, list);

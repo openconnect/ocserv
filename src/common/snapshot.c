@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <talloc.h>
+#include <sys/stat.h>
 #include <common/common.h>
 
 #include <ccan/htable/htable.h>

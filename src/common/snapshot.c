@@ -249,12 +249,6 @@ int snapshot_create(struct snapshot_t *snapshot, const char *filename)
 	if (fd_out != -1)
 		close(fd_out);
 
-	if (entry != NULL) {
-		if (entry->fd != -1)
-			close(entry->fd);
-		talloc_free(entry);
-	}
-
 	return ret;
 }
 

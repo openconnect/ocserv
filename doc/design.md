@@ -189,3 +189,20 @@ Cookies are valid for the value configured in `cookie-timeout` option, after
 a client disconnects due to timeout. Their purpose is to allow mobile clients to
 roam between networks without significant disruption in the VPN service.
 
+## When compile with --enable-latency-stats
+
+The ocserv server gathers statistical data about the latency incurred while processing received DTLS packets. Due to the volume of data being collected, processing is perfomed in batches. Batch size is a tradeoff of memory usage and statistical accuracy. All values are stored in microseconds (10^-6 seconds).
+
+* Latency samples are first batched by the ocserv-worker, which gathers LATENCY_SAMPLE_SIZE (1024) of latency data.
+
+* After LATENCY_SAMPLE_SIZE samples have been gathered, median, mean and STDEV (RMS of delta from median) are computed for that sample set. Totals are maintained for mean and STDEV as well as count of sample sets processed.
+
+* After more than LATENCY_WORKER_AGGREGATION_TIME (60) seconds have passed (or when the worker process ends) the totals for mean, STDEV and sample count are sent to the main process.
+
+* The ocserv-main process accumulates a running total of mean, STDEV and sample count from all the worker processes for the current sampling interval. Every LATENCY_AGGREGATION_TIME (60s) the current running total is stored as the latency data for the previous interval.
+
+* The main_server_st stats.current_latency_stats stores weighted mean of the latency the server experienced for the last LATENCY_AGGREGATION_TIME interval. Values are stored as total and sample count, permitting the consumer of the stats to better compute confidence interval and mean value for latency and variation of latency.
+
+* Latency information is emitted to the log and can also be queried via occtl. Mean latency for an interval can be computed as latency_median_total/latency_sample_count and mean STDEV can be computed as latency_rms_total/latency_sample_count.
+
+* Latency information can be used as a metric to measure how the ocserv is performing and to measure effective server load.

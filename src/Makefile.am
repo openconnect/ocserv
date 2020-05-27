@@ -63,6 +63,10 @@ CORE_SOURCES = $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
 	vasprintf.c vasprintf.h vhost.h vpn.h 
 
+if ENABLE_LATENCY_SUPPORT
+ocserv_worker_SOURCES += worker-latency.c worker-latency.h
+endif
+
 if ENABLE_COMPRESSION
 CORE_SOURCES += lzs.c lzs.h
 endif
@@ -84,6 +88,10 @@ CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
 	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
 	$(CODE_COVERAGE_LDFLAGS) 
 	
+if ENABLE_LATENCY_SUPPORT
+ocserv_worker_LDADD += $(LIBM)
+endif
+
 if ENABLE_OIDC_AUTH
 CORE_LDADD += $(LIBCURL_LIBS) $(CJOSE_LIBS) $(JANSSON_LIBS)
 endif

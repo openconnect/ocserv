@@ -43,12 +43,34 @@ struct timeval tv;
 #endif
 }
 
+inline static void
+gettime_realtime (struct timespec *t)
+{
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+  clock_gettime (CLOCK_REALTIME, t);
+#else
+struct timeval tv;
+  gettimeofday (&tv, NULL);
+  t->tv_sec = tv.tv_sec;
+  t->tv_nsec = tv.tv_usec * 1000;
+#endif
+}
+
 inline static
 unsigned int
 timespec_sub_ms (struct timespec *a, struct timespec *b)
 {
   return (a->tv_sec * 1000 + a->tv_nsec / (1000 * 1000) -
           (b->tv_sec * 1000 + b->tv_nsec / (1000 * 1000)));
+}
+
+
+inline static
+uint64_t
+timespec_sub_us (struct timespec *a, struct timespec *b)
+{
+  return (a->tv_sec * 1000000ULL  + a->tv_nsec / (1000) -
+          (b->tv_sec * 1000000ULL + b->tv_nsec / (1000)));
 }
 
 #endif

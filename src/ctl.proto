@@ -31,6 +31,10 @@ message status_rep
 	required uint64 auth_failures = 23;
 	required uint64 total_sessions_closed = 24;
 	required uint64 total_auth_failures = 25;
+
+	optional uint64 latency_median_total = 26;
+	optional uint64 latency_rms_total = 27;
+	optional uint64 latency_sample_count = 28;
 }
 
 message bool_msg

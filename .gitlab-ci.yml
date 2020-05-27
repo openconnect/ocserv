@@ -65,7 +65,7 @@ Ubuntu18.04:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth
+  - ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth --enable-latency-stats
   - make -j$JOBS
   - make check -j$JOBS
   tags:

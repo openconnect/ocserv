@@ -451,6 +451,32 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 		break;
 
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	case CMD_LATENCY_STATS_DELTA:{
+			LatencyStatsDelta * tmsg;
+ 
+			if (proc->status != PS_AUTH_COMPLETED) {
+				mslog(s, proc, LOG_ERR,
+					"received LATENCY STATS DELTA in unauthenticated state.");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+
+			tmsg = latency_stats_delta__unpack(&pa, raw_len, raw);
+			if (tmsg == NULL) {
+				mslog(s, proc, LOG_ERR, "error unpacking latency stats delta data");
+				ret = ERR_BAD_COMMAND;
+				goto cleanup;
+			}
+			
+			s->stats.delta_latency_stats.median_total += tmsg->median_delta;
+			s->stats.delta_latency_stats.rms_total += tmsg->rms_delta;
+			s->stats.delta_latency_stats.sample_count += tmsg->sample_count_delta;
+
+			latency_stats_delta__free_unpacked(tmsg, &pa);
+		}
+		break;
+#endif
 	default:
 		mslog(s, proc, LOG_ERR, "unknown CMD from worker: 0x%x", (unsigned)cmd);
 		ret = ERR_BAD_COMMAND;

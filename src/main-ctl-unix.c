@@ -203,6 +203,14 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.auth_failures = ctx->s->stats.auth_failures;
 	rep.total_auth_failures = ctx->s->stats.total_auth_failures;
 	rep.total_sessions_closed = ctx->s->stats.total_sessions_closed;
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	rep.latency_median_total = ctx->s->stats.current_latency_stats.median_total;
+	rep.has_latency_median_total = true;
+	rep.latency_rms_total = ctx->s->stats.current_latency_stats.rms_total;
+	rep.has_latency_rms_total = true;
+	rep.latency_sample_count = ctx->s->stats.current_latency_stats.sample_count;
+	rep.has_latency_sample_count = true;
+#endif
 
 	ret = send_msg(ctx->pool, cfd, CTL_CMD_STATUS_REP, &rep,
 		       (pack_size_func) status_rep__get_packed_size,

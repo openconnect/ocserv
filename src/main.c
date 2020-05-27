@@ -100,6 +100,9 @@ ev_signal term_sig_watcher;
 ev_signal int_sig_watcher;
 ev_signal reload_sig_watcher;
 ev_child child_watcher;
+#if defined(CAPTURE_LATENCY_SUPPORT)
+ev_timer latency_watcher;
+#endif
 
 static int set_env_from_ws(main_server_st * ws);
 
@@ -527,6 +530,9 @@ void clear_lists(main_server_st *s)
 		ev_io_stop (loop, &sec_mod_watcher);
 		ev_child_stop (loop, &child_watcher);
 		ev_timer_stop(loop, &maintenance_watcher);
+#if defined(CAPTURE_LATENCY_SUPPORT)
+		ev_timer_stop(loop, &latency_watcher);		
+#endif
 		/* free memory and descriptors by the event loop */
 		ev_loop_destroy (loop);
 	}
@@ -1196,6 +1202,25 @@ static void maintenance_watcher_cb(EV_P_ ev_timer *w, int revents)
 	perform_maintenance(s);
 }
 
+#if defined(CAPTURE_LATENCY_SUPPORT)
+static void latency_watcher_cb(EV_P_ ev_timer *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	s->stats.current_latency_stats = s->stats.delta_latency_stats;
+	s->stats.delta_latency_stats.median_total = 0;
+	s->stats.delta_latency_stats.rms_total = 0;
+	s->stats.delta_latency_stats.sample_count = 0;
+	mslog(
+		s, 
+		NULL, 
+		LOG_INFO, 
+		"Latency: Median Total %ld RMS Total %ld Sample Count %ld", 
+		s->stats.current_latency_stats.median_total, 
+		s->stats.current_latency_stats.rms_total, 
+		s->stats.current_latency_stats.sample_count);
+}
+#endif
+
 static void maintenance_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
@@ -1456,6 +1481,12 @@ int main(int argc, char** argv)
 	ev_init(&maintenance_watcher, maintenance_watcher_cb);
 	ev_timer_set(&maintenance_watcher, MAIN_MAINTENANCE_TIME, MAIN_MAINTENANCE_TIME);
 	ev_timer_start(loop, &maintenance_watcher);
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	ev_init(&latency_watcher, latency_watcher_cb);
+	ev_timer_set(&latency_watcher, LATENCY_AGGREGATION_TIME, LATENCY_AGGREGATION_TIME);
+	ev_timer_start(loop, &latency_watcher);
+#endif
 
 	/* allow forcing maintenance with SIGUSR2 */
 	ev_init (&maintenance_sig_watcher, maintenance_sig_watcher_cb);

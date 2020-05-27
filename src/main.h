@@ -54,6 +54,10 @@ extern ev_timer maintainance_watcher;
 
 int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool worker);
 
+#if defined(CAPTURE_LATENCY_SUPPORT)
+#define LATENCY_AGGREGATION_TIME (60)
+#endif
+
 struct listener_st {
 	ev_io io;
 	struct list_node list;
@@ -192,6 +196,14 @@ struct proc_hash_db_st {
 	unsigned total;
 };
 
+#if defined(CAPTURE_LATENCY_SUPPORT)
+struct latency_stats_st {
+	uint64_t median_total;
+	uint64_t rms_total;
+	uint64_t sample_count;
+};
+#endif
+
 struct main_stats_st {
 	uint64_t session_timeouts; /* sessions with timeout */
 	uint64_t session_idle_timeouts; /* sessions with idle timeout */
@@ -219,6 +231,11 @@ struct main_stats_st {
 	/* These are counted since start time */
 	uint64_t total_auth_failures; /* authentication failures since start_time */
 	uint64_t total_sessions_closed; /* sessions closed since start_time */
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	struct latency_stats_st current_latency_stats;
+	struct latency_stats_st delta_latency_stats;
+#endif
 };
 
 typedef struct main_server_st {

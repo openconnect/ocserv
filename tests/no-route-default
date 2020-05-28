@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=5743
+TMPFILE=$(mktemp)
+
+. `dirname $0`/common.sh
+
+echo "Testing whether exclude routes are being sent (with route=default)... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  rm -f $TMPFILE 2>&1
+  cleanup
+}
+trap finish EXIT
+
+update_config no-route-default.config
+launch_simple_server -d 1 -f -c ${CONFIG}
+PID=$!
+wait_server $PID
+
+echo -n "Connecting to get routes... "
+timeout 15s $OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE} 2>&1
+
+echo ok
+
+echo -n "Checking routes... "
+
+cat ${TMPFILE}|grep X-CSTP-Split-Exclude|grep 192.168.98.0 >/dev/null
+if test $? != 0;then
+	cat ${TMPFILE}|grep X-CSTP-Split
+	echo "Temporary file contents are not correct"
+	exit 1
+fi
+
+echo ok
+
+kill $PID
+sleep 5
+
+echo "Testing whether exclude routes are being sent (with no route)... "
+sed 's/route = default//g' -i ${CONFIG}
+launch_simple_server -d 1 -f -c ${CONFIG}
+PID=$!
+wait_server $PID
+
+echo -n "Connecting to get routes... "
+timeout 15s $OPENCONNECT -v localhost:$PORT --sslkey ${srcdir}/certs/user-key.pem -c ${srcdir}/certs/user-cert-testuser.pem --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true </dev/null >${TMPFILE} 2>&1
+
+echo ok
+
+echo -n "Checking routes... "
+
+cat ${TMPFILE}|grep X-CSTP-Split-Exclude|grep 192.168.98.0 >/dev/null
+if test $? != 0;then
+	cat ${TMPFILE}|grep X-CSTP-Split
+	echo "Temporary file contents are not correct"
+	exit 1
+fi
+
+echo ok
+
+
+exit 0

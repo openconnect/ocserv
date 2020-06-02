@@ -39,7 +39,8 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	sleep-connect-script data/test-psk-negotiate.config data/test-group-name.config \
 	connect-ios-script data/apple-ios.config certs/kerberos-cert.pem \
 	data/kdc.conf data/krb5.conf data/k5.KERBEROS.TEST data/kadm5.acl \
-	data/ipv6-iface.config
+	data/ipv6-iface.config data/no-route-default.config data/no-route-group.config \
+	data/group-config/group1
 
 SUBDIRS = docker-ocserv
 
@@ -94,7 +95,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
 	test-gssapi test-pass-opt-cert test-cert-opt-pass test-gssapi-opt-pass \
 	test-gssapi-opt-cert haproxy-auth test-maintenance \
-	test-group-name
+	test-group-name no-route-default no-route-group
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

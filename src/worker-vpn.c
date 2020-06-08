@@ -2255,6 +2255,8 @@ static int connect_handler(worker_st * ws)
 		}
 
 		if (ws->req.use_psk || !WSCONFIG(ws)->dtls_legacy) {
+			oclog(ws, LOG_INFO, "X-DTLS-App-ID: %s", ws->buffer);
+
 			ret =
 			    cstp_printf(ws, "X-DTLS-App-ID: %s\r\n",
 				       ws->buffer);
@@ -2264,6 +2266,8 @@ static int connect_handler(worker_st * ws)
 			ret =
 			    cstp_printf(ws, "X-DTLS-CipherSuite: "DTLS_PROTO_INDICATOR"\r\n");
 		} else if (ws->req.selected_ciphersuite) {
+			oclog(ws, LOG_INFO, "X-DTLS-Session-ID: %s", ws->buffer);
+
 			ret =
 			    cstp_printf(ws, "X-DTLS-Session-ID: %s\r\n",
 				       ws->buffer);

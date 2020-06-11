@@ -23,11 +23,11 @@
 
 builddir=${builddir:-.}
 
-OPENCONNECT=${OPENCONNECT:-/usr/sbin/openconnect}
+OPENCONNECT=${OPENCONNECT:-$(which openconnect)}
 
-if ! test -x ${OPENCONNECT};then
+if test -z "${OPENCONNECT}" || ! test -x ${OPENCONNECT};then
 	echo "You need openconnect to run this test"
-	exit 77
+	exit 1
 fi
 
 if test -z "$NO_NEED_ROOT";then

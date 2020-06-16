@@ -146,7 +146,7 @@ RPM/epel7:
   - cp $TARFILE /usr/local/rpms/ocserv
   - cd /usr/local/rpms/ocserv
   - sed -i -e "s/$RPMVERSION/$NEWVERSION/" -e 's/have_gpgv2 1/have_gpgv2 0/g' *.spec
-  - test "$RPMVERSION" != "$NEWVERSION" && cat sources|grep -v "ocserv-$RPMVERSION" >sources.tmp
+  - ( test "$RPMVERSION" != "$NEWVERSION" && cat sources|grep -v "ocserv-$RPMVERSION" >sources.tmp ) || /bin/true
   - sha512sum --tag ocserv-$NEWVERSION.tar.xz >>sources.tmp
   - mv sources.tmp sources
   - touch ocserv-$NEWVERSION.tar.xz.sig
@@ -183,7 +183,7 @@ RPM/epel8:
   - cp $TARFILE /usr/local/rpms/ocserv
   - cd /usr/local/rpms/ocserv
   - sed -i -e "s/$RPMVERSION/$NEWVERSION/" -e 's/have_gpgv2 1/have_gpgv2 0/g' *.spec
-  - test "$RPMVERSION" != "$NEWVERSION" && cat sources|grep -v "ocserv-$RPMVERSION" >sources.tmp
+  - ( test "$RPMVERSION" != "$NEWVERSION" && cat sources|grep -v "ocserv-$RPMVERSION" >sources.tmp ) || /bin/true
   - sha512sum --tag ocserv-$NEWVERSION.tar.xz >>sources.tmp
   - mv sources.tmp sources
   - touch ocserv-$NEWVERSION.tar.xz.sig

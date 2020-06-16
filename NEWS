@@ -1,4 +1,4 @@
-* Version 1.0.2 (unreleased)
+* Version 1.1.0 (released 2020-06-16)
 - Switch from fork to fork/exec model to achieve better scaling and ASLR
   protection. This introduces an ocserv-worker application which should be
   installed at the same path as ocserv (#285).

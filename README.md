@@ -1,6 +1,3 @@
-[![Build status](https://gitlab.com/openconnect/ocserv/badges/master/pipeline.svg)](https://gitlab.com/openconnect/ocserv/commits/master)
-[![coverage report](https://gitlab.com/openconnect/ocserv/badges/master/coverage.svg)](https://openconnect.gitlab.io/ocserv/coverage/)
-
 # About
 
 This program is openconnect VPN server (ocserv), a server for the
@@ -13,6 +10,13 @@ The program consists of:
  2. occtl, the server's control tool. A tool which allows one to query the
    server for information.
  3. ocpasswd, a tool to administer simple password files.
+
+
+# Supported platforms
+
+The OpenConnect VPN server is designed and tested to work, with both IPv6
+and IPv4, on Linux systems. It is, however, known to work on FreeBSD, other
+BSD derived systems.
 
 
 # Build dependencies

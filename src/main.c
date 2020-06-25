@@ -66,6 +66,7 @@
 #include <base64-helper.h>
 #include <snapshot.h>
 #include <isolate.h>
+#include <sockdiag.h>
 
 #ifdef HAVE_GSSAPI
 # include <libtasn1.h>
@@ -85,6 +86,7 @@ int worker_argc = 0;
 char **worker_argv = NULL;
 
 static void listen_watcher_cb (EV_P_ ev_io *w, int revents);
+static void flow_control_cb (EV_P_ ev_timer *w, int revents);
 
 int syslog_open = 0;
 sigset_t sig_default_set;
@@ -123,6 +125,8 @@ static void add_listener(void *pool, struct listen_list_st *list,
 
 	ev_init(&tmp->io, listen_watcher_cb);
 	ev_io_set(&tmp->io, fd, EV_READ);
+
+	ev_init(&tmp->flow_control, flow_control_cb);
 
 	list_add(&list->head, &(tmp->list));
 	list->total++;
@@ -1005,6 +1009,15 @@ static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)
 	}
 }
 
+static void flow_control_cb (EV_P_ ev_timer *w, int revents)
+{
+	struct listener_st *ltmp = (struct listener_st *)((char*)w - offsetof(struct listener_st, flow_control));
+
+	// Clear the timer and resume accept
+	ev_timer_stop(loop, &ltmp->flow_control);
+	ev_io_start(loop, &ltmp->io);
+}
+
 static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 {
 	main_server_st *s = ev_userdata(loop);
@@ -1170,8 +1183,24 @@ fork_failed:
 		forward_udp_to_owner(s, ltmp);
 	}
 
-	if (GETCONFIG(s)->rate_limit_ms > 0)
-		ms_sleep(GETCONFIG(s)->rate_limit_ms);
+	// Rate limiting of incoming connections is implemented as follows:
+	// After accepting a client connection:
+	//   Arm the flow control timer.
+	//   Stop accepting connections.
+	// When the timer fires, it resumes accepting the connections.
+	if (GETCONFIG(s)->rate_limit_ms > 0) {
+		int rqueue = 0;
+		int wqueue = 0;
+		int retval = sockdiag_query_unix_domain_socket_queue_length(s->secmod_addr.sun_path, &rqueue, &wqueue);
+		mslog(s, NULL, LOG_DEBUG, "queue_length retval:%d rqueue:%d wqueue:%d", retval, rqueue, wqueue);
+		if (retval || rqueue > wqueue / 2) {
+			mslog(s, NULL, LOG_INFO, "delaying accepts for %d ms", GETCONFIG(s)->rate_limit_ms);
+			// Arm the timer and pause accept
+			ltmp->flow_control.repeat = ((ev_tstamp)(GETCONFIG(s)->rate_limit_ms)) / 1000.;
+			ev_io_stop(loop, &ltmp->io);
+			ev_timer_again(loop, &ltmp->flow_control);
+		}
+	}
 }
 
 static void sec_mod_watcher_cb (EV_P_ ev_io *w, int revents)

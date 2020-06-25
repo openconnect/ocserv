@@ -1,0 +1,80 @@
+#!/bin/sh
+#
+# Copyright (C) 2020 Microsoft Corp.
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4504
+PIDFILE=ocserv-pid.$$.tmp
+
+. `dirname $0`/common.sh
+
+echo "Testing flow control... "
+
+update_config test1.config
+
+sed -i 's/#rate-limit-ms = 100/rate-limit-ms = 100/g' ${CONFIG}
+
+launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo "Connecting to obtain cookie... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||
+	fail $PID "Could not receive cookie from server"
+
+echo "Connecting to obtain cookie with wrong password... "
+( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
+echo "Connecting to obtain cookie with empty password... "
+( echo -e "\n" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
+echo "Connecting to obtain cookie with wrong username... "
+( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u tost --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
+# test locked account
+
+echo "Connecting to obtain cookie with locked account... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u locked --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
+#test special characters
+
+echo "Connecting to obtain cookie with special password... "
+( echo "!@#$%^&*()<>" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
+echo "Connecting to obtain cookie with empty password... "
+( echo "" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u "empty" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
+#echo "Normal connection... "
+#( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true ) ||
+#	fail $PID "Could not connect to server"
+
+if ! test -f ${PIDFILE};then
+	fail $PID "Could not find pid file ${PIDFILE}"
+fi
+
+cleanup
+
+exit 0

@@ -569,6 +569,13 @@ fi
 
 AM_CONDITIONAL(ENABLE_LATENCY_SUPPORT,  test "x$have_latency_stats" = xyes)
 
+AC_CHECK_HEADERS([linux/netlink.h linux/rtnetlink.h linux/sock_diag.h linux/unix_diag.h], [sockdiag_header=yes], [sockdiag_header=no])
+
+if test "x$sockdiag_header" = xyes; then
+  AC_DEFINE([ENABLE_ADAPTIVE_RATE_LIMIT_SUPPORT], [1], [Enable adaptive rate limiting])
+fi
+
+
 AC_ARG_WITH(pcl-lib,
   AS_HELP_STRING([--without-pcl-lib], [use the included PCL library]),
   test_for_pcl_lib=$withval,

@@ -301,7 +301,7 @@ struct cfg_st {
 	unsigned cisco_client_compat; /* do not require client certificate, 
 	                               * and allow auth to complete in different
 	                               * TCP sessions. */
-	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds */
+	unsigned rate_limit_ms; /* if non zero force a connection every rate_limit milliseconds if ocserv-sm is heavily loaded */
 	unsigned ping_leases; /* non zero if we need to ping prior to leasing */
 
 	size_t rx_per_sec;

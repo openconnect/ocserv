@@ -171,6 +171,14 @@ static const dtls_ciphersuite_st ciphersuites12[] = {
 	}
 };
 
+#define STR_ST(x) {.data = (uint8_t*)x, .length = sizeof(x)-1}
+static const str_st sensitve_http_headers[] = {
+	STR_ST("Cookie"),
+	STR_ST("X-DTLS-Master-Secret"),
+	STR_ST("Authorization"),
+	{NULL, 0}
+};
+
 #ifdef HAVE_LZ4
 /* Wrappers over LZ4 functions */
 static
@@ -250,6 +258,17 @@ unsigned switch_comp_priority(void *pool, const char *modstring)
 }
 #endif
 
+static bool header_is_sensitive(str_st * header)
+{
+	size_t i;
+	for (i = 0; sensitve_http_headers[i].length != 0; i++) {
+		if ((header->length == sensitve_http_headers[i].length) &&
+			(strncasecmp((char*)header->data, (char*)sensitve_http_headers[i].data, header->length) == 0))
+			return true;
+	}
+	return false;
+}
+
 static
 void header_value_check(struct worker_st *ws, struct http_req_st *req)
 {
@@ -268,9 +287,7 @@ void header_value_check(struct worker_st *ws, struct http_req_st *req)
 	if (req->value.length <= 0)
 		return;
 
-	if (WSPCONFIG(ws)->debug < DEBUG_SENSITIVE &&
-		((req->header.length == 6 && strncasecmp((char*)req->header.data, "Cookie", 6) == 0) ||
-		(req->header.length == 20 && strncasecmp((char*)req->header.data, "X-DTLS-Master-Secret", 20) == 0)))
+	if (WSPCONFIG(ws)->debug < DEBUG_SENSITIVE && header_is_sensitive(&req->header))
 		oclog(ws, LOG_HTTP_DEBUG, "HTTP processing: %.*s: (censored)", (int)req->header.length,
 		      req->header.data);
 	else

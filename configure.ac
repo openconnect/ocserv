@@ -426,6 +426,14 @@ AC_LIB_HAVE_LINKFLAGS(systemd,, [#include <systemd/sd-daemon.h>], [sd_listen_fds
  fi
 fi
 
+AC_ARG_ENABLE(namespaces,
+  AS_HELP_STRING([--disable-namespaces], [disable namespaces support]),
+    namespaces_enabled=$enableval, namespaces_enabled=yes)
+
+if [ test "$namespaces_enabled" = "yes" ];then
+	AC_DEFINE([LINUX_NAMESPACES], [], [Enable Linux namespaces])
+fi
+
 AC_ARG_ENABLE(anyconnect-compat,
   AS_HELP_STRING([--disable-anyconnect-compat], [disable Anyconnect client compatibility (experimental)]),
     anyconnect_enabled=$enableval, anyconnect_enabled=yes)
@@ -694,6 +702,7 @@ Summary of build options:
   OIDC Auth backend:    ${enable_oidc_auth}
   Anyconnect compat:    ${anyconnect_enabled}
   TCP wrappers:         ${libwrap_enabled}
+  namespaces:           ${namespaces_enabled}
   systemd:              ${systemd_enabled}
   (socket activation)
   worker isolation:     ${isolation}

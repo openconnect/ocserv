@@ -28,7 +28,7 @@ ocserv_SOURCES = $(CORE_SOURCES) $(AUTH_SOURCES) $(ACCT_SOURCES) \
 	proc-search.h route-add.c route-add.h sec-mod.c sec-mod.h sec-mod-acct.h \
 	sec-mod-auth.c sec-mod-auth.h sec-mod-cookies.c sec-mod-db.c \
 	sec-mod-resume.c sec-mod-resume.h sec-mod-sup-config.c sec-mod-sup-config.h \
-	common/sockdiag.h common/sockdiag.c
+	common/sockdiag.h common/sockdiag.c namespace.c
 
 ocserv_LDADD = $(CORE_LDADD)
 
@@ -62,7 +62,7 @@ CORE_SOURCES = $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
 	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
 	sup-config/file.c sup-config/file.h sup-config/radius.c \
 	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
-	vasprintf.c vasprintf.h vhost.h vpn.h 
+	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h
 
 if ENABLE_LATENCY_SUPPORT
 ocserv_worker_SOURCES += worker-latency.c worker-latency.h

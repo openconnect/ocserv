@@ -281,7 +281,7 @@ noprocfs/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-maintainer-mode --without-docker-tests
+  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-maintainer-mode --without-docker-tests --disable-namespaces
   - make -j$JOBS
   tags:
   - shared

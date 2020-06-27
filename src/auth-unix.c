@@ -64,7 +64,7 @@ unsigned found;
 			}
 
 			if (found == 0) {
-				syslog(LOG_AUTH,
+				syslog(LOG_NOTICE,
 				       "user '%s' requested group '%s' but is not a member",
 				       username, suggested);
 				return -1;

@@ -111,7 +111,7 @@ static int radius_auth_init(void **ctx, void *pool, void *_vctx, const common_au
 	struct radius_vhost_ctx *vctx = _vctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_AUTH,
+		syslog(LOG_NOTICE,
 		       "radius-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
@@ -162,7 +162,7 @@ static int radius_auth_group(void *ctx, const char *suggested, char *groupname, 
 			}
 		}
 
-		syslog(LOG_AUTH,
+		syslog(LOG_NOTICE,
 		       "radius-auth: user '%s' requested group '%s' but is not a member",
 		       pctx->username, suggested);
 		return -1;
@@ -471,7 +471,7 @@ static int radius_auth_pass(void *ctx, const char *pass, unsigned pass_len)
 			goto cleanup;
 		}
 
-		syslog(LOG_AUTH,
+		syslog(LOG_NOTICE,
 		       "radius-auth: error authenticating user '%s' (code %d)",
 		       pctx->username, ret);
 		ret = ERR_AUTH_FAIL;

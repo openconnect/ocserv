@@ -50,7 +50,7 @@ pam_handle_t *ph;
 struct pam_conv dc;
 
 	if (ai->username[0] == 0) {
-		syslog(LOG_AUTH,
+		syslog(LOG_NOTICE,
 		       "PAM-acct: no username present");
 		return ERR_AUTH_FAIL;
 	}
@@ -59,7 +59,7 @@ struct pam_conv dc;
 	dc.appdata_ptr = NULL;
 	pret = pam_start(PACKAGE, ai->username, &dc, &ph);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "PAM-acct init: %s", pam_strerror(ph, pret));
+		syslog(LOG_NOTICE, "PAM-acct init: %s", pam_strerror(ph, pret));
 		goto fail1;
 	}
 

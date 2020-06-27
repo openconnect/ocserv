@@ -160,7 +160,7 @@ int pret;
 struct pam_ctx_st * pctx;
 
 	if (info->username == NULL || info->username[0] == 0) {
-		syslog(LOG_AUTH,
+		syslog(LOG_NOTICE,
 		       "pam-auth: no username present");
 		return ERR_AUTH_FAIL;
 	}
@@ -175,7 +175,7 @@ struct pam_ctx_st * pctx;
 	pctx->dc.appdata_ptr = pctx;
 	pret = pam_start(PACKAGE, info->username, &pctx->dc, &pctx->ph);
 	if (pret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "PAM-auth init: %s", pam_strerror(pctx->ph, pret));
+		syslog(LOG_NOTICE, "PAM-auth init: %s", pam_strerror(pctx->ph, pret));
 		goto fail1;
 	}
 
@@ -214,7 +214,7 @@ size_t prompt_hash = 0;
 		co_call(pctx->cr);
 
 		if (pctx->cr_ret != PAM_SUCCESS) {
-			syslog(LOG_AUTH, "PAM-auth pam_auth_msg: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+			syslog(LOG_NOTICE, "PAM-auth pam_auth_msg: %s", pam_strerror(pctx->ph, pctx->cr_ret));
 			return ERR_AUTH_FAIL;
 		}
 	}
@@ -254,7 +254,7 @@ struct pam_ctx_st * pctx = ctx;
 		return -1;
 
 	if (pctx->state != PAM_S_WAIT_FOR_PASS) {
-		syslog(LOG_AUTH, "PAM auth: conversation left in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
+		syslog(LOG_NOTICE, "PAM auth: conversation left in wrong state (%d/expecting %d)", pctx->state, PAM_S_WAIT_FOR_PASS);
 		return ERR_AUTH_FAIL;
 	}
 
@@ -265,7 +265,7 @@ struct pam_ctx_st * pctx = ctx;
 	co_call(pctx->cr);
 
 	if (pctx->cr_ret != PAM_SUCCESS) {
-		syslog(LOG_AUTH, "PAM-auth pam_auth_pass: %s", pam_strerror(pctx->ph, pctx->cr_ret));
+		syslog(LOG_NOTICE, "PAM-auth pam_auth_pass: %s", pam_strerror(pctx->ph, pctx->cr_ret));
 		return ERR_AUTH_FAIL;
 	}
 	
@@ -294,7 +294,7 @@ int pret;
 
 	pret = pam_get_item(pctx->ph, PAM_USER, (const void **)&user);
 	if (pret != PAM_SUCCESS) {
-		/*syslog(LOG_AUTH, "PAM-auth: pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret));*/
+		/*syslog(LOG_NOTICE, "PAM-auth: pam_get_item(PAM_USER): %s", pam_strerror(pctx->ph, pret));*/
 		return -1;
 	}
 	

@@ -191,7 +191,7 @@ static void radius_acct_session_stats(void *_vctx, unsigned auth_method, const c
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
-		syslog(LOG_AUTH, "radius-auth: radius_open_session: %d", ret);
+		syslog(LOG_NOTICE, "radius-auth: radius_open_session: %d", ret);
 		goto cleanup;
 	}
 
@@ -233,7 +233,7 @@ static int radius_acct_open_session(void *_vctx, unsigned auth_method, const com
 		rc_avpair_free(recvd);
 
 	if (ret != OK_RC) {
-		syslog(LOG_AUTH, "radius-auth: radius_open_session: %d", ret);
+		syslog(LOG_NOTICE, "radius-auth: radius_open_session: %d", ret);
 		ret = -1;
 		goto cleanup;
 	}

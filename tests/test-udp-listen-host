@@ -57,10 +57,30 @@ function finish {
 
   rm "${OUTFILE}" "${CONFIG_UDP_LISTEN_LOCAL}"
   # first openconnect cli will exit after ocserv is killed/restarted
-  kill "$(cat "${CLIPID2}")"
-  rm "${CLIPID2}"
+  test -f "${CLIPID2}" && kill "$(cat "${CLIPID2}")"
+  test -f "${CLIPID}" && kill "$(cat "${CLIPID}")"
+  rm -f "${CLIPID2}" "${CLIPID}"
 }
 trap finish EXIT
+
+function wait_file {
+  local file=$1
+  local max_time=$2
+  local time=0
+
+  while [ ${time} -lt ${max_time} ]
+  do
+    sleep 5
+    if test -e ${file};then
+      echo "Found file (waited ${time})"
+      return 0
+    fi
+    let time+=5
+  done
+
+  #timeout
+  echo "Could not find ${file} after ${time} secs"
+}
 
 # server address
 ADDRESS=10.201.2.1
@@ -91,9 +111,9 @@ sleep 3
 echo " * Connecting to haproxy and using dtls ... "
 echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${CLIPID}" --background
 
-${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
+wait_file "${CLIPID}" 11
 
-sleep 3
+${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
 
 grep "DTLS cipher:" ${OUTFILE}
 if test $? != 0;then
@@ -101,17 +121,20 @@ if test $? != 0;then
 	exit 1
 fi
 
-test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+
+test -n "${PID}" && kill "${PID}" >/dev/null
 sed -e "s/^udp-listen-host = ${ADDRESS}/udp-listen-host = 127.0.0.1/" "${CONFIG}" >${CONFIG_UDP_LISTEN_LOCAL}
-kill -9 "${PID}" >/dev/null
+wait ${PID}
+kill "$(cat "${CLIPID}")"
 sleep 1
+
 echo "restart ocsev with udp-listen-host set to 127.0.0.1"
 ${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG_UDP_LISTEN_LOCAL} ${DEBUG} & PID=$!
 
 echo " * Connecting to haproxy and using dtls again ... "
 echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} --user test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --script=/bin/true --verbose --pid-file "${CLIPID2}" --background
 
-sleep 3
+wait_file "${CLIPID2}" 11
 
 ${OCCTL} -s ${OCCTL_SOCKET} show user ${USERNAME} >${OUTFILE}
 

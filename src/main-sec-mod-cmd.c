@@ -532,22 +532,24 @@ int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie,
 	proc->config = msg->config;
 	proc->vhost = find_vhost(s->vconfig, msg->vhost);
 
-	apply_default_config(s, proc, proc->config);
+	if (proc->config) {
+		apply_default_config(s, proc, proc->config);
 
-	/* check whether the cookie IP matches */
-	if (proc->config && proc->config->deny_roaming != 0) {
-		if (msg->ip == NULL) {
-			return -1;
-		}
+		/* check whether the cookie IP matches */
+		if (proc->config->deny_roaming != 0) {
+			if (msg->ip == NULL) {
+				return -1;
+			}
 
-		if (human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
-					    str_ip, sizeof(str_ip), 0) == NULL)
-			return -1;
+			if (human_addr2((struct sockaddr *)&proc->remote_addr, proc->remote_addr_len,
+						    str_ip, sizeof(str_ip), 0) == NULL)
+				return -1;
 
-		if (strcmp(str_ip, msg->ip) != 0) {
-			mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
-				proc->username, msg->ip, str_ip);
-			return -1;
+			if (strcmp(str_ip, msg->ip) != 0) {
+				mslog(s, proc, LOG_INFO, "user '%s' is re-using cookie from different IP (prev: %s, current: %s); rejecting",
+					proc->username, msg->ip, str_ip);
+				return -1;
+			}
 		}
 	}
 

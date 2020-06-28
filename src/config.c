@@ -1167,7 +1167,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 		/* parse configuration
 		*/
 		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
-		if (ret < 0 && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0) {
+		if (ret < 0 && strcmp(file, DEFAULT_CFG_FILE) == 0) {
 			cfg_file = OLD_DEFAULT_CFG_FILE;
 			ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
 		}

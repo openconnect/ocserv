@@ -291,9 +291,9 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 	ret = 0;
 	goto cleanup;
  fail:
-	cstp_printf(ws,
-		   "HTTP/1.%u 502 %s\r\n\r\n",
-		   http_ver, reason);
+	(void)cstp_printf(ws,
+			 "HTTP/1.%u 502 %s\r\n\r\n",
+			 http_ver, reason);
 	ret = -1;
 
  cleanup:

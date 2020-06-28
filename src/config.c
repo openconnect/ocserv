@@ -1753,7 +1753,7 @@ void remove_pid_file(void)
 	if (pid_file[0]==0)
 		return;
 
-	remove(pid_file);
+	(void)remove(pid_file);
 }
 
 int _add_multi_line_val(void *pool, char ***varname, size_t *num,

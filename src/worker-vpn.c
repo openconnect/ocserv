@@ -498,7 +498,7 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 				 (pack_size_func)cli_stats_msg__get_packed_size,
 				 (pack_func) cli_stats_msg__pack);
 		if (discon_reason) /* wait for sec-mod to close connection to verify data have been accounted */
-			read(sd, buf, sizeof(buf));
+			(void)read(sd, buf, sizeof(buf));
 		close(sd);
 
 		if (ret >= 0) {

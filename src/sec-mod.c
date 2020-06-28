@@ -942,7 +942,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	memset(&sa, 0, sizeof(sa));
 	sa.sun_family = AF_UNIX;
 	strlcpy(sa.sun_path, socket_file, sizeof(sa.sun_path));
-	remove(socket_file);
+	(void)remove(socket_file);
 
 #define SOCKET_FILE sa.sun_path
 

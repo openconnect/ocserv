@@ -1291,9 +1291,9 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	if (vhost->perm_config.port == 0 && vhost->perm_config.unix_conn_file == NULL) {
 		if (defvhost) {
 			if (vhost->perm_config.port)
-				vhost->perm_config.port = vhost->perm_config.port;
+				vhost->perm_config.port = defvhost->perm_config.port;
 			else if (vhost->perm_config.unix_conn_file)
-				vhost->perm_config.unix_conn_file = talloc_strdup(vhost, vhost->perm_config.unix_conn_file);
+				vhost->perm_config.unix_conn_file = talloc_strdup(vhost, defvhost->perm_config.unix_conn_file);
 		} else {
 			fprintf(stderr, ERRSTR"%sthe tcp-port option is mandatory!\n", PREFIX_VHOST(vhost));
 			exit(1);

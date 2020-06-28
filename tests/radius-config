@@ -68,6 +68,28 @@ function finish {
 }
 trap finish EXIT
 
+function wait_file_contents {
+  local file=$1
+  local contents=$2
+  local max_time=$3
+  local time=0
+
+  while [ ${time} -lt ${max_time} ]
+  do
+    sleep 5
+    grep -E "${contents}" "${file}" >/dev/null
+    if test $? = 0;then
+      echo "Found ${contents} (waited ${time})"
+      return 0
+    fi
+    let time+=5
+  done
+
+  #timeout
+  echo "Could not find ${contents} in ${file} after ${time} secs"
+  exit 1
+}
+
 # server address
 ADDRESS=10.102.246.1
 CLI_ADDRESS=10.102.247.1
@@ -85,6 +107,7 @@ OCCTL_SOCKET=./occtl-radius-$$.socket
 ${CMDNS2} ${IP} link set dev lo up
 
 # Run servers
+rm -f ${RADIUSLOG}
 ${CMDNS2} ${RADIUSD} -d ${srcdir}/data/raddb/ -s -x -l ${RADIUSLOG} &
 RADIUSPID=$!
 
@@ -138,9 +161,9 @@ fi
 
 echo "Waiting for accounting report"
 
-sleep 28
+wait_file_contents ${RADIUSLOG} "Acct-Input-Octets = [1-9]+" 35
 
-OCTETS=$(cat ${RADIUSLOG}|grep Acct-Input-Octets|tail -1|sed 's/Acct-Input-Octets = //g')
+OCTETS=$(cat ${RADIUSLOG}|grep Acct-Input-Octets|tail -1|sed 's/.*Acct-Input-Octets = //g')
 if test -z "$OCTETS" || test "$OCTETS" = 0;then
 	cat ${RADIUSLOG}|grep Acct-Input-Octets
 	echo "Interim update showed no data!"
@@ -149,7 +172,7 @@ fi
 echo "Transferred ${OCTETS} bytes"
 
 echo "Waiting for disconnection report"
-sleep 60
+wait_file_contents ${RADIUSLOG} "Acct-Terminate-Cause" 70
 
 DISC=$(cat ${RADIUSLOG}|grep "Acct-Status-Type = Start"|tail -1)
 if test -z "$DISC";then

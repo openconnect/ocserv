@@ -458,7 +458,7 @@ static void plain_group_list(void *pool, void *additional, char ***groupname, un
 
 					if (htable_get(&hash, hval, str_cmp, tgroup[i]) == NULL) {
 						if (strlen(tgroup[i]) > 1)
-							htable_add(&hash, hval, tgroup[i]);
+							(void)htable_add(&hash, hval, tgroup[i]);
 					}
 				}
 			}

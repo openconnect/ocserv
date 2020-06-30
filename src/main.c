@@ -200,8 +200,10 @@ int _listen_ports(void *pool, struct perm_cfg_st* config,
 			y = 1;
 			/* avoid listen on ipv6 addresses failing
 			 * because already listening on ipv4 addresses: */
-			setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
-				   (const void *) &y, sizeof(y));
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
+				       (const void *) &y, sizeof(y)) < 0) {
+				perror("setsockopt(IPV6_V6ONLY) failed");
+			}
 		}
 #endif
 
@@ -468,13 +470,17 @@ int y;
 		y = 1;
 		/* avoid listen on ipv6 addresses failing
 		 * because already listening on ipv4 addresses: */
-		setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
-			   (const void *) &y, sizeof(y));
+		if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
+			   (const void *) &y, sizeof(y)) < 0) {
+			perror("setsockopt(IPV6_V6ONLY) failed");
+		}
 	}
 #endif
 
 	y = 1;
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y));
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *) &y, sizeof(y)) < 0) {
+		perror("setsockopt(SO_REUSEADDR) failed");
+	}
 
 	if (GETCONFIG(s)->try_mtu) {
 		set_mtu_disc(fd, family, 1);

@@ -67,13 +67,17 @@ static int get_sup_config(struct cfg_st *cfg, client_entry_st *entry,
 		if (msg->config->routes != NULL) {
 			for (i=0;i<pctx->routes_size;i++) {
 				msg->config->routes[i] = talloc_strdup(pool, pctx->routes[i]);
+				if (msg->config->routes[i] == NULL) {
+					syslog(LOG_ERR, "Error allocating memory for routes");
+					return -1;
+				}
+				if (ip_route_sanity_check(msg->config->routes, &msg->config->routes[i]) < 0) {
+					syslog(LOG_ERR, "Route '%s' is malformed", msg->config->routes[i]);
+					return -1;
+				}
 			}
 			msg->config->n_routes = pctx->routes_size;
 		}
-	}
-
-	for (i=0;i<msg->config->n_routes;i++) {
-		ip_route_sanity_check(msg->config->routes, &msg->config->routes[i]);
 	}
 
 	if (pctx->ipv4_dns1[0] != 0)

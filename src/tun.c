@@ -306,7 +306,7 @@ static void os_reset_ipv6_addr(struct proc_st *proc)
 		ifr6.ifr_addr.sin6_len = sizeof(struct sockaddr_in6);
 		ifr6.ifr_addr.sin6_family = AF_INET6;
 
-		ioctl(fd, SIOCDIFADDR_IN6, &ifr6);
+		(void)ioctl(fd, SIOCDIFADDR_IN6, &ifr6);
 		close(fd);
 	}
 }
@@ -802,7 +802,7 @@ static void reset_ipv4_addr(struct proc_st *proc)
 		ifr.ifr_addr.sa_len = sizeof(struct sockaddr_in);
 		ifr.ifr_addr.sa_family = AF_INET;
 
-		ioctl(fd, SIOCDIFADDR, &ifr);
+		(void)ioctl(fd, SIOCDIFADDR, &ifr);
 		close(fd);
 	}
 #elif defined(__linux__)
@@ -814,7 +814,7 @@ static void reset_ipv4_addr(struct proc_st *proc)
 		memcpy(&ifr.ifr_addr, &proc->ipv4->lip, proc->ipv4->lip_len);
 		ifr.ifr_addr.sa_family = AF_INET;
 
-		ioctl(fd, SIOCDIFADDR, &ifr);
+		(void)ioctl(fd, SIOCDIFADDR, &ifr);
 
 		close(fd);
 	}

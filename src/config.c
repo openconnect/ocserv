@@ -1167,7 +1167,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 		/* parse configuration
 		*/
 		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
-		if (ret < 0 && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0) {
+		if (ret < 0 && strcmp(file, DEFAULT_CFG_FILE) == 0) {
 			cfg_file = OLD_DEFAULT_CFG_FILE;
 			ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
 		}
@@ -1291,9 +1291,9 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	if (vhost->perm_config.port == 0 && vhost->perm_config.unix_conn_file == NULL) {
 		if (defvhost) {
 			if (vhost->perm_config.port)
-				vhost->perm_config.port = vhost->perm_config.port;
+				vhost->perm_config.port = defvhost->perm_config.port;
 			else if (vhost->perm_config.unix_conn_file)
-				vhost->perm_config.unix_conn_file = talloc_strdup(vhost, vhost->perm_config.unix_conn_file);
+				vhost->perm_config.unix_conn_file = talloc_strdup(vhost, defvhost->perm_config.unix_conn_file);
 		} else {
 			fprintf(stderr, ERRSTR"%sthe tcp-port option is mandatory!\n", PREFIX_VHOST(vhost));
 			exit(1);
@@ -1753,7 +1753,7 @@ void remove_pid_file(void)
 	if (pid_file[0]==0)
 		return;
 
-	remove(pid_file);
+	(void)remove(pid_file);
 }
 
 int _add_multi_line_val(void *pool, char ***varname, size_t *num,

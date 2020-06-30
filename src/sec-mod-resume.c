@@ -165,12 +165,17 @@ int handle_resume_store_req(sec_mod_st *sec,
 	       req->session_data.len);
 	memcpy(&cache->remote_addr, req->cli_addr.data, req->cli_addr.len);
 
-	htable_add(sec->tls_db.ht, key, cache);
-	sec->tls_db.entries++;
+	if (htable_add(sec->tls_db.ht, key, cache) == 0) {
+		seclog(sec, LOG_INFO,
+		      "could not add TLS session to hash table");
+		talloc_free(cache);
+	} else {
+		sec->tls_db.entries++;
 
-	seclog_hex(sec, LOG_DEBUG, "TLS session DB storing",
-				req->session_id.data,
-				req->session_id.len, 0);
+		seclog_hex(sec, LOG_DEBUG, "TLS session DB storing",
+					req->session_id.data,
+					req->session_id.len, 0);
+	}
 
 	return 0;
 }

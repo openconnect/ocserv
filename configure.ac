@@ -135,6 +135,13 @@ AC_ARG_WITH(kerberos-tests,
 
 AM_CONDITIONAL(ENABLE_KERBEROS_TESTS, test "x$kerberos_tests" = xyes)
 
+AC_ARG_WITH(tun-tests,
+  AS_HELP_STRING([--without-tun-tests], [disable any tests requiring /dev/net/tun]),
+  tun_tests=$withval,
+  tun_tests=yes)
+
+AM_CONDITIONAL(ENABLE_TUN_TESTS, test "x$tun_tests" = xyes)
+
 AC_ARG_WITH(nuttcp-tests,
   AS_HELP_STRING([--without-nuttcp-tests], [disable any tests requiring nuttcp]),
   nuttcp_tests=$withval,

@@ -642,6 +642,8 @@ fi
 AM_CONDITIONAL(ENABLE_OIDC_AUTH,  test "x$enable_oidc_auth" = xyes)
 AM_CONDITIONAL(ENABLE_OIDC_AUTH_TESTS, test "x$enable_oidc_auth" = xyes)
 
+AC_CHECK_FILE(/proc/self/exe, AC_DEFINE([PROC_FS_SUPPORTED],[1], [procfs supported]), [])
+
 uid=$(id -u)
 gid=$(id -g)
 AC_SUBST([ROOTUID], [$uid])

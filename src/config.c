@@ -1130,6 +1130,7 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 	ctx.reload = (flags&CFG_FLAG_RELOAD)?1:0;
 	ctx.head = head;
 
+#if defined(PROC_FS_SUPPORTED)
 	// Worker always reads from snapshot
 	if ((flags & CFG_FLAG_WORKER) == CFG_FLAG_WORKER) {
 		char * snapshot_file = NULL;
@@ -1192,6 +1193,27 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 		}
 
 	}
+#else
+	const char * cfg_file = file;
+
+	if (cfg_file == NULL) {
+		fprintf(stderr, ERRSTR"no config file!\n");
+		exit(1);
+	}
+
+	/* parse configuration
+	*/
+	ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+	if (ret < 0 && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0) {
+		cfg_file = OLD_DEFAULT_CFG_FILE;
+		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+	}
+
+	if (ret < 0) {
+		fprintf(stderr, ERRSTR"cannot load config file %s\n", cfg_file);
+		exit(1);
+	}
+#endif
 
 	/* apply configuration not yet applied.
 	 * We start from the last, which is the default server (firstly

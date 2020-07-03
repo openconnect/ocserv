@@ -255,6 +255,25 @@ Fedora:
     untracked: true
     when: always
 
+Fedora-noprocfs:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  script:
+  - chmod -R o-w tests/data/raddb
+  - git submodule update --init
+  - autoreconf -fvi
+  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-maintainer-mode --without-docker-tests
+  - make -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 day
+    untracked: true
+    when: on_failure
+
 # Tests seccomp filters by asking seccomp to fail with a trap
 seccomp/Fedora:
   stage: testing

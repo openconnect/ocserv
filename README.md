@@ -15,8 +15,13 @@ The program consists of:
 # Supported platforms
 
 The OpenConnect VPN server is designed and tested to work, with both IPv6
-and IPv4, on Linux systems. It is, however, known to work on FreeBSD, other
-BSD derived systems.
+and IPv4, on Linux systems. It is, however, known to work on FreeBSD,
+OpenBSD and other BSD derived systems.
+
+Known limitation is that on platforms, which do not support procfs(5),
+changes to the configuration must only be made while ocserv(8) is stopped.
+Not doing so will cause new worker processes picking up the new
+configuration while ocserv-main will use the previous configuration.
 
 
 # Build dependencies

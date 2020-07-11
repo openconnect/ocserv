@@ -4,6 +4,7 @@ stages:
 
 variables:
   BUILD_IMAGES_PROJECT: openconnect/build-images
+  ALPINE_BUILD: buildenv-alpine
   DEBIAN_BUILD: buildenv-debian
   FEDORA_BUILD: buildenv-fedora
   UBUNTU16_BUILD: buildenv-ubuntu
@@ -230,6 +231,24 @@ Coverity:
     paths:
       - cov-int/*.txt
 
+# Test building with musl
+musl/Alpine:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$ALPINE_BUILD
+  script:
+  - autoreconf -fvi
+  - ./configure --disable-maintainer-mode --without-docker-tests --with-werror
+  - make -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  artifacts:
+    expire_in: 1 day
+    untracked: true
+    when: on_failure
+
 Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
@@ -255,7 +274,7 @@ Fedora:
     untracked: true
     when: always
 
-Fedora-noprocfs:
+noprocfs/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:

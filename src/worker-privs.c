@@ -29,7 +29,7 @@
 #include <sys/syscall.h>
 #include <seccomp.h>
 #include <sys/ioctl.h>
-#include <sys/signal.h>
+#include <signal.h>
 #include <errno.h>
 
 /* libseccomp 2.4.2 broke accidentally the API. Work around it. */

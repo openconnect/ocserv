@@ -95,7 +95,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
 	test-gssapi test-pass-opt-cert test-cert-opt-pass test-gssapi-opt-pass \
 	test-gssapi-opt-cert haproxy-auth test-maintenance \
-	test-group-name no-route-default no-route-group
+	test-group-name
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth
@@ -108,7 +108,10 @@ endif
 if HAVE_LIBOATH
 dist_check_SCRIPTS += test-otp-cert test-otp
 endif
+endif
 
+if ENABLE_TUN_TESTS
+dist_check_SCRIPTS += no-route-default no-route-group
 endif
 
 

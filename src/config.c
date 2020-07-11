@@ -1414,11 +1414,18 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 #endif
 
 	if (config->priorities == NULL) {
-		/* on vhosts assign the main host priorities */
+		char *tmp = "";
+		/* on vhosts assign the main host priorities. We furthermore disable TLS1.3 on Cisco clients
+		 * due to issue #318. */
+
+		if (config->cisco_client_compat) {
+			tmp = ":-VERS-TLS1.3";
+		}
+
 		if (defvhost) {
-			config->priorities = talloc_strdup(config, defvhost->perm_config.config->priorities);
+			config->priorities = talloc_asprintf(config, "%s%s", defvhost->perm_config.config->priorities, tmp);
 		} else {
-			config->priorities = talloc_strdup(config, "NORMAL:%SERVER_PRECEDENCE:%COMPAT");
+			config->priorities = talloc_asprintf(config, "%s%s", "NORMAL:%SERVER_PRECEDENCE:%COMPAT", tmp);
 		}
 	}
 

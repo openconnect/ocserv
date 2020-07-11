@@ -53,7 +53,7 @@ int err;
 	}
 
 	if ((err = nl_connect(sock, NETLINK_ROUTE)) < 0) {
-		fprintf(stderr, "nl: error in nl_connect");
+		fprintf(stderr, "nl: error in nl_connect (%d)", err);
 		goto error;
 	}
 

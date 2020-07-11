@@ -286,7 +286,7 @@ unsigned check_cmd(const char *cmd, const char *input,
 {
 	char *t, *p;
 	unsigned len, tlen;
-	unsigned i, j, ret = 0;
+	unsigned i, ret = 0;
 	char prev;
 
 	while (whitespace(*input))
@@ -300,7 +300,7 @@ unsigned check_cmd(const char *cmd, const char *input,
 
 	prev = 0;
 	p = t;
-	for (i = j = 0; i < len; i++) {
+	for (i = 0; i < len; i++) {
 		if (!whitespace(prev) || !whitespace(input[i])) {
 			*p = input[i];
 			prev = input[i];

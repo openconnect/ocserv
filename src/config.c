@@ -743,6 +743,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		} else if (strcmp(name, "listen-clear-file") == 0) {
 			if (!PWARN_ON_VHOST_STRDUP(vhost->name, "listen-clear-file", unix_conn_file))
 				PREAD_STRING(pool, vhost->perm_config.unix_conn_file);
+		} else if (strcmp(name, "listen-netns") == 0) {
+			vhost->perm_config.listen_netns_name = talloc_strdup(pool, value);
 		} else if (strcmp(name, "tcp-port") == 0) {
 			if (!PWARN_ON_VHOST(vhost->name, "tcp-port", port))
 				READ_NUMERIC(vhost->perm_config.port);

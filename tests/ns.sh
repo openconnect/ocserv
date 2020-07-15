@@ -75,19 +75,19 @@ ${IP} link add ${ETHNAME1} type veth peer name ${ETHNAME2}
 ${IP} link set ${ETHNAME1} netns ${NSNAME1}
 ${IP} link set ${ETHNAME2} netns ${NSNAME2}
 
-${IP} netns exec ${NSNAME1} ip link set ${ETHNAME1} up
-${IP} netns exec ${NSNAME2} ip link set ${ETHNAME2} up
-${IP} netns exec ${NSNAME2} ip link set lo up
+${IP} -n ${NSNAME1} link set ${ETHNAME1} up
+${IP} -n ${NSNAME2} link set ${ETHNAME2} up
+${IP} -n ${NSNAME2} link set lo up
 
-${IP} netns exec ${NSNAME1} ip addr add ${CLI_ADDRESS} dev ${ETHNAME1}
-${IP} netns exec ${NSNAME2} ip addr add ${ADDRESS} dev ${ETHNAME2}
+${IP} -n ${NSNAME1} addr add ${CLI_ADDRESS} dev ${ETHNAME1}
+${IP} -n ${NSNAME2} addr add ${ADDRESS} dev ${ETHNAME2}
 
-${IP} netns exec ${NSNAME1} ip route add default via ${CLI_ADDRESS} dev ${ETHNAME1}
-${IP} netns exec ${NSNAME2} ip route add default via ${ADDRESS} dev ${ETHNAME2}
+${IP} -n ${NSNAME1} route add default via ${CLI_ADDRESS} dev ${ETHNAME1}
+${IP} -n ${NSNAME2} route add default via ${ADDRESS} dev ${ETHNAME2}
 
-${IP} netns exec ${NSNAME2} ip addr
-${IP} netns exec ${NSNAME2} ip route
-${IP} netns exec ${NSNAME1} ip route
+${IP} -n ${NSNAME2} addr
+${IP} -n ${NSNAME2} route
+${IP} -n ${NSNAME1} route
 
 ${IP} netns exec ${NSNAME1} ping -c 1 ${ADDRESS} >/dev/null
 ${IP} netns exec ${NSNAME2} ping -c 1 ${ADDRESS} >/dev/null

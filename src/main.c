@@ -67,6 +67,7 @@
 #include <snapshot.h>
 #include <isolate.h>
 #include <sockdiag.h>
+#include <namespace.h>
 
 #ifdef HAVE_GSSAPI
 # include <libtasn1.h>
@@ -168,8 +169,8 @@ static void set_common_socket_options(int fd)
 }
 
 static 
-int _listen_ports(void *pool, struct perm_cfg_st* config, 
-		struct addrinfo *res, struct listen_list_st *list)
+int _listen_ports(void *pool, struct perm_cfg_st* config, struct addrinfo *res,
+		struct listen_list_st *list, struct netns_fds *netns)
 {
 	struct addrinfo *ptr;
 	int s, y;
@@ -192,8 +193,8 @@ int _listen_ports(void *pool, struct perm_cfg_st* config,
 				type, human_addr(ptr->ai_addr, ptr->ai_addrlen,
 					   buf, sizeof(buf)));
 
-		s = socket(ptr->ai_family, ptr->ai_socktype,
-			   ptr->ai_protocol);
+		s = socket_netns(netns, ptr->ai_family, ptr->ai_socktype,
+				ptr->ai_protocol);
 		if (s < 0) {
 			perror("socket() failed");
 			continue;
@@ -312,6 +313,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 		struct listen_list_st *list)
 {
 	struct addrinfo hints, *res;
+	struct netns_fds netns = {-1, -1};
 	char portname[6];
 	int ret;
 #ifdef HAVE_LIBSYSTEMD
@@ -320,6 +322,11 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 
 	list_head_init(&list->head);
 	list->total = 0;
+
+	if (config->listen_netns_name && open_namespaces(&netns, config) < 0) {
+		fprintf(stderr, "cannot init listen namespaces\n");
+		return -1;
+	}
 
 #ifdef HAVE_LIBSYSTEMD
 	/* Support for systemd socket-activatable service */
@@ -414,7 +421,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list);
+		ret = _listen_ports(pool, config, res, list, &netns);
 		freeaddrinfo(res);
 
 		if (ret < 0) {
@@ -451,12 +458,17 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list);
+		ret = _listen_ports(pool, config, res, list, &netns);
 		if (ret < 0) {
 			return -1;
 		}
 
 		freeaddrinfo(res);
+	}
+
+	if (config->listen_netns_name && close_namespaces(&netns) < 0) {
+		fprintf(stderr, "cannot close listen namespaces\n");
+		return -1;
 	}
 
 	return 0;

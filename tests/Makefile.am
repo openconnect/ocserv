@@ -40,7 +40,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	connect-ios-script data/apple-ios.config certs/kerberos-cert.pem \
 	data/kdc.conf data/krb5.conf data/k5.KERBEROS.TEST data/kadm5.acl \
 	data/ipv6-iface.config data/no-route-default.config data/no-route-group.config \
-	data/group-config/group1
+	data/group-config/group1 data/test-namespace-listen.config
 
 SUBDIRS = docker-ocserv
 
@@ -65,7 +65,7 @@ dist_check_SCRIPTS += haproxy-connect test-iroute test-multi-cookie test-pass-sc
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
 	test-cookie-invalidation test-user-config test-append-routes test-ban \
 	multiple-routes json test-udp-listen-host test-max-same-1 test-script-multi-user \
-	apple-ios ipv6-iface
+	apple-ios ipv6-iface test-namespace-listen
 
 if RADIUS_ENABLED
 dist_check_SCRIPTS += radius-group radius-otp

@@ -73,7 +73,8 @@ update_config() {
 	       -e 's|@ROUTE1@|'${ROUTE1}'|g' "$file.$$.tmp" \
 	       -e 's|@ROUTE2@|'${ROUTE2}'|g' "$file.$$.tmp" \
 	       -e 's|@MATCH_CIPHERS@|'${MATCH_CIPHERS}'|g' "$file.$$.tmp" \
-	       -e 's|@OCCTL_SOCKET@|'${OCCTL_SOCKET}'|g' "$file.$$.tmp"
+	       -e 's|@OCCTL_SOCKET@|'${OCCTL_SOCKET}'|g' "$file.$$.tmp" \
+	       -e 's|@LISTEN_NS@|'${LISTEN_NS}'|g' "$file.$$.tmp"
 	CONFIG="$file.$$.tmp"
 }
 

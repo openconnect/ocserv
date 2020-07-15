@@ -67,6 +67,7 @@ iputils-ping       / iputils
 freeradius	   / freeradius
 gawk		   / gawk
 yajl-tools	   / yajl
+iproute2	   / iproute
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

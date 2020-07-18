@@ -34,14 +34,17 @@ libev-dev            / libev-devel
 
 Optional dependencies that enable specific functionality:
 ```
-TCP wrappers: libwrap0-dev       / tcp_wrappers-devel
-PAM:          libpam0g-dev       / pam-devel
-LZ4:          liblz4-dev         / lz4-devel
-seccomp:      libseccomp-dev     / libseccomp-devel
-occtl:        libreadline-dev    / readline-devel
-              libnl-route-3-dev  / libnl3-devel
-GSSAPI:       libkrb5-dev        / krb5-devel
-Radius:       libradcli-dev      / radcli-devel
+TCP wrappers: libwrap0-dev        / tcp_wrappers-devel
+PAM:          libpam0g-dev        / pam-devel
+LZ4:          liblz4-dev          / lz4-devel
+seccomp:      libseccomp-dev      / libseccomp-devel
+occtl:        libreadline-dev     / readline-devel
+              libnl-route-3-dev   / libnl3-devel
+GSSAPI:       libkrb5-dev         / krb5-devel
+Radius:       libradcli-dev       / radcli-devel
+OIDC:	      libcurl4-gnutls-dev / libcurl-devel
+	      libcjose-dev        / cjose-devel
+	      libjansson-dev	  / jansson-devel
 ```
 
 Dependencies for development, testing, or dependencies that can be skipped
@@ -66,6 +69,8 @@ haproxy            / haproxy
 iputils-ping       / iputils
 freeradius	   / freeradius
 gawk		   / gawk
+gnutls-bin	   / gnutls-utils
+iproute2	   / iproute
 yajl-tools	   / yajl
 iproute2	   / iproute
 ```

@@ -8,7 +8,7 @@ variables:
   DEBIAN_BUILD: buildenv-debian
   FEDORA_BUILD: buildenv-fedora
   UBUNTU16_BUILD: buildenv-ubuntu
-  UBUNTU18_BUILD: buildenv-ubuntu18
+  UBUNTU20_BUILD: buildenv-ubuntu20
   CENTOS8_BUILD: buildenv-centos8
   CENTOS7_BUILD: buildenv-centos7
   CENTOS6_BUILD: buildenv-centos6
@@ -60,9 +60,9 @@ Ubuntu16.04:
       - ./*.log
       - ./tests/*.log
 
-Ubuntu18.04:
+Ubuntu20.04:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU18_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU20_BUILD
   script:
   - git submodule update --init
   - autoreconf -fvi
@@ -337,9 +337,9 @@ minimal:
       - tests/*.log
 
 # Build a minimal version with every optional feature disable
-Ubuntu18.04-minimal:
+Ubuntu20.04-minimal:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU18_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU20_BUILD
   script:
   - git submodule update --init
   - autoreconf -fvi

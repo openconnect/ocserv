@@ -483,11 +483,12 @@ int handle_unban_ip_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *pa
 
 	if (status != 0) {
 		printf("IP '%s' was unbanned\n", arg);
+		ret = 0;
 	} else {
 		printf("could not unban IP '%s'\n", arg);
+		ret = 1;
 	}
 
-	ret = 0;
 	goto cleanup;
 
  error:
@@ -533,11 +534,12 @@ int handle_disconnect_user_cmd(struct unix_ctx *ctx, const char *arg, cmd_params
 
 	if (status != 0) {
 		printf("user '%s' was disconnected\n", arg);
+		ret = 0;
 	} else {
 		printf("could not disconnect user '%s'\n", arg);
+		ret = 1;
 	}
 
-	ret = 0;
 	goto cleanup;
 
  error:

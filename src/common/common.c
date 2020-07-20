@@ -122,11 +122,10 @@ const char *cmd_request_to_str(unsigned _cmd)
 		return "ban IP";
 	case CMD_BAN_IP_REPLY:
 		return "ban IP reply";
-
+	case CMD_LATENCY_STATS_DELTA:
+		return "latency stats delta";
 	case CMD_SEC_CLI_STATS:
 		return "sm: worker cli stats";
-	case CMD_SECM_CLI_STATS:
-		return "sm: main cli stats";
 	case CMD_SEC_AUTH_INIT:
 		return "sm: auth init";
 	case CMD_SEC_AUTH_CONT:
@@ -137,8 +136,12 @@ const char *cmd_request_to_str(unsigned _cmd)
 		return "sm: decrypt";
 	case CMD_SEC_SIGN:
 		return "sm: sign";
-	case CMD_SECM_STATS:
-		return "sm: stats";
+	case CMD_SEC_SIGN_DATA:
+		return "sm: sign data";
+	case CMD_SEC_SIGN_HASH:
+		return "sm: sign hash";
+	case CMD_SEC_GET_PK:
+		return "sm: get pk";
 	case CMD_SECM_SESSION_CLOSE:
 		return "sm: session close";
 	case CMD_SECM_SESSION_OPEN:
@@ -149,14 +152,18 @@ const char *cmd_request_to_str(unsigned _cmd)
 		return "sm: ban IP";
 	case CMD_SECM_BAN_IP_REPLY:
 		return "sm: ban IP reply";
-	case CMD_SECM_RELOAD:
-		return "sm: reload";
-	case CMD_SECM_RELOAD_REPLY:
-		return "sm: reload reply";
+	case CMD_SECM_CLI_STATS:
+		return "sm: main cli stats";
 	case CMD_SECM_LIST_COOKIES:
 		return "sm: list cookies";
 	case CMD_SECM_LIST_COOKIES_REPLY:
 		return "sm: list cookies reply";
+	case CMD_SECM_STATS:
+		return "sm: stats";
+	case CMD_SECM_RELOAD:
+		return "sm: reload";
+	case CMD_SECM_RELOAD_REPLY:
+		return "sm: reload reply";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", _cmd);
 		return tmp;

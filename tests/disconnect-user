@@ -1,0 +1,121 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+
+# This test checks whether an explicitly disconnected user via occtl
+# can connect again using its cookie. It uses debug-no-secmod-stats = true
+# to ensure that it is testing the worst case scenario where the worker
+# process has died without notifying sec-mod.
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PORT=4477
+TMPFILE=ocfile.$$.tmp
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+OCCTL_SOCKET=./occtl-$$.socket
+
+. `dirname $0`/common.sh
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing ocserv disconnection via occtl... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${TMPFILE}" && rm -f ${TMPFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
+# server address
+ADDRESS=10.236.2.1
+CLI_ADDRESS=10.236.1.1
+VPNNET=192.168.1.0/24
+VPNADDR=192.168.1.1
+VPNNET6=fcbe:735c:407a:3b62:164d:fa21:1495:0/112
+VPNADDR6=fcbe:735c:407a:3b62:164d:fa21:1495:1
+
+. `dirname $0`/ns.sh
+
+# Run servers
+update_config disconnect-user.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 3
+
+# Run clients
+echo " * Getting cookie from ${ADDRESS}:${PORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${PORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --authenticate >${TMPFILE} )
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+eval $(cat ${TMPFILE})
+echo " * Connecting to ${ADDRESS}:${PORT}..."
+( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+echo " * ping remote address"
+
+${CMDNS1} ping -c 3 ${VPNADDR}
+
+set +e
+
+${OCCTL} -s ${OCCTL_SOCKET} disconnect user test
+if test $? != 0;then
+        echo "occtl didn't find connected user!"
+        exit 1
+fi
+
+echo " * Re-connecting to obtain cookie after disconnect... "
+( ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${PORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script -C "${COOKIE}" --pid-file=${CLIPID} -b )
+if test $? = 0;then
+	echo "Succeeded using the cookie to connect"
+	exit 1
+fi
+
+sleep 2
+
+${OCCTL} -s ${OCCTL_SOCKET} show user test
+if test $? = 0;then
+        echo "occtl found disconnected user!"
+        exit 1
+fi
+
+exit 0

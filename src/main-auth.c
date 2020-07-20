@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014, 2015 Nikos Mavrogiannopoulos
+ * Copyright (C) 2013-2020 Nikos Mavrogiannopoulos
  * Copyright (C) 2014, 2015 Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -166,8 +166,8 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req)
 {
-int ret;
-struct proc_st *old_proc;
+	int ret;
+	struct proc_st *old_proc;
 
 	if (req->cookie.data == NULL || req->cookie.len != sizeof(proc->sid))
 		return -1;
@@ -178,6 +178,15 @@ struct proc_st *old_proc;
 	if (ret < 0)
 		return -1;
 	proc->dtls_session_id_size = sizeof(proc->dtls_session_id);
+
+	/* check for a user with the same sid as in the cookie */
+	old_proc = proc_search_sid(s, req->cookie.data);
+	if (old_proc != NULL) {
+		if (old_proc->invalidated != 0) {
+			mslog(s, proc, LOG_ERR, "the reused session has been invalidated");
+			return -1;
+		}
+	}
 
 	/* loads sup config and basic proc info (e.g., username) */
 	ret = session_open(s, proc, req->cookie.data, req->cookie.len);
@@ -191,16 +200,15 @@ struct proc_st *old_proc;
         	put_into_cgroup(s, proc->config->cgroup, proc->pid);
 	}
 
-	/* check for a user with the same sid as in the cookie */
-	old_proc = proc_search_sid(s, req->cookie.data);
+	/* disconnect and re-use previous session's IPs*/
 	if (old_proc != NULL) {
-		mslog(s, old_proc, LOG_INFO, "disconnecting previous user session due to session re-use");
-
 		if (strcmp(proc->username, old_proc->username) != 0) {
 			mslog(s, old_proc, LOG_ERR, "the user of the new session doesn't match the old (new: %s)",
-				proc->username);
+			      proc->username);
 			return -1;
 		}
+
+		mslog(s, old_proc, LOG_INFO, "disconnecting previous user session due to session re-use");
 
 		/* steal its leases */
 		steal_ip_leases(old_proc, proc);

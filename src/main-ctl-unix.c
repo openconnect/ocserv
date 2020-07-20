@@ -718,7 +718,7 @@ static void method_disconnect_user_name(method_ctx *ctx,
 	/* got the name. Try to disconnect */
 	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
 		if (strcmp(ctmp->username, req->username) == 0) {
-			terminate_proc(ctx->s, ctmp);
+			disconnect_proc(ctx->s, ctmp);
 			rep.status = 1;
 		}
 	}
@@ -755,8 +755,9 @@ static void method_disconnect_user_id(method_ctx *ctx, int cfd,
 	/* got the ID. Try to disconnect */
 	list_for_each_safe(&ctx->s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid == req->id) {
-			terminate_proc(ctx->s, ctmp);
+			disconnect_proc(ctx->s, ctmp);
 			rep.status = 1;
+
 			if (req->id != -1)
 				break;
 		}

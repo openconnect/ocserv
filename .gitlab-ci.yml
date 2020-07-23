@@ -244,6 +244,7 @@ musl/Alpine:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 day
     untracked: true
@@ -288,6 +289,7 @@ noprocfs/Fedora:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 day
     untracked: true
@@ -309,6 +311,7 @@ seccomp/Fedora:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 day
     untracked: true

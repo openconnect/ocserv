@@ -215,7 +215,7 @@ Coverity:
   - tar xfz /tmp/coverity_tool.tgz
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-oidc-auth --enable-latency-stats
   - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$JOBS
   - tar cfz cov-int.tar.gz cov-int
   - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME

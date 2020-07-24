@@ -206,16 +206,16 @@ RPM/epel8:
 
 Coverity:
   stage: testing
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   only:
   - schedules
   - coverity
   script:
-  - wget https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_SCAN_TOKEN&project=$COVERITY_SCAN_PROJECT_NAME" -O /tmp/coverity_tool.tgz
+  - wget --quiet https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_SCAN_TOKEN&project=$COVERITY_SCAN_PROJECT_NAME" -O /tmp/coverity_tool.tgz
   - tar xfz /tmp/coverity_tool.tgz
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-oidc-auth --enable-latency-stats
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-latency-stats
   - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$JOBS
   - tar cfz cov-int.tar.gz cov-int
   - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME

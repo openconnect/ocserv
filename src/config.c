@@ -773,6 +773,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 			READ_MULTI_LINE(vhost->perm_config.cert, vhost->perm_config.cert_size);
 		} else if (strcmp(name, "server-key") == 0) {
 			READ_MULTI_LINE(vhost->perm_config.key, vhost->perm_config.key_size);
+		} else if (strcmp(name, "debug-no-secmod-stats") == 0) {
+			READ_TF(vhost->perm_config.debug_no_secmod_stats);
 		} else if (strcmp(name, "dh-params") == 0) {
 			READ_STRING(vhost->perm_config.dh_params_file);
 		} else if (strcmp(name, "pin-file") == 0) {

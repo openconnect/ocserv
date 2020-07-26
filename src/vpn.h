@@ -381,7 +381,6 @@ struct perm_cfg_st {
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	char *cert_hash;
 #endif
-
 	unsigned int stats_reset_time;
 	unsigned foreground;
 	unsigned no_chdir;
@@ -396,6 +395,9 @@ struct perm_cfg_st {
 	char *listen_netns_name;
 	unsigned int port;
 	unsigned int udp_port;
+
+	/* for testing ocserv only */
+	unsigned debug_no_secmod_stats;
 
 	/* attic, where old config allocated values are stored */
 	struct list_head attic;

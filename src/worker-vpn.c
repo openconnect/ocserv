@@ -106,7 +106,7 @@ static void link_mtu_set(worker_st * ws, unsigned mtu);
 static void handle_alarm(int signo)
 {
 	if (global_ws)
-		exit_worker(global_ws);
+		exit_worker_reason(global_ws, terminate_reason);
 
 	_exit(1);
 }
@@ -471,6 +471,10 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 	CliStatsMsg msg = CLI_STATS_MSG__INIT;
 	int sd, ret, e;
 
+	/* this is only used by certain tests */
+	if (WSPCONFIG(ws)->debug_no_secmod_stats != 0)
+		return;
+
 	ws->last_stats_msg = now;
 
 	sd = connect_to_secmod(ws);
@@ -745,8 +749,10 @@ void vpn_server(struct worker_st *ws)
 	ocsignal(SIGALRM, handle_alarm);
 
 	global_ws = ws;
-	if (GETCONFIG(ws)->auth_timeout)
+	if (GETCONFIG(ws)->auth_timeout) {
+		terminate_reason = REASON_SERVER_DISCONNECT;
 		alarm(GETCONFIG(ws)->auth_timeout);
+	}
 
 	/* do not allow this process to be traced. That
 	 * prevents worker processes tracing each other. */
@@ -1213,6 +1219,7 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 	 * freezes in the worker due to an unexpected block (due to worker
 	 * bug or kernel bug). In that case the worker will be killed due
 	 * the the alarm instead of hanging. */
+	terminate_reason = REASON_SERVER_DISCONNECT;
 	alarm(1800);
 
 	if (WSCONFIG(ws)->idle_timeout > 0) {

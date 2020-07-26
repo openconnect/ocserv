@@ -562,7 +562,7 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 	e = find_client_entry(sec, req->sid.data);
 	if (e == NULL) {
 		seclog(sec, LOG_INFO, "session close but with non-existing SID");
-		return send_msg(e, fd, CMD_SECM_CLI_STATS, &rep,
+		return send_msg(sec, fd, CMD_SECM_CLI_STATS, &rep,
 		                (pack_size_func) cli_stats_msg__get_packed_size,
 		                (pack_func) cli_stats_msg__pack);
 	}
@@ -583,6 +583,10 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 	}
 	if (req->has_bytes_out && req->bytes_out > e->stats.bytes_out) {
 			e->stats.bytes_out = req->bytes_out;
+	}
+
+	if (req->server_disconnected) {
+		e->discon_reason = REASON_SERVER_DISCONNECT;
 	}
 
 	/* send reply */
@@ -606,7 +610,6 @@ int handle_secm_session_close_cmd(sec_mod_st *sec, int fd, const SecmSessionClos
 
 	return 0;
 }
-
 
 void handle_sec_auth_ban_ip_reply(sec_mod_st *sec, const BanIpReplyMsg *msg)
 {

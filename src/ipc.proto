@@ -322,6 +322,7 @@ message secm_session_close_msg
 	optional uint64 bytes_out = 5;
 	optional string ipv4 = 6;
 	optional string ipv6 = 7;
+	required bool server_disconnected = 8 [default = false];
 }
 
 /* SECM_STATS */

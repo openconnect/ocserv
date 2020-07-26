@@ -121,6 +121,10 @@ typedef struct proc_st {
 	uint8_t sid[SID_SIZE];
 	unsigned active_sid;
 
+	/* non zero if the sid has been invalidated and must not be allowed
+	 * to reconnect. */
+	unsigned invalidated;
+
 	/* whether the host-update script has already been called */
 	unsigned host_updated;
 
@@ -353,14 +357,18 @@ struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 void remove_proc(main_server_st* s, struct proc_st *proc, unsigned flags);
 void proc_to_zombie(main_server_st* s, struct proc_st *proc);
 
-inline static void terminate_proc(main_server_st *s, proc_st *proc)
+inline static void disconnect_proc(main_server_st *s, proc_st *proc)
 {
-	/* if it has an IP, send a signal so that we cleanup
-	 * and get stats properly */
-	if (proc->pid != -1 && proc->pid != 0)
+	/* make sure that the SID cannot be reused */
+	proc->invalidated = 1;
+
+	/* if it has a PID, send a signal so that we cleanup
+	 * and sec-mod gets stats orderly */
+	if (proc->pid != -1 && proc->pid != 0) {
                 kill(proc->pid, SIGTERM);
-	else
+	} else {
 		remove_proc(s, proc, RPROC_KILL);
+	}
 }
 
 void put_into_cgroup(main_server_st * s, const char* cgroup, pid_t pid);

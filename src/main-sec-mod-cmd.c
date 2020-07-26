@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Red Hat, Inc.
- * Copyright (C) 2015-2017 Nikos Mavrogiannopoulos
+ * Copyright (C) 2015-2020 Nikos Mavrogiannopoulos
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -657,6 +657,9 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	ireq.has_bytes_out = 1;
 	ireq.sid.data = proc->sid;
 	ireq.sid.len = sizeof(proc->sid);
+
+	if (proc->invalidated)
+		ireq.server_disconnected = 1;
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_CLOSE));
 

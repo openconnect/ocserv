@@ -874,6 +874,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		fprintf(stderr, WARNSTR"the option 'session-control' is deprecated\n");
 	} else if (strcmp(name, "banner") == 0) {
 		READ_STRING(config->banner);
+	} else if (strcmp(name, "pre-login-banner") == 0) {
+		READ_STRING(config->pre_login_banner);
 	} else if (strcmp(name, "dtls-legacy") == 0) {
 		READ_TF(config->dtls_legacy);
 	} else if (strcmp(name, "cisco-client-compat") == 0) {

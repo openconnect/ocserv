@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+# tests whether the pre-login-banner is printed
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PORT=4173
+TMPFILE=ocserv-plbanner.$$.tmp
+PIDFILE=ocserv-pid.$$.tmp
+
+. `dirname $0`/common.sh
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PIDFILE}" && test -f "${PIDFILE}" && kill $(cat ${PIDFILE}) >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${TMPFILE}" && rm -f ${TMPFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
+echo "Testing banner printing... "
+
+update_config test1.config
+launch_sr_server -d 1 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+sleep 3
+
+echo "Connecting to obtain cookie... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT  $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >${TMPFILE} 2>&1 ) ||
+	fail $PID "Could not receive cookie from server"
+
+grep "AN UNPREDICTABLE BANNER" ${TMPFILE} >/dev/null
+if test $? != 0;then
+	echo "The banner was not printed"
+	cat $TMPFILE
+	exit 1
+fi
+
+echo "Connecting to obtain cookie with wrong password... "
+( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT  $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >${TMPFILE} 2>&1 ) &&
+	fail $PID "Received cookie when we shouldn't"
+
+grep "AN UNPREDICTABLE BANNER" ${TMPFILE} >/dev/null
+if test $? != 0;then
+	echo "The banner was not printed"
+	cat $TMPFILE
+	exit 1
+fi
+
+exit 0

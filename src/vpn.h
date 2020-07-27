@@ -242,6 +242,7 @@ struct cfg_st {
 	unsigned no_compress_limit;	/* under this size (in bytes) of data there will be no compression */
 #endif
 	char *banner;
+	char *pre_login_banner;
 	char *ocsp_response; /* file with the OCSP response */
 	char *default_domain; /* domain to be advertised */
 

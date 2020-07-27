@@ -9,6 +9,7 @@
   anyconnect clients seem to supporting TLS1.3 but unable to handle
   a client with an RSA key (#318)
 - Enable a race free user disconnection via occtl (#59)
+- Added the config option of a pre-login-banner (#313)
 
 
 * Version 1.1.0 (released 2020-06-16)

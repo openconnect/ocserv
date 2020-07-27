@@ -73,41 +73,41 @@ static const char ocv3_success_msg_head[] = "<?xml version=\"1.0\" encoding=\"UT
 
 static const char ocv3_success_msg_foot[] = "</auth>\n";
 
-#define OC_LOGIN_MSG_START \
+#define OC_LOGIN_START \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
     "<config-auth client=\"vpn\" type=\"auth-request\">\n" \
     VERSION_MSG \
-    "<auth id=\"main\">\n" \
+    "<auth id=\"main\">\n"
+
+#define OC_LOGIN_FORM_START \
     "<message>%s</message>\n" \
     "<form method=\"post\" action=\"/auth\">\n"
 
-static const char oc_login_msg_end[] =
-    "</form></auth>\n" "</config-auth>";
+#define OC_LOGIN_END \
+    "</form></auth>\n" "</config-auth>"
 
-static const char login_msg_user[] =
-    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n";
+#define OC_LOGIN_FORM_INPUT_USER \
+    "<input type=\"text\" name=\"username\" label=\"Username:\" />\n"
 
 #define DEFAULT_PASSWD_LABEL "Password:"
-#define LOGIN_MSG_PASSWORD \
+#define OC_LOGIN_FORM_INPUT_PASSWORD \
     "<input type=\"password\" name=\"password\" label=\""DEFAULT_PASSWD_LABEL"\" />\n"
-#define LOGIN_MSG_PASSWORD_CTR \
+#define OC_LOGIN_FORM_INPUT_PASSWORD_CTR \
     "<input type=\"password\" name=\"secondary_password\" label=\"Password%d:\" />\n"
 
 #define _OCV3_LOGIN_MSG_START(x) \
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" \
-    "<auth id=\""x"\">\n" \
-    "<message>%s</message>\n" \
-    "<form method=\"post\" action=\"/auth\">\n"
+    "<auth id=\""x"\">\n"
 
-#define OCV3_LOGIN_MSG_START _OCV3_LOGIN_MSG_START("main")
-#define OCV3_PASSWD_MSG_START _OCV3_LOGIN_MSG_START("passwd")
+#define OCV3_LOGIN_START _OCV3_LOGIN_MSG_START("main")
+#define OCV3_PASSWD_START _OCV3_LOGIN_MSG_START("passwd")
+
+#define OCV3_LOGIN_END "</form></auth>\n"
 
 #ifdef SUPPORT_OIDC_AUTH
 #define HTTP_AUTH_OIDC_PREFIX "Bearer"
 #endif
 
-static const char ocv3_login_msg_end[] =
-    "</form></auth>\n";
 
 static int get_cert_info(worker_st * ws);
 static int basic_auth_handler(worker_st * ws, unsigned http_ver, const char *msg);
@@ -208,20 +208,20 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	char context[BASE64_ENCODE_RAW_LENGTH(SID_SIZE) + 1];
 	unsigned int i, j;
 	str_st str;
-	const char *login_msg_start;
-	const char *login_msg_end;
+	const char *login_start;
+	const char *login_end;
 
 	if (ws->req.user_agent_type == AGENT_OPENCONNECT_V3) {
 		/* certain v2.x modified clients require a different auth_id
 		 * when password is being requested, rather than username */
 		if (ws->auth_state == S_AUTH_REQ)
-			login_msg_start = OCV3_PASSWD_MSG_START;
+			login_start = OCV3_PASSWD_START;
 		else
-			login_msg_start = OCV3_LOGIN_MSG_START;
-		login_msg_end = ocv3_login_msg_end;
+			login_start = OCV3_LOGIN_START;
+		login_end = OCV3_LOGIN_END;
 	} else {
-		login_msg_start = OC_LOGIN_MSG_START;
-		login_msg_end = oc_login_msg_end;
+		login_start = OC_LOGIN_START;
+		login_end = OC_LOGIN_END;
 	}
 
 	if ((ws->selected_auth->type & AUTH_TYPE_GSSAPI) && ws->auth_state < S_AUTH_COOKIE) {
@@ -269,44 +269,64 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 	}
 
 	if (ws->auth_state == S_AUTH_REQ) {
-		/* only ask password */
+		/* Password Form */
 		if (pmsg == NULL || strncasecmp(pmsg, DEFAULT_PASSWD_LABEL, sizeof(DEFAULT_PASSWD_LABEL)-1) == 0)
 			pmsg = "Please enter your password.";
 
-		ret = str_append_printf(&str, login_msg_start, pmsg);
+		ret = str_append_str(&str, login_start);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
+		ret = str_append_printf(&str, OC_LOGIN_FORM_START, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
 		if (pcounter > 0)
-			ret = str_append_printf(&str, LOGIN_MSG_PASSWORD_CTR, pcounter);
+			ret = str_append_printf(&str, OC_LOGIN_FORM_INPUT_PASSWORD_CTR, pcounter);
 		else
-			ret = str_append_str(&str, LOGIN_MSG_PASSWORD);
+			ret = str_append_str(&str, OC_LOGIN_FORM_INPUT_PASSWORD);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
-		ret = str_append_str(&str, login_msg_end);
+		ret = str_append_str(&str, login_end);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
 	} else {
+		/* Username / Groups Form */
 		if (pmsg == NULL)
 			pmsg = "Please enter your username.";
 
-		/* ask for username and groups */
-		ret = str_append_printf(&str, login_msg_start, pmsg);
+		ret = str_append_str(&str, login_start);
+		if (ret < 0) {
+			ret = -1;
+			goto cleanup;
+		}
+
+		if (WSCONFIG(ws)->pre_login_banner) {
+			ret = str_append_printf(&str, "<banner>%s</banner>", WSCONFIG(ws)->pre_login_banner);
+			if (ret < 0) {
+				ret = -1;
+				goto cleanup;
+			}
+		}
+
+		ret = str_append_printf(&str, OC_LOGIN_FORM_START, pmsg);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
 		if (ws->selected_auth->type & AUTH_TYPE_USERNAME_PASS) {
-			ret = str_append_str(&str, login_msg_user);
+			ret = str_append_str(&str, OC_LOGIN_FORM_INPUT_USER);
 			if (ret < 0) {
 				ret = -1;
 				goto cleanup;
@@ -396,7 +416,7 @@ int get_auth_handler2(worker_st * ws, unsigned http_ver, const char *pmsg, unsig
 			}
 		}
 
-		ret = str_append_str(&str, login_msg_end);
+		ret = str_append_str(&str, login_end);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;

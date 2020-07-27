@@ -13,6 +13,7 @@ enum AUTH_REP {
 message auth_cookie_request_msg
 {
 	required bytes cookie = 1;
+	optional string hostname = 2;
 }
 
 message fw_port_st
@@ -183,18 +184,14 @@ message session_info_msg
 {
 	required string tls_ciphersuite = 1;
 	required string dtls_ciphersuite = 2;
-	required string user_agent = 3;
-	optional string cstp_compr = 4;
-	optional string dtls_compr = 5;
+	optional string cstp_compr = 3;
+	optional string dtls_compr = 4;
 	/* these two are of type sockaddr_storage,
 	 * and contain the addresses we got from proxy
 	 * protocol (if any).
 	 */
-	optional bytes our_addr = 6;
-	optional bytes remote_addr = 7;
-
-	optional string hostname = 8;
-	optional string device_type = 9;
+	optional bytes our_addr = 5;
+	optional bytes remote_addr = 6;
 }
 
 /* WORKER_BAN_IP: sent from worker to main */

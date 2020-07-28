@@ -37,6 +37,7 @@ case "$REASON" in
 	fi
 	;;
   "host-update")
+	verify_env_set "HOSTNAME"
 	echo > host-update.ok
 	;;
 esac

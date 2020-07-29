@@ -10,16 +10,18 @@ verify_env_set() {
 	fi
 }
 
+# Verify the common environment variables
 verify_env_set "IP_REMOTE"
 verify_env_set "REASON"
+verify_env_set "HOSTNAME"
+verify_env_set "USERNAME"
+verify_env_set "USER_AGENT"
+verify_env_set "DEVICE_PLATFORM"
+verify_env_set "DEVICE_TYPE"
 
 case "$REASON" in
   connect)
-	verify_env_set "USERNAME"
-	verify_env_set "USER_AGENT"
 	verify_env_set "DEVICE"
-	verify_env_set "DEVICE_PLATFORM"
-	verify_env_set "DEVICE_TYPE"
 
 	test "${OCSERV_DNS}" = "192.168.1.1 192.168.5.1 " && \
 	test "${OCSERV_DNS4}" = "192.168.1.1 192.168.5.1 " && \

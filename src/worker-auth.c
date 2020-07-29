@@ -952,6 +952,8 @@ int auth_cookie(worker_st * ws, void *cookie, size_t cookie_size)
 
 	msg.cookie.data = cookie;
 	msg.cookie.len = cookie_size;
+	if (ws->req.hostname[0] != 0)
+		msg.hostname = ws->req.hostname;
 
 	ret = send_msg_to_main(ws, AUTH_COOKIE_REQ, &msg, (pack_size_func)
 			       auth_cookie_request_msg__get_packed_size,

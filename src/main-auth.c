@@ -226,6 +226,9 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 	/* this also hints to call session_close() */
 	proc->active_sid = 1;
 
+	if (req->hostname != NULL)
+		strlcpy(proc->hostname, req->hostname, sizeof(proc->hostname));
+
 	/* add the links to proc hash */
 	if (proc_table_add(s, proc) < 0) {
 		mslog(s, proc, LOG_ERR, "failed to add proc hashes");

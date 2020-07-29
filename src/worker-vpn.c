@@ -980,18 +980,6 @@ void session_info_send(worker_st * ws)
 			msg.dtls_compr = (char*)ws->dtls_selected_comp->name;
 	}
 
-	if (ws->req.user_agent[0] != 0) {
-		msg.user_agent = ws->req.user_agent;
-	}
-
-	if (ws->req.devtype[0] != 0) {
-		msg.device_type = ws->req.devtype;
-	}
-
-	if (ws->req.hostname[0] != 0) {
-		msg.hostname = ws->req.hostname;
-	}
-
 	if (WSCONFIG(ws)->listen_proxy_proto) {
 		msg.our_addr.data = (uint8_t*)&ws->our_addr;
 		msg.our_addr.len = ws->our_addr_len;

@@ -4,7 +4,7 @@
   makes the server more resilient (and prevents connection failures) on
   multiple concurrent connections (#310)
 - Added namespace support for listen address by introducing the
-  listen-netns  option (#189)
+  listen-netns  option (#316)
 - Disable TLS1.3 when cisco client compatibility is enabled. New
   anyconnect clients seem to supporting TLS1.3 but unable to handle
   a client with an RSA key (#318)

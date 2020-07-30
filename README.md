@@ -57,7 +57,6 @@ libhttp-parser-dev / http-parser-devel
 libpcl1-dev        / pcllib-devel
 protobuf-c-compiler/ protobuf-c
 gperf              / gperf
-liblockfile-bin    / lockfile-progs
 nuttcp             / nuttcp
 lcov               / lcov
 libuid-wrapper     / uid_wrapper

@@ -6,6 +6,7 @@ variables:
   BUILD_IMAGES_PROJECT: openconnect/build-images
   ALPINE_BUILD: buildenv-alpine
   DEBIAN_BUILD: buildenv-debian
+  DEBIAN_X86_CROSS_BUILD: buildenv-debian-x86
   FEDORA_BUILD: buildenv-fedora
   UBUNTU16_BUILD: buildenv-ubuntu
   UBUNTU20_BUILD: buildenv-ubuntu20
@@ -30,6 +31,28 @@ Debian:
   except:
   - tags
   - schedules
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - ./*.log
+      - ./tests/*.log
+
+i386/Debian:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$DEBIAN_X86_CROSS_BUILD
+  script:
+  - git submodule update --init
+  - autoreconf -fvi
+# Radius seems to be malfunctioning on i386 build
+  - ./configure --enable-oidc-auth --without-radius
+  - make -j$JOBS
+  - make check -j$JOBS VERBOSE=1
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
   artifacts:
     expire_in: 1 week
     when: on_failure
@@ -340,7 +363,7 @@ minimal:
       - tests/*.log
 
 # Build a minimal version with every optional feature disable
-Ubuntu20.04-minimal:
+minimal/Ubuntu20.04:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU20_BUILD
   script:

@@ -30,12 +30,21 @@ if test -z "${OPENCONNECT}" || ! test -x ${OPENCONNECT};then
 	exit 1
 fi
 
+if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
+	echo "Disabling worker isolation to enable asan"
+	ISOLATE_WORKERS=false
+fi
+
 if test -z "$NO_NEED_ROOT";then
 	if test "$(id -u)" != "0";then
 		echo "You need to run this script as root"
 		exit 77
 	fi
 else
+	if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
+		echo "Skipping test requiring ldpreload"
+		exit 77
+	fi
 	SOCKDIR="${srcdir}/tmp/sockwrap.$$.tmp"
 	mkdir -p $SOCKDIR
 	export SOCKET_WRAPPER_DIR=$SOCKDIR

@@ -269,7 +269,7 @@ musl/Alpine:
   - tags
   - schedules
   artifacts:
-    expire_in: 1 day
+    expire_in: 1 week
     untracked: true
     when: on_failure
 
@@ -314,7 +314,28 @@ noprocfs/Fedora:
   - tags
   - schedules
   artifacts:
-    expire_in: 1 day
+    expire_in: 1 week
+    untracked: true
+    when: on_failure
+
+clang/Fedora:
+  stage: testing
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  script:
+  - chmod -R o-w tests/data/raddb
+  - git submodule update --init
+  - autoreconf -fvi
+  - CC=clang ./configure --disable-maintainer-mode --without-docker-tests --with-werror
+  - make -j$JOBS
+  - make check -j$JOBS
+  tags:
+  - shared
+  - linux
+  except:
+  - tags
+  - schedules
+  artifacts:
+    expire_in: 1 week
     untracked: true
     when: on_failure
 
@@ -336,7 +357,7 @@ seccomp/Fedora:
   - tags
   - schedules
   artifacts:
-    expire_in: 1 day
+    expire_in: 1 week
     untracked: true
     when: on_failure
 

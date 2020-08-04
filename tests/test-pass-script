@@ -119,19 +119,28 @@ echo " * Re-connecting to force session stealing... "
 eval "$(grep COOKIE ${PARAMSFILE})"
 echo ${COOKIE}| $OPENCONNECT localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE} -b
 
-sleep 4
 echo " - Pausing client"
-if ! test -f ${OPIDFILE};then
-	echo "Could not find pid file"
+TIMEOUT=4
+while ! test -f ${OPIDFILE}; do
+    TIMEOUT=$(($TIMEOUT - 1))
+    if [ $TIMEOUT -eq 0 ]; then
+	echo "Timed out waiting for ${OPIDFILE}"
 	exit 1
-fi
-kill -s STOP $(cat ${OPIDFILE})
-sleep 12
+    fi
+    sleep 1
+done
 
-if ! test -f ${builddir}/connect.ok;then
-	echo "Connect script was not run (2)"
+kill -s STOP $(cat ${OPIDFILE})
+
+TIMEOUT=12
+while ! test -f ${builddir}/connect.ok; do
+    TIMEOUT=$(($TIMEOUT - 1))
+    if [ $TIMEOUT -eq 0 ]; then
+	echo "Timed out waiting for ${builddir}/connect.ok"
 	exit 1
-fi
+    fi
+    sleep 1
+done
 
 rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
@@ -141,17 +150,26 @@ echo ${COOKIE} | $OPENCONNECT -q localhost:$PORT -u "test2" --reconnect-timeout 
 
 echo " - Resuming (disconnected) client"
 kill -s CONT $(cat ${OPIDFILE})
-sleep 6
 
-if ! test -f ${builddir}/connect.ok;then
-	echo "Connect script was not run (3)"
+TIMEOUT=6
+while ! test -f ${builddir}/connect.ok; do
+    TIMEOUT=$(($TIMEOUT - 1))
+    if [ $TIMEOUT -eq 0 ]; then
+	echo "Timed out waiting for ${builddir}/connect.ok (3)"
 	exit 1
-fi
+    fi
+    sleep 1
+done
 
-if ! test -f ${builddir}/disconnect.ok;then
-	echo "Disconnect script was not run properly (3)"
+TIMEOUT=6
+while ! test -f ${builddir}/disconnect.ok; do
+    TIMEOUT=$(($TIMEOUT - 1))
+    if [ $TIMEOUT -eq 0 ]; then
+	echo "Timed out waiting for ${builddir}/disconnect.ok (3)"
 	exit 1
-fi
+    fi
+    sleep 1
+done
 
 rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
@@ -160,13 +178,19 @@ echo " - Killing all clients"
 sleep 2
 test -f ${OPIDFILE2} && kill $(cat ${OPIDFILE2})
 test -f ${OPIDFILE} && kill $(cat ${OPIDFILE})
-sleep 6
 
 echo " - Last check of files"
-if ! test -f ${builddir}/disconnect.ok;then
-	echo "Disconnect script was not run properly (4)"
+
+TIMEOUT=6
+while ! test -f ${builddir}/disconnect.ok; do
+    TIMEOUT=$(($TIMEOUT - 1))
+    if [ $TIMEOUT -eq 0 ]; then
+	echo "Timed out waiting for ${builddir}/disconnect.ok (4)"
 	exit 1
-fi
+    fi
+    sleep 1
+done
+
 
 sleep 5
 echo " - Check server status"

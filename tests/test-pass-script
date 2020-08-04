@@ -80,7 +80,15 @@ echo " * Connecting to obtain cookie... "
 echo " * Re-connecting to force script run... "
 echo "!@#$%^&*()<>" | timeout 7 $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true
 
-sleep 5
+TIMEOUT=5
+while ! test -f ${builddir}/disconnect.ok; do
+    TIMEOUT=$(($TIMEOUT - 1))
+    if [ $TIMEOUT -eq 0 ]; then
+	echo "Timed out waiting for ${builddir}/disconnect.ok (1)"
+	exit 1
+    fi
+    sleep 1
+done
 
 if ! test -f ${builddir}/connect.ok;then
 	echo "Connect script was not run"
@@ -117,7 +125,7 @@ fi
 
 echo " * Re-connecting to force session stealing... "
 eval "$(grep COOKIE ${PARAMSFILE})"
-echo ${COOKIE}| $OPENCONNECT localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE} -b
+echo ${COOKIE}| $OPENCONNECT --local-hostname='mylocalname' localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE} -b
 
 echo " - Pausing client"
 TIMEOUT=4
@@ -146,7 +154,7 @@ rm -f ${builddir}/connect.ok
 rm -f ${builddir}/disconnect.ok
 
 echo " * Re-connecting to steal previous IP address... "
-echo ${COOKIE} | $OPENCONNECT -q localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE2} -b
+echo ${COOKIE} | $OPENCONNECT -q --local-hostname='mylocalname' localhost:$PORT -u "test2" --reconnect-timeout 0 --cookie-on-stdin --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true --pid-file=${OPIDFILE2} -b
 
 echo " - Resuming (disconnected) client"
 kill -s CONT $(cat ${OPIDFILE})
@@ -195,7 +203,7 @@ done
 sleep 5
 echo " - Check server status"
 
-( echo "!@#$%^&*()<>" | $OPENCONNECT -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
+( echo "!@#$%^&*()<>" | $OPENCONNECT --local-hostname='mylocalname' -q localhost:$PORT -u "sp@c/al" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >/dev/null 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
 echo " - Killing server"

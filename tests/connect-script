@@ -14,6 +14,7 @@ verify_env_set() {
 verify_env_set "IP_REMOTE"
 verify_env_set "REASON"
 verify_env_set "HOSTNAME"
+verify_env_set "REMOTE_HOSTNAME"
 verify_env_set "USERNAME"
 verify_env_set "USER_AGENT"
 verify_env_set "DEVICE_PLATFORM"

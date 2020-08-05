@@ -205,6 +205,9 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 	if (auth == NULL)
 		return;
 
+	if (vhostname[0] == 0)
+		vhostname = "vhost:default";
+
 	if (primary != 0) {
 		/* Set the primary authentication methods */
 		for (j=0;j<auth_size;j++) {
@@ -243,7 +246,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 			}
 			talloc_free(auth[j]);
 		}
-		fprintf(stderr, NOTESTR"%ssetting '%s' as primary authentication method\n", vhostname, config->auth[0].name);
+		fprintf(stderr, NOTESTR"%s: setting '%s' as primary authentication method\n", vhostname, config->auth[0].name);
 	} else {
 		unsigned x = config->auth_methods;
 		/* Append authentication methods (alternative options) */

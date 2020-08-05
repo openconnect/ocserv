@@ -1,0 +1,85 @@
+#!/bin/sh
+#
+# Copyright (C) 2013 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+PORT=3492
+NO_NEED_ROOT=1
+
+. `dirname $0`/common.sh
+
+echo "Testing whether invalid configurations fail as expected... "
+
+# plain + pam (primary)
+update_config test1.config
+
+echo "auth = pam" >> ${CONFIG}
+
+timeout 10 ${SERV} -d 1 -p ${PIDFILE} -f -c ${CONFIG}
+
+if test $? != 0 && test $? != 124;then
+	echo "Command failed as expected"
+else
+	exit 1
+fi
+
+# plain + pam (alt)
+update_config test1.config
+
+echo "enable-auth = pam" >> ${CONFIG}
+
+timeout 10 ${SERV} -d 1 -p ${PIDFILE} -f -c ${CONFIG}
+
+if test $? != 0 && test $? != 124;then
+	echo "Command failed as expected"
+else
+	exit 1
+fi
+
+# plain + radius (primary)
+update_config test1.config
+
+echo "auth = \"radius[config=${srcdir}/data/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=ocserv1]\"" >> ${CONFIG}
+
+timeout 10 ${SERV} -d 1 -p ${PIDFILE} -f -c ${CONFIG}
+
+if test $? != 0 && test $? != 124;then
+	echo "Command failed as expected"
+else
+	exit 1
+fi
+
+# plain + radius (alternative)
+update_config test1.config
+
+echo "enable-auth = \"radius[config=${srcdir}/data/radiusclient/radiusclient.conf,groupconfig=true,nas-identifier=ocserv1]\"" >> ${CONFIG}
+
+timeout 10 ${SERV} -d 1 -p ${PIDFILE} -f -c ${CONFIG}
+
+if test $? != 0 && test $? != 124;then
+	echo "Command failed as expected"
+else
+	exit 1
+fi
+
+rm -f ${CONFIG} ${PIDFILE}
+
+exit 0

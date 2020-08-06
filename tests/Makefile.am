@@ -96,7 +96,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
 	test-gssapi test-pass-opt-cert test-cert-opt-pass test-gssapi-opt-pass \
 	test-gssapi-opt-cert haproxy-auth test-maintenance \
-	test-group-name flowcontrol banner
+	test-group-name flowcontrol banner invalid-configs
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

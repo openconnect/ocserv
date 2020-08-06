@@ -194,6 +194,21 @@ static auth_types_st avail_auth_types[] =
 #endif
 };
 
+static void check_for_duplicate_password_auth(struct perm_cfg_st *config, const char *vhostname, unsigned type)
+{
+	unsigned i;
+
+	if (type & AUTH_TYPE_USERNAME_PASS) {
+		for (i=0;i<MAX_AUTH_METHODS;i++) {
+			if (config->auth[i].enabled == 0)
+				break;
+			if (config->auth[i].type & AUTH_TYPE_USERNAME_PASS) {
+				fprintf(stderr, ERRSTR"%s: you cannot mix multiple password authentication methods\n", vhostname);
+				exit(1);
+			}
+		}
+	}
+}
 
 static void figure_auth_funcs(void *pool, const char *vhostname,
 			      struct perm_cfg_st *config, char **auth, unsigned auth_size,
@@ -260,6 +275,7 @@ static void figure_auth_funcs(void *pool, const char *vhostname,
 					config->auth[x].name = talloc_strdup(pool, avail_auth_types[i].name);
 					fprintf(stderr, NOTESTR"%s: enabling '%s' as authentication method\n", vhostname, avail_auth_types[i].name);
 
+					check_for_duplicate_password_auth(config, vhostname, avail_auth_types[i].type);
 					config->auth[x].amod = avail_auth_types[i].mod;
 					config->auth[x].type |= avail_auth_types[i].type;
 					config->auth[x].enabled = 1;

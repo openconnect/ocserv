@@ -14,7 +14,7 @@ gl_EARLY
 AM_PROG_AR
 AM_PROG_CC_C_O
 AC_PROG_SED
-if test "$GCC" = "yes" && ! echo "$CC"|grep clang;then
+if test "$GCC" = "yes" && ! expr "$CC" : clang >/dev/null 2>&1;then
 	CFLAGS="$CFLAGS -Wall -Wno-strict-aliasing -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-implicit-fallthrough -Wno-stringop-truncation"
 fi
 
@@ -128,6 +128,16 @@ AC_ARG_WITH(docker-tests,
   docker_tests=yes)
 
 AM_CONDITIONAL(ENABLE_DOCKER_TESTS, test "x$docker_tests" = xyes)
+
+AC_ARG_WITH(asan-broken-tests,
+  AS_HELP_STRING([--without-asan-broken-tests], [disable any tests that cannot be run under asan]),
+  enable_asan_broken_tests=$withval,
+  enable_asan_broken_tests=yes)
+
+AC_MSG_CHECKING([whether to enable broken in asan tests])
+AC_MSG_RESULT([${enable_asan_broken_tests}])
+
+AM_CONDITIONAL(DISABLE_ASAN_BROKEN_TESTS, test "x$enable_asan_broken_tests" = xno)
 
 AC_ARG_WITH(kerberos-tests,
   AS_HELP_STRING([--with-kerberos-tests], [enable any tests requiring kerberos setup]),

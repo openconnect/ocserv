@@ -120,6 +120,12 @@ static int snapshot_add_entry(snapshot_t * snapshot, const char *filename,
 	return retval;
 }
 
+static int talloc_clear_htable(snapshot_t *s)
+{
+	htable_clear(&s->ht);
+	return 0;
+}
+
 int snapshot_init(void *pool, struct snapshot_t **snapshot, const char *prefix)
 {
 	snapshot_t *new_snapshot = NULL;
@@ -141,6 +147,7 @@ int snapshot_init(void *pool, struct snapshot_t **snapshot, const char *prefix)
 		goto cleanup;
 
 	htable_init(&new_snapshot->ht, snapshot_rehash, new_snapshot);
+	talloc_set_destructor(new_snapshot, talloc_clear_htable);
 
 	*snapshot = new_snapshot;
 	new_snapshot = NULL;

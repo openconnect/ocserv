@@ -408,16 +408,16 @@ minimal/Ubuntu20.04:
 
 # We do not compile with PAM under address sanitizer since we are using co-routines
 # without instrumentation for sanitizer.
-.asan/Fedora:
+asan/clang/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
-  - chmod o-w tests/data/raddb
+  - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-fsanitize=address -g -O2" LDFLAGS="-static-libasan" ./configure --without-pam --without-docker-tests
+  - CC=clang CFLAGS="-fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer -g -O1" ./configure --without-pam --without-docker-tests --without-asan-broken-tests
   - make -j$JOBS
-  - make check -j$JOBS VERBOSE=1
+  - make check -j$JOBS
   tags:
   - shared
   - linux

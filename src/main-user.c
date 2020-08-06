@@ -341,6 +341,7 @@ const char* script, *next_script = NULL;
 		setenv("USERNAME", proc->username, 1);
 		setenv("GROUPNAME", proc->groupname, 1);
 		setenv("HOSTNAME", proc->hostname, 1);
+		setenv("REMOTE_HOSTNAME", proc->hostname, 1);
 		setenv("DEVICE", proc->tun_lease.name, 1);
 		setenv("USER_AGENT", proc->user_agent, 1);
 		setenv("DEVICE_TYPE", proc->device_type, 1);

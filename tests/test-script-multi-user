@@ -30,6 +30,11 @@ USERNAME=test
 
 . `dirname $0`/common.sh
 
+if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
+	echo "Skipping test requiring ldpreload"
+	exit 77
+fi
+
 rm -f test-sleep.tmp
 
 OCCTL_SOCKET=./occtl-test-script-$$.socket

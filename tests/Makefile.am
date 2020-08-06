@@ -192,3 +192,8 @@ XFAIL_TESTS = $(xfail_scripts)
 TESTS_ENVIRONMENT = srcdir="$(srcdir)" \
 	top_builddir="$(top_builddir)"
 
+if DISABLE_ASAN_BROKEN_TESTS
+TESTS_ENVIRONMENT += DISABLE_ASAN_BROKEN_TESTS=1
+else
+TESTS_ENVIRONMENT += DISABLE_ASAN_BROKEN_TESTS=0
+endif

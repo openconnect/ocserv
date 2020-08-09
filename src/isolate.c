@@ -47,12 +47,13 @@ void update_fd_limits(main_server_st * s, unsigned main)
 	int ret;
 
 	if (main) {
-		if (GETCONFIG(s)->max_clients > 0
-		    && GETCONFIG(s)->max_clients >
-		    s->fd_limits_default_set.rlim_cur)
-			max = GETCONFIG(s)->max_clients + 32;
+		if (GETCONFIG(s)->max_clients > 0) 
+			// FUTURE: Should this be raises to account for scripts?
+			max = GETCONFIG(s)->max_clients + 32 + s->sec_mod_instance_count * 2;
 		else
-			max = MAX(4 * 1024, s->fd_limits_default_set.rlim_cur);
+			// If the admin doesn't specify max_clients,
+			// then we are limiting it to around 4K.
+			max = 4 * 1024;
 
 		if (max > s->fd_limits_default_set.rlim_cur) {
 			new_set.rlim_cur = max;

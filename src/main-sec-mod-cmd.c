@@ -66,8 +66,9 @@ static void update_auth_failures(main_server_st * s, uint64_t auth_failures)
 	s->stats.total_auth_failures += auth_failures;
 }
 
-int handle_sec_mod_commands(main_server_st * s)
+int handle_sec_mod_commands(sec_mod_instance_st * sec_mod_instance)
 {
+	struct main_server_st * s = sec_mod_instance->server;
 	struct iovec iov[3];
 	uint8_t cmd;
 	struct msghdr hdr;
@@ -92,7 +93,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	hdr.msg_iovlen = 2;
 
 	do {
-		ret = recvmsg(s->sec_mod_fd, &hdr, 0);
+		ret = recvmsg(sec_mod_instance->sec_mod_fd, &hdr, 0);
 	} while(ret == -1 && errno == EINTR);
 	if (ret == -1) {
 		e = errno;
@@ -122,7 +123,7 @@ int handle_sec_mod_commands(main_server_st * s)
 		return ERR_MEM;
 	}
 
-	raw_len = force_read_timeout(s->sec_mod_fd, raw, length, MAIN_SEC_MOD_TIMEOUT);
+	raw_len = force_read_timeout(sec_mod_instance->sec_mod_fd, raw, length, MAIN_SEC_MOD_TIMEOUT);
 	if (raw_len != length) {
 		e = errno;
 		mslog(s, NULL, LOG_ERR,
@@ -159,7 +160,7 @@ int handle_sec_mod_commands(main_server_st * s)
 
 			mslog(s, NULL, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_BAN_IP_REPLY));
 
-			ret = send_msg(NULL, s->sec_mod_fd, CMD_SECM_BAN_IP_REPLY,
+			ret = send_msg(NULL, sec_mod_instance->sec_mod_fd, CMD_SECM_BAN_IP_REPLY,
 				&reply, (pack_size_func)ban_ip_reply_msg__get_packed_size,
 				(pack_func)ban_ip_reply_msg__pack);
 			if (ret < 0) {
@@ -185,10 +186,10 @@ int handle_sec_mod_commands(main_server_st * s)
 				goto cleanup;
 			}
 
-			s->stats.secmod_client_entries = smsg->secmod_client_entries;
-			s->stats.tlsdb_entries = smsg->secmod_tlsdb_entries;
-			s->stats.max_auth_time = smsg->secmod_max_auth_time;
-			s->stats.avg_auth_time = smsg->secmod_avg_auth_time;
+			sec_mod_instance->secmod_client_entries = smsg->secmod_client_entries;
+			sec_mod_instance->tlsdb_entries = smsg->secmod_tlsdb_entries;
+			sec_mod_instance->max_auth_time = smsg->secmod_max_auth_time;
+			sec_mod_instance->avg_auth_time = smsg->secmod_avg_auth_time;
 			update_auth_failures(s, smsg->secmod_auth_failures);
 
 		}
@@ -210,7 +211,7 @@ int handle_sec_mod_commands(main_server_st * s)
 	return ret;
 }
 
-static void append_routes(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
+static void append_routes(sec_mod_instance_st * sec_mod_instance, proc_st *proc, GroupCfgSt *gc)
 {
 	vhost_cfg_st *vhost = proc->vhost;
 
@@ -294,7 +295,7 @@ static void append_routes(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 }
 
 static
-void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
+void apply_default_config(sec_mod_instance_st * sec_mod_instance, proc_st *proc, GroupCfgSt *gc)
 {
 	vhost_cfg_st *vhost = proc->vhost;
 
@@ -308,7 +309,7 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 		gc->n_routes = vhost->perm_config.config->network.routes_size;
 	}
 
-	append_routes(s, proc, gc);
+	append_routes(sec_mod_instance, proc, gc);
 
 	if (gc->no_routes == NULL) {
 		gc->no_routes = vhost->perm_config.config->network.no_routes;
@@ -447,9 +448,10 @@ void apply_default_config(main_server_st *s, proc_st *proc, GroupCfgSt *gc)
 	(*proc->config_usage_count)++;
 }
 
-int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
+int session_open(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size)
 {
 	int ret, e;
+	main_server_st * s = sec_mod_instance->server;
 	SecmSessionOpenMsg ireq = SECM_SESSION_OPEN_MSG__INIT;
 	SecmSessionReplyMsg *msg = NULL;
 	char str_ipv4[MAX_IP_STR];
@@ -476,7 +478,7 @@ int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie,
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_OPEN));
 
-	ret = send_msg(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_OPEN,
+	ret = send_msg(proc, sec_mod_instance->sec_mod_fd_sync, CMD_SECM_SESSION_OPEN,
 		&ireq, (pack_size_func)secm_session_open_msg__get_packed_size,
 		(pack_func)secm_session_open_msg__pack);
 	if (ret < 0) {
@@ -485,7 +487,7 @@ int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie,
 		return -1;
 	}
 
-	ret = recv_msg(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
+	ret = recv_msg(proc, sec_mod_instance->sec_mod_fd_sync, CMD_SECM_SESSION_REPLY,
 	       (void *)&msg, (unpack_func) secm_session_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
@@ -533,7 +535,7 @@ int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie,
 	proc->vhost = find_vhost(s->vconfig, msg->vhost);
 
 	if (proc->config) {
-		apply_default_config(s, proc, proc->config);
+		apply_default_config(sec_mod_instance, proc, proc->config);
 
 		/* check whether the cookie IP matches */
 		if (proc->config->deny_roaming != 0) {
@@ -558,6 +560,17 @@ int session_open(main_server_st *s, struct proc_st *proc, const uint8_t *cookie,
 
 static void reset_stats(main_server_st *s, time_t now)
 {
+	unsigned int i;	
+	unsigned long max_auth_time = 0;
+	unsigned long avg_auth_time = 0;
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		max_auth_time = MAX(max_auth_time, s->sec_mod_instances[i].max_auth_time);
+		s->sec_mod_instances[i].max_auth_time = 0;
+		avg_auth_time += s->sec_mod_instances[i].avg_auth_time;
+		s->sec_mod_instances[i].avg_auth_time = 0;
+	}
+	if (s->sec_mod_instance_count != 0)
+		avg_auth_time /= s->sec_mod_instance_count;
 	mslog(s, NULL, LOG_INFO, "Start statistics block");
 	mslog(s, NULL, LOG_INFO, "Total sessions handled: %lu", (unsigned long)s->stats.total_sessions_closed);
 	mslog(s, NULL, LOG_INFO, "Sessions handled: %lu", (unsigned long)s->stats.sessions_closed);
@@ -569,8 +582,8 @@ static void reset_stats(main_server_st *s, time_t now)
 
 	mslog(s, NULL, LOG_INFO, "Total authentication failures: %lu", (unsigned long)s->stats.total_auth_failures);
 	mslog(s, NULL, LOG_INFO, "Authentication failures: %lu", (unsigned long)s->stats.auth_failures);
-	mslog(s, NULL, LOG_INFO, "Maximum authentication time: %lu sec", (unsigned long)s->stats.max_auth_time);
-	mslog(s, NULL, LOG_INFO, "Average authentication time: %lu sec", (unsigned long)s->stats.avg_auth_time);
+	mslog(s, NULL, LOG_INFO, "Maximum authentication time: %lu sec", max_auth_time);
+	mslog(s, NULL, LOG_INFO, "Average authentication time: %lu sec", avg_auth_time);
 	mslog(s, NULL, LOG_INFO, "Data in: %lu, out: %lu kbytes", (unsigned long)s->stats.kbytes_in, (unsigned long)s->stats.kbytes_out);
 	mslog(s, NULL, LOG_INFO, "End of statistics block; resetting non-total stats");
 
@@ -583,7 +596,7 @@ static void reset_stats(main_server_st *s, time_t now)
 	s->stats.kbytes_in = 0;
 	s->stats.kbytes_out = 0;
 	s->stats.max_session_mins = 0;
-	s->stats.max_auth_time = 0;
+
 }
 
 static void update_main_stats(main_server_st * s, struct proc_st *proc)
@@ -642,8 +655,9 @@ static void update_main_stats(main_server_st * s, struct proc_st *proc)
 	reset_stats(s, now);
 }
 
-int session_close(main_server_st * s, struct proc_st *proc)
+int session_close(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc)
 {
+	main_server_st * s = sec_mod_instance->server;
 	int ret, e;
 	SecmSessionCloseMsg ireq = SECM_SESSION_CLOSE_MSG__INIT;
 	CliStatsMsg *msg = NULL;
@@ -663,7 +677,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 
 	mslog(s, proc, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_SESSION_CLOSE));
 
-	ret = send_msg(proc, s->sec_mod_fd_sync, CMD_SECM_SESSION_CLOSE,
+	ret = send_msg(proc, sec_mod_instance->sec_mod_fd_sync, CMD_SECM_SESSION_CLOSE,
 		&ireq, (pack_size_func)secm_session_close_msg__get_packed_size,
 		(pack_func)secm_session_close_msg__pack);
 	if (ret < 0) {
@@ -672,7 +686,7 @@ int session_close(main_server_st * s, struct proc_st *proc)
 		return -1;
 	}
 
-	ret = recv_msg(proc, s->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
+	ret = recv_msg(proc, sec_mod_instance->sec_mod_fd_sync, CMD_SECM_CLI_STATS,
 	       (void *)&msg, (unpack_func) cli_stats_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
@@ -693,13 +707,14 @@ int session_close(main_server_st * s, struct proc_st *proc)
 	return 0;
 }
 
-int secmod_reload(main_server_st * s)
+int secmod_reload(sec_mod_instance_st * sec_mod_instance)
 {
+	main_server_st * s = sec_mod_instance->server;
 	int ret, e;
 
 	mslog(s, NULL, LOG_DEBUG, "sending msg %s to sec-mod", cmd_request_to_str(CMD_SECM_RELOAD));
 
-	ret = send_msg(s->main_pool, s->sec_mod_fd_sync, CMD_SECM_RELOAD,
+	ret = send_msg(s->main_pool, sec_mod_instance->sec_mod_fd_sync, CMD_SECM_RELOAD,
 		       NULL, NULL, NULL);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR,
@@ -707,7 +722,7 @@ int secmod_reload(main_server_st * s)
 		return -1;
 	}
 
-	ret = recv_msg(s->main_pool, s->sec_mod_fd_sync, CMD_SECM_RELOAD_REPLY,
+	ret = recv_msg(s->main_pool, sec_mod_instance->sec_mod_fd_sync, CMD_SECM_RELOAD_REPLY,
 		       NULL, NULL, MAIN_SEC_MOD_TIMEOUT);
 	if (ret < 0) {
 		e = errno;
@@ -732,29 +747,32 @@ static void clear_unneeded_mem(struct list_head *vconfig)
  * The sync_fd is used by main to send synchronous commands- commands which
  * expect a reply immediately.
  */
-int run_sec_mod(main_server_st *s, int *sync_fd)
+void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_index)
 {
 	int e, fd[2], ret;
 	int sfd[2];
 	pid_t pid;
 	const char *p;
+	
+	main_server_st * s = sec_mod_instance->server; 
 
-	/* fills s->socket_file */
-	strlcpy(s->socket_file, secmod_socket_file_name(GETPCONFIG(s)), sizeof(s->socket_file));
-	mslog(s, NULL, LOG_DEBUG, "created sec-mod socket file (%s)", s->socket_file);
+	/* fills sec_mod_instance->socket_file */
+	
+	snprintf(sec_mod_instance->socket_file, sizeof(sec_mod_instance->socket_file), "%s.%d", secmod_socket_file_name(GETPCONFIG(s)), instance_index);
+	mslog(s, NULL, LOG_DEBUG, "created sec-mod socket file (%s)", sec_mod_instance->socket_file);
 
 	if (GETPCONFIG(s)->chroot_dir != NULL) {
-		ret = snprintf(s->full_socket_file, sizeof(s->full_socket_file), "%s/%s",
-			       GETPCONFIG(s)->chroot_dir, s->socket_file);
-		if (ret != strlen(s->full_socket_file)) {
-			mslog(s, NULL, LOG_ERR, "too long chroot path; cannot create socket: %s", s->full_socket_file);
+		ret = snprintf(sec_mod_instance->full_socket_file, sizeof(sec_mod_instance->full_socket_file), "%s/%s",
+			       GETPCONFIG(s)->chroot_dir, sec_mod_instance->socket_file);
+		if (ret != strlen(sec_mod_instance->full_socket_file)) {
+			mslog(s, NULL, LOG_ERR, "too long chroot path; cannot create socket: %s", sec_mod_instance->full_socket_file);
 			exit(1);
 		}
 	} else {
-		strlcpy(s->full_socket_file, s->socket_file, sizeof(s->full_socket_file));
+		strlcpy(sec_mod_instance->full_socket_file, sec_mod_instance->socket_file, sizeof(sec_mod_instance->full_socket_file));
 	}
 
-	p = s->full_socket_file;
+	p = sec_mod_instance->full_socket_file;
 
 	ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
 	if (ret < 0) {
@@ -784,16 +802,17 @@ int run_sec_mod(main_server_st *s, int *sync_fd)
 		set_cloexec_flag (fd[0], 1);
 		set_cloexec_flag (sfd[0], 1);
 		clear_unneeded_mem(s->vconfig);
-		sec_mod_server(s->main_pool, s->config_pool, s->vconfig, p, fd[0], sfd[0], sizeof(s->hmac_key), s->hmac_key);
+		sec_mod_server(s->main_pool, s->config_pool, s->vconfig, p, fd[0], sfd[0], sizeof(s->hmac_key), s->hmac_key, instance_index);
 		exit(0);
 	} else if (pid > 0) {	/* parent */
 		close(fd[0]);
 		close(sfd[0]);
-		s->sec_mod_pid = pid;
+		sec_mod_instance->sec_mod_pid = pid;
 		set_cloexec_flag (fd[1], 1);
 		set_cloexec_flag (sfd[1], 1);
-		*sync_fd = sfd[1];
-		return fd[1];
+		sec_mod_instance->sec_mod_fd_sync = sfd[1];
+		sec_mod_instance->sec_mod_fd = fd[1];
+		return;
 	} else {
 		e = errno;
 		mslog(s, NULL, LOG_ERR, "error in fork(): %s", strerror(e));

@@ -234,7 +234,8 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 		print_single_value(stdout, params, "Status", rep->status != 0 ? "online" : "error", 1);
 		print_single_value_int(stdout, params, "Server PID", rep->pid, 1);
-		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pid, 1);
+		print_single_value_int(stdout, params, "Sec-mod PID", rep->sec_mod_pids[0], 1);
+		print_single_value_int(stdout, params, "Sec-mod instance count", rep->n_sec_mod_pids, 1);
 
 		t = rep->start_time;
 		tm = localtime(&t);

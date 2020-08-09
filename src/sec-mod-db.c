@@ -110,6 +110,9 @@ client_entry_st *new_client_entry(sec_mod_st *sec, struct vhost_cfg_st *vhost, c
 			goto fail;
 		}
 
+		e->sid[0] = sec->sec_mod_instance_id;
+		seclog(sec, LOG_INFO, "sec-mod instance %d issue cookie", sec->sec_mod_instance_id);
+
 		/* check if in use */
 		te = find_client_entry(sec, e->sid);
 	} while(te != NULL && retries-- >= 0);

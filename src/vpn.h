@@ -397,6 +397,8 @@ struct perm_cfg_st {
 	unsigned int port;
 	unsigned int udp_port;
 
+	unsigned int sec_mod_scale;
+
 	/* for testing ocserv only */
 	unsigned debug_no_secmod_stats;
 

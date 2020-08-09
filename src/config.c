@@ -827,6 +827,9 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 				READ_STATIC_STRING(pid_file);
 			} else if (reload == 0)
 				fprintf(stderr, NOTESTR"skipping 'pid-file' config option\n");
+		} else if (strcmp(name, "sec-mod-scale") == 0) {
+			if (!PWARN_ON_VHOST(vhost->name, "sec-mod-scale", sec_mod_scale))
+				READ_NUMERIC(vhost->perm_config.sec_mod_scale);
 		} else {
 			stage1_found = 0;
 		}

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ "$REASON" = "connect" ];then
+	if test "$IP_REAL" != "127.0.0.1" && test "$IP_REAL" != "::1" && test -n "$IP_REAL_LOCAL";then
+		echo  "$IP_REAL:$IP_REAL_LOCAL" >proxyproto-v1-connect-ok
+	fi
+fi
+
+exit 0

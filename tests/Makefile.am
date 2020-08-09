@@ -95,7 +95,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-pass-group-cert test-pass-group-cert-no-pass test-sighup \
 	test-enc-key test-sighup-key-change test-get-cert test-san-cert \
 	test-gssapi test-pass-opt-cert test-cert-opt-pass test-gssapi-opt-pass \
-	test-gssapi-opt-cert haproxy-auth test-maintenance \
+	test-gssapi-opt-cert haproxy-auth test-maintenance resumption \
 	test-group-name flowcontrol banner invalid-configs
 
 if HAVE_CWRAP_PAM

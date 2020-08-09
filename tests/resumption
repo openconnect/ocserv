@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+TMPFILE=resume.$$.tmp
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing ocserv session resumption... "
+
+function finish {
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  rm -f ${TMPFILE}
+  rm -f ${CONFIG}
+}
+trap finish EXIT
+
+update_config test1.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
+
+wait_server $PID
+
+echo -n "Connecting to resume... "
+( LD_PRELOAD=libsocket_wrapper.so gnutls-cli -r --priority NORMAL:-VERS-ALL:+VERS-TLS1.2 $ADDRESS --port $PORT --insecure > $TMPFILE 2>/dev/null </dev/null ) ||
+	(cat ${TMPFILE} && fail $PID "Could not connect to resume!" )
+
+grep "This is a resumed session" ${TMPFILE}
+if test $? != 0;then
+	cat ${TMPFILE}
+	fail $PID "failed, session was not resumed"
+fi
+
+echo "ok"
+
+rm -f "$TMPFILE"
+
+exit 0

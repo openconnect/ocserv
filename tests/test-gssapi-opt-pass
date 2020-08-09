@@ -21,7 +21,6 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 builddir=${builddir:-.}
 NO_NEED_ROOT=1
-PORT=4439
 OUTFILE=test-gssapi-opt-pass.$$.tmp
 
 connect()
@@ -67,6 +66,8 @@ if [ $? != 0 ];then
 fi
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing local backend with gssapi and password fallback... "
 

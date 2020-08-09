@@ -20,9 +20,10 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4450
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 run_client() {
 	HOST=$1;

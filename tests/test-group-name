@@ -21,13 +21,14 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=443
 HEAD=$(mktemp)
 POST=$(mktemp)
 COOKIES=$(mktemp)
 OUTFILE=$(mktemp)
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing whether group labels are translated to groups... "
 
@@ -47,7 +48,7 @@ launch_simple_sr_server -d 1 -f -c ${CONFIG}
 PID=$!
 wait_server $PID
 
-TARGET=https://$ADDRESS
+TARGET=https://$ADDRESS:$PORT
 
 cat >$HEAD <<_EOF
 Accept-Encoding:identity

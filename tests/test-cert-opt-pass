@@ -20,10 +20,11 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4425
 OUTFILE=test-cert-opt-pass.$$.tmp
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing local backend with certificate and optional username-password... "
 

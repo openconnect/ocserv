@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2011-2013 Free Software Foundation, Inc.
 # Copyright 2013 Nikos Mavrogiannopoulos

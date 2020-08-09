@@ -20,11 +20,12 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4513
 
 # Test whether more than 128 routes can be read from a config file.
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing ocserv and user route application... "
 
@@ -32,7 +33,8 @@ TMPFILE1=multiple-routes.$$.tmp
 
 rm -f ${TMPFILE1}
 
-launch_simple_server -d 1 -f -c "${srcdir}/data/multiple-routes.config"
+update_config multiple-routes.config
+launch_simple_server -d 1 -f -c "${CONFIG}"
 PID=$!
 wait_server $PID
 
@@ -57,7 +59,7 @@ fi
 
 echo ok
 
-rm -f ${TMPFILE1}
+rm -f ${TMPFILE1} ${CONFIG}
 kill $PID
 wait
 

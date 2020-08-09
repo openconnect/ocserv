@@ -25,13 +25,14 @@
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4459
 TMPFILE=ocfile.$$.tmp
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 OCCTL_SOCKET=./occtl-$$.socket
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 if test "$(id -u)" != "0";then
 	echo "This test must be run as root"

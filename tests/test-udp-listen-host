@@ -24,8 +24,6 @@ CLIPID="${srcdir:-.}/ci$$-1.pid.tmp"
 CLIPID2="${srcdir:-.}/ci$$-2.pid.tmp"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4166
-HAPORT=4167
 PIDFILE=ocserv-pid.$$.tmp
 CONFIG_UDP_LISTEN_LOCAL=ocserv_udp_listen_local.conf.$$.tmp
 HACONFIG=haproxy.conf.$$.tmp
@@ -34,6 +32,10 @@ HAPROXY=$(command -v haproxy)
 IP=$(command -v ip)
 
 . "$(dirname "$0")/common.sh"
+
+eval "${GETPORT}"
+HAPORT=${PORT}
+eval "${GETPORT}"
 
 if test -z "${HAPROXY}";then
 	echo "no haproxy present"

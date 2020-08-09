@@ -20,9 +20,10 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4441
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing ocserv and SIGHUP behavior... "
 

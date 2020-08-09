@@ -20,15 +20,17 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4501
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing ocserv and user route application... "
 
 rm -f ${srcdir}/test-iroute.tmp
 
-launch_server -d 1 -f -c "${srcdir}/data/test-iroute.config" & PID=$!
+update_config test-iroute.config
+launch_server -d 1 -f -c "${CONFIG}" & PID=$!
 wait_server $PID
 
 echo -n "Connecting to obtain cookie (with certificate)... "
@@ -60,7 +62,7 @@ fi
 
 echo ok
 
-rm -f ${srcdir}/test-iroute.tmp
+rm -f ${srcdir}/test-iroute.tmp ${CONFIG}
 
 kill $PID
 wait

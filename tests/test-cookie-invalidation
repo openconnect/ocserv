@@ -20,16 +20,18 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4502
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
 PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
 echo "Testing whether cookies are being correctly invalidated... "
 rm -f "${PIDFILE1}" "${PIDFILE2}"
 
-launch_server -d 1 -f -c ${srcdir}/data/test-cookie-invalidation.config & PID=$!
+update_config test-cookie-invalidation.config
+launch_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
@@ -91,6 +93,7 @@ if [ -f "${PIDFILE2}" ];then
 fi
 
 rm -f "${PIDFILE1}" "${PIDFILE2}"
+rm -f ${CONFIG}
 
 kill $PID
 wait

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2013 Nikos Mavrogiannopoulos
 #
@@ -21,10 +21,11 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 PIDFILE=ocserv-pid.$$.tmp
-PORT=3492
 NO_NEED_ROOT=1
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing whether invalid configurations fail as expected... "
 

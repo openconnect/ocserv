@@ -22,7 +22,6 @@ SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 builddir=${builddir:-.}
 NO_NEED_ROOT=1
-PORT=4449
 
 NTLMSSP_CONF=""
 for conf in /etc/gss/mech.d/mech.ntlmssp.conf /etc/gss/mech.d/ntlmssp.conf;do
@@ -44,6 +43,8 @@ if [ $? != 0 ];then
 fi
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing local backend with gssapi... "
 

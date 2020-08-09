@@ -20,12 +20,13 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4512
 
 # Test whether DPD, keepalive per user are actually set, and whether
 # the expose-iroutes option has an effect to other users.
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing ocserv and user route application... "
 
@@ -35,7 +36,8 @@ TMPFILE2=${srcdir}/test-user-config-2.tmp
 rm -f ${TMPFILE1}
 rm -f ${TMPFILE2}
 
-launch_simple_server -d 1 -f -c "${srcdir}/data/test-user-config.config"
+update_config test-user-config.config
+launch_simple_server -d 1 -f -c "${CONFIG}"
 PID=$!
 wait_server $PID
 
@@ -182,7 +184,7 @@ echo ok
 
 
 kill $kpid3
-rm -f ${TMPFILE1}
+rm -f ${TMPFILE1} ${CONFIG}
 rm -f ${TMPFILE2}
 kill $PID
 wait

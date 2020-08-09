@@ -21,11 +21,12 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=6552
 
 VERBOSE=1
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing PAM backend with username-password... "
 

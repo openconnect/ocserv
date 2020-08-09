@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+OPIDFILE=oc-pid.$$.tmp
+VERBOSE=1
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing connection with ping-leases=true..."
+
+function finish {
+  echo " * Cleaning up..."
+  test -f ${OPIDFILE} && kill $(cat ${OPIDFILE}) >/dev/null 2>&1
+  test -f ${PIDFILE} && kill $(cat ${PIDFILE}) >/dev/null 2>&1
+  rm -f ${OPIDFILE}
+  rm -f ${CONFIG}
+}
+trap finish EXIT
+
+update_config ping-leases.config
+launch_simple_server -d 1 -p ${PIDFILE} --no-chdir -c ${CONFIG}
+
+sleep 3
+
+PID=$(cat ${PIDFILE})
+if test -z "${PID}";then
+	echo "server did not start"
+	exit 1
+fi
+
+echo "Server started with PID $PID..."
+
+echo "Connecting to obtain cookie..."
+( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||
+	fail $PID "Could not receive cookie from server"
+
+
+echo "Connecting to ping lease..."
+echo "test" | timeout 10 $OPENCONNECT localhost:$PORT -u "test" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true
+
+if test $? != 124;then
+	fail $PID "Could not connect to server"
+fi
+
+cleanup
+
+exit 0

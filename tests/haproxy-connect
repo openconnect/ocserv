@@ -20,8 +20,6 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4566
-HAPORT=4567
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 HACONFIG=haproxy.conf.$$.tmp
@@ -30,6 +28,11 @@ HAPROXY=$(which haproxy)
 IP=$(which ip)
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
+HAPORT=${PORT}
+
+eval "${GETPORT}"
 
 if test -z "${HAPROXY}";then
 	echo "no haproxy present"

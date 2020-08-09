@@ -20,24 +20,23 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4612
 
 # Test whether append-routes behaves as expected.
 
 . `dirname $0`/common.sh
 
+eval "${GETPORT}"
+
 echo "Testing ocserv and user append-route application... "
 
-CONFFILE=${srcdir}/test-append-routes-conf.tmp
 TMPFILE1=${srcdir}/test-append-routes.tmp
 
 rm -f ${TMPFILE1}
 
-cp ${srcdir}/data/test-user-config.config ${CONFFILE}
-echo "append-routes = true" >> ${CONFFILE}
-sed -i 's/= 4512/= 4612/g' ${CONFFILE}
+update_config test-user-config.config
+echo "append-routes = true" >> ${CONFIG}
 
-launch_server -d 1 -f -c ${CONFFILE} & PID=$!
+launch_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Checking if routes are appended... "
@@ -68,7 +67,7 @@ fi
 echo ok
 
 rm -f ${TMPFILE1}
-rm -f ${CONFFILE}
+rm -f ${CONFIG}
 
 kill $PID
 wait

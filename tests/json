@@ -21,7 +21,6 @@
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4568
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
@@ -29,6 +28,8 @@ IP=$(which ip)
 OUTFILE=json.$$.tmp
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 if test -z "${IP}";then
 	echo "no IP tool is present"

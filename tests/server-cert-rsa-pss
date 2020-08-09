@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2017 Red Hat, Inc.
 #
@@ -21,9 +21,10 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4444
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing server cert with RSA-PSS... "
 

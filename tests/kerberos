@@ -23,13 +23,14 @@
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=443
 PIDFILE=ocserv-pid.$$.tmp
 KRB5PIDFILE=krb5-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
 IP=$(which ip)
 OUTFILE=traffic.$$.tmp
+# This port needs to be fixed to 443 due to KKDCP
+PORT=443
 
 USERNAME=krb5user
 USERPASS=krb5user123

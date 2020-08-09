@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #
-# Copyright (C) 2013 Nikos Mavrogiannopoulos
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
 #
 # This file is part of ocserv.
 #
@@ -20,47 +20,42 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+
+TMPFILE=resume.$$.tmp
 
 . `dirname $0`/common.sh
 
 eval "${GETPORT}"
 
-run_client() {
-	HOST=$1;
-	shift;
-	USER=$1;
-	shift;
-	PASS=$1;
-	shift;
+echo "Testing ocserv session resumption... "
 
-	( echo $PASS | $OPENCONNECT -q $HOST -u $USER --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true >/dev/null 2>&1 ) ||
-		echo "$USER: Could not connect to server"
+function finish {
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  rm -f ${TMPFILE}
+  rm -f ${CONFIG}
 }
+trap finish EXIT
 
+update_config test1.config
+launch_simple_sr_server -d 1 -f -c ${CONFIG}
+PID=$!
 
-echo "Testing local backend with username-password... "
-
-launch_debug_server -f -c "${srcdir}/data/test-stress.config" & PID=$!
 wait_server $PID
 
-sleep 3
+echo -n "Connecting to resume... "
+( LD_PRELOAD=libsocket_wrapper.so gnutls-cli -r --priority NORMAL:-VERS-ALL:+VERS-TLS1.2 $ADDRESS --port $PORT --insecure > $TMPFILE 2>/dev/null </dev/null ) ||
+	(cat ${TMPFILE} && fail $PID "Could not connect to resume!" )
 
-run_client localhost:$PORT test test &
-run_client localhost:$PORT test2 test2 &
-
-while true;do
-run_client localhost:$PORT test test &
-run_client localhost:$PORT test2 test2 &
-run_client localhost:$PORT test3 test3 &
-run_client localhost:$PORT test4 test4 &
-sleep 2
+grep "This is a resumed session" ${TMPFILE}
 if test $? != 0;then
-	break
+	cat ${TMPFILE}
+	fail $PID "failed, session was not resumed"
 fi
-run_client localhost:$PORT test5 test5 &
-done
 
-kill $PID
-wait
+echo "ok"
+
+rm -f "$TMPFILE"
 
 exit 0

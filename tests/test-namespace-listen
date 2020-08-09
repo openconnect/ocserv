@@ -18,7 +18,6 @@
 SERV="${SERV:-../src/ocserv}"
 PIDFILE=ocserv-pid.$$.tmp
 srcdir=${srcdir:-.}
-PORT=4498
 LISTEN_NS="ocserv-listen-ns-tmp-$$"
 OUTFILE=lsof.$$.tmp
 SS=$(which ss)
@@ -41,6 +40,8 @@ trap finish EXIT
 
 . `dirname $0`/common.sh
 . `dirname $0`/ns.sh
+
+eval "${GETPORT}"
 
 update_config test-namespace-listen.config
 if test "$VERBOSE" = 1;then

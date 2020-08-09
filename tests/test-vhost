@@ -20,13 +20,14 @@
 PKG_CONFIG="${PKG_CONFIG:-/usr/bin/pkg-config}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=443
 NO_NEED_ROOT=1
 TMPFILE=pid.$$.tmp
 
 VERBOSE=1
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 connect()
 {

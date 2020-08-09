@@ -21,12 +21,13 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4473
 TEMPLATE=temp-key.$$.tmpl.tmp
 SERVER_CERT=server-cert-temp.pem.tmp
 SERVER_KEY=server-key-temp.pem.tmp
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing ocserv and SIGHUP behavior on server key change... "
 

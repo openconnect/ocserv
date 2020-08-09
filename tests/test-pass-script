@@ -21,12 +21,13 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 builddir=${builddir:-.}
-PORT=4448
 OPIDFILE=pass-script.$$.tmp
 OPIDFILE2=pass-script2.$$.tmp
 PARAMSFILE=pass-script.params.$$.tmp
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing connect and disconnect script behavior"
 
@@ -61,7 +62,8 @@ fi
 
 echo " * Testing local backend with username-password... "
 
-launch_server -d 1 -f -c "${srcdir}/data/test-pass-script.config" & PID=$!
+update_config test-pass-script.config
+launch_server -d 1 -f -c "${CONFIG}" & PID=$!
 wait_server $PID
 
 echo " * Connecting to obtain cookie with wrong username... "
@@ -212,5 +214,7 @@ PID=""
 wait
 
 echo "Script tests were successful"
+
+rm -f ${CONFIG}
 
 exit 0

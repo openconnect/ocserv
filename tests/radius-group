@@ -23,7 +23,6 @@
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4569
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 PATH=${PATH}:/usr/sbin
@@ -37,6 +36,8 @@ if test -z "${RADIUSD}";then
 fi 
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 if test -z "${IP}";then
 	echo "no IP tool is present"

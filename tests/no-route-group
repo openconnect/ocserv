@@ -20,10 +20,11 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=5744
 TMPFILE=$(mktemp)
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing whether group exclude routes are being sent (with route=default)... "
 

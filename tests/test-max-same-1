@@ -20,9 +20,10 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4516
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing whether max-same-clients=1 allows cookie re-use... "
 

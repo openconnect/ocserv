@@ -21,11 +21,12 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4503
 PIDFILE=ocserv-pid.$$.tmp
 OCCTL_SOCKET=./occtl-oidc-$$.socket
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing local backend with oidc token auth... "
 

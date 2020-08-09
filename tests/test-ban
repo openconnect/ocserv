@@ -21,7 +21,6 @@
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4497
 OCCTL_SOCKET=./occtl-ban-$$.socket
 PIDFILE=ocserv-pid.$$.tmp
 OUTFILE=ban.$$.tmp
@@ -35,6 +34,8 @@ VPNADDR6=fc39:d561:62c6:861b:9f38:9734:9fa1:0
 
 . `dirname $0`/common.sh
 . `dirname $0`/ns.sh
+
+eval "${GETPORT}"
 
 update_config test-ban.config
 if test "$VERBOSE" = 1;then

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2020 Microsoft Corp.
 #
@@ -21,10 +21,11 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4504
 PIDFILE=ocserv-pid.$$.tmp
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing flow control... "
 

@@ -20,15 +20,17 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4499
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing whether cookies will expire as expected... "
 
 PIDFILE="${srcdir}/ct$$.pid.tmp"
 
-launch_server -d 1 -f -c ${srcdir}/data/test-cookie-timeout.config & PID=$!
+update_config test-cookie-timeout.config
+launch_server -d 1 -f -c ${CONFIG} & PID=$!
 wait_server $PID
 
 echo "Connecting to obtain cookie... "
@@ -111,6 +113,6 @@ fi
 kill $PID
 wait
 
-rm -f "${PIDFILE}"
+rm -f "${PIDFILE}" ${CONFIG}
 
 exit 0

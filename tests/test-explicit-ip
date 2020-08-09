@@ -21,9 +21,10 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 TMPFILE=${srcdir}/outfile.$$
-PORT=8446
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 connect()
 {
@@ -54,7 +55,8 @@ return 0
 
 echo "Testing local backend with username-password and explicit IP addresses... "
 
-launch_server -d 1 -f -c "${srcdir}/data/test-explicit-ip.config" & PID=$!
+update_config test-explicit-ip.config
+launch_server -d 1 -f -c "${CONFIG}" & PID=$!
 wait_server $PID
 
 echo -n "Connecting with an illegal address assigned... "

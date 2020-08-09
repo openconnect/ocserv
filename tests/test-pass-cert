@@ -21,10 +21,11 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4445
 ISOLATE_WORKERS=false
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing local backend with username-password and certificate... "
 

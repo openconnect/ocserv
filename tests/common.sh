@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (C) 2011-2013 Free Software Foundation, Inc.
 # Copyright 2013 Nikos Mavrogiannopoulos
@@ -214,5 +214,49 @@ cleanup() {
 	rm -f ${CONFIG}
 	return $ret
 }
+
+# Check for a utility to list ports.  Both ss and netstat will list
+# ports for normal users, and have similar semantics, so put the
+# command in the caller's PFCMD, or exit, indicating an unsupported
+# test.  Prefer ss from iproute2 over the older netstat.
+have_port_finder() {
+	for file in $(which ss 2> /dev/null) /*bin/ss /usr/*bin/ss /usr/local/*bin/ss;do
+		if test -x "$file";then
+			PFCMD="$file";return 0
+		fi
+	done
+
+	if test -z "$PFCMD";then
+	for file in $(which netstat 2> /dev/null) /bin/netstat /usr/bin/netstat /usr/local/bin/netstat;do
+		if test -x "$file";then
+			PFCMD="$file";return 0
+		fi
+	done
+	fi
+
+	if test -z "$PFCMD";then
+		echo "neither ss nor netstat found"
+		exit 1
+	fi
+}
+
+check_if_port_in_use() {
+	local PORT="$1"
+	local PFCMD; have_port_finder
+	$PFCMD -an|grep "[\:\.]$PORT" >/dev/null 2>&1
+}
+
+# Find a port number not currently in use.
+GETPORT='
+    rc=0
+    unset myrandom
+    while test $rc = 0; do
+        if test -n "$RANDOM"; then myrandom=$(($RANDOM + $RANDOM)); fi
+        if test -z "$myrandom"; then myrandom=$(date +%N | sed s/^0*//); fi
+        if test -z "$myrandom"; then myrandom=0; fi
+        PORT="$(((($$<<15)|$myrandom) % 63001 + 2000))"
+        check_if_port_in_use $PORT;rc=$?
+    done
+'
 
 trap "fail \"Failed to launch the server, aborting test... \"" 10 

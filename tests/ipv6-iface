@@ -20,12 +20,13 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-PORT=4313
 PIDFILE=ocserv-pid.$$.tmp
 CLIPID=oc-pid.$$.tmp
 IP=$(which ip)
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 if test -z "${IP}";then
 	echo "no IP tool is present"

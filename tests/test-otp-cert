@@ -22,10 +22,11 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-PORT=4479
 OTP_FILE=test-otp-users.$$.tmp
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 echo "Testing local backend with username-password-otp and certificate... "
 

@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #
-# Copyright (C) 2018 Red Hat, Inc.
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
 #
 # This file is part of ocserv.
 #
@@ -19,17 +19,27 @@
 
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
-NO_NEED_ROOT=1
 PIDFILE=ocserv-pid.$$.tmp
+OPIDFILE=oc-pid.$$.tmp
+VERBOSE=1
 
 . `dirname $0`/common.sh
 
 eval "${GETPORT}"
 
-echo "Testing operation when run on background..."
+echo "Testing connection with ping-leases=true..."
 
-update_config test1.config
-launch_simple_sr_server -d 1 -p ${PIDFILE} --no-chdir -c ${CONFIG}
+function finish {
+  echo " * Cleaning up..."
+  test -f ${OPIDFILE} && kill $(cat ${OPIDFILE}) >/dev/null 2>&1
+  test -f ${PIDFILE} && kill $(cat ${PIDFILE}) >/dev/null 2>&1
+  rm -f ${OPIDFILE}
+  rm -f ${CONFIG}
+}
+trap finish EXIT
+
+update_config ping-leases.config
+launch_simple_server -d 1 -p ${PIDFILE} --no-chdir -c ${CONFIG}
 
 sleep 3
 
@@ -42,13 +52,16 @@ fi
 echo "Server started with PID $PID..."
 
 echo "Connecting to obtain cookie..."
-( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||
+( echo "test" | $OPENCONNECT -q localhost:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||
 	fail $PID "Could not receive cookie from server"
 
-if ! test -f ${PIDFILE};then
-	fail $PID "Could not find pid file ${PIDFILE}"
-fi
 
+echo "Connecting to ping lease..."
+echo "test" | timeout 10 $OPENCONNECT localhost:$PORT -u "test" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s /bin/true
+
+if test $? != 124;then
+	fail $PID "Could not connect to server"
+fi
 
 cleanup
 

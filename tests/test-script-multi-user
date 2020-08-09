@@ -22,13 +22,14 @@ SERV="${SERV:-../src/ocserv}"
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 srcdir=${srcdir:-.}
 builddir=${builddir:-.}
-PORT=4472
 PIDFILE=ocserv-pid.$$.tmp
 VPNNET=172.29.205.0/24
 OUTFILE=out.$$.tmp
 USERNAME=test
 
 . `dirname $0`/common.sh
+
+eval "${GETPORT}"
 
 if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
 	echo "Skipping test requiring ldpreload"

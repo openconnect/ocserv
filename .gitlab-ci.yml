@@ -21,7 +21,7 @@ Debian:
   script:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth
+    ./configure --without-nuttcp-tests --enable-oidc-auth
   - make -j$JOBS
   - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - make check -j$JOBS
@@ -66,7 +66,7 @@ Ubuntu16.04:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests --without-docker-tests
+  - ./configure --without-nuttcp-tests
   - make -j$JOBS
 # this version of openconnect doesn't work with IPv6 only
   - make check -j$JOBS XFAIL_TESTS=ipv6-iface
@@ -89,7 +89,7 @@ Ubuntu20.04:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests --without-docker-tests --enable-oidc-auth --enable-latency-stats
+  - ./configure --without-nuttcp-tests --enable-oidc-auth --enable-latency-stats
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -136,7 +136,7 @@ Centos7:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-docker-tests
+  - ./configure
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -238,7 +238,7 @@ Coverity:
   - tar xfz /tmp/coverity_tool.tgz
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-latency-stats
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --enable-latency-stats
   - cov-analysis-linux64-*/bin/cov-build --dir cov-int make -j$JOBS
   - tar cfz cov-int.tar.gz cov-int
   - curl https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
@@ -260,7 +260,7 @@ musl/Alpine:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$ALPINE_BUILD
   script:
   - autoreconf -fvi
-  - ./configure --disable-maintainer-mode --without-docker-tests --with-werror
+  - ./configure --disable-maintainer-mode --with-werror
   - make -j$JOBS
   tags:
   - shared
@@ -282,7 +282,7 @@ Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --without-docker-tests --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
+  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1
   - make files-update
@@ -305,7 +305,7 @@ noprocfs/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-maintainer-mode --without-docker-tests --disable-namespaces
+  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-maintainer-mode --disable-namespaces
   - make -j$JOBS
   tags:
   - shared
@@ -325,7 +325,7 @@ clang/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CC=clang ./configure --disable-maintainer-mode --without-docker-tests --with-werror
+  - CC=clang ./configure --disable-maintainer-mode --with-werror
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -347,7 +347,7 @@ seccomp/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --disable-maintainer-mode --without-docker-tests --with-kerberos-tests --enable-oidc-auth --with-seccomp-trap
+  - ./configure --disable-maintainer-mode --with-kerberos-tests --enable-oidc-auth --with-seccomp-trap
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -367,7 +367,7 @@ minimal:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-docker-tests --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf
+  - ./configure --without-libnl --without-liboath --without-pam --without-radius --without-utmp --without-libwrap --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --without-protobuf
   - make -j$JOBS
   - make check -j$JOBS XFAIL_TESTS="lz4-compression"
   tags:
@@ -390,7 +390,7 @@ minimal/Ubuntu20.04:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-protobuf --without-root-tests --without-docker-tests --without-nuttcp-tests --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression
+  - ./configure --without-protobuf --without-root-tests --without-nuttcp-tests --without-libtalloc-prefix --without-libnl --without-maxmind --without-geoip --without-libreadline-prefix --without-liboath --without-libc-prefix --without-pam --without-radius --without-libcrypt-prefix --without-utmp --without-libutil-prefix --without-libwrap --without-libwrap-prefix --without-libseccomp-prefix --without-libsystemd-prefix --without-http-parser --without-lz4 --without-gssapi --without-pcl-lib --disable-rpath --disable-seccomp --disable-anyconnect-compat --disable-compression
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -415,7 +415,7 @@ asan/clang/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CC=clang CFLAGS="-fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer -g -O1" ./configure --without-pam --without-docker-tests --without-asan-broken-tests
+  - CC=clang CFLAGS="-fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer -g -O1" ./configure --without-pam --without-asan-broken-tests
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -439,7 +439,7 @@ ubsan/Fedora:
   - git submodule update --init
   - autoreconf -fvi
   - export UBCFLAGS="-Wall -Wextra -fsanitize=undefined -fsanitize=bool -fsanitize=alignment -fsanitize=null -fsanitize=bounds-strict -fsanitize=enum -fno-sanitize-recover -g -O2 -Werror"
-  - CFLAGS="$UBCFLAGS" ./configure --without-docker-tests
+  - CFLAGS="$UBCFLAGS" ./configure
   - make -j$JOBS
   - make check -j$JOBS CFLAGS="$UBCFLAGS -Wno-unused-function -Wno-unused-parameter"
   tags:

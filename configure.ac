@@ -122,13 +122,6 @@ AC_ARG_WITH(root-tests,
 
 AM_CONDITIONAL(ENABLE_ROOT_TESTS, test "x$root_tests" = xyes)
 
-AC_ARG_WITH(docker-tests,
-  AS_HELP_STRING([--without-docker-tests], [disable any tests requiring docker]),
-  docker_tests=$withval,
-  docker_tests=yes)
-
-AM_CONDITIONAL(ENABLE_DOCKER_TESTS, test "x$docker_tests" = xyes)
-
 AC_ARG_WITH(asan-broken-tests,
   AS_HELP_STRING([--without-asan-broken-tests], [disable any tests that cannot be run under asan]),
   enable_asan_broken_tests=$withval,
@@ -688,7 +681,6 @@ AC_CONFIG_FILES([
 	src/Makefile
 	doc/Makefile
 	gl/Makefile
-	tests/docker-ocserv/Makefile
 	tests/data/pam/ocserv
 	tests/data/pam/nss-passwd
 	tests/data/pam/nss-group

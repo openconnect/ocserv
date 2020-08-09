@@ -1,0 +1,128 @@
+#!/bin/bash
+#
+# Copyright (C) 2018 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
+HACONFIG=haproxy.conf.$$.tmp
+PATH=${PATH}:/usr/sbin
+HAPROXY=$(which haproxy)
+IP=$(which ip)
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+HAPORT=${PORT}
+
+eval "${GETPORT}"
+
+if test -z "${HAPROXY}";then
+	echo "no haproxy present"
+	exit 77
+fi
+
+if test -z "${IP}";then
+	echo "no IP tool is present"
+	exit 77
+fi
+
+if test "$(id -u)" != "0";then
+	echo "This test must be run as root"
+	exit 77
+fi
+
+echo "Testing ocserv connection via haproxy... "
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${HAPID}" && kill ${HAPID} >/dev/null 2>&1
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -n "${HACONFIG}" && rm -f ${HACONFIG} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${NUTTCPPID}" && kill ${NUTTCPPID} >/dev/null 2>&1
+  rm -f proxyproto-v1-connect-ok
+}
+trap finish EXIT
+
+rm -f proxyproto-v1-connect-ok
+
+# server address
+ADDRESS=10.214.2.1
+CLI_ADDRESS=10.214.1.1
+VPNNET=192.168.1.0/24
+VPNADDR=192.168.1.1
+
+. `dirname $0`/ns.sh
+
+# Run servers
+update_config haproxy-proxyproto-v1.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 1
+
+rm -f ${HACONFIG}
+sed -e 's|@HAPORT@|'${HAPORT}'|g' -e 's|@PORT@|'${PORT}'|g' -e 's|@ADDRESS@|'${ADDRESS}'|g' ${srcdir}/data/haproxy-proxyproto-v1.cfg >${HACONFIG}
+${CMDNS2} ${HAPROXY} -f ${HACONFIG} -d & HAPID=$!
+
+sleep 3
+
+# Run clients
+echo " * Getting cookie from ${ADDRESS}:${HAPORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly )
+if test $? != 0;then
+	echo "Could not get cookie from server"
+	exit 1
+fi
+
+echo " * Connecting to ${ADDRESS}:${HAPORT}..."
+( echo "test" | ${CMDNS1} ${OPENCONNECT} -q ${ADDRESS}:${HAPORT} -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 -s ${srcdir}/scripts/vpnc-script --pid-file=${CLIPID} --passwd-on-stdin -b )
+if test $? != 0;then
+	echo "Could not connect to server"
+	exit 1
+fi
+
+set -e
+echo " * ping remote address"
+
+${CMDNS1} ping -c 3 ${VPNADDR}
+
+set +e
+
+echo " * checking for connect-ok"
+if ! test -f proxyproto-v1-connect-ok;then
+	echo "Could not find file written by script"
+	exit 1
+fi
+
+if ! test -f ${PIDFILE};then
+	echo "Could not find pid file ${PIDFILE}"
+	exit 1
+fi
+
+exit 0

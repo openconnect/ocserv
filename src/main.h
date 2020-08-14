@@ -70,7 +70,7 @@ struct listener_st {
 	socklen_t addr_len;
 	int family;
 	int protocol;
-	ev_timer flow_control;
+	ev_timer resume_accept;
 };
 
 struct listen_list_st {

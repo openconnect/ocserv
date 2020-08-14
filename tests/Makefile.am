@@ -91,7 +91,7 @@ dist_check_SCRIPTS += test-pass test-pass-cert test-cert test-group-pass \
 	test-gssapi test-pass-opt-cert test-cert-opt-pass test-gssapi-opt-pass \
 	test-gssapi-opt-cert haproxy-auth test-maintenance resumption \
 	test-group-name flowcontrol banner invalid-configs haproxy-proxyproto \
-	haproxy-proxyproto-v1
+	haproxy-proxyproto-v1 test-drain-server
 
 if HAVE_CWRAP_PAM
 dist_check_SCRIPTS += test-pam test-pam-noauth

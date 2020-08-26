@@ -888,7 +888,8 @@ static int load_keys(sec_mod_st *sec, unsigned force)
  */
 void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfig,
 		    const char *socket_file, int cmd_fd, int cmd_fd_sync,
-		    size_t  hmac_key_length, const uint8_t * hmac_key)
+		    size_t  hmac_key_length, const uint8_t * hmac_key,
+			const uint8_t instance_id)
 {
 	struct sockaddr_un sa;
 	socklen_t sa_len;
@@ -935,6 +936,7 @@ void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfi
 	sec->config_pool = config_pool;
 	sec->sec_mod_pool = sec_mod_pool;
 	memcpy((uint8_t*)sec->hmac_key, hmac_key, hmac_key_length);
+	sec->sec_mod_instance_id = instance_id;
 
 	tls_cache_init(sec, &sec->tls_db);
 	sup_config_init(sec);

@@ -174,16 +174,39 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 {
 	StatusRep rep = STATUS_REP__INIT;
 	int ret;
+	unsigned int i;
+	uint32_t * sec_mod_pids;
+
+	sec_mod_pids = talloc_array(ctx->pool, uint32_t, ctx->s->sec_mod_instance_count);
+	if (sec_mod_pids) {
+		for (i = 0; i < ctx->s->sec_mod_instance_count; i ++) {
+			sec_mod_pids[i] = ctx->s->sec_mod_instances[i].sec_mod_pid;
+		}
+	}
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: status");
 
 	rep.status = 1;
 	rep.pid = getpid();
 	rep.start_time = ctx->s->stats.start_time;
-	rep.sec_mod_pid = ctx->s->sec_mod_pid;
+	if (sec_mod_pids) {
+		rep.sec_mod_pids = sec_mod_pids;
+		rep.n_sec_mod_pids = ctx->s->sec_mod_instance_count;
+	}
 	rep.active_clients = ctx->s->stats.active_clients;
-	rep.secmod_client_entries = ctx->s->stats.secmod_client_entries;
-	rep.stored_tls_sessions = ctx->s->stats.tlsdb_entries;
+	rep.secmod_client_entries = 0;
+	rep.stored_tls_sessions = 0;
+	rep.max_auth_time = 0;
+	rep.avg_auth_time = 0;
+	for (i = 0; i < ctx->s->sec_mod_instance_count; i ++) {
+		rep.secmod_client_entries += ctx->s->sec_mod_instances[i].secmod_client_entries;
+		rep.stored_tls_sessions += ctx->s->sec_mod_instances[i].tlsdb_entries;
+		rep.max_auth_time = MAX(rep.max_auth_time, ctx->s->sec_mod_instances[i].max_auth_time);
+		rep.avg_auth_time = ctx->s->sec_mod_instances[i].avg_auth_time;
+	}
+	if (ctx->s->sec_mod_instance_count != 0) {
+		rep.avg_auth_time /= ctx->s->sec_mod_instance_count;
+	}
 	rep.banned_ips = main_ban_db_elems(ctx->s);
 
 	rep.session_timeouts = ctx->s->stats.session_timeouts;
@@ -195,9 +218,7 @@ static void method_status(method_ctx *ctx, int cfd, uint8_t * msg,
 	rep.min_mtu = ctx->s->stats.min_mtu;
 	rep.max_mtu = ctx->s->stats.max_mtu;
 	rep.last_reset = ctx->s->stats.last_reset;
-	rep.avg_auth_time = ctx->s->stats.avg_auth_time;
 	rep.avg_session_mins = ctx->s->stats.avg_session_mins;
-	rep.max_auth_time = ctx->s->stats.max_auth_time;
 	rep.max_session_mins = ctx->s->stats.max_session_mins;
 
 	rep.auth_failures = ctx->s->stats.auth_failures;
@@ -551,22 +572,86 @@ static void method_list_banned(method_ctx *ctx, int cfd, uint8_t * msg,
 static void method_list_cookies(method_ctx *ctx, int cfd, uint8_t * msg,
 			      unsigned msg_size)
 {
+	SecmListCookiesReplyMsg reply = SECM_LIST_COOKIES_REPLY_MSG__INIT;
+	SecmListCookiesReplyMsg ** sub_replies = NULL;
+	CookieIntMsg ** cookies = NULL;
+	PROTOBUF_ALLOCATOR(pa, ctx->pool);
+
+	size_t total_cookies = 0;
+	unsigned int i;
+	unsigned int j;
+	unsigned int k;
 	int ret;
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: list-cookies");
 
-	ret = send_msg(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES,
-			 NULL, NULL, NULL);
-	if (ret < 0) {
-		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies to sec-mod!");
+	sub_replies = talloc_zero_array(ctx->pool, SecmListCookiesReplyMsg*, ctx->s->sec_mod_instance_count);
+	if (!sub_replies) {
+		goto reply_and_exit;
 	}
 
-	ret = forward_msg(ctx->pool, ctx->s->sec_mod_fd_sync, CMD_SECM_LIST_COOKIES_REPLY,
-			  cfd, CTL_CMD_LIST_COOKIES_REP, MAIN_SEC_MOD_TIMEOUT);
+	for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+		SecmListCookiesReplyMsg * sub_reply = NULL;
+		ret = send_msg(ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync, CMD_SECM_LIST_COOKIES,
+				NULL, NULL, NULL);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies to sec-mod!");
+			continue;
+		}
+		ret = recv_msg(ctx->pool, ctx->s->sec_mod_instances[i].sec_mod_fd_sync, CMD_SECM_LIST_COOKIES_REPLY, 
+				(void*)&sub_reply, (unpack_func)secm_list_cookies_reply_msg__unpack, MAIN_SEC_MOD_TIMEOUT);
+		if (ret < 0) {
+			mslog(ctx->s, NULL, LOG_ERR, "error receiving list cookies reply");
+			continue;
+		}
+		
+		if (sub_reply) {
+			sub_replies[i] = sub_reply;
+			total_cookies += sub_reply->n_cookies;
+		}
+	}
+
+	cookies = talloc_zero_array(ctx->pool, CookieIntMsg*, total_cookies);
+	if (!cookies) {
+		goto reply_and_exit;
+	}
+
+	k = 0;
+	for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+		if (sub_replies[i] == NULL) {
+			continue;
+		}
+
+		for (j = 0; j < sub_replies[i]->n_cookies; j++) {
+			cookies[k++] = sub_replies[i]->cookies[j];
+		}
+	}
+
+reply_and_exit:
+	reply.cookies = cookies;
+	reply.n_cookies = total_cookies;
+
+	ret = send_msg(ctx->pool, cfd, CTL_CMD_LIST_COOKIES_REP, &reply,
+		       (pack_size_func) secm_list_cookies_reply_msg__get_packed_size,
+		       (pack_func) secm_list_cookies_reply_msg__pack);
 	if (ret < 0) {
 		mslog(ctx->s, NULL, LOG_ERR, "error sending list cookies reply");
 	}
 
+	if (sub_replies) {
+		for (i = 0; i < ctx->s->sec_mod_instance_count; i++) {
+			if (sub_replies[i] == NULL) {
+				continue;
+			}
+			secm_list_cookies_reply_msg__free_unpacked(sub_replies[i], &pa);
+		}
+		talloc_free(sub_replies);
+	}
+
+	if (cookies) {
+		talloc_free(cookies);
+	}
+	return;
 }
 
 static void single_info_common(method_ctx *ctx, int cfd, uint8_t * msg,

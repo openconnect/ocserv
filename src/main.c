@@ -94,15 +94,20 @@ sigset_t sig_default_set;
 struct ev_loop *loop = NULL;
 static unsigned allow_broken_clients = 0;
 
+typedef struct sec_mod_watcher_st {
+	ev_io sec_mod_watcher;
+	ev_child child_watcher;
+	unsigned int sec_mod_instance_index;
+} sec_mod_watcher_st;
+
 /* EV watchers */
 ev_io ctl_watcher;
-ev_io sec_mod_watcher;
+sec_mod_watcher_st * sec_mod_watchers = NULL;
 ev_timer maintenance_watcher;
 ev_signal maintenance_sig_watcher;
 ev_signal term_sig_watcher;
 ev_signal int_sig_watcher;
 ev_signal reload_sig_watcher;
-ev_child child_watcher;
 #if defined(CAPTURE_LATENCY_SUPPORT)
 ev_timer latency_watcher;
 #endif
@@ -511,6 +516,7 @@ int y;
  */
 void clear_lists(main_server_st *s)
 {
+	int i;
 	struct listener_st *ltmp = NULL, *lpos;
 	struct proc_st *ctmp = NULL, *cpos;
 	struct script_wait_st *script_tmp = NULL, *script_pos;
@@ -549,8 +555,10 @@ void clear_lists(main_server_st *s)
 	/* clear libev state */
 	if (loop) {
 		ev_io_stop (loop, &ctl_watcher);
-		ev_io_stop (loop, &sec_mod_watcher);
-		ev_child_stop (loop, &child_watcher);
+		for (i = 0; i < s->sec_mod_instance_count; i++) {
+			ev_io_stop (loop, &sec_mod_watchers[i].sec_mod_watcher);
+			ev_child_stop (loop, &sec_mod_watchers[i].child_watcher);
+		}
 		ev_timer_stop(loop, &maintenance_watcher);
 #if defined(CAPTURE_LATENCY_SUPPORT)
 		ev_timer_stop(loop, &latency_watcher);		
@@ -942,14 +950,17 @@ static void worker_child_watcher_cb(struct ev_loop *loop, ev_child *w, int reven
 static void kill_children(main_server_st* s)
 {
 	struct proc_st *ctmp = NULL, *cpos;
-
+	int i;
 	/* kill the security module server */
 	list_for_each_safe(&s->proc_list.head, ctmp, cpos, list) {
 		if (ctmp->pid != -1) {
 			remove_proc(s, ctmp, RPROC_KILL|RPROC_QUIT);
 		}
 	}
-	kill(s->sec_mod_pid, SIGTERM);
+
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		kill(s->sec_mod_instances[i].sec_mod_pid, SIGTERM);
+	}
 }
 
 static void kill_children_auth_timeout(main_server_st* s)
@@ -992,19 +1003,21 @@ static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revent
 {
 	main_server_st *s = ev_userdata(loop);
 	int ret;
+	int i;
 
 	mslog(s, NULL, LOG_INFO, "reloading configuration");
-	kill(s->sec_mod_pid, SIGHUP);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		kill(s->sec_mod_instances[i].sec_mod_pid, SIGHUP);
 
-	/* Reload on main needs to happen later than sec-mod.
-	 * That's because of a test that the certificate matches the
-	 * used key. */
-	ret = secmod_reload(s);
-	if (ret < 0) {
-		mslog(s, NULL, LOG_ERR, "could not reload sec-mod!\n");
-		ev_feed_signal_event (loop, SIGTERM);
+		/* Reload on main needs to happen later than sec-mod.
+		* That's because of a test that the certificate matches the
+		* used key. */
+		ret = secmod_reload(&s->sec_mod_instances[i]);
+		if (ret < 0) {
+			mslog(s, NULL, LOG_ERR, "could not reload sec-mod!\n");
+			ev_feed_signal_event (loop, SIGTERM);
+		}
 	}
-
 	reload_cfg_file(s->config_pool, s->vconfig, 0);
 }
 
@@ -1039,6 +1052,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 	int fd, ret;
 	int cmd_fd[2];
 	pid_t pid;
+	int i;
 	hmac_component_st hmac_components[3];
 	char worker_path[_POSIX_PATH_MAX];
 
@@ -1093,6 +1107,7 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 
 		pid = fork();
 		if (pid == 0) {	/* child */
+			unsigned int sec_mod_instance_index;
 			/* close any open descriptors, and erase
 			 * sensitive data before running the worker
 			 */
@@ -1100,17 +1115,24 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			close(cmd_fd[0]);
 			clear_lists(s);
 			if (s->top_fd != -1) close(s->top_fd);
-			close(s->sec_mod_fd);
-			close(s->sec_mod_fd_sync);
+			for (i = 0; i < s->sec_mod_instance_count; i ++) {
+				close(s->sec_mod_instances[i].sec_mod_fd);
+				close(s->sec_mod_instances[i].sec_mod_fd_sync);
+			}
 
 			setproctitle(PACKAGE_NAME"-worker");
 			kill_on_parent_kill(SIGTERM);
 
 			set_self_oom_score_adj(s);
 
+			sec_mod_instance_index = hash_any(
+				SA_IN_P_GENERIC(&ws->remote_addr, ws->remote_addr_len),
+				SA_IN_SIZE(ws->remote_addr_len), 0) % s->sec_mod_instance_count;
+
 			/* write sec-mod's address */
-			memcpy(&ws->secmod_addr, &s->secmod_addr, s->secmod_addr_len);
-			ws->secmod_addr_len = s->secmod_addr_len;
+			memcpy(&ws->secmod_addr, &s->sec_mod_instances[sec_mod_instance_index].secmod_addr, s->sec_mod_instances[sec_mod_instance_index].secmod_addr_len);
+			ws->secmod_addr_len = s->sec_mod_instances[sec_mod_instance_index].secmod_addr_len;
+
 
 			ws->main_pool = s->main_pool;
 
@@ -1203,7 +1225,7 @@ fork_failed:
 	if (GETCONFIG(s)->rate_limit_ms > 0) {
 		int rqueue = 0;
 		int wqueue = 0;
-		int retval = sockdiag_query_unix_domain_socket_queue_length(s->secmod_addr.sun_path, &rqueue, &wqueue);
+		int retval = sockdiag_query_unix_domain_socket_queue_length(s->sec_mod_instances[0].secmod_addr.sun_path, &rqueue, &wqueue);
 		mslog(s, NULL, LOG_DEBUG, "queue_length retval:%d rqueue:%d wqueue:%d", retval, rqueue, wqueue);
 		if (retval || rqueue > wqueue / 2) {
 			mslog(s, NULL, LOG_INFO, "delaying accepts for %d ms", GETCONFIG(s)->rate_limit_ms);
@@ -1217,10 +1239,11 @@ fork_failed:
 
 static void sec_mod_watcher_cb (EV_P_ ev_io *w, int revents)
 {
+	sec_mod_watcher_st *sec_mod = (sec_mod_watcher_st *)w;
 	main_server_st *s = ev_userdata(loop);
 	int ret;
 
-	ret = handle_sec_mod_commands(s);
+	ret = handle_sec_mod_commands(&s->sec_mod_instances[sec_mod->sec_mod_instance_index]);
 	if (ret < 0) { /* bad commands from sec-mod are unacceptable */
 		mslog(s, NULL, LOG_ERR,
 		       "error in command from sec-mod");
@@ -1307,6 +1330,7 @@ int main(int argc, char** argv)
 	main_server_st *s;
 	char *str;
 	int i;
+	int processor_count = 0;
 
 #ifdef DEBUG_LEAKS
 	talloc_enable_leak_report_full();
@@ -1314,6 +1338,8 @@ int main(int argc, char** argv)
 
 	saved_argc = argc;
 	saved_argv = argv;
+
+	processor_count = sysconf(_SC_NPROCESSORS_ONLN);
 
 	/* main pool */
 	main_pool = talloc_init("main");
@@ -1440,7 +1466,30 @@ int main(int argc, char** argv)
 
 	write_pid_file();
 
-	s->sec_mod_fd = run_sec_mod(s, &s->sec_mod_fd_sync);
+	// Start the configured number of ocserv-sm processes
+	s->sec_mod_instance_count = GETPCONFIG(s)->sec_mod_scale;
+	
+	if (s->sec_mod_instance_count == 0)	{
+		if (GETCONFIG(s)->max_clients != 0) {
+			// Compute ideal number of clients per sec-mod
+			unsigned int sec_mod_count_for_users = GETCONFIG(s)->max_clients / MINIMUM_USERS_PER_SEC_MOD + 1;
+			// Limit it to number of processors. 
+			s->sec_mod_instance_count = MIN(processor_count,sec_mod_count_for_users);
+		} else {
+			// If it's unlimited, the use processor count.
+			s->sec_mod_instance_count = processor_count;
+		}
+	}
+
+	s->sec_mod_instances = talloc_zero_array(s, sec_mod_instance_st, s->sec_mod_instance_count);
+	sec_mod_watchers = talloc_zero_array(s, sec_mod_watcher_st, s->sec_mod_instance_count);
+
+	mslog(s, NULL, LOG_INFO, "Starting %d instances of ocserv-sm", s->sec_mod_instance_count);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		s->sec_mod_instances[i].server = s;
+		run_sec_mod(&s->sec_mod_instances[i], i);
+	}
+
 	ret = ctl_handler_init(s);
 	if (ret < 0) {
 		mslog(s, NULL, LOG_ERR, "Cannot create command handler");
@@ -1466,12 +1515,14 @@ int main(int argc, char** argv)
 	}
 	ms_sleep(100); /* give some time for sec-mod to initialize */
 
-	s->secmod_addr.sun_family = AF_UNIX;
-	p = s->socket_file;
-	if (GETPCONFIG(s)->chroot_dir) /* if we are on chroot make the socket file path relative */
-		while (*p == '/') p++;
-	strlcpy(s->secmod_addr.sun_path, p, sizeof(s->secmod_addr.sun_path));
-	s->secmod_addr_len = SUN_LEN(&s->secmod_addr);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		s->sec_mod_instances[i].secmod_addr.sun_family = AF_UNIX;
+		p = s->sec_mod_instances[i].socket_file;
+		if (GETPCONFIG(s)->chroot_dir) /* if we are on chroot make the socket file path relative */
+			while (*p == '/') p++;
+		strlcpy(s->sec_mod_instances[i].secmod_addr.sun_path, p, sizeof(s->sec_mod_instances[i].secmod_addr.sun_path));
+		s->sec_mod_instances[i].secmod_addr_len = SUN_LEN(&s->sec_mod_instances[i].secmod_addr);
+	}
 
 	/* initialize memory for worker process */
 	worker_pool = talloc_named(main_pool, 0, "worker");
@@ -1504,7 +1555,10 @@ int main(int argc, char** argv)
 	ev_set_syserr_cb(syserr_cb);
 
 	ev_init(&ctl_watcher, ctl_watcher_cb);
-	ev_init(&sec_mod_watcher, sec_mod_watcher_cb);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		ev_init(&sec_mod_watchers[i].sec_mod_watcher, sec_mod_watcher_cb);
+		sec_mod_watchers[i].sec_mod_instance_index = i;
+	}
 
 	ev_init (&int_sig_watcher, term_sig_watcher_cb);
 	ev_signal_set (&int_sig_watcher, SIGINT);
@@ -1525,14 +1579,19 @@ int main(int argc, char** argv)
 		ev_io_start (loop, &ltmp->io);
 	}
 
-	ev_io_set(&sec_mod_watcher, s->sec_mod_fd, EV_READ);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		ev_io_set(&sec_mod_watchers[i].sec_mod_watcher, s->sec_mod_instances[i].sec_mod_fd, EV_READ);
+		ev_io_start (loop, &sec_mod_watchers[i].sec_mod_watcher);
+	}
+
 	ctl_handler_set_fds(s, &ctl_watcher);
 
 	ev_io_start (loop, &ctl_watcher);
-	ev_io_start (loop, &sec_mod_watcher);
 
-	ev_child_init(&child_watcher, sec_mod_child_watcher_cb, s->sec_mod_pid, 0);
-	ev_child_start (loop, &child_watcher);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		ev_child_init(&sec_mod_watchers[i].child_watcher, sec_mod_child_watcher_cb, s->sec_mod_instances[i].sec_mod_pid, 0);
+		ev_child_start (loop, &sec_mod_watchers[i].child_watcher);
+	}
 
 	ev_init(&maintenance_watcher, maintenance_watcher_cb);
 	ev_timer_set(&maintenance_watcher, MAIN_MAINTENANCE_TIME, MAIN_MAINTENANCE_TIME);
@@ -1555,7 +1614,9 @@ int main(int argc, char** argv)
 	/* try to clean-up everything allocated to ease checks 
 	 * for memory leaks.
 	 */
-	remove(s->full_socket_file);
+	for (i = 0; i < s->sec_mod_instance_count; i ++) {
+		remove(s->sec_mod_instances[i].full_socket_file);
+	}
 	remove(GETPCONFIG(s)->occtl_socket_file);
 	remove_pid_file();
 

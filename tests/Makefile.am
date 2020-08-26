@@ -43,7 +43,7 @@ EXTRA_DIST = certs/ca-key.pem certs/ca.pem ns.sh common.sh certs/server-cert.pem
 	data/group-config/group1 data/test-namespace-listen.config data/disconnect-user.config \
 	data/disconnect-user2.config data/ping-leases.config data/haproxy-proxyproto.config \
 	data/haproxy-proxyproto.cfg scripts/proxy-connectscript data/haproxy-proxyproto-v1.config \
-	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1
+	data/haproxy-proxyproto-v1.cfg scripts/proxy-connectscript-v1 data/test-multiple-client-ip.config
 
 xfail_scripts =
 dist_check_SCRIPTS =  ocpasswd-test
@@ -71,7 +71,7 @@ if ENABLE_NUTTCP_TESTS
 dist_check_SCRIPTS += traffic lz4-compression lzs-compression \
 	aes256-cipher aes128-cipher oc-aes256-gcm-cipher oc-aes128-gcm-cipher \
 	test-config-per-group ac-aes128-gcm-cipher ac-aes256-gcm-cipher \
-	no-dtls-cipher psk-negotiate psk-negotiate-match
+	no-dtls-cipher psk-negotiate psk-negotiate-match test-multiple-client-ip
 endif
 
 if RADIUS_ENABLED

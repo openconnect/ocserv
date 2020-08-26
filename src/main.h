@@ -58,6 +58,8 @@ int cmd_parser (void *pool, int argc, char **argv, struct list_head *head, bool 
 #define LATENCY_AGGREGATION_TIME (60)
 #endif
 
+#define MINIMUM_USERS_PER_SEC_MOD 500
+
 struct listener_st {
 	ev_io io;
 	struct list_node list;
@@ -149,6 +151,7 @@ typedef struct proc_st {
 	char cstp_compr[8];
 	char dtls_compr[8];
 	unsigned mtu;
+	unsigned int sec_mod_instance_index;
 
 	/* if the session is initiated by a cookie the following two are set
 	 * and are considered when generating an IP address. That is used to
@@ -220,15 +223,9 @@ struct main_stats_st {
 	unsigned max_mtu;
 
 	unsigned active_clients;
-	/* updated on the cli_stats_msg from sec-mod. 
-	 * Holds the number of entries in secmod list of users */
-	unsigned secmod_client_entries;
-	unsigned tlsdb_entries;
 	time_t start_time;
 	time_t last_reset;
 
-	uint32_t avg_auth_time; /* in seconds */
-	uint32_t max_auth_time; /* in seconds */
 	uint32_t avg_session_mins; /* in minutes */
 	uint32_t max_session_mins;
 	uint64_t auth_failures; /* authentication failures */
@@ -243,6 +240,26 @@ struct main_stats_st {
 #endif
 };
 
+typedef struct sec_mod_instance_st {
+	struct main_server_st * server;
+	char socket_file[_POSIX_PATH_MAX];
+	char full_socket_file[_POSIX_PATH_MAX];
+	pid_t sec_mod_pid;
+
+	struct sockaddr_un secmod_addr;
+	unsigned secmod_addr_len;
+
+	int sec_mod_fd; /* messages are sent and received async */
+	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
+	/* updated on the cli_stats_msg from sec-mod. 
+	 * Holds the number of entries in secmod list of users */
+	unsigned secmod_client_entries;
+	unsigned tlsdb_entries;
+	uint32_t avg_auth_time; /* in seconds */
+	uint32_t max_auth_time; /* in seconds */
+
+} sec_mod_instance_st;
+
 typedef struct main_server_st {
 	/* virtual hosts are only being added to that list, never removed */
 	struct list_head *vconfig;
@@ -256,13 +273,6 @@ typedef struct main_server_st {
 	struct script_list_st script_list;
 	/* maps DTLS session IDs to proc entries */
 	struct proc_hash_db_st proc_table;
-	
-	char socket_file[_POSIX_PATH_MAX];
-	char full_socket_file[_POSIX_PATH_MAX];
-	pid_t sec_mod_pid;
-
-	struct sockaddr_un secmod_addr;
-	unsigned secmod_addr_len;
 
 	struct main_stats_st stats;
 
@@ -271,11 +281,12 @@ typedef struct main_server_st {
 	/* This one is on worker pool */
 	struct worker_st *ws;
 
+	unsigned int sec_mod_instance_count;
+	sec_mod_instance_st * sec_mod_instances;
+
 	int top_fd;
 	int ctl_fd;
 
-	int sec_mod_fd; /* messages are sent and received async */
-	int sec_mod_fd_sync; /* messages are send in a sync order (ping-pong). Only main sends. */
 	void *main_pool; /* talloc main pool */
 	void *config_pool; /* talloc config pool */
 
@@ -292,7 +303,7 @@ typedef struct main_server_st {
 void clear_lists(main_server_st *s);
 
 int handle_worker_commands(main_server_st *s, struct proc_st* cur);
-int handle_sec_mod_commands(main_server_st *s);
+int handle_sec_mod_commands(sec_mod_instance_st * sec_mod_instances);
 
 int user_connected(main_server_st *s, struct proc_st* cur);
 void user_hostname_update(main_server_st *s, struct proc_st* cur);
@@ -300,8 +311,8 @@ void user_disconnected(main_server_st *s, struct proc_st* cur);
 
 int send_udp_fd(main_server_st* s, struct proc_st * proc, int fd);
 
-int session_open(main_server_st * s, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
-int session_close(main_server_st * s, struct proc_st *proc);
+int session_open(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc, const uint8_t *cookie, unsigned cookie_size);
+int session_close(sec_mod_instance_st * sec_mod_instance, struct proc_st *proc);
 
 #ifdef UNDER_TEST
 /* for testing */
@@ -336,13 +347,13 @@ int set_tun_mtu(main_server_st* s, struct proc_st * proc, unsigned mtu);
 int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 			AUTHREP r);
 
-int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
+int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req);
 
 int check_multiple_users(main_server_st *s, struct proc_st* proc);
 int handle_script_exit(main_server_st *s, struct proc_st* proc, int code);
 
-int run_sec_mod(main_server_st * s, int *sync_fd);
+void run_sec_mod(sec_mod_instance_st * sec_mod_instance, unsigned int instance_index);
 
 struct proc_st *new_proc(main_server_st * s, pid_t pid, int cmd_fd,
 			struct sockaddr_storage *remote_addr, socklen_t remote_addr_len,
@@ -389,7 +400,7 @@ int send_socket_msg_to_worker(main_server_st* s, struct proc_st* proc, uint8_t c
 	return send_socket_msg(proc, proc->fd, cmd, socketfd, msg, get_size, pack);
 }
 
-int secmod_reload(main_server_st * s);
+int secmod_reload(sec_mod_instance_st * sec_mod_instance);
 
 const char *secmod_socket_file_name(struct perm_cfg_st *perm_config);
 void restore_secmod_socket_file_name(const char * save_path);

@@ -427,7 +427,9 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 			goto cleanup;
 		}
 
-		ret = handle_auth_cookie_req(s, proc, auth_cookie_req);
+		proc->sec_mod_instance_index = auth_cookie_req->cookie.data[0] % s->sec_mod_instance_count;
+
+		ret = handle_auth_cookie_req(&s->sec_mod_instances[proc->sec_mod_instance_index], proc, auth_cookie_req);
 
 		safe_memset(raw, 0, raw_len);
 		safe_memset(auth_cookie_req->cookie.data, 0, auth_cookie_req->cookie.len);

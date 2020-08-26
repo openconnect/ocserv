@@ -49,6 +49,7 @@ typedef struct sec_mod_st {
 	uint32_t total_authentications; /* successful authentications: to calculate the average above */
 	time_t last_stats_reset;
 	const uint8_t hmac_key[HMAC_DIGEST_SIZE];
+	uint32_t sec_mod_instance_id;
 } sec_mod_st;
 
 typedef struct stats_st {
@@ -169,6 +170,7 @@ void sec_auth_user_deinit(sec_mod_st *sec, client_entry_st *e);
 void sec_mod_server(void *main_pool, void *config_pool, struct list_head *vconfig,
 		    const char *socket_file,
 		    int cmd_fd, int cmd_fd_sync,
-			size_t  hmac_key_length, const uint8_t * hmac_key);
+			size_t  hmac_key_length, const uint8_t * hmac_key,
+			const uint8_t instance_id);
 
 #endif

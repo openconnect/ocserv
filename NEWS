@@ -10,6 +10,10 @@
   a client with an RSA key (#318)
 - Enable a race free user disconnection via occtl (#59)
 - Added the config option of a pre-login-banner (#313)
+- Ocserv siwtched to using multiple ocserv-sm processes to improve scale,
+  with the number of ocserv-sm process dependent on maximum clients and
+  number of CPUs. Configuration option sec-mod-scale can be used to override
+  the heuristics.
 
 
 * Version 1.1.0 (released 2020-06-16)

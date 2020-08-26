@@ -163,9 +163,10 @@ int send_cookie_auth_reply(main_server_st* s, struct proc_st* proc,
 	return 0;
 }
 
-int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
+int handle_auth_cookie_req(sec_mod_instance_st * sec_mod_instance, struct proc_st* proc,
  			   const AuthCookieRequestMsg * req)
 {
+	main_server_st * s = sec_mod_instance->server;
 	int ret;
 	struct proc_st *old_proc;
 
@@ -189,7 +190,7 @@ int handle_auth_cookie_req(main_server_st* s, struct proc_st* proc,
 	}
 
 	/* loads sup config and basic proc info (e.g., username) */
-	ret = session_open(s, proc, req->cookie.data, req->cookie.len);
+	ret = session_open(sec_mod_instance, proc, req->cookie.data, req->cookie.len);
 	if (ret < 0) {
 		mslog(s, proc, LOG_INFO, "could not open session");
 		return -1;

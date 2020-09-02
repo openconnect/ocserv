@@ -206,3 +206,51 @@ The ocserv server gathers statistical data about the latency incurred while proc
 * Latency information is emitted to the log and can also be queried via occtl. Mean latency for an interval can be computed as latency_median_total/latency_sample_count and mean STDEV can be computed as latency_rms_total/latency_sample_count.
 
 * Latency information can be used as a metric to measure how the ocserv is performing and to measure effective server load.
+
+## Load Balancer integration
+
+Ocserv can be deployed behind a layer 3 load balancer to support high availabilty and scale. 
+
+### Example load balancer configuration using keepalived.
+This is not intended as an exhaustive guide to configuring keepalived, but rather as a high level overview.
+
+* One or more hosts (directors) running keepalived, with a virtual IP assigned to them, optionally using VRRP to manage VIP failover (not shown here).
+
+* Three or more instances of ocserv running on hosts (real-server). Virtual IP assigned to the loopback interface with an ARP filter to prevent them from avertising.
+
+* Define a iptables rule to tag incoming traffic to be load balanced:
+```
+iptables -A PREROUTING -t mangle -d $VIP/32 -j MARK --set-mark 1
+```
+
+* Define a keepalived configuration file. Replace IP addresses with the IP of the actual server instances. VRRP configuration not shown here.
+```
+virtual_server fwmark 1 {
+    delay_loop 5
+    lb_algo rr
+    lb_kind DR
+    persistence_timeout 300
+    real_server 10.0.0.1 443 {
+        TCP_CHECK {
+            connect_port 443
+            connect_timeout 5
+        }
+    }
+    real_server 10.0.0.2 443 {
+        TCP_CHECK {
+            connect_port 443
+            connect_timeout 5
+        }
+    }
+    real_server 10.0.0.3 443 {
+        TCP_CHECK {
+            connect_port 443
+            connect_timeout 5
+        }
+    }
+}
+```
+
+* Set ocserv option "server-drain-ms = 10000" (2 times the health check interval) to permit graceful shutdown of ocserv instances. This setting adds a delay between the time when the server stops accepting new connections (which causes the load balancer to view it as unhealthy) and when existing clients are disconnected. This prevents clients from attempting to reconnect to a server that is shutting down or has recently shutdown.
+
+* Notes on sizing the HA cluster. Best practices for high availability are to maintain a minimum of two spare nodes as this permits for one node to be undergoing maintenance and for an unplanned failure on a second node. Each node should be sized to account for a rapid reconnect of all clients, which will cause a spike of CPU utilization due to TLS key exchange. The rate-limit-ms can be used to flatten the spike at the expense of some clients retrying their connections. 

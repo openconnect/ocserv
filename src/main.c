@@ -87,7 +87,7 @@ int worker_argc = 0;
 char **worker_argv = NULL;
 
 static void listen_watcher_cb (EV_P_ ev_io *w, int revents);
-static void flow_control_cb (EV_P_ ev_timer *w, int revents);
+static void resume_accept_cb (EV_P_ ev_timer *w, int revents);
 
 int syslog_open = 0;
 sigset_t sig_default_set;
@@ -104,6 +104,7 @@ typedef struct sec_mod_watcher_st {
 ev_io ctl_watcher;
 sec_mod_watcher_st * sec_mod_watchers = NULL;
 ev_timer maintenance_watcher;
+ev_timer graceful_shutdown_watcher;
 ev_signal maintenance_sig_watcher;
 ev_signal term_sig_watcher;
 ev_signal int_sig_watcher;
@@ -132,7 +133,7 @@ static void add_listener(void *pool, struct listen_list_st *list,
 	ev_init(&tmp->io, listen_watcher_cb);
 	ev_io_set(&tmp->io, fd, EV_READ);
 
-	ev_init(&tmp->flow_control, flow_control_cb);
+	ev_init(&tmp->resume_accept, resume_accept_cb);
 
 	list_add(&list->head, &(tmp->list));
 	list->total++;
@@ -979,9 +980,8 @@ static void kill_children_auth_timeout(main_server_st* s)
 	}
 }
 
-static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
+static void terminate_server(main_server_st * s)
 {
-	main_server_st *s = ev_userdata(loop);
 	unsigned total = 10;
 
 	mslog(s, NULL, LOG_INFO, "termination request received; waiting for children to die");
@@ -997,6 +997,40 @@ static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 	}
 
 	ev_break (loop, EVBREAK_ALL);
+}
+
+static void graceful_shutdown_watcher_cb(EV_P_ ev_timer *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+
+	terminate_server(s);
+}
+
+static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	main_server_st *s = ev_userdata(loop);
+	struct listener_st *ltmp = NULL, *lpos;
+	unsigned int server_drain_ms = GETCONFIG(s)->server_drain_ms;
+
+	if (server_drain_ms == 0) {
+		terminate_server(s);
+	}
+	else 
+	{
+		mslog(s, NULL, LOG_INFO, "termination request received; stopping new connections");
+		graceful_shutdown_watcher.repeat = ((ev_tstamp)(server_drain_ms)) / 1000.;
+		mslog(s, NULL, LOG_INFO, "termination request received; waiting %d ms", server_drain_ms);
+		ev_timer_again(loop, &graceful_shutdown_watcher);
+
+		// Close the listening ports and stop the IO
+		list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
+			ev_io_stop(loop, &ltmp->io);
+			close(ltmp->fd);
+			list_del(&ltmp->list);
+			talloc_free(ltmp);
+			s->listen_list.total--;
+		}
+	}
 }
 
 static void reload_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
@@ -1034,13 +1068,19 @@ static void cmd_watcher_cb (EV_P_ ev_io *w, int revents)
 	}
 }
 
-static void flow_control_cb (EV_P_ ev_timer *w, int revents)
+static void resume_accept_cb (EV_P_ ev_timer *w, int revents)
 {
-	struct listener_st *ltmp = (struct listener_st *)((char*)w - offsetof(struct listener_st, flow_control));
+	main_server_st *s = ev_userdata(loop);
+	struct listener_st *ltmp = (struct listener_st *)((char*)w - offsetof(struct listener_st, resume_accept));
+	// Add hysteresis to the pause/resume cycle to damp oscillations
+	unsigned int resume_threshold = GETCONFIG(s)->max_clients * 9 / 10;
 
-	// Clear the timer and resume accept
-	ev_timer_stop(loop, &ltmp->flow_control);
-	ev_io_start(loop, &ltmp->io);
+	// Only resume accepting connections if we are under the limit
+	if (resume_threshold == 0 || s->stats.active_clients < resume_threshold) {
+		// Clear the timer and resume accept
+		ev_timer_stop(loop, &ltmp->resume_accept);
+		ev_io_start(loop, &ltmp->io);
+	}
 }
 
 static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
@@ -1217,6 +1257,12 @@ fork_failed:
 		forward_udp_to_owner(s, ltmp);
 	}
 
+	if (GETCONFIG(s)->max_clients > 0 && s->stats.active_clients >= GETCONFIG(s)->max_clients) {
+		ltmp->resume_accept.repeat = ((ev_tstamp)(1));
+		ev_io_stop(loop, &ltmp->io);
+		ev_timer_again(loop, &ltmp->resume_accept);
+	}
+
 	// Rate limiting of incoming connections is implemented as follows:
 	// After accepting a client connection:
 	//   Arm the flow control timer.
@@ -1230,9 +1276,9 @@ fork_failed:
 		if (retval || rqueue > wqueue / 2) {
 			mslog(s, NULL, LOG_INFO, "delaying accepts for %d ms", GETCONFIG(s)->rate_limit_ms);
 			// Arm the timer and pause accept
-			ltmp->flow_control.repeat = ((ev_tstamp)(GETCONFIG(s)->rate_limit_ms)) / 1000.;
+			ltmp->resume_accept.repeat = ((ev_tstamp)(GETCONFIG(s)->rate_limit_ms)) / 1000.;
 			ev_io_stop(loop, &ltmp->io);
-			ev_timer_again(loop, &ltmp->flow_control);
+			ev_timer_again(loop, &ltmp->resume_accept);
 		}
 	}
 }
@@ -1596,6 +1642,8 @@ int main(int argc, char** argv)
 	ev_init(&maintenance_watcher, maintenance_watcher_cb);
 	ev_timer_set(&maintenance_watcher, MAIN_MAINTENANCE_TIME, MAIN_MAINTENANCE_TIME);
 	ev_timer_start(loop, &maintenance_watcher);
+
+	ev_init(&graceful_shutdown_watcher, graceful_shutdown_watcher_cb);
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
 	ev_init(&latency_watcher, latency_watcher_cb);

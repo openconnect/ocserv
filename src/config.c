@@ -869,6 +869,9 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 	} else if (strcmp(name, "rate-limit-ms") == 0) {
 		if (!WARN_ON_VHOST(vhost->name, "rate-limit-ms", rate_limit_ms))
 			READ_NUMERIC(config->rate_limit_ms);
+	} else if (strcmp(name, "server-drain-ms") == 0) {
+		if (!WARN_ON_VHOST(vhost->name, "server-drain-ms", server_drain_ms))
+			READ_NUMERIC(config->server_drain_ms);
 	} else if (strcmp(name, "ocsp-response") == 0) {
 		READ_STRING(config->ocsp_response);
 #ifdef ANYCONNECT_CLIENT_COMPAT

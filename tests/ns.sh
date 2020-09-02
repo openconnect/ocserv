@@ -116,7 +116,7 @@ test -n "${ADDRESS2}" && ${IP} -n ${NSNAME2} route add ${CLI_ADDRESS2}/32 via ${
 ${IP} -n ${NSNAME2} addr
 ${IP} -n ${NSNAME2} route
 ${IP} -n ${NSNAME1} route
-${IP} -n ${NSNAME3} route
+test -n "${CLI_ADDRESS2}" && ${IP} -n ${NSNAME3} route
 
 ${IP} netns exec ${NSNAME1} ping -c 1 ${ADDRESS} >/dev/null 
 ${IP} netns exec ${NSNAME2} ping -c 1 ${ADDRESS} >/dev/null 

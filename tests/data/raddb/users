@@ -98,6 +98,7 @@ test-class	Cleartext-Password := "test-class"
 	Framed-IP-Netmask = 255.255.255.0,
 	Framed-Routing = Broadcast-Listen,
 	Class = "OU=group1;group2",
+	Class = "unknown",
 	Framed-MTU = 1500
 
 testtime	Cleartext-Password := "test"

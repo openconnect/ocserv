@@ -6,7 +6,7 @@
 - Added namespace support for listen address by introducing the
   listen-netns  option (#316)
 - Disable TLS1.3 when cisco client compatibility is enabled. New
-  anyconnect clients seem to supporting TLS1.3 but unable to handle
+  anyconnect clients seem to supporting TLS1.3 but are unable to handle
   a client with an RSA key (#318)
 - Enable a race free user disconnection via occtl (#59)
 - Added the config option of a pre-login-banner (#313)
@@ -14,6 +14,8 @@
   with the number of ocserv-sm process dependent on maximum clients and
   number of CPUs. Configuration option sec-mod-scale can be used to override
   the heuristics.
+- Fixed issue with group selection on radius servers sending multiple
+  group class attribute (#322).
 
 
 * Version 1.1.0 (released 2020-06-16)

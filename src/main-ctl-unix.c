@@ -425,10 +425,12 @@ static int append_user_info(method_ctx *ctx,
 
 		tmp = ctmp->config->rx_per_sec;
 		tmp *= 1000;
+		rep->has_rx_per_sec = ctmp->config->has_rx_per_sec;
 		rep->rx_per_sec = tmp;
 
 		tmp = ctmp->config->tx_per_sec;
 		tmp *= 1000;
+		rep->has_tx_per_sec = ctmp->config->has_tx_per_sec;
 		rep->tx_per_sec = tmp;
 
 		rep->dpd = ctmp->config->dpd;

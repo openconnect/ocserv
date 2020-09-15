@@ -316,10 +316,10 @@ int _listen_unix_ports(void *pool, struct perm_cfg_st* config,
  */
 static int
 listen_ports(void *pool, struct perm_cfg_st* config, 
-		struct listen_list_st *list)
+		struct listen_list_st *list,
+		struct netns_fds *netns)
 {
 	struct addrinfo hints, *res;
-	struct netns_fds netns = {-1, -1};
 	char portname[6];
 	int ret;
 #ifdef HAVE_LIBSYSTEMD
@@ -328,11 +328,6 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 
 	list_head_init(&list->head);
 	list->total = 0;
-
-	if (config->listen_netns_name && open_namespaces(&netns, config) < 0) {
-		fprintf(stderr, "cannot init listen namespaces\n");
-		return -1;
-	}
 
 #ifdef HAVE_LIBSYSTEMD
 	/* Support for systemd socket-activatable service */
@@ -427,7 +422,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list, &netns);
+		ret = _listen_ports(pool, config, res, list, netns);
 		freeaddrinfo(res);
 
 		if (ret < 0) {
@@ -464,17 +459,12 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 			return -1;
 		}
 
-		ret = _listen_ports(pool, config, res, list, &netns);
+		ret = _listen_ports(pool, config, res, list, netns);
 		if (ret < 0) {
 			return -1;
 		}
 
 		freeaddrinfo(res);
-	}
-
-	if (config->listen_netns_name && close_namespaces(&netns) < 0) {
-		fprintf(stderr, "cannot close listen namespaces\n");
-		return -1;
 	}
 
 	return 0;
@@ -808,7 +798,7 @@ int sfd = -1;
 			goto fail;
 		}
 
-		sfd = socket(listener->family, SOCK_DGRAM, listener->protocol);
+		sfd = socket_netns(&s->netns, listener->family, SOCK_DGRAM, listener->protocol);
 		if (sfd < 0) {
 			e = errno;
 			mslog(s, proc_to_send, LOG_ERR, "new UDP socket failed: %s",
@@ -1415,6 +1405,8 @@ int main(int argc, char** argv)
 	s->stats.start_time = s->stats.last_reset = time(0);
 	s->top_fd = -1;
 	s->ctl_fd = -1;
+	s->netns.default_fd = -1;
+	s->netns.listen_fd = -1;
 
 	if (!hmac_init_key(sizeof(s->hmac_key), (uint8_t*)(s->hmac_key))) {
 		fprintf(stderr, "unable to generate hmac key\n");
@@ -1476,8 +1468,12 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
+	if (GETPCONFIG(s)->listen_netns_name && open_namespaces(&s->netns, GETPCONFIG(s)) < 0) {
+		fprintf(stderr, "cannot init listen namespaces\n");
+		exit(1);
+	}
 	/* Listen to network ports */
-	ret = listen_ports(s, GETPCONFIG(s), &s->listen_list);
+	ret = listen_ports(s, GETPCONFIG(s), &s->listen_list, &s->netns);
 	if (ret < 0) {
 		fprintf(stderr, "Cannot listen to specified ports\n");
 		exit(1);
@@ -1670,6 +1666,10 @@ int main(int argc, char** argv)
 
 	snapshot_terminate(config_snapshot);
 
+	if (GETPCONFIG(s)->listen_netns_name && close_namespaces(&s->netns) < 0) {
+		fprintf(stderr, "cannot close listen namespaces\n");
+		exit(1);
+	}
 	clear_lists(s);
 	clear_vhosts(s->vconfig);
 	talloc_free(s->config_pool);

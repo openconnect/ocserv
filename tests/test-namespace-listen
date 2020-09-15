@@ -15,31 +15,37 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# we start server in ns1, but listen in ns2, and test client from ns3
+
 SERV="${SERV:-../src/ocserv}"
 PIDFILE=ocserv-pid.$$.tmp
+CLIPID=oc-pid.$$.tmp
 srcdir=${srcdir:-.}
-LISTEN_NS="ocserv-listen-ns-tmp-$$"
-OUTFILE=lsof.$$.tmp
+OUTFILE=ss.$$.tmp
 SS=$(which ss)
 
 ADDRESS=10.213.2.1
+ADDRESS2=10.213.2.2
 CLI_ADDRESS=10.213.1.1
+CLI_ADDRESS2=10.213.1.2
 VPNNET=172.17.215.0/24
 VPNADDR=172.17.215.1
 
 function finish {
   set +e
   echo " * Cleaning up..."
+  test -f "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
+  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${PID}" && kill ${PID} >/dev/null 2>&1
   test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
-  test -n "${LISTEN_NS}" && ${IP} netns delete ${LISTEN_NS} >/dev/null 2>&1
   test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
 }
 trap finish EXIT
 
 . `dirname $0`/common.sh
 . `dirname $0`/ns.sh
+LISTEN_NS=$NSNAME2
 
 eval "${GETPORT}"
 
@@ -48,21 +54,71 @@ if test "$VERBOSE" = 1;then
 DEBUG="-d 3"
 fi
 
-echo "Seting up listen namespace"
-${IP} netns add ${LISTEN_NS}
-
-${CMDNS2} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+${CMDNS1} ${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
 
 sleep 5
 
-${IP} netns exec ${LISTEN_NS} ${SS} -tulwn>${OUTFILE}
-grep "LISTEN" ${OUTFILE}
+echo "server: check listen tcp"
+${SS} -N ${LISTEN_NS} -nt -o state listening sport = :${PORT} src ${ADDRESS} > ${OUTFILE}
+grep -E "0[ ]+[0-9]+[ ]+${ADDRESS}:${PORT}[ ]+.*?:\*" ${OUTFILE}
 if test $? != 0; then
-	echo "ocserv is not listening in the correct namespace!"
+	echo "server: check listen tcp failed"
+	cat ${OUTFILE}
 	exit 1
 fi
 
-kill $PID
+echo "server: check listen udp"
+${SS} -N ${LISTEN_NS} -nu -o state unconnected sport = :${PORT} src ${ADDRESS} > ${OUTFILE}
+grep -E "0[ ]+0[ ]+${ADDRESS}:${PORT}[ ]+.*?:\*" ${OUTFILE}
+if test $? != 0; then
+	echo "server: check listen udp failed"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+echo " connecting to server"
+(echo "test" | ${CMDNS3} $OPENCONNECT $ADDRESS:$PORT -u "test" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --pid-file=${CLIPID} -b) ||
+	fail $PID "could not connect to server"
+sleep 5
+
+echo "server: check estab tcp"
+${SS} -N ${LISTEN_NS} -nt -o state established sport = :${PORT} src ${ADDRESS} dst ${CLI_ADDRESS2} > ${OUTFILE}
+grep -E "0[ ]+0[ ]+${ADDRESS}:${PORT}[ ]+${CLI_ADDRESS2}:[0-9]+" ${OUTFILE}
+if test $? != 0; then
+	echo "server: check estab tcp failed"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+echo "server: check estab udp"
+${SS} -N ${LISTEN_NS} -nu -o state established sport = :${PORT} src ${ADDRESS} dst ${CLI_ADDRESS2} > ${OUTFILE}
+grep -E "0[ ]+0[ ]+${ADDRESS}:${PORT}[ ]+${CLI_ADDRESS2}:[0-9]+" ${OUTFILE}
+if test $? != 0; then
+	echo "server: check estab udp failed"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+echo "client: check estab tcp"
+${SS} -N ${NSNAME3} -nt -o state established dport = :${PORT} src ${CLI_ADDRESS2} dst ${ADDRESS} > ${OUTFILE}
+grep -E "0[ ]+0[ ]+${CLI_ADDRESS2}:[0-9]+[ ]+${ADDRESS}:${PORT}" ${OUTFILE}
+if test $? != 0; then
+	echo "client: check estab tcp failed"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+echo "client: check estab udp"
+${SS} -N ${NSNAME3} -nu -o state established dport = :${PORT} src ${CLI_ADDRESS2} dst ${ADDRESS} > ${OUTFILE}
+grep -E "0[ ]+0[ ]+${CLI_ADDRESS2}:[0-9]+[ ]+${ADDRESS}:${PORT}" ${OUTFILE}
+if test $? != 0; then
+	echo "client: check estab udp failed"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+kill $(cat ${CLIPID})
+kill ${PID}
 wait
 
 exit 0

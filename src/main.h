@@ -36,6 +36,7 @@
 #include <ev.h>
 #include <hmac.h>
 #include "vhost.h"
+#include <namespace.h>
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
 # include <limits.h>
@@ -294,6 +295,8 @@ typedef struct main_server_st {
 
 	/* used as temporary buffer (currently by forward_udp_to_owner) */
 	uint8_t msg_buffer[MAX_MSG_SIZE];
+
+	struct netns_fds netns;
 
 #ifdef RLIMIT_NOFILE
 	struct rlimit fd_limits_default_set;

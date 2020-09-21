@@ -15,7 +15,8 @@ and handling of a 'plain' password file used by ocserv.
     location.
 
   * **-g, --group**::
-    Specify the user's group name.
+    Specify the user's group name. Note that groups of one character such as
+    '*' and 'x', are ignored.
 
   * **-d, --delete**::
     Deletes the specified user from the password file.

@@ -1,4 +1,4 @@
-* Version 1.1.1 (unreleased)
+* Version 1.1.1 (released 2020-09-21)
 - Fixed compatibility with OpenBSD that lacks procfs (#312)
 - Improved rate-limit-ms and made it dependent on secmod backlog. This
   makes the server more resilient (and prevents connection failures) on

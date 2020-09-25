@@ -542,6 +542,7 @@ void clear_lists(main_server_st *s)
 	proc_table_deinit(s);
 	ctl_handler_deinit(s);
 	main_ban_db_deinit(s);
+	if_address_cleanup(s);
 
 	/* clear libev state */
 	if (loop) {
@@ -1441,6 +1442,11 @@ int main(int argc, char** argv)
 	ip_lease_init(&s->ip_leases);
 	proc_table_init(s);
 	main_ban_db_init(s);
+	if (if_address_init(s) == 0)
+	{
+		fprintf(stderr, "failed to initialize local addresses\n");
+		exit(1);
+	}
 
 	sigemptyset(&sig_default_set);
 

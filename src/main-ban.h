@@ -44,4 +44,7 @@ unsigned main_ban_db_elems(main_server_st *s);
 void main_ban_db_deinit(main_server_st *s);
 void *main_ban_db_init(main_server_st *s);
 
+int if_address_init(main_server_st *s);
+void if_address_cleanup(main_server_st * s);
+
 #endif

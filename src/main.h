@@ -24,6 +24,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <net/if.h>
 #include <vpn.h>
@@ -261,6 +262,11 @@ typedef struct sec_mod_instance_st {
 
 } sec_mod_instance_st;
 
+typedef struct if_address_st {
+	struct sockaddr if_addr;
+	struct sockaddr if_netmask;
+} if_address_st;
+
 typedef struct main_server_st {
 	/* virtual hosts are only being added to that list, never removed */
 	struct list_head *vconfig;
@@ -301,6 +307,9 @@ typedef struct main_server_st {
 #ifdef RLIMIT_NOFILE
 	struct rlimit fd_limits_default_set;
 #endif
+
+	struct if_address_st * if_addresses;
+	unsigned int if_addresses_count; 
 } main_server_st;
 
 void clear_lists(main_server_st *s);

@@ -43,6 +43,10 @@
 #include <arpa/inet.h>
 #include <ccan/hash/hash.h>
 #include <ccan/htable/htable.h>
+#include <ifaddrs.h>
+#include <sys/socket.h>
+
+static bool if_address_test_local(main_server_st * s, struct sockaddr_storage *addr);
 
 static size_t rehash(const void *_e, void *unused)
 {
@@ -270,6 +274,11 @@ unsigned check_if_banned(main_server_st *s, struct sockaddr_storage *addr, sockl
 
 	(void)(txt);
 
+	if (if_address_test_local(s, addr)) {
+		mslog(s, NULL, LOG_DEBUG, "Not applying ban to local IP: %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), 0));
+		return 0;
+	}
+
 	in_size = SA_IN_SIZE(addr_size);
 	if (in_size != 4 && in_size != 16) {
 	    	mslog(s, NULL, LOG_ERR, "unknown address type for %s", human_addr2((struct sockaddr*)addr, addr_size, txt, sizeof(txt), 0));
@@ -320,3 +329,118 @@ void cleanup_banned_entries(main_server_st *s)
 	}
 }
 
+int if_address_init(main_server_st *s)
+{
+	struct ifaddrs * ifaddr = NULL, *ifa;
+	if_address_st * local_if_addresses = NULL;
+	int retval = 0;
+	unsigned count = 0;
+	s->if_addresses_count = 0;
+	s->if_addresses = NULL;
+
+	if (getifaddrs(&ifaddr) < 0) {
+		int err = errno;
+		fprintf(stderr, "Failed to read local if address list: %s", strerror(err));
+		goto cleanup;
+	}
+
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL) {
+			continue;
+		}
+		count ++;
+	}
+	
+	local_if_addresses = talloc_array(s, if_address_st, count);
+	if (local_if_addresses == NULL) {
+		fprintf(stderr, "Failed to allocate");
+		goto cleanup;
+	}
+
+	count = 0;
+
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		sa_family_t family;
+		if (ifa->ifa_addr == NULL) {
+			continue;
+		}
+		family = ifa->ifa_addr->sa_family;
+		if (family == AF_INET || family == AF_INET6) {
+			memcpy(&local_if_addresses[count].if_addr, ifa->ifa_addr, sizeof(struct sockaddr));
+			memcpy(&local_if_addresses[count].if_netmask, ifa->ifa_netmask, sizeof(struct sockaddr));
+			count++;
+		}
+	}
+
+	s->if_addresses = local_if_addresses;
+	s->if_addresses_count = count;
+	local_if_addresses = NULL;
+
+	retval = 1;
+
+cleanup:
+	if (ifaddr != NULL)
+		freeifaddrs(ifaddr);
+
+	if (local_if_addresses != NULL)
+		talloc_free(local_if_addresses);
+
+	return retval;
+}
+
+static bool test_local_ipv4(struct sockaddr_in * remote, struct sockaddr_in * local, struct sockaddr_in * network)
+{
+	uint32_t l = local->sin_addr.s_addr & network->sin_addr.s_addr;
+	uint32_t r = remote->sin_addr.s_addr & network->sin_addr.s_addr;
+	if (l != r)
+		return false;
+	else
+		return true;
+}
+
+static bool test_local_ipv6(struct sockaddr_in6 * remote, struct sockaddr_in6 * local, struct sockaddr_in6 * network)
+{
+	unsigned index = 0;
+	
+	for (index = 0; index < 4; index ++) {
+		uint32_t l = local->sin6_addr.s6_addr32[index] & network->sin6_addr.s6_addr32[index];
+		uint32_t r = remote->sin6_addr.s6_addr32[index] & network->sin6_addr.s6_addr32[index];
+		if (l != r) 
+			return false;
+	}
+	return true;
+}
+
+static bool if_address_test_local(main_server_st * s, struct sockaddr_storage *addr)
+{
+	unsigned index;
+	for (index = 0; index < s->if_addresses_count; index ++)
+	{
+		if_address_st * ifa = &s->if_addresses[index];
+		if (ifa->if_addr.sa_family != addr->ss_family)
+			continue;
+
+		switch (addr->ss_family) {
+		case AF_INET:
+			if (test_local_ipv4((struct sockaddr_in *)addr, (struct sockaddr_in *)&ifa->if_addr, (struct sockaddr_in *)&ifa->if_netmask))
+				return true;
+			break;
+		case AF_INET6:
+			if (test_local_ipv6((struct sockaddr_in6 *)addr, (struct sockaddr_in6 *)&ifa->if_addr, (struct sockaddr_in6 *)&ifa->if_netmask))
+				return true;
+			break;
+		default:
+			break;
+		}
+	}
+	return false;
+}
+
+void if_address_cleanup(main_server_st * s)
+{
+	if (s->if_addresses)
+		talloc_free(s->if_addresses);
+
+	s->if_addresses = NULL;
+	s->if_addresses_count = 0;
+}

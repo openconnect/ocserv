@@ -57,10 +57,10 @@ if ENABLE_ROOT_TESTS
 #other root requiring tests
 dist_check_SCRIPTS += haproxy-connect test-iroute test-multi-cookie test-pass-script \
 	test-cookie-timeout test-cookie-timeout-2 test-explicit-ip \
-	test-cookie-invalidation test-user-config test-append-routes test-ban \
+	test-cookie-invalidation test-user-config test-append-routes test-ban \ 
 	multiple-routes json test-udp-listen-host test-max-same-1 test-script-multi-user \
 	apple-ios ipv6-iface test-namespace-listen disconnect-user disconnect-user2 \
-	ping-leases
+	ping-leases test-ban-local
 
 if RADIUS_ENABLED
 dist_check_SCRIPTS += radius-group radius-otp

@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+# Copyright (C) 2015 Red Hat
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+OCCTL_SOCKET=./occtl-ban-$$.socket
+PIDFILE=ocserv-pid.$$.tmp
+OUTFILE=ban.$$.tmp
+
+ADDRESS=127.0.0.1
+VPNNET=172.17.215.0/24
+VPNADDR=172.17.215.1
+VPNNET6=fc39:d561:62c6:861b:9f38:9734:9fa1:0/112
+VPNADDR6=fc39:d561:62c6:861b:9f38:9734:9fa1:0
+
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+update_config test-ban.config
+if test "$VERBOSE" = 1;then
+DEBUG="-d 3"
+fi
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${OUTFILE}" && rm -f ${OUTFILE} >/dev/null 2>&1
+}
+trap finish EXIT
+
+echo "Testing whether ban operates as expected on a local subnet ... "
+
+echo $PORT
+
+${SERV} -p ${PIDFILE} -f -c ${CONFIG} ${DEBUG} & PID=$!
+
+sleep 4
+
+echo "Connecting with wrong password 5 times... "
+echo "notest" | ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+echo "notest" | ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3
+
+echo ""
+echo "Connecting with correct password... "
+eval `echo "test" | ${OPENCONNECT} --passwd-on-stdin -q ${ADDRESS}:${PORT} -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+
+if [ -z "$COOKIE" ];then
+	fail $PID "Could not obtain cookie even though client should be exempt"
+fi
+
+${OCCTL} -s ${OCCTL_SOCKET} show status >${OUTFILE}
+if test $? != 0;then
+	echo "occtl couldn't run!"
+	exit 1
+fi
+
+grep "IPs in ban list: 1$" ${OUTFILE}
+if test $? != 0;then
+	echo "The banned list didn't contain the expected (1) entries!"
+	cat ${OUTFILE}
+	exit 1
+fi
+
+
+kill $PID
+wait
+
+exit 0

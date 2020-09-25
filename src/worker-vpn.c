@@ -103,6 +103,8 @@ static void set_socket_timeout(worker_st * ws, int fd);
 
 static void link_mtu_set(worker_st * ws, unsigned mtu);
 
+static int test_for_tcp_health_probe(struct worker_st *ws);
+
 static void handle_alarm(int signo)
 {
 	if (global_ws)
@@ -788,6 +790,11 @@ void vpn_server(struct worker_st *ws)
 		 * after client hello is received. We set temporarily a value
 		 * as we need to set some cipher priorities for handshake to start. */
 		ws->vhost = find_vhost(ws->vconfig, NULL);
+
+		if (test_for_tcp_health_probe(ws) != 0) {
+			oclog(ws, LOG_DEBUG, "Received TCP health probe from load-balancer");
+			exit_worker_reason(ws, REASON_HEALTH_PROBE);
+		}
 
 		/* initialize the session */
 		ret = gnutls_init(&session, GNUTLS_SERVER);
@@ -2688,4 +2695,17 @@ static int parse_dtls_data(struct worker_st *ws,
 	    parse_data(ws, buf, buf_size, now, 1);
 	ws->last_msg_udp = now;
 	return ret;
+}
+
+static int test_for_tcp_health_probe(struct worker_st *ws)
+{
+	int ret;
+	uint8_t buffer[1];
+	ret = recv(ws->conn_fd, buffer, sizeof(buffer), MSG_PEEK);
+
+	// If we get back an error, assume this was a tcp health probe
+	if (ret > 0) 
+		return 0;
+	else 
+		return 1;
 }

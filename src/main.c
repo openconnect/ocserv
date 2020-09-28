@@ -894,7 +894,6 @@ static void sec_mod_child_watcher_cb(struct ev_loop *loop, ev_child *w, int reve
 	ev_child_stop(loop, w);
 	mslog(s, NULL, LOG_ERR, "ocserv-secmod died unexpectedly");
 	ev_feed_signal_event (loop, SIGTERM);
-
 }
 
 void script_child_watcher_cb(struct ev_loop *loop, ev_child *w, int revents)
@@ -1007,18 +1006,20 @@ static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
 	}
 	else 
 	{
-		mslog(s, NULL, LOG_INFO, "termination request received; stopping new connections");
-		graceful_shutdown_watcher.repeat = ((ev_tstamp)(server_drain_ms)) / 1000.;
-		mslog(s, NULL, LOG_INFO, "termination request received; waiting %d ms", server_drain_ms);
-		ev_timer_again(loop, &graceful_shutdown_watcher);
+		if (!ev_is_active(&graceful_shutdown_watcher)) {
+			mslog(s, NULL, LOG_INFO, "termination request received; stopping new connections");
+			graceful_shutdown_watcher.repeat = ((ev_tstamp)(server_drain_ms)) / 1000.;
+			mslog(s, NULL, LOG_INFO, "termination request received; waiting %d ms", server_drain_ms);
+			ev_timer_again(loop, &graceful_shutdown_watcher);
 
-		// Close the listening ports and stop the IO
-		list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
-			ev_io_stop(loop, &ltmp->io);
-			close(ltmp->fd);
-			list_del(&ltmp->list);
-			talloc_free(ltmp);
-			s->listen_list.total--;
+			// Close the listening ports and stop the IO
+			list_for_each_safe(&s->listen_list.head, ltmp, lpos, list) {
+				ev_io_stop(loop, &ltmp->io);
+				close(ltmp->fd);
+				list_del(&ltmp->list);
+				talloc_free(ltmp);
+				s->listen_list.total--;
+			}
 		}
 	}
 }
@@ -1283,6 +1284,7 @@ static void sec_mod_watcher_cb (EV_P_ ev_io *w, int revents)
 	if (ret < 0) { /* bad commands from sec-mod are unacceptable */
 		mslog(s, NULL, LOG_ERR,
 		       "error in command from sec-mod");
+		ev_io_stop(loop, w);
 		ev_feed_signal_event (loop, SIGTERM);
 	}
 }

@@ -2,7 +2,7 @@
 
 This program is openconnect VPN server (ocserv), a server for the
 [openconnect VPN client](http://www.infradead.org/openconnect/).
-It follows the [openconnect protocol](https://github.com/openconnect/protocol)
+It follows the [openconnect protocol](https://gitlab.com/openconnect/protocol)
 and is believed to be compatible with CISCO's AnyConnect SSL VPN. 
 
 The program consists of:
@@ -123,7 +123,7 @@ and set these users on run-as-user and run-as-group options. The run:
 
 # Configuration
 
-Several configuration instruction are available in [the recipes repository](https://github.com/openconnect/recipes).
+Several configuration instruction are available in [the recipes repository](https://gitlab.com/openconnect/recipes).
 
 
 # Profiling

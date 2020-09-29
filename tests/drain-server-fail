@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Nikos Mavrogiannopoulos
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+SERV="${SERV:-../src/ocserv}"
+OCCTL="${OCCTL:-../src/occtl/occtl}"
+srcdir=${srcdir:-.}
+NO_NEED_ROOT=1
+PIDFILE=ocserv-pid.$$.tmp
+OCCTL_SOCKET=./occtl-drain-$$.socket
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+echo "Testing server-drain-ms when sec-mod abruptively fails..."
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${CONFIG}" && rm -f "${CONFIG}" >/dev/null 2>&1
+  test -n "${PID}" && kill "${PID}" >/dev/null 2>&1
+}
+trap finish EXIT
+
+update_config test1.config
+echo server-drain-ms=15000 >> ${CONFIG}
+echo "occtl-socket-file = $OCCTL_SOCKET" >> ${CONFIG}
+echo "use-occtl = true" >> ${CONFIG}
+
+launch_simple_sr_server -d 3 -p ${PIDFILE} -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo "Connecting to obtain cookie... "
+( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT -q $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly ) ||
+	fail $PID "Could not receive cookie from server"
+
+if ! test -f ${PIDFILE};then
+	fail $PID "Could not find pid file ${PIDFILE}"
+fi
+
+
+SPID=$(${OCCTL} -s ${OCCTL_SOCKET} show status|grep -i "Sec-mod PID"|cut -d ':' -f 2)
+if test -z "${SPID}";then
+	echo "Could not detect sec-mod PID"
+	${OCCTL} -s ${OCCTL_SOCKET} show status
+	exit 1
+fi
+
+echo "Killing sec-mod"
+kill -15 ${SPID}
+
+function wait_ocserv {
+  local max_time=$1
+  local time=0
+
+  while [ ${time} -lt ${max_time} ]
+  do
+    sleep 5
+    test -e ${OCCTL_SOCKET}
+    if ! test $? = 0;then
+      echo "ocserv is down"
+      return 0
+    fi
+    let time+=5
+  done
+
+  #timeout
+  echo "ocserv did not get offline after ${time} secs"
+  kill -9 $(cat $PIDFILE)
+  exit 1
+}
+
+wait_ocserv 30
+
+exit 0

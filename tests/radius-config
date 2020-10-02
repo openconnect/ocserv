@@ -173,7 +173,7 @@ fi
 echo "Transferred ${OCTETS} bytes"
 
 echo "Waiting for disconnection report"
-wait_file_contents ${RADIUSLOG} "Acct-Terminate-Cause" 70
+wait_file_contents ${RADIUSLOG} "Acct-Terminate-Cause" 120
 
 DISC=$(cat ${RADIUSLOG}|grep "Acct-Status-Type = Start"|tail -1)
 if test -z "$DISC";then

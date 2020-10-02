@@ -49,22 +49,22 @@
 #endif
 
 /* recv from the new file descriptor and make sure we have a valid packet */
-static unsigned recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg **tmsg)
+static unsigned recv_from_new_fd(struct worker_st * ws, struct dtls_st *dtls, int fd, UdpFdMsg **tmsg)
 {
 	int saved_fd, ret;
 	UdpFdMsg *saved_tmsg;
 
 	/* don't bother with anything if we are on uninitialized state */
-	if (ws->dtls_session == NULL || ws->udp_state != UP_ACTIVE)
+	if (dtls->dtls_session == NULL || dtls->udp_state != UP_ACTIVE)
 		return 1;
 
-	saved_fd = ws->dtls_tptr.fd;
-	saved_tmsg = ws->dtls_tptr.msg;
+	saved_fd = dtls->dtls_tptr.fd;
+	saved_tmsg = dtls->dtls_tptr.msg;
 
-	ws->dtls_tptr.msg = *tmsg;
-	ws->dtls_tptr.fd = fd;
+	dtls->dtls_tptr.msg = *tmsg;
+	dtls->dtls_tptr.fd = fd;
 
-	ret = gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
+	ret = gnutls_record_recv(dtls->dtls_session, ws->buffer, ws->buffer_size);
 	/* we receive GNUTLS_E_AGAIN in case the packet was discarded */
 	if (ret > 0) {
 		ret = 1;
@@ -73,9 +73,9 @@ static unsigned recv_from_new_fd(struct worker_st *ws, int fd, UdpFdMsg **tmsg)
 
 	ret = 0;
  revert:
- 	*tmsg = ws->dtls_tptr.msg;
- 	ws->dtls_tptr.fd = saved_fd;
- 	ws->dtls_tptr.msg = saved_tmsg;
+ 	*tmsg = dtls->dtls_tptr.msg;
+ 	dtls->dtls_tptr.fd = saved_fd;
+ 	dtls->dtls_tptr.msg = saved_tmsg;
  	return ret;
 }
 
@@ -86,6 +86,7 @@ int handle_commands_from_main(struct worker_st *ws)
 	UdpFdMsg *tmsg = NULL;
 	int ret;
 	int fd = -1;
+	struct dtls_st * dtls = NULL;
 	/*int cmd_data_len;*/
 
 	memset(&ws->buffer, 0, sizeof(ws->buffer));
@@ -113,7 +114,7 @@ int handle_commands_from_main(struct worker_st *ws)
 		case CMD_UDP_FD: {
 			unsigned has_hello = 1;
 
-			if (ws->udp_state != UP_WAIT_FD) {
+			if (DTLS_ACTIVE(ws)->udp_state != UP_WAIT_FD) {
 				oclog(ws, LOG_DEBUG, "received another a UDP fd!");
 			}
 
@@ -131,24 +132,27 @@ int handle_commands_from_main(struct worker_st *ws)
 			if (has_hello == 0) {
 				/* check if the first packet received is a valid one -
 				 * if not discard the new fd */
-				if (!recv_from_new_fd(ws, fd, &tmsg)) {
+				if (!recv_from_new_fd(ws, DTLS_ACTIVE(ws), fd, &tmsg)) {
 					oclog(ws, LOG_INFO, "received UDP fd message but its session has invalid data!");
 					if (tmsg)
 						udp_fd_msg__free_unpacked(tmsg, NULL);
 					close(fd);
 					return 0;
 				}
+				dtls = DTLS_ACTIVE(ws);
 			} else { /* received client hello */
-				ws->udp_state = UP_SETUP;
+				dtls = DTLS_INACTIVE(ws);
+				dtls->udp_state = UP_SETUP;
+				oclog(ws, LOG_DEBUG, "Starting DTLS session %d", ws->dtls_active_session ^ 1);
 			}
 
-			if (ws->dtls_tptr.fd != -1)
-				close(ws->dtls_tptr.fd);
-			if (ws->dtls_tptr.msg != NULL)
-				udp_fd_msg__free_unpacked(ws->dtls_tptr.msg, NULL);
+			if (dtls->dtls_tptr.fd != -1)
+				close(dtls->dtls_tptr.fd);
+			if (dtls->dtls_tptr.msg != NULL)
+				udp_fd_msg__free_unpacked(dtls->dtls_tptr.msg, NULL);
 
-			ws->dtls_tptr.msg = tmsg;
-			ws->dtls_tptr.fd = fd;
+			dtls->dtls_tptr.msg = tmsg;
+			dtls->dtls_tptr.fd = fd;
 
 			if (WSCONFIG(ws)->try_mtu == 0)
 				set_mtu_disc(fd, ws->proto, 0);
@@ -170,8 +174,8 @@ int handle_commands_from_main(struct worker_st *ws)
 udp_fd_fail:
 	if (tmsg)
 		udp_fd_msg__free_unpacked(tmsg, NULL);
-	if (ws->dtls_tptr.fd == -1)
-		ws->udp_state = UP_DISABLED;
+	if (dtls && dtls->dtls_tptr.fd == -1)
+		dtls->udp_state = UP_DISABLED;
 
 	return -1;
 }

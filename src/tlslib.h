@@ -144,8 +144,8 @@ void cstp_cork(struct worker_st *ws);
 int cstp_uncork(struct worker_st *ws);
 
 /* DTLS API */
-void dtls_close(struct worker_st *ws);
-ssize_t dtls_send(struct worker_st *ws, const void *data, size_t data_size);
+void dtls_close(struct dtls_st *dtls);
+ssize_t dtls_send(struct dtls_st *dtls, const void *data, size_t data_size);
 
 /* packet API */
 inline static void packet_deinit(void *p)
@@ -158,7 +158,7 @@ inline static void packet_deinit(void *p)
 }
 
 ssize_t cstp_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
-ssize_t dtls_recv_packet(struct worker_st *ws, gnutls_datum_t *data, void **p);
+ssize_t dtls_recv_packet(struct dtls_st *dtls, gnutls_datum_t *data, void **p);
 
 /* Helper functions */
 unsigned need_file_reload(const char *file, time_t last_access);

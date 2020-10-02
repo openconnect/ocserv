@@ -339,13 +339,13 @@ void cstp_fatal_close(worker_st *ws,
 	}
 }
 
-ssize_t dtls_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
+ssize_t dtls_recv_packet(struct dtls_st *dtls, gnutls_datum_t *data, void **p)
 {
 	int ret;
 #ifdef ZERO_COPY
 	gnutls_packet_t packet = NULL;
 
-	ret = gnutls_record_recv_packet(ws->dtls_session, &packet);
+	ret = gnutls_record_recv_packet(dtls->dtls_session, &packet);
 	if (ret > 0) {
 		gnutls_packet_get(packet, data, NULL);
 		*p = packet;
@@ -354,7 +354,7 @@ ssize_t dtls_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
 	}
 #else
 	ret =
-	    gnutls_record_recv(ws->dtls_session, ws->buffer, ws->buffer_size);
+	    gnutls_record_recv(dtls->dtls_session, ws->buffer, ws->buffer_size);
 	data->data = ws->buffer;
 	data->size = ret;
 #endif
@@ -362,7 +362,7 @@ ssize_t dtls_recv_packet(worker_st *ws, gnutls_datum_t *data, void **p)
 	return ret;
 }
 
-ssize_t dtls_send(worker_st *ws, const void *data,
+ssize_t dtls_send(struct dtls_st *dtls, const void *data,
 			size_t data_size)
 {
 	int ret;
@@ -370,7 +370,7 @@ ssize_t dtls_send(worker_st *ws, const void *data,
 	const uint8_t* p = data;
 
 	while(left > 0) {
-		ret = gnutls_record_send(ws->dtls_session, p, data_size);
+		ret = gnutls_record_send(dtls->dtls_session, p, data_size);
 		if (ret < 0) {
 			if (ret != GNUTLS_E_AGAIN && ret != GNUTLS_E_INTERRUPTED) {
 				return ret;
@@ -389,10 +389,10 @@ ssize_t dtls_send(worker_st *ws, const void *data,
 	return data_size;
 }
 
-void dtls_close(worker_st *ws)
+void dtls_close(struct dtls_st *dtls)
 {
-	gnutls_bye(ws->dtls_session, GNUTLS_SHUT_WR);
-	gnutls_deinit(ws->dtls_session);
+	gnutls_bye(dtls->dtls_session, GNUTLS_SHUT_WR);
+	gnutls_deinit(dtls->dtls_session);
 }
 
 static size_t rehash(const void *_e, void *unused)
@@ -467,7 +467,8 @@ static int verify_certificate_cb(gnutls_session_t session)
 		return -1;
 	}
 
-	if (session == ws->dtls_session) {
+	if ((session == DTLS_ACTIVE(ws)->dtls_session) ||
+		(session == DTLS_INACTIVE(ws)->dtls_session)) {
 		oclog(ws, LOG_ERR, "unexpected issue; client shouldn't have offered a certificate in DTLS");
 		return GNUTLS_E_CERTIFICATE_ERROR;
 	}

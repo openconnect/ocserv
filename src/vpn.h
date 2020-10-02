@@ -416,6 +416,7 @@ typedef struct attic_entry_st {
 /* generic thing to stop complaints */
 struct worker_st;
 struct main_server_st;
+struct dtls_st;
 
 #define MAX_BANNER_SIZE 256
 #define MAX_USERNAME_SIZE 64

@@ -180,6 +180,9 @@ check_PROGRAMS += gen_oidc_test_data
 dist_check_SCRIPTS += test-oidc
 endif
 
+
+dist_check_SCRIPTS += test-replay
+
 TESTS =  $(check_PROGRAMS) $(dist_check_SCRIPTS) $(xfail_scripts)
 
 XFAIL_TESTS = $(xfail_scripts)

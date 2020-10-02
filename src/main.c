@@ -1172,7 +1172,6 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 
 			ws->cmd_fd = cmd_fd[1];
 			ws->tun_fd = -1;
-			ws->dtls_tptr.fd = -1;
 			set_cloexec_flag(fd, false);
 			ws->conn_fd = fd;
 			ws->conn_type = stype;

@@ -1,6 +1,9 @@
 * Version 1.1.2 (unreleased)
 - Fixed an infinite loop on sec-mod crash when server-drain-ms is set
   (#356)
+- Don't apply BanIP checks to clients on the same subnet (#360)
+- Don't attempt TLS if the client closes the connection with zero data
+  sent (#357)
 
 
 * Version 1.1.1 (released 2020-09-21)

@@ -117,7 +117,7 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 		}
 	}
 
-	mslog(s, proc, LOG_INFO, "user disconnected (reason: %s, rx: %"PRIu64", tx: %"PRIu64")",
+	mslog(s, proc, (proc->discon_reason != REASON_HEALTH_PROBE ? LOG_INFO : LOG_DEBUG), "user disconnected (reason: %s, rx: %"PRIu64", tx: %"PRIu64")",
 		discon_reason_to_str(proc->discon_reason), proc->bytes_in, proc->bytes_out);
 
 	pid = remove_from_script_list(s, proc);

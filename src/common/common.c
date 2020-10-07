@@ -192,6 +192,8 @@ const char *discon_reason_to_str(unsigned reason)
 		return "unspecified error";
 	case REASON_SESSION_TIMEOUT:
 		return "session timeout";
+	case REASON_HEALTH_PROBE:
+		return "TCP health probe";
 	default:
 		snprintf(tmp, sizeof(tmp), "unknown (%u)", reason);
 		return tmp;

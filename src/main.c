@@ -1331,7 +1331,7 @@ static void latency_watcher_cb(EV_P_ ev_timer *w, int revents)
 	mslog(
 		s, 
 		NULL, 
-		LOG_INFO, 
+		LOG_DEBUG, 
 		"Latency: Median Total %ld RMS Total %ld Sample Count %ld", 
 		s->stats.current_latency_stats.median_total, 
 		s->stats.current_latency_stats.rms_total, 

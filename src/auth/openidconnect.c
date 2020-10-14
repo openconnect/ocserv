@@ -254,7 +254,7 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 
 	curl = curl_easy_init();
 	if (!curl) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to download JSON document: URI %s\n",
 		       uri);
 		goto cleanup;
@@ -262,7 +262,7 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 
 	res = curl_easy_setopt(curl, CURLOPT_URL, uri);
 	if (res != CURLE_OK) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
 		       uri, res);
 		goto cleanup;
@@ -272,7 +272,7 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 	    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
 			     oidc_json_parser_context_callback);
 	if (res != CURLE_OK) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
 		       uri, res);
 		goto cleanup;
@@ -280,7 +280,7 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 
 	res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
 	if (res != CURLE_OK) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
 		       uri, res);
 		goto cleanup;
@@ -288,7 +288,7 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to download JSON document: URI %s, CURLcode %d\n",
 		       uri, res);
 		goto cleanup;
@@ -296,7 +296,7 @@ static json_t *oidc_fetch_json_from_uri(void * pool, const char *uri)
 
 	json = json_loadb(context.buffer, context.offset, 0, &err);
 	if (!json) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to parse JSON document: URI %s\n",
 		       uri);
 		goto cleanup;
@@ -327,7 +327,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 	json_t *value;
 
 	if (!openid_configuration_url) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: openid_configuration_url missing from config\n");
 		goto cleanup;
 	}
@@ -338,21 +338,21 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 				       (openid_configuration_url));
 
 	if (!oidc_config) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: Unable to fetch config doc from %s\n", json_string_value(openid_configuration_url));
 		goto cleanup;
 	}
 
 	json_t *jwks_uri = json_object_get(oidc_config, "jwks_uri");
 	if (!jwks_uri || !json_string_value(jwks_uri)) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: jwks_uri missing from config doc\n");
 		goto cleanup;
 	}
 
 	jwks = oidc_fetch_json_from_uri(vctx->pool, json_string_value(jwks_uri));
 	if (!jwks) {
-		syslog(LOG_NOTICE,
+		syslog(LOG_ERR,
 		       "ocserv-oidc: failed to fetch keys from jwks_uri %s\n",
 		       json_string_value(jwks_uri));
 		goto cleanup;
@@ -360,7 +360,7 @@ static bool oidc_fetch_oidc_keys(oidc_vctx_st * vctx)
 
 	array = json_object_get(jwks, "keys");
 	if (array == NULL) {
-		syslog(LOG_NOTICE, "ocserv-oidc: JWK keys malformed\n");
+		syslog(LOG_ERR, "ocserv-oidc: JWK keys malformed\n");
 		goto cleanup;
 	}
 

@@ -200,6 +200,25 @@ const char *discon_reason_to_str(unsigned reason)
 	}
 }
 
+unsigned int discon_reason_to_log_level(unsigned int reason)
+{
+	switch (reason) {
+	case 0:
+	case REASON_ANY:
+	case REASON_HEALTH_PROBE:
+		return LOG_DEBUG;
+	case REASON_USER_DISCONNECT:
+	case REASON_TEMP_DISCONNECT:
+	case REASON_SERVER_DISCONNECT:
+	case REASON_IDLE_TIMEOUT:
+	case REASON_DPD_TIMEOUT:
+	case REASON_ERROR:
+	case REASON_SESSION_TIMEOUT:
+	default:
+		return LOG_INFO;
+	}
+}
+
 ssize_t force_write(int sockfd, const void *buf, size_t len)
 {
 	int left = len;

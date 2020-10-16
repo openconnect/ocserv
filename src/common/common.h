@@ -85,6 +85,7 @@ int recv_msg_data(int fd, uint8_t *cmd, uint8_t *data, size_t data_size, int *re
 
 const char* cmd_request_to_str(unsigned cmd);
 const char* discon_reason_to_str(unsigned reason);
+unsigned int discon_reason_to_log_level(unsigned reason);
 
 ssize_t oc_recvfrom_at(int sockfd, void *buf, size_t len, int flags,
                     struct sockaddr *src_addr, socklen_t *addrlen,

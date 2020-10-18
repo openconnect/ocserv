@@ -626,6 +626,7 @@ dnl config options for inih
 AC_DEFINE([INI_STOP_ON_FIRST_ERROR], [1], [inih configuration])
 AC_DEFINE([INI_INLINE_COMMENT_PREFIXES], ["#"], [inih configuration])
 AC_DEFINE([INI_ALLOW_MULTILINE], [1], [inih configuration])
+AC_DEFINE([INI_MAX_LINE], [2048], [inih configuration])
 
 if test "$have_cwrap_pam" = yes; then
 	m4_ifdef([PKG_CHECK_VAR], [PKG_CHECK_VAR([CWRAP_PAM_MODULES], [pam_wrapper], [modules])])

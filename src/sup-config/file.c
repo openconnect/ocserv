@@ -94,12 +94,12 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 
 	if (section != NULL && section[0] != 0) {
 		syslog(LOG_INFO, "skipping unknown section '%s' in %s", section, file);
-		return 0;
+		return 1;
 	}
 
 	value = sanitize_config_value(ctx->pool, _value);
 	if (value == NULL)
-		return 0;
+		return 1;
 
 	if (strcmp(name, "no-udp") == 0) {
 		READ_TF(msg->config->no_udp, msg->config->has_no_udp);
@@ -193,14 +193,14 @@ static int group_cfg_ini_handler(void *_ctx, const char *section, const char *na
 		ret = cfg_parse_ports(pool, &msg->config->fw_ports, &msg->config->n_fw_ports, value);
 		if (ret < 0) {
 			talloc_free(value);
-			return -1;
+			return 0;
 		}
 	} else {
 		syslog(LOG_INFO, "skipping unknown option '%s' in %s", name, file);
 	}
 
 	talloc_free(value);
-	return 0;
+	return 1;
 }
 
 /* This will parse the configuration file and append/replace data into
@@ -221,8 +221,11 @@ int parse_group_cfg_file(struct cfg_st *global_config,
 	ctx.file = file;
 
 	ret = ini_parse(file, group_cfg_ini_handler, &ctx);
-	if (ret < 0) {
-		syslog(LOG_ERR, "cannot load config file %s", file);
+	if (ret != 0) {
+		if (ret > 0)
+			syslog(LOG_ERR, "error in line %d of config file %s", ret, file);
+		else
+			syslog(LOG_ERR, "cannot load config file %s", file);
 		return 0;
 	}
 

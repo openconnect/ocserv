@@ -23,8 +23,9 @@
 SERV="${SERV:-../src/ocserv}"
 srcdir=${srcdir:-.}
 NO_NEED_ROOT=1
-TMPFILE=ocserv-plbanner.$$.tmp
+TMPFILE=ocserv-banner.$$.tmp
 PIDFILE=ocserv-pid.$$.tmp
+BANNER="Welcome%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%All"
 
 . `dirname $0`/common.sh
 
@@ -52,9 +53,9 @@ echo "Connecting to obtain cookie... "
 ( echo "test" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT  $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >${TMPFILE} 2>&1 ) ||
 	fail $PID "Could not receive cookie from server"
 
-grep "AN UNPREDICTABLE BANNER" ${TMPFILE} >/dev/null
+grep "${BANNER}" ${TMPFILE} >/dev/null
 if test $? != 0;then
-	echo "The banner was not printed"
+	echo "The banner was not printed (1)"
 	cat $TMPFILE
 	exit 1
 fi
@@ -63,9 +64,9 @@ echo "Connecting to obtain cookie with wrong password... "
 ( echo "tost" | LD_PRELOAD=libsocket_wrapper.so $OPENCONNECT  $ADDRESS:$PORT -u test --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --cookieonly >${TMPFILE} 2>&1 ) &&
 	fail $PID "Received cookie when we shouldn't"
 
-grep "AN UNPREDICTABLE BANNER" ${TMPFILE} >/dev/null
+grep "${BANNER}" ${TMPFILE} >/dev/null
 if test $? != 0;then
-	echo "The banner was not printed"
+	echo "The banner was not printed (2)"
 	cat $TMPFILE
 	exit 1
 fi

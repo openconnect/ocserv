@@ -20,8 +20,9 @@ Debian:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$DEBIAN_BUILD
   script:
   - chmod -R o-w tests/data/raddb
-  - git submodule update --init && autoreconf -fvi &&
-    ./configure --without-nuttcp-tests --enable-oidc-auth
+  - git submodule update --init
+  - autoreconf -fvi
+  - ./configure --without-nuttcp-tests --enable-oidc-auth
   - make -j$JOBS
   - export OCSERV_ALLOW_BROKEN_CLIENTS=1
   - make check -j$JOBS
@@ -460,7 +461,7 @@ static-analyzers/Fedora:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   script:
-  - autoreconf -fvi
+  - autoreconf -fvi -Werror
   - scan-build ./configure
   - scan-build --status-bugs -o scan-build-src make -j$JOBS
   - cppcheck --force -q -Isrc/ -Isrc/occtl -Igl/ -I. --error-exitcode=1 src/ -i src/inih

@@ -169,6 +169,7 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(getsockopt, 0);
 	ADD_SYSCALL(setsockopt, 0);
 
+
 #ifdef ANYCONNECT_CLIENT_COMPAT
 	/* we need to open files when we have an xml_config_file setup on any vhost */
 	list_for_each(ws->vconfig, vhost, list) {
@@ -184,6 +185,13 @@ int disable_system_calls(struct worker_st *ws)
 	/* this we need to get the MTU from
 	 * the TUN device */
 	ADD_SYSCALL(ioctl, 1, SCMP_A1(SCMP_CMP_EQ, (int)SIOCGIFMTU));
+
+	// Add calls to support libev
+	ADD_SYSCALL(epoll_wait, 0);
+	ADD_SYSCALL(epoll_create1, 0);
+	ADD_SYSCALL(epoll_ctl, 0);
+	ADD_SYSCALL(rt_sigaction, 0);
+	ADD_SYSCALL(eventfd2, 0);
 
 	ret = seccomp_load(ctx);
 	if (ret < 0) {

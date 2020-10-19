@@ -38,6 +38,7 @@
 #include <sys/uio.h>
 #include <hmac.h>
 #include "vhost.h"
+#include "ev.h"
 
 typedef enum {
 	UP_DISABLED,
@@ -166,13 +167,20 @@ typedef struct dtls_transport_ptr {
 #endif
 } dtls_transport_ptr;
 
+typedef struct dtls_st {
+	ev_io io;
+	dtls_transport_ptr dtls_tptr;
+	gnutls_session_t dtls_session;
+	udp_port_state_t udp_state;
+	time_t last_dtls_rehandshake;
+} dtls_st;
+
 /* Given a base MTU, this macro provides the DTLS plaintext data we can send;
  * the output value does not include the DTLS header */
 #define DATA_MTU(ws,mtu) (mtu-ws->dtls_crypto_overhead-ws->dtls_proto_overhead)
 
 typedef struct worker_st {
 	gnutls_session_t session;
-	gnutls_session_t dtls_session;
 
 	auth_struct_st *selected_auth;
 	const compression_method_st *dtls_selected_comp;
@@ -224,13 +232,14 @@ typedef struct worker_st {
 	time_t last_periodic_check;
 
 	/* set after authentication */
-	dtls_transport_ptr dtls_tptr;
-	udp_port_state_t udp_state;
 	time_t udp_recv_time; /* time last udp packet was received */
+	uint8_t dtls_active_session : 1;
+	dtls_st dtls[2];
+#define DTLS_ACTIVE(ws) (&ws->dtls[ws->dtls_active_session])
+#define DTLS_INACTIVE(ws) (&ws->dtls[ws->dtls_active_session ^ 1])
 
 	/* protection from multiple rehandshakes */
 	time_t last_tls_rehandshake;
-	time_t last_dtls_rehandshake;
 
 	/* the time the last stats message was sent */
 	time_t last_stats_msg;

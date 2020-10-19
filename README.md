@@ -72,6 +72,7 @@ gnutls-bin	   / gnutls-utils
 iproute2	   / iproute
 yajl-tools	   / yajl
 iproute2	   / iproute
+tcpdump      / tcpdump
 ```
 
 See [README-radius](doc/README-radius.md) for more information on Radius

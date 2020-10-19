@@ -48,6 +48,7 @@
 #include <signal.h>
 #include <poll.h>
 #include <math.h>
+#include <ev.h>
 
 #if defined(__linux__) && !defined(IPV6_PATHMTU)
 # define IPV6_PATHMTU 61
@@ -87,10 +88,25 @@
 
 #define MSS_ADJUST(x) x += TCP_HEADER_SIZE + ((ws->proto == AF_INET)?(IP_HEADER_SIZE):(IPV6_HEADER_SIZE))
 
+#define WORKER_MAINTENANCE_TIME (10.)
+
 struct worker_st *global_ws = NULL;
 
 static int terminate = 0;
 static int terminate_reason = REASON_SERVER_DISCONNECT;
+
+static struct ev_loop *loop = NULL;
+ev_io command_watcher;
+ev_io tls_watcher;
+ev_io tun_watcher;
+ev_timer period_check_watcher;
+ev_signal term_sig_watcher;
+ev_signal int_sig_watcher;
+ev_signal alarm_sig_watcher;
+
+static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents);
+
+static int worker_event_loop(struct worker_st * ws);
 
 static int parse_cstp_data(struct worker_st *ws, uint8_t * buf, size_t buf_size,
 			   time_t);
@@ -101,9 +117,11 @@ static void session_info_send(worker_st * ws);
 static void set_net_priority(worker_st * ws, int fd, int priority);
 static void set_socket_timeout(worker_st * ws, int fd);
 
-static void link_mtu_set(worker_st * ws, unsigned mtu);
+static void link_mtu_set(worker_st * ws, struct dtls_st * dtls, unsigned mtu);
 
 static int test_for_tcp_health_probe(struct worker_st *ws);
+
+static void dtls_watcher_cb (EV_P_ ev_io * w, int revents);
 
 static void handle_alarm(int signo)
 {
@@ -115,9 +133,9 @@ static void handle_alarm(int signo)
 
 static void handle_term(int signo)
 {
-	terminate = 1;
-	terminate_reason = REASON_SERVER_DISCONNECT;
-	alarm(2);		/* force exit by SIGALRM */
+       terminate = 1;
+       terminate_reason = REASON_SERVER_DISCONNECT;
+       alarm(2);               /* force exit by SIGALRM */
 }
 
 /* we override that function to force gnutls use poll()
@@ -334,7 +352,7 @@ static int setup_legacy_dtls_keys(gnutls_session_t session, struct worker_st *ws
 	return 0;
 }
 
-static int setup_dtls_connection(struct worker_st *ws)
+static int setup_dtls_connection(struct worker_st *ws, struct dtls_st * dtls)
 {
 	int ret;
 	gnutls_session_t session;
@@ -377,17 +395,17 @@ static int setup_dtls_connection(struct worker_st *ws)
 	gnutls_transport_set_pull_function(session, dtls_pull);
 #endif
 	gnutls_transport_set_pull_timeout_function(session, dtls_pull_timeout);
-	gnutls_transport_set_ptr(session, &ws->dtls_tptr);
+	gnutls_transport_set_ptr(session, &dtls->dtls_tptr);
 
 	/* we decrease the default retransmission timeout to bring
 	 * our DTLS support in par with the DTLS1.3 recommendations.
 	 */
 	gnutls_dtls_set_timeouts(session, 400, 60*1000);
 
-	ws->udp_state = UP_HANDSHAKE;
+	dtls->udp_state = UP_HANDSHAKE;
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
-	ret = setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_TIMESTAMPING, &ts_socket_opt, sizeof(ts_socket_opt));
+	ret = setsockopt(dtls->dtls_tptr.fd, SOL_SOCKET, SO_TIMESTAMPING, &ts_socket_opt, sizeof(ts_socket_opt));
 	if (ret == -1)
 		oclog(ws, LOG_DEBUG, "setsockopt(UDP, SO_TIMESTAMPING), failed.");
 #endif
@@ -395,24 +413,28 @@ static int setup_dtls_connection(struct worker_st *ws)
 	/* Setup the fd settings */
 	if (WSCONFIG(ws)->output_buffer > 0) {
 		int t = MIN(2048, ws->link_mtu * WSCONFIG(ws)->output_buffer);
-		ret = setsockopt(ws->dtls_tptr.fd, SOL_SOCKET, SO_SNDBUF, &t,
+		ret = setsockopt(dtls->dtls_tptr.fd, SOL_SOCKET, SO_SNDBUF, &t,
 			   sizeof(t));
 		if (ret == -1)
 			oclog(ws, LOG_DEBUG,
 			      "setsockopt(UDP, SO_SNDBUF) to %u, failed.",
 			      t);
 	}
-	set_net_priority(ws, ws->dtls_tptr.fd, ws->user_config->net_priority);
-	set_socket_timeout(ws, ws->dtls_tptr.fd);
+	set_net_priority(ws, dtls->dtls_tptr.fd, ws->user_config->net_priority);
+	set_socket_timeout(ws, dtls->dtls_tptr.fd);
 
 	/* reset MTU */
-	link_mtu_set(ws, ws->adv_link_mtu);
+	link_mtu_set(ws, dtls, ws->adv_link_mtu);
 
-	if (ws->dtls_session != NULL) {
-		gnutls_deinit(ws->dtls_session);
+	if (dtls->dtls_session != NULL) {
+		gnutls_deinit(dtls->dtls_session);
 	}
 
-	ws->dtls_session = session;
+	dtls->dtls_session = session;
+	ev_init(&dtls->io, dtls_watcher_cb);
+	ev_io_set(&dtls->io, dtls->dtls_tptr.fd, EV_READ);
+	ev_io_start(loop, &dtls->io);
+	ev_invoke(loop, &dtls->io, EV_READ);
 
 	return 0;
  fail:
@@ -980,9 +1002,9 @@ void session_info_send(worker_st * ws)
 			msg.cstp_compr = (char*)ws->cstp_selected_comp->name;
 	}
 
-	if (ws->udp_state != UP_DISABLED && ws->dtls_session) {
+	if (DTLS_ACTIVE(ws)->udp_state != UP_DISABLED && DTLS_ACTIVE(ws)->dtls_session) {
 		msg.dtls_ciphersuite =
-		    gnutls_session_get_desc(ws->dtls_session);
+		    gnutls_session_get_desc(DTLS_ACTIVE(ws)->dtls_session);
 		if (ws->dtls_selected_comp)
 			msg.dtls_compr = (char*)ws->dtls_selected_comp->name;
 	}
@@ -1010,7 +1032,7 @@ void session_info_send(worker_st * ws)
  * @mtu: the link MTU
  */
 static
-void link_mtu_set(worker_st * ws, unsigned mtu)
+void link_mtu_set(struct worker_st * ws, struct dtls_st * dtls, unsigned mtu)
 {
 	if (ws->link_mtu == mtu || mtu > sizeof(ws->buffer))
 		return;
@@ -1018,8 +1040,8 @@ void link_mtu_set(worker_st * ws, unsigned mtu)
 	ws->link_mtu = mtu;
 
 	oclog(ws, LOG_DEBUG, "setting connection link MTU to %u", mtu);
-	if (ws->dtls_session)
-		gnutls_dtls_set_mtu(ws->dtls_session,
+	if (dtls->dtls_session)
+		gnutls_dtls_set_mtu(dtls->dtls_session,
 				    ws->link_mtu - ws->dtls_proto_overhead);
 
 	data_mtu_send(ws, DATA_MTU(ws, ws->link_mtu));
@@ -1031,25 +1053,25 @@ void link_mtu_set(worker_st * ws, unsigned mtu)
  * @mtu: the "plaintext" data MTU (not including the DTLS protocol byte)
  */
 static
-void data_mtu_set(worker_st * ws, unsigned mtu)
+void data_mtu_set(worker_st * ws, struct dtls_st * dtls, unsigned mtu)
 {
-	if (ws->dtls_session) {
-		gnutls_dtls_set_data_mtu(ws->dtls_session, mtu+1);
+	if (dtls->dtls_session) {
+		gnutls_dtls_set_data_mtu(dtls->dtls_session, mtu+1);
 
-		mtu = gnutls_dtls_get_mtu(ws->dtls_session);
+		mtu = gnutls_dtls_get_mtu(dtls->dtls_session);
 		if (mtu <= 0 || mtu == ws->link_mtu)
 			return;
 
 		mtu += ws->dtls_proto_overhead;
-		link_mtu_set(ws, mtu);
+		link_mtu_set(ws, dtls, mtu);
 	}
 }
 
-static void disable_mtu_disc(worker_st *ws)
+static void disable_mtu_disc(worker_st *ws, struct dtls_st * dtls)
 {
 	oclog(ws, LOG_DEBUG, "disabling MTU discovery on UDP socket");
-	set_mtu_disc(ws->dtls_tptr.fd, ws->proto, 0);
-	link_mtu_set(ws, ws->adv_link_mtu);
+	set_mtu_disc(dtls->dtls_tptr.fd, ws->proto, 0);
+	link_mtu_set(ws, dtls, ws->adv_link_mtu);
 	WSCONFIG(ws)->try_mtu = 0;
 }
 
@@ -1059,9 +1081,9 @@ static void disable_mtu_disc(worker_st *ws)
  * Returns -1 on failure.
  */
 static
-int mtu_not_ok(worker_st * ws)
+int mtu_not_ok(worker_st * ws, struct dtls_st * dtls)
 {
-	if (WSCONFIG(ws)->try_mtu == 0 || ws->dtls_session == NULL)
+	if (WSCONFIG(ws)->try_mtu == 0 || dtls->dtls_session == NULL)
 		return 0;
 
 	if (ws->proto == AF_INET) {
@@ -1072,8 +1094,8 @@ int mtu_not_ok(worker_st * ws)
 		if (ws->last_good_mtu == min) {
 			oclog(ws, LOG_INFO,
 			      "could not calculate a sufficient MTU; disabling MTU discovery");
-			disable_mtu_disc(ws);
-			link_mtu_set(ws, min);
+			disable_mtu_disc(ws, dtls);
+			link_mtu_set(ws, dtls, min);
 			return 0;
 		}
 
@@ -1081,7 +1103,7 @@ int mtu_not_ok(worker_st * ws)
 			ws->last_good_mtu = MAX(((2 * (ws->link_mtu)) / 3), min);
 		}
 
-		link_mtu_set(ws, ws->last_good_mtu);
+		link_mtu_set(ws, dtls, ws->last_good_mtu);
 		oclog(ws, LOG_INFO, "MTU %u is too large, switching to %u",
 		      ws->last_bad_mtu, ws->link_mtu);
 	} else if (ws->proto == AF_INET6) { /* IPv6 */
@@ -1089,16 +1111,16 @@ int mtu_not_ok(worker_st * ws)
 		struct ip6_mtuinfo mtuinfo;
 		socklen_t len = sizeof(mtuinfo);
 
-		if (getsockopt(ws->dtls_tptr.fd, IPPROTO_IPV6, IPV6_PATHMTU, &mtuinfo, &len) < 0 || mtuinfo.ip6m_mtu < 1280) {
+		if (getsockopt(dtls->dtls_tptr.fd, IPPROTO_IPV6, IPV6_PATHMTU, &mtuinfo, &len) < 0 || mtuinfo.ip6m_mtu < 1280) {
 			oclog(ws, LOG_INFO, "cannot obtain IPv6 MTU (was %u); disabling MTU discovery",
 			      ws->link_mtu);
-			disable_mtu_disc(ws);
-			link_mtu_set(ws, MIN_MTU(ws));
+			disable_mtu_disc(ws, dtls);
+			link_mtu_set(ws, dtls, MIN_MTU(ws));
 			return 0;
 		}
 
 		oclog(ws, LOG_DEBUG, "setting (via IPV6_PATHMTU) connection MTU to %u", mtuinfo.ip6m_mtu);
-		link_mtu_set(ws, mtuinfo.ip6m_mtu);
+		link_mtu_set(ws, dtls, mtuinfo.ip6m_mtu);
 
 		if (mtuinfo.ip6m_mtu > ws->adv_link_mtu) {
 			oclog(ws, LOG_INFO, "the discovered IPv6 MTU (%u) is larger than the advertised (%u); disabling MTU discovery",
@@ -1106,7 +1128,7 @@ int mtu_not_ok(worker_st * ws)
 			return 0;
 		}
 #else
-		link_mtu_set(ws, MIN_MTU(ws));
+		link_mtu_set(ws, dtls, MIN_MTU(ws));
 #endif
 	}
 
@@ -1118,13 +1140,13 @@ int mtu_not_ok(worker_st * ws)
  * @ws: a worker structure
  * @mtu: the current "plaintext" data MTU
  */
-static void mtu_discovery_init(worker_st * ws, unsigned mtu)
+static void mtu_discovery_init(worker_st * ws, struct dtls_st * dtls, unsigned mtu)
 {
 	const unsigned min = MIN_MTU(ws);
 	if (mtu <= min) {
 		oclog(ws, LOG_INFO,
 		      "our initial MTU is too low; disabling MTU discovery");
-		disable_mtu_disc(ws);
+		disable_mtu_disc(ws, dtls);
 	}
 
 	if (!WSCONFIG(ws)->try_mtu)
@@ -1136,7 +1158,7 @@ static void mtu_discovery_init(worker_st * ws, unsigned mtu)
 }
 
 static
-void mtu_ok(worker_st * ws)
+void mtu_ok(worker_st * ws, struct dtls_st * dtls)
 {
 	unsigned int c;
 
@@ -1150,7 +1172,7 @@ void mtu_ok(worker_st * ws)
 	ws->last_good_mtu = ws->link_mtu;
 	c = (ws->link_mtu + ws->last_bad_mtu) / 2;
 
-	link_mtu_set(ws, c);
+	link_mtu_set(ws, dtls, c);
 	return;
 }
 
@@ -1252,7 +1274,7 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 #endif
 
 	/* check DPD. Otherwise exit */
-	if (ws->udp_state == UP_ACTIVE &&
+	if (DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE &&
 	    now - ws->last_msg_udp > DPD_TRIES * dpd && dpd > 0) {
 	    	unsigned data_mtu = DATA_MTU(ws, ws->link_mtu);
 		oclog(ws, LOG_ERR,
@@ -1262,13 +1284,13 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 		memset(ws->buffer+1, 0, data_mtu);
 		ws->buffer[0] = AC_PKT_DPD_OUT;
 
-		ret = dtls_send(ws, ws->buffer, data_mtu+1);
+		ret = dtls_send(DTLS_ACTIVE(ws), ws->buffer, data_mtu+1);
 		DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 		if (now - ws->last_msg_udp > DPD_MAX_TRIES * dpd) {
 			oclog(ws, LOG_ERR,
 			      "have not received UDP message or DPD for very long; disabling UDP port");
-			ws->udp_state = UP_INACTIVE;
+			DTLS_ACTIVE(ws)->udp_state = UP_INACTIVE;
 		}
 	}
 	if (dpd > 0 && now - ws->last_msg_tcp > DPD_TRIES * dpd) {
@@ -1294,12 +1316,12 @@ int periodic_check(worker_st * ws, struct timespec *tnow, unsigned dpd)
 		}
 	}
 
-	if (ws->conn_type != SOCK_TYPE_UNIX && ws->udp_state != UP_DISABLED) {
+	if (ws->conn_type != SOCK_TYPE_UNIX && DTLS_ACTIVE(ws)->udp_state != UP_DISABLED) {
 		max = get_pmtu_approx(ws);
 		if (max > 0 && max < ws->link_mtu) {
 			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP/PMTU to %u",
 			      max);
-			link_mtu_set(ws, max);
+			link_mtu_set(ws, DTLS_ACTIVE(ws), max);
 		}
 	}
 
@@ -1359,16 +1381,16 @@ static void set_net_priority(worker_st * ws, int fd, int priority)
 
 #define SEND_ERR(x) if (x<0) goto send_error
 
-static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
+static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec *tnow)
 {
 	int ret;
 	gnutls_datum_t data;
 	void *packet = NULL;
 
-	switch (ws->udp_state) {
+	switch (dtls->udp_state) {
 	case UP_ACTIVE:
 	case UP_INACTIVE:
-		ret = dtls_recv_packet(ws, &data, &packet);
+		ret = dtls_recv_packet(dtls, &data, &packet);
 		oclog(ws, LOG_TRANSFER_DEBUG,
 		      "received %d byte(s) (DTLS)", ret);
 
@@ -1376,8 +1398,8 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 
 		if (ret == GNUTLS_E_REHANDSHAKE) {
 
-			if (ws->last_dtls_rehandshake > 0 &&
-			    tnow->tv_sec - ws->last_dtls_rehandshake <
+			if (dtls->last_dtls_rehandshake > 0 &&
+			    tnow->tv_sec - dtls->last_dtls_rehandshake <
 			    WSCONFIG(ws)->rekey_time / 2) {
 				oclog(ws, LOG_INFO,
 				      "client requested DTLS rehandshake too soon");
@@ -1392,18 +1414,18 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 			      "client requested rehandshake on DTLS channel");
 
 			do {
-				ret = gnutls_handshake(ws->dtls_session);
+				ret = gnutls_handshake(dtls->dtls_session);
 			} while (ret == GNUTLS_E_AGAIN
 				 || ret == GNUTLS_E_INTERRUPTED);
 
 			DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 			oclog(ws, LOG_DEBUG, "DTLS rehandshake completed");
 
-			ws->last_dtls_rehandshake = tnow->tv_sec;
+			dtls->last_dtls_rehandshake = tnow->tv_sec;
 		} else if (ret >= 1) {
 			/* where we receive any DTLS UDP packet we reset the state
 			 * to active */
-			ws->udp_state = UP_ACTIVE;
+			dtls->udp_state = UP_ACTIVE;
 
 			if (bandwidth_update
 			    (&ws->b_rx, data.size - CSTP_DTLS_OVERHEAD, tnow) != 0) {
@@ -1423,50 +1445,53 @@ static int dtls_mainloop(worker_st * ws, struct timespec *tnow)
 		ws->udp_recv_time = tnow->tv_sec;
 		break;
 	case UP_SETUP:
-		ret = setup_dtls_connection(ws);
+		ret = setup_dtls_connection(ws, dtls);
 		if (ret < 0) {
 			ret = -1;
 			goto cleanup;
 		}
 
-		gnutls_dtls_set_mtu(ws->dtls_session, ws->link_mtu - ws->dtls_proto_overhead);
-		mtu_discovery_init(ws, ws->link_mtu);
+		gnutls_dtls_set_mtu(dtls->dtls_session, ws->link_mtu - ws->dtls_proto_overhead);
+		mtu_discovery_init(ws, dtls, ws->link_mtu);
 		break;
 
 	case UP_HANDSHAKE:
  hsk_restart:
-		ret = gnutls_handshake(ws->dtls_session);
+		ret = gnutls_handshake(dtls->dtls_session);
 		if (ret < 0 && gnutls_error_is_fatal(ret) != 0) {
 			if (ret == GNUTLS_E_FATAL_ALERT_RECEIVED)
 				oclog(ws, LOG_ERR,
 				      "error in DTLS handshake: %s: %s\n",
 				      gnutls_strerror(ret),
 				      gnutls_alert_get_name
-				      (gnutls_alert_get(ws->dtls_session)));
+				      (gnutls_alert_get(dtls->dtls_session)));
 			else
 				oclog(ws, LOG_ERR,
 				      "error in DTLS handshake: %s\n",
 				      gnutls_strerror(ret));
-			ws->udp_state = UP_DISABLED;
+			dtls->udp_state = UP_DISABLED;
 			break;
 		}
 
 		if (ret == GNUTLS_E_LARGE_PACKET) {
 			/* adjust mtu */
-			mtu_not_ok(ws);
+			mtu_not_ok(ws, dtls);
 			goto hsk_restart;
 		} else if (ret == 0) {
 			unsigned data_mtu;
 
 			/* gnutls_dtls_get_data_mtu() already subtracts the crypto overhead */
 			data_mtu =
-			    gnutls_dtls_get_data_mtu(ws->dtls_session) -
+			    gnutls_dtls_get_data_mtu(dtls->dtls_session) -
 			    CSTP_DTLS_OVERHEAD;
 
-			ws->udp_state = UP_ACTIVE;
+			dtls->udp_state = UP_ACTIVE;
 			oclog(ws, LOG_DEBUG,
 			      "DTLS handshake completed (link MTU: %u, data MTU: %u)\n",
 			      ws->link_mtu, data_mtu);
+			ws->dtls_active_session++;
+			oclog(ws, LOG_DEBUG,
+				  "Maing DTLS session %d active", ws->dtls_active_session);
 			session_info_send(ws);
 		}
 
@@ -1510,11 +1535,11 @@ static int tls_mainloop(struct worker_st *ws, struct timespec *tnow)
 				goto cleanup;
 			}
 
-			if ((ret == AC_PKT_DATA || ret == AC_PKT_COMPRESSED) && ws->udp_state == UP_ACTIVE) {
+			if ((ret == AC_PKT_DATA || ret == AC_PKT_COMPRESSED) && DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE) {
 				/* client switched to TLS for some reason */
 				if (tnow->tv_sec - ws->udp_recv_time >
 				    UDP_SWITCH_TIME)
-					ws->udp_state = UP_INACTIVE;
+					DTLS_ACTIVE(ws)->udp_state = UP_INACTIVE;
 			}
 		}
 
@@ -1582,15 +1607,15 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 	cstp_to_send.size = l;
 
 	if (WSCONFIG(ws)->switch_to_tcp_timeout &&
-	    ws->udp_state == UP_ACTIVE &&
+	    DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE &&
 	    tnow->tv_sec > ws->udp_recv_time + WSCONFIG(ws)->switch_to_tcp_timeout) {
 		oclog(ws, LOG_DEBUG, "No UDP data received for %li seconds, using TCP instead\n",
 				tnow->tv_sec - ws->udp_recv_time);
-		ws->udp_state = UP_INACTIVE;
+		DTLS_ACTIVE(ws)->udp_state = UP_INACTIVE;
 	}
 
 #ifdef ENABLE_COMPRESSION
-	if (ws->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > WSCONFIG(ws)->no_compress_limit) {
+	if (DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE && ws->dtls_selected_comp != NULL && l > WSCONFIG(ws)->no_compress_limit) {
 		/* otherwise don't compress */
 		ret = ws->dtls_selected_comp->compress(ws->decomp+8, sizeof(ws->decomp)-8, ws->buffer+8, l);
 		oclog(ws, LOG_TRANSFER_DEBUG, "compressed %d to %d\n", (int)l, ret);
@@ -1626,27 +1651,27 @@ static int tun_mainloop(struct worker_st *ws, struct timespec *tnow)
 
 		oclog(ws, LOG_TRANSFER_DEBUG, "sending %d byte(s)\n", l);
 
-		if (ws->udp_state == UP_ACTIVE) {
+		if (DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE) {
 
 			ws->tun_bytes_out += dtls_to_send.size;
 
 			dtls_to_send.data[7] = dtls_type;
-			ret = dtls_send(ws, dtls_to_send.data + 7, dtls_to_send.size + 1);
+			ret = dtls_send(DTLS_ACTIVE(ws), dtls_to_send.data + 7, dtls_to_send.size + 1);
 			DTLS_FATAL_ERR_CMD(ret, exit_worker_reason(ws, REASON_ERROR));
 
 			if (ret == GNUTLS_E_LARGE_PACKET) {
-				mtu_not_ok(ws);
+				mtu_not_ok(ws, DTLS_ACTIVE(ws));
 
 				oclog(ws, LOG_TRANSFER_DEBUG,
 				      "retrying (TLS) %d\n", l);
 				tls_retry = 1;
 			} else if (ret >= 1+DATA_MTU(ws, ws->link_mtu) &&
 				   WSCONFIG(ws)->try_mtu != 0) {
-				mtu_ok(ws);
+				mtu_ok(ws, DTLS_ACTIVE(ws));
 			}
 		}
 
-		if (ws->udp_state != UP_ACTIVE || tls_retry != 0) {
+		if (DTLS_ACTIVE(ws)->udp_state != UP_ACTIVE || tls_retry != 0) {
 			cstp_to_send.data[0] = 'S';
 			cstp_to_send.data[1] = 'T';
 			cstp_to_send.data[2] = 'F';
@@ -1787,7 +1812,7 @@ static void calc_mtu_values(worker_st * ws)
 	/* link MTU is the device MTU */
 	ws->link_mtu = ws->vinfo.mtu;
 
-	if (ws->udp_state != UP_DISABLED) {
+	if (DTLS_ACTIVE(ws)->udp_state != UP_DISABLED) {
 		/* crypto overhead for DTLS */
 		if (ws->req.use_psk) {
 			if (ws->session == NULL) {
@@ -1832,22 +1857,11 @@ static void calc_mtu_values(worker_st * ws)
 static int connect_handler(worker_st * ws)
 {
 	struct http_req_st *req = &ws->req;
-	struct pollfd pfd[4];
-	unsigned pfd_size;
 	int max, ret, t;
 	char *p;
 	unsigned rnd;
-#ifdef HAVE_PPOLL
-	struct timespec tv;
-#endif
-	unsigned tls_pending, dtls_pending = 0, i;
-	struct timespec tnow;
+	unsigned i;
 	unsigned ip6;
-	sigset_t emptyset, blockset;
-
-	sigemptyset(&blockset);
-	sigemptyset(&emptyset);
-	sigaddset(&blockset, SIGTERM);
 
 	gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
 
@@ -1930,10 +1944,14 @@ static int connect_handler(worker_st * ws)
 		SEND_ERR(ret);
 	}
 
-	ws->udp_state = UP_DISABLED;
+	ws->dtls_active_session = 0;
+	DTLS_ACTIVE(ws)->udp_state = UP_DISABLED;
+	DTLS_INACTIVE(ws)->udp_state = UP_DISABLED;
+
 	if (WSPCONFIG(ws)->udp_port != 0 && req->master_secret_set != 0) {
 		memcpy(ws->master_secret, req->master_secret, TLS_MASTER_SIZE);
-		ws->udp_state = UP_WAIT_FD;
+		DTLS_ACTIVE(ws)->udp_state = UP_WAIT_FD;
+		DTLS_INACTIVE(ws)->udp_state = UP_WAIT_FD;
 	} else {
 		oclog(ws, LOG_DEBUG, "disabling UDP (DTLS) connection");
 	}
@@ -1959,7 +1977,7 @@ static int connect_handler(worker_st * ws)
 		if (max > 0 && max < ws->vinfo.mtu) {
 			oclog(ws, LOG_DEBUG, "reducing MTU due to TCP/PMTU to %u",
 			      max);
-			link_mtu_set(ws, max);
+			link_mtu_set(ws, DTLS_ACTIVE(ws), max);
 		}
 	}
 
@@ -2216,7 +2234,7 @@ static int connect_handler(worker_st * ws)
 	set_net_priority(ws, ws->conn_fd, ws->user_config->net_priority);
 	set_no_delay(ws, ws->conn_fd);
 
-	if (ws->udp_state != UP_DISABLED) {
+	if (DTLS_ACTIVE(ws)->udp_state != UP_DISABLED) {
 
 		if (ws->user_config->dpd > 0) {
 			ret =
@@ -2342,150 +2360,10 @@ static int connect_handler(worker_st * ws)
 	ret = cstp_uncork(ws);
 	SEND_ERR(ret);
 
-	/* start dead peer detection */
-	gettime(&tnow);
-	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = tnow.tv_sec;
-
-	bandwidth_init(&ws->b_rx, ws->user_config->rx_per_sec);
-	bandwidth_init(&ws->b_tx, ws->user_config->tx_per_sec);
-
-	sigprocmask(SIG_BLOCK, &blockset, NULL);
-
-	/* worker main loop  */
-	for (;;) {
-		if (terminate != 0) {
- terminate:
-			ws->buffer[0] = 'S';
-			ws->buffer[1] = 'T';
-			ws->buffer[2] = 'F';
-			ws->buffer[3] = 1;
-			ws->buffer[4] = 0;
-			ws->buffer[5] = 0;
-			ws->buffer[6] = AC_PKT_DISCONN;
-			ws->buffer[7] = 0;
-
-			oclog(ws, LOG_TRANSFER_DEBUG,
-			      "sending disconnect message in TLS channel");
-			cstp_send(ws, ws->buffer, 8);
-			exit_worker_reason(ws, terminate_reason);
-		}
-
-		if (ws->session != NULL)
-			tls_pending = gnutls_record_check_pending(ws->session);
-		else
-			tls_pending = 0;
-
-		if (ws->udp_state > UP_WAIT_FD) {
-			dtls_pending = dtls_pull_buffer_non_empty(&ws->dtls_tptr);
-			if (ws->dtls_session != NULL)
-				dtls_pending +=
-				    gnutls_record_check_pending(ws->dtls_session);
-		} else {
-			dtls_pending = 0;
-		}
-
-		pfd[0].revents = 0;
-		pfd[1].revents = 0;
-		pfd[2].revents = 0;
-		pfd[3].revents = 0;
-
-		if (tls_pending == 0 && dtls_pending == 0) {
-			pfd[0].fd = ws->conn_fd;
-			pfd[0].events = POLLIN;
-
-			pfd[1].fd = ws->cmd_fd;
-			pfd[1].events = POLLIN;
-
-			pfd[2].fd = ws->tun_fd;
-			pfd[2].events = POLLIN;
-
-			pfd_size = 3;
-
-			if (ws->udp_state > UP_WAIT_FD) {
-				pfd[3].fd = ws->dtls_tptr.fd;
-				pfd[3].events = POLLIN;
-				pfd_size++;
-			}
-
-#ifdef HAVE_PPOLL
-			tv.tv_nsec = 0;
-			tv.tv_sec = 10;
-			ret = ppoll(pfd, pfd_size, &tv, &emptyset);
-#else
-			sigprocmask(SIG_UNBLOCK, &blockset, NULL);
-			ret = poll(pfd, pfd_size, 10*1000);
-			sigprocmask(SIG_BLOCK, &blockset, NULL);
-#endif
-			if (ret == -1) {
-				if (errno == EINTR || errno == EAGAIN)
-					continue;
-				terminate_reason = REASON_ERROR;
-				goto exit;
-			}
-
-			if ((pfd[0].revents | pfd[1].revents |
-			     pfd[2].revents | pfd[3].revents) & POLLERR) {
-				terminate_reason = REASON_ERROR;
-				goto exit;
-			}
-		}
-		gettime(&tnow);
-
-		if (periodic_check(ws, &tnow, ws->user_config->dpd) < 0) {
-			terminate_reason = REASON_ERROR;
-			goto exit;
-		}
-
-		/* send pending data from tun device */
-		if (pfd[2].revents & (POLLIN|POLLHUP)) {
-			ret = tun_mainloop(ws, &tnow);
-			if (ret < 0) {
-				terminate_reason = REASON_ERROR;
-				goto exit;
-			}
-		}
-
-		/* read pending data from TCP channel */
-		if ((pfd[0].revents & (POLLIN|POLLHUP)) || tls_pending != 0) {
-			ret = tls_mainloop(ws, &tnow);
-			if (ret < 0) {
-				terminate_reason = REASON_ERROR;
-				goto exit;
-			}
-		}
-
-		/* read data from UDP channel */
-		if (ws->udp_state > UP_WAIT_FD &&
-		    ((pfd[3].revents & (POLLIN|POLLHUP)) || dtls_pending != 0)) {
-
-			ret = dtls_mainloop(ws, &tnow);
-			if (ret < 0) {
-				terminate_reason = REASON_ERROR;
-				goto exit;
-			}
-
-#if defined(CAPTURE_LATENCY_SUPPORT)
-			if (ws->dtls_tptr.rx_time.tv_sec != 0) {
-				capture_latency_sample(ws, &ws->dtls_tptr.rx_time);
-				ws->dtls_tptr.rx_time.tv_sec = 0;
-				ws->dtls_tptr.rx_time.tv_nsec = 0;
-			}
-#endif
-		}
-
-		/* read commands from command fd */
-		if (pfd[1].revents & (POLLIN|POLLHUP)) {
-			ret = handle_commands_from_main(ws);
-			if (ret == ERR_NO_CMD_FD) {
-				terminate_reason = REASON_ERROR;
-				goto terminate;
-			}
-
-			if (ret < 0) {
-				terminate_reason = REASON_ERROR;
-				goto exit;
-			}
-		}
+	ret = worker_event_loop(ws);
+	if (ret != 0)
+	{
+		goto exit;
 	}
 
 	return 0;
@@ -2493,9 +2371,11 @@ static int connect_handler(worker_st * ws)
  exit:
 	cstp_close(ws);
 	/*gnutls_deinit(ws->session); */
-	if (ws->udp_state == UP_ACTIVE && ws->dtls_session) {
-		dtls_close(ws);
-		/*gnutls_deinit(ws->dtls_session); */
+	if (DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE && DTLS_ACTIVE(ws)->dtls_session) {
+		dtls_close(DTLS_ACTIVE(ws));
+	}
+	if (DTLS_INACTIVE(ws)->udp_state == UP_ACTIVE && DTLS_INACTIVE(ws)->dtls_session) {
+		dtls_close(DTLS_INACTIVE(ws));
 	}
 
 	exit_worker_reason(ws, terminate_reason);
@@ -2551,15 +2431,15 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 
 			if (buf_size-CSTP_DTLS_OVERHEAD > DATA_MTU(ws, ws->link_mtu)) {
 				/* peer is doing MTU discovery */
-				data_mtu_set(ws, buf_size-CSTP_DTLS_OVERHEAD);
+				data_mtu_set(ws, DTLS_ACTIVE(ws), buf_size-CSTP_DTLS_OVERHEAD);
 			}
 
-			ret = dtls_send(ws, buf, buf_size);
+			ret = dtls_send(DTLS_ACTIVE(ws), buf, buf_size);
 			if (ret == GNUTLS_E_LARGE_PACKET) {
 				oclog(ws, LOG_TRANSFER_DEBUG,
 				      "could not send DPD of %d bytes", (int)buf_size);
-				mtu_not_ok(ws);
-				ret = dtls_send(ws, buf, 1);
+				mtu_not_ok(ws, DTLS_ACTIVE(ws));
+				ret = dtls_send(DTLS_ACTIVE(ws), buf, 1);
 			}
 
 			oclog(ws, LOG_TRANSFER_DEBUG,
@@ -2665,10 +2545,10 @@ static int parse_cstp_data(struct worker_st *ws,
 		return -1;
 	}
 
-	if (buf[6] == AC_PKT_DATA && ws->udp_state == UP_ACTIVE) {
+	if (buf[6] == AC_PKT_DATA && DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE) {
 		/* if we received a data packet in the CSTP channel we assume that
 		 * our peer wants to switch to it as the communication channel */
-		ws->udp_state = UP_INACTIVE;
+		DTLS_ACTIVE(ws)->udp_state = UP_INACTIVE;
 	}
 
 	ret = parse_data(ws, buf, buf_size, now, 0);
@@ -2708,4 +2588,229 @@ static int test_for_tcp_health_probe(struct worker_st *ws)
 		return 0;
 	else 
 		return 1;
+}
+
+static void syserr_cb (const char *msg)
+{
+	struct worker_st * ws = ev_userdata(loop);
+	int err = errno;
+
+	oclog(ws, LOG_ERR, "libev fatal error: %s / %s", msg, strerror(err));
+
+  	terminate_reason = REASON_ERROR;
+	exit_worker_reason(ws, terminate_reason);
+}
+
+static void cstp_send_terminate(struct worker_st * ws)
+{
+	ws->buffer[0] = 'S';
+	ws->buffer[1] = 'T';
+	ws->buffer[2] = 'F';
+	ws->buffer[3] = 1;
+	ws->buffer[4] = 0;
+	ws->buffer[5] = 0;
+	ws->buffer[6] = AC_PKT_DISCONN;
+	ws->buffer[7] = 0;
+
+	oclog(ws, LOG_TRANSFER_DEBUG,
+			"sending disconnect message in TLS channel");
+	cstp_send(ws, ws->buffer, 8);
+	exit_worker_reason(ws, terminate_reason);
+}
+
+static void command_watcher_cb (EV_P_ ev_io *w, int revents)
+{
+	struct worker_st *ws = ev_userdata(loop);
+
+	int ret = handle_commands_from_main(ws);
+	if (ret == ERR_NO_CMD_FD) {
+		terminate_reason = REASON_ERROR;
+		cstp_send_terminate(ws);
+	}
+
+	if (ret < 0) {
+		terminate_reason = REASON_ERROR;
+		cstp_send_terminate(ws);
+	}
+
+	if (DTLS_ACTIVE(ws)->udp_state == UP_SETUP) {
+		ev_invoke(loop, &DTLS_ACTIVE(ws)->io, EV_READ);
+	}
+	if (DTLS_INACTIVE(ws)->udp_state == UP_SETUP) {
+		ev_invoke(loop, &DTLS_INACTIVE(ws)->io, EV_READ);
+	}
+}
+
+static void tls_watcher_cb (EV_P_ ev_io * w, int revents)
+{
+	struct timespec tnow;
+	struct worker_st *ws = ev_userdata(loop);
+	int ret;
+	gettime(&tnow);
+
+	ret = tls_mainloop(ws, &tnow);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "tls_mainloop failed %d", ret);
+		terminate_reason = REASON_ERROR;
+		cstp_send_terminate(ws);
+	}
+}
+
+static void tun_watcher_cb (EV_P_ ev_io * w, int revents)
+{
+	struct timespec tnow;
+	struct worker_st *ws = ev_userdata(loop);
+	int ret;
+	gettime(&tnow);
+
+	ret = tun_mainloop(ws, &tnow);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "tun_mainloop failed %d", ret);
+		terminate_reason = REASON_ERROR;
+		cstp_send_terminate(ws);
+	}
+}
+
+static void dtls_watcher_cb (EV_P_ ev_io * w, int revents)
+{
+	struct timespec tnow;
+	struct worker_st *ws = ev_userdata(loop);
+	struct dtls_st * dtls = (struct dtls_st*)w;
+	int ret;
+	gettime(&tnow);
+
+	ret = dtls_mainloop(ws, dtls, &tnow);
+	if (ret < 0) {
+		oclog(ws, LOG_ERR, "dtls_mainloop failed %d", ret);
+		terminate_reason = REASON_ERROR;
+		cstp_send_terminate(ws);
+	}
+
+#if defined(CAPTURE_LATENCY_SUPPORT)
+	if (dtls->dtls_tptr.rx_time.tv_sec != 0) {
+		capture_latency_sample(ws, &dtls->dtls_tptr.rx_time);
+		dtls->dtls_tptr.rx_time.tv_sec = 0;
+		dtls->dtls_tptr.rx_time.tv_nsec = 0;
+	}
+#endif
+}
+
+static void term_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int revents)
+{
+	struct worker_st *ws = ev_userdata(loop);
+	cstp_send_terminate(ws);
+}
+
+static void invoke_dtls_if_needed(struct dtls_st * dtls)
+{
+	if ((dtls->udp_state > UP_WAIT_FD) && 
+		(dtls->dtls_session != NULL) &&
+		(gnutls_record_check_pending(dtls->dtls_session))) {
+		ev_invoke(loop, &dtls->io, EV_READ);
+	}
+}
+
+static void periodic_check_watcher_cb(EV_P_ ev_timer *w, int revents)
+{
+	struct worker_st *ws = ev_userdata(loop);
+	struct timespec tnow;
+
+	gettime(&tnow);
+
+	if (periodic_check(ws, &tnow, ws->user_config->dpd) < 0) {
+		terminate_reason = REASON_ERROR;
+		cstp_send_terminate(ws);
+		return;
+	}
+
+	if (terminate)
+		cstp_send_terminate(ws);
+
+	if (gnutls_record_check_pending(ws->session))
+	{
+		ev_invoke(loop, &tls_watcher, EV_READ);
+	}
+
+	invoke_dtls_if_needed(DTLS_ACTIVE(ws));
+	invoke_dtls_if_needed(DTLS_INACTIVE(ws));
+}
+
+static int worker_event_loop(struct worker_st * ws)
+{
+	struct timespec tnow;
+
+#if defined(__linux__) && defined(HAVE_LIBSECCOMP)
+	loop = ev_default_loop(EVFLAG_NOENV|EVBACKEND_EPOLL);
+#else
+	loop = EV_DEFAULT;
+#endif
+
+	// Restore the signal handlers
+	ocsignal(SIGTERM, SIG_DFL);
+	ocsignal(SIGINT, SIG_DFL);
+	ocsignal(SIGALRM, SIG_DFL);
+	
+	ev_init(&alarm_sig_watcher, term_sig_watcher_cb);
+	ev_signal_set (&alarm_sig_watcher, SIGALRM);
+	ev_signal_start (loop, &alarm_sig_watcher);
+
+	ev_init (&int_sig_watcher, term_sig_watcher_cb);
+	ev_signal_set (&int_sig_watcher, SIGINT);
+	ev_signal_start (loop, &int_sig_watcher);
+
+	ev_init (&term_sig_watcher, term_sig_watcher_cb);
+	ev_signal_set (&term_sig_watcher, SIGTERM);
+	ev_signal_start (loop, &term_sig_watcher);
+	
+	ev_set_userdata (loop, ws);
+	ev_set_syserr_cb(syserr_cb);
+
+	ev_init(&command_watcher, command_watcher_cb);
+	ev_io_set(&command_watcher, ws->cmd_fd, EV_READ);
+	ev_io_start(loop, &command_watcher);
+
+	ev_init(&tls_watcher, tls_watcher_cb);
+	ev_io_set(&tls_watcher, ws->conn_fd, EV_READ);
+	ev_io_start(loop, &tls_watcher);
+
+	ev_init(&DTLS_ACTIVE(ws)->io, dtls_watcher_cb);
+	ev_init(&DTLS_INACTIVE(ws)->io, dtls_watcher_cb);
+
+	ev_init(&tun_watcher, tun_watcher_cb);
+	ev_io_set(&tun_watcher, ws->tun_fd, EV_READ);
+	ev_io_start(loop, &tun_watcher);
+
+	ev_init (&period_check_watcher, periodic_check_watcher_cb);
+	ev_timer_set(&period_check_watcher, WORKER_MAINTENANCE_TIME, WORKER_MAINTENANCE_TIME);
+	ev_timer_start(loop, &period_check_watcher);
+
+
+	/* start dead peer detection */
+	gettime(&tnow);
+	ws->last_msg_tcp = ws->last_msg_udp = ws->last_nc_msg = tnow.tv_sec;
+
+	bandwidth_init(&ws->b_rx, ws->user_config->rx_per_sec);
+	bandwidth_init(&ws->b_tx, ws->user_config->tx_per_sec);
+
+
+	ev_run(loop, 0);
+	if (terminate != 0)
+	{
+		goto exit;
+	}
+	return 0;
+
+ exit:
+	cstp_close(ws);
+	/*gnutls_deinit(ws->session); */
+	if (DTLS_ACTIVE(ws)->udp_state == UP_ACTIVE && DTLS_ACTIVE(ws)->dtls_session) {
+		dtls_close(DTLS_ACTIVE(ws));
+	}
+	if (DTLS_INACTIVE(ws)->udp_state == UP_ACTIVE && DTLS_INACTIVE(ws)->dtls_session) {
+		dtls_close(DTLS_INACTIVE(ws));
+	}
+
+	exit_worker_reason(ws, terminate_reason);
+
+	return 1;
 }

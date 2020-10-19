@@ -189,7 +189,8 @@ int main(int argc, char **argv)
 	ws->vconfig = s->vconfig;
 
 	ws->tun_fd = -1;
-	ws->dtls_tptr.fd = -1;
+	DTLS_ACTIVE(ws)->dtls_tptr.fd = -1;
+	DTLS_INACTIVE(ws)->dtls_tptr.fd = -1;
 
 	/* Drop privileges after this point */
 	drop_privileges(s);

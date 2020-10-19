@@ -1,0 +1,89 @@
+#!/bin/bash
+#
+# Copyright (C) 2020 Microsoft Corporation
+#
+# This file is part of ocserv.
+#
+# ocserv is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at
+# your option) any later version.
+#
+# ocserv is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+SERV="${SERV:-../src/ocserv}"
+srcdir=${srcdir:-.}
+
+. `dirname $0`/common.sh
+
+eval "${GETPORT}"
+
+TCPDUMP=${TCPDUMP:-$(which tcpdump)}
+
+if test -z "${TCPDUMP}" || ! test -x ${TCPDUMP};then
+	echo "You need tcpdump to run this test"
+	exit 77
+fi
+
+
+echo "Testing whether replay of DTLS hello breaks client session... "
+
+PIDFILE1="${srcdir}/ci$$-1.pid.tmp"
+PIDFILE2="${srcdir}/ci$$-2.pid.tmp"
+TCPDUMP_FILE="${srcdir}/dtls_hello.pcap"
+rm -f "${PIDFILE1}" "${PIDFILE2}"
+
+function finish {
+  set +e
+  echo " * Cleaning up..."
+  test -n "${PID}" && kill ${PID} >/dev/null 2>&1
+  test -f "${PIDFILE1}" && kill $(cat ${PIDFILE1}) >/dev/null 2>&1
+  test -f "${PIDFILE2}" && kill $(cat ${PIDFILE2}) >/dev/null 2>&1
+  test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
+  test -n "${TCPDUMP_FILE}" && rm -f "${TCPDUMP_FILE}" >/dev/null 2>&1
+  rm -f "${PIDFILE1}" "${PIDFILE2}" 2>&1
+}
+trap finish EXIT
+
+# Catch the DTLS client hello
+$TCPDUMP -c 1 -n -i lo "udp and port $PORT" -w $TCPDUMP_FILE > tcpdump.log  2>&1 &
+
+update_config test-max-same-1.config
+launch_server -d 9999 -f -c ${CONFIG} & PID=$!
+wait_server $PID
+
+echo "Connecting to obtain cookie... "
+eval `echo "test" | $OPENCONNECT -q localhost:$PORT -u test --authenticate --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3`
+
+if [ -z "$COOKIE" ];then
+	echo "Could not obtain cookie"
+	exit 1
+fi
+
+#echo "Cookie: $COOKIE"
+
+echo "Connecting with cookie... "
+echo "test" | $OPENCONNECT -q localhost:$PORT -u test -C "$COOKIE" --servercert=d66b507ae074d03b02eafca40d35f87dd81049d3 --verbose --pid-file "${PIDFILE1}" --background
+
+sleep 4
+
+# Extract the DTLS client hello
+DTLS_HELLO=$($TCPDUMP -t -r $TCPDUMP_FILE -x | grep -v localhost | awk -F: '{print $2}' | tr -d '\n' | tr -d ' ' | cut -c 57- | sed 's/\(.\{2\}\)/\1 /g')
+
+# Replay the DTLS client hello
+echo Sending replayed DTLS Hello
+echo $DTLS_HELLO | xxd -r -p | nc -w 1 -u localhost $PORT > /dev/null
+
+sleep 5
+
+ping -c 4 192.168.1.1 || fail $PID Tunnel was broken
+
+
+exit 0

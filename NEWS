@@ -1,11 +1,12 @@
 * Version 1.1.2 (unreleased)
+- Allow setup of new DTLS session concurrent with old session (#359).
 - Fixed an infinite loop on sec-mod crash when server-drain-ms is set
   (#356)
 - Don't apply BanIP checks to clients on the same subnet (#360)
 - Don't attempt TLS if the client closes the connection with zero data
   sent (#357)
-- Increased the maximum configuration line (#364)
-- Allow setup of new DTLS session concurrent with old session. 
+- Increased the maximum configuration line; this allows banner
+  messages longer than 200 characters (#364)
 
 
 * Version 1.1.1 (released 2020-09-21)

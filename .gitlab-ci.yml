@@ -54,6 +54,7 @@ i386/Debian:
   - linux
   except:
   - tags
+  - schedules
   artifacts:
     expire_in: 1 week
     when: on_failure

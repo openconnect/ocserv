@@ -113,7 +113,7 @@ ev_signal reload_sig_watcher;
 ev_timer latency_watcher;
 #endif
 
-static int set_env_from_ws(main_server_st * ws);
+static bool set_env_from_ws(main_server_st * ws);
 
 static void add_listener(void *pool, struct listen_list_st *list,
 	int fd, int family, int socktype, int protocol,
@@ -1192,7 +1192,9 @@ static void listen_watcher_cb (EV_P_ ev_io *w, int revents)
 			// Clear the HMAC key
 			safe_memset((uint8_t*)s->hmac_key, 0, sizeof(s->hmac_key));
 
-			set_env_from_ws(s);
+			if (!set_env_from_ws(s))
+				exit(1);
+
 #if defined(PROC_FS_SUPPORTED)
 			{
 				char path[_POSIX_PATH_MAX];
@@ -1693,7 +1695,7 @@ extern unsigned pam_auth_group_list_size;
 extern unsigned gssapi_auth_group_list_size;
 extern unsigned plain_auth_group_list_size;
 
-static int set_env_from_ws(main_server_st *s)
+static bool set_env_from_ws(main_server_st *s)
 {
 	worker_st *ws = s->ws;
 	WorkerStartupMsg msg = WORKER_STARTUP_MSG__INIT;
@@ -1730,12 +1732,16 @@ static int set_env_from_ws(main_server_st *s)
 		goto cleanup;
 
 	for (index = 0; index < entry_count; index++) {
-		int fd;
+		int fd, rr;
 		const char *file_name;
 		if (index == 0) {
-			snapshot_first(config_snapshot, &iter, &fd, &file_name);
+			rr = snapshot_first(config_snapshot, &iter, &fd, &file_name);
 		} else {
-			snapshot_next(config_snapshot, &iter, &fd, &file_name);
+			rr = snapshot_next(config_snapshot, &iter, &fd, &file_name);
+		}
+		if (rr < 0) {
+			mslog(s, NULL, LOG_ERR, "snapshot restoration failed (%d)\n", ret);
+			goto cleanup;
 		}
 
 		entries[index] = talloc_zero(s, SnapshotEntryMsg);

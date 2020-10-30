@@ -107,6 +107,14 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(getcwd, 0);
 	ADD_SYSCALL(lstat, 0);
 
+	/* Socket wrapper tests use additional syscalls; only enable
+	 * them when socket wrapper is active */
+	if (getenv("SOCKET_WRAPPER_DIR") != NULL) {
+		ADD_SYSCALL(stat64, 0);
+		ADD_SYSCALL(readlink, 0);
+		ADD_SYSCALL(newfstatat, 0);
+	}
+
 	/* we use quite some system calls here, and in the end
 	 * we don't even know whether a newer libc will change the
 	 * underlying calls to something else. seccomp seems to be useful
@@ -122,7 +130,11 @@ int disable_system_calls(struct worker_st *ws)
 	ADD_SYSCALL(getrusage, 0);
 	ADD_SYSCALL(alarm, 0);
 	ADD_SYSCALL(getpid, 0);
+
+	/* memory allocation - both are used by different platforms */
 	ADD_SYSCALL(brk, 0);
+	ADD_SYSCALL(mmap, 0);
+
 #ifdef __NR_getrandom
 	ADD_SYSCALL(getrandom, 0); /* used by gnutls 3.5.x */
 #endif
@@ -175,6 +187,8 @@ int disable_system_calls(struct worker_st *ws)
 	list_for_each(ws->vconfig, vhost, list) {
 		if (vhost->perm_config.config->xml_config_file) {
 			ADD_SYSCALL(stat, 0);
+			ADD_SYSCALL(stat64, 0);
+			ADD_SYSCALL(newfstatat, 0);
 			ADD_SYSCALL(open, 0);
 			ADD_SYSCALL(openat, 0);
 			break;

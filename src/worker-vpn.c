@@ -442,7 +442,7 @@ static int setup_dtls_connection(struct worker_st *ws, struct dtls_st * dtls)
 	return -1;
 }
 
-void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
+void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final, unsigned discon_reason)
 {
 	int ret, e;
 	BanIpMsg msg = BAN_IP_MSG__INIT;
@@ -463,6 +463,10 @@ void ws_add_score_to_ip(worker_st *ws, unsigned points, unsigned final)
 
 	msg.ip = ws->remote_ip_str;
 	msg.score = points;
+	if (final) {
+		msg.has_discon_reason = 1;
+		msg.discon_reason = discon_reason;
+	}
 
 	ret = send_msg(ws, ws->cmd_fd, CMD_BAN_IP, &msg,
 				(pack_size_func) ban_ip_msg__get_packed_size,
@@ -557,7 +561,7 @@ void exit_worker_reason(worker_st * ws, unsigned reason)
 	}
 
 	if (ws->ban_points > 0)
-		ws_add_score_to_ip(ws, 0, 1);
+		ws_add_score_to_ip(ws, 0, 1, reason);
 
 	talloc_free(ws->main_pool);
 	closelog();

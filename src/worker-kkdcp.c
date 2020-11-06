@@ -144,7 +144,7 @@ int post_kkdcp_handler(worker_st *ws, unsigned http_ver)
 		return -1;
 	}
 
-	ws_add_score_to_ip(ws, WSCONFIG(ws)->ban_points_kkdcp, 0);
+	ws_add_score_to_ip(ws, WSCONFIG(ws)->ban_points_kkdcp, 0, 0);
 	oclog(ws, LOG_HTTP_DEBUG, "HTTP processing kkdcp framed request: %u bytes", (unsigned)req->body_length);
 
 	length = BUF_SIZE;

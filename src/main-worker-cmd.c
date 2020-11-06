@@ -299,6 +299,10 @@ int handle_worker_commands(main_server_st * s, struct proc_st *proc)
 
 			ret = add_str_ip_to_ban_list(s, remote_address, tmsg->score);
 
+			if (tmsg->has_discon_reason) {
+				proc->discon_reason = tmsg->discon_reason;
+			}
+
 			ban_ip_msg__free_unpacked(tmsg, &pa);
 
 			if (ret < 0) {

@@ -200,6 +200,7 @@ message ban_ip_msg
 	required string ip = 1;
 	required uint32 score = 2;
 	optional bytes sid = 3; /* sec-mod sends it */
+	optional uint32 discon_reason = 4;
 }
 
 message ban_ip_reply_msg

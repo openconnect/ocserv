@@ -285,7 +285,7 @@ Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
+  - CFLAGS="-g -O0" ./configure --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1
   - make dist
@@ -307,7 +307,7 @@ noprocfs/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-maintainer-mode --disable-namespaces
+  - ac_cv_file_FILE__proc_self_exe=no ./configure --disable-namespaces
   - make -j$JOBS
   tags:
   - shared
@@ -327,7 +327,7 @@ clang/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - CC=clang ./configure --disable-maintainer-mode --with-werror
+  - CC=clang ./configure --with-werror
   - make -j$JOBS
   - make check -j$JOBS
   tags:
@@ -349,7 +349,7 @@ seccomp/Fedora:
   - chmod -R o-w tests/data/raddb
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --disable-maintainer-mode --with-kerberos-tests --enable-oidc-auth --with-seccomp-trap
+  - ./configure --with-kerberos-tests --enable-oidc-auth --with-seccomp-trap
   - make -j$JOBS
   - make check -j$JOBS
   tags:

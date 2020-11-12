@@ -288,7 +288,6 @@ Fedora:
   - CFLAGS="-g -O0" ./configure --disable-maintainer-mode --enable-code-coverage --with-kerberos-tests --enable-oidc-auth
   - make -j$JOBS
   - make check -j$JOBS COVERAGE=1
-  - make files-update
   - make dist
   - make local-code-coverage-output
   tags:

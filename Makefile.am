@@ -38,15 +38,8 @@ ChangeLog:
 	git log --pretty > ChangeLog
 .PHONY: ChangeLog
 
-files-update:
-
-files-compare:
-	@echo "*****************************************************************"
-	@echo "If the following step fails, run files-update"
-	@echo "*****************************************************************"
-
-dist-hook: files-compare ChangeLog
+dist-hook: ChangeLog
 	mv ChangeLog $(distdir)
 	test -f doc/ocserv.8 && test -f doc/ocpasswd.8 && test -f doc/occtl.8
 
-.PHONY: files-update files-compare AUTHORS
+.PHONY: AUTHORS

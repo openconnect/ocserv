@@ -63,10 +63,18 @@ function finish {
   test -e "${KRB5PIDFILE}" && kill $(cat ${KRB5PIDFILE}) >/dev/null 2>&1
   test -e "${KRB5PIDFILE}" && rm -f ${KRB5PIDFILE} >/dev/null 2>&1
   test -n "${PIDFILE}" && rm -f ${PIDFILE} >/dev/null 2>&1
-  test -n "${CLIPID}" && kill $(cat ${CLIPID}) >/dev/null 2>&1
-  test -n "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
+  test -e "${CLIPID}" && kill -s INT $(cat ${CLIPID}) >/dev/null 2>&1
+  test -e "${CLIPID}" && rm -f ${CLIPID} >/dev/null 2>&1
   test -n "${CONFIG}" && rm -f ${CONFIG} >/dev/null 2>&1
   rm -f ${OUTFILE} 2>&1
+  #reset kerberos changes
+  echo -e "secret123\nsecret123"|/usr/sbin/kdb5_util destroy -f
+  echo -e "${USERPASS}\n${USERPASS}" | /usr/sbin/kadmin.local -q "delete_principal -force ${USERNAME}"
+  echo -e "${USERPASS}\n${USERPASS}" | /usr/sbin/kadmin.local -q "delete_principal -force HTTP/kerberos.test"
+  rm -f /etc/krb5-keytab
+  grep kerberos.test /etc/hosts && sed '$d' /etc/hosts
+  #undef Fedora33 the krb5kdc doesn't create a PID file
+  killall krb5kdc
 }
 trap finish EXIT
 

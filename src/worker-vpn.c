@@ -1867,7 +1867,15 @@ static int connect_handler(worker_st * ws)
 	unsigned i;
 	unsigned ip6;
 
-	gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
+	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
+	if (ret < 0) {
+		oclog(ws, LOG_ERR,
+		      "error in the random generator: %s", gnutls_strerror(ret));
+		cstp_puts(ws, "HTTP/1.1 503 Service Unavailable\r\n");
+		cstp_puts(ws,
+			 "X-Reason: Server error\r\n\r\n");
+		return -1;
+	}
 
 	ws->buffer_size = sizeof(ws->buffer);
 

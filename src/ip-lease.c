@@ -291,7 +291,12 @@ int get_ipv4_lease(main_server_st* s, struct proc_st* proc)
 			memcpy(SA_IN_U8_P(&rnd), proc->ipv4_seed, 4);
 		} else {
 			if (max_loops < MAX_IP_TRIES-FIXED_IPS) {
-				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+				ret = gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in_addr));
+				if (ret < 0) {
+					mslog(s, proc, LOG_ERR, "error in the random generator: %s", gnutls_strerror(ret));
+					ret = ERR_NO_IP;
+					goto fail;
+				}
 			} else {
 				ip_from_seed(SA_IN_U8_P(&rnd), sizeof(struct in_addr),
 					     SA_IN_U8_P(&rnd), sizeof(struct in_addr));
@@ -453,7 +458,12 @@ int get_ipv6_lease(main_server_st* s, struct proc_st* proc)
 				     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));
 		} else {
 			if (max_loops < MAX_IP_TRIES-FIXED_IPS) {
-				gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in6_addr));
+				ret = gnutls_rnd(GNUTLS_RND_NONCE, SA_IN_U8_P(&rnd), sizeof(struct in6_addr));
+				if (ret < 0) {
+					mslog(s, proc, LOG_ERR, "error in the random generator: %s", gnutls_strerror(ret));
+					ret = ERR_NO_IP;
+					goto fail;
+				}
 			} else {
 				ip_from_seed(SA_IN6_U8_P(&rnd), sizeof(struct in6_addr),
 					     SA_IN6_U8_P(&rnd), sizeof(struct in6_addr));

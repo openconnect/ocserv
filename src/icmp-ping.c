@@ -183,12 +183,16 @@ int icmp_ping4(main_server_st * s, struct sockaddr_in *addr1)
 	if (GETCONFIG(s)->ping_leases == 0)
 		return 0;
 
-	gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
+	if ((e=gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1))) < 0) {
+		mslog(s, NULL, LOG_ERR,
+		      "error in the random generator: %s", gnutls_strerror(e));
+		return 0;
+	}
 
 	pingsock = socket(AF_INET, SOCK_RAW, 1);
 	if (pingsock == -1) {
 		e = errno;
-		mslog(s, NULL, LOG_INFO,
+		mslog(s, NULL, LOG_ERR,
 		      "could not open raw socket for ping: %s", strerror(e));
 		return 0;
 	}
@@ -274,12 +278,16 @@ int icmp_ping6(main_server_st * s,
 	if (GETCONFIG(s)->ping_leases == 0)
 		return 0;
 
-	gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1));
+	if ((e=gnutls_rnd(GNUTLS_RND_NONCE, &id1, sizeof(id1))) < 0) {
+		mslog(s, NULL, LOG_ERR,
+		      "error in the random generator: %s", gnutls_strerror(e));
+		return 0;
+	}
 
 	pingsock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	if (pingsock == -1) {
 		e = errno;
-		mslog(s, NULL, LOG_INFO,
+		mslog(s, NULL, LOG_ERR,
 		      "could not open raw socket for ping: %s", strerror(e));
 		return 0;
 	}

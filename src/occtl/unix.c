@@ -1593,8 +1593,13 @@ int handle_events_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	ret = 1;
  cleanup:
 	talloc_free(data);
+	// These are indeed dead code but if removed a minor change
+	// in the code above may result to either memory leak or
+	// something worse.
+	// coverity[dead_error_line : FALSE]
 	if (rep1 != NULL)
 		user_list_rep__free_unpacked(rep1, &pa);
+	// coverity[dead_error_line : FALSE]
 	if (rep2 != NULL)
 		top_update_rep__free_unpacked(rep2, &pa);
 	free_reply(&raw);

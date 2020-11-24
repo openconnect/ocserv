@@ -529,8 +529,13 @@ void send_stats_to_secmod(worker_st * ws, time_t now, unsigned discon_reason)
 		ret = send_msg_to_secmod(ws, sd, CMD_SEC_CLI_STATS, &msg,
 				 (pack_size_func)cli_stats_msg__get_packed_size,
 				 (pack_func) cli_stats_msg__pack);
-		if (discon_reason) /* wait for sec-mod to close connection to verify data have been accounted */
-			(void)read(sd, buf, sizeof(buf));
+		if (discon_reason) { /* wait for sec-mod to close connection to verify data have been accounted */
+			e = read(sd, buf, sizeof(buf));
+			if (e == -1) {
+				e = errno;
+				oclog(ws, LOG_DEBUG, "could not wait for sec-mod: %s\n", strerror(e));
+			}
+		}
 		close(sd);
 
 		if (ret >= 0) {

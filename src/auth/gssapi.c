@@ -93,7 +93,7 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 {
 	int ret;
 	OM_uint32 time, minor;
-	gss_name_t name = GSS_C_NO_NAME;
+	const gss_name_t name = GSS_C_NO_NAME;
 	gssapi_cfg_st *config = additional;
 	struct gssapi_vhost_ctx_st *vctx;
 
@@ -135,9 +135,6 @@ static void gssapi_vhost_init(void **_vctx, void *pool, void *additional)
 			exit(1);
 		}
 	}
-
-	if (name != GSS_C_NO_NAME)
-		gss_release_name(&minor, &name);
 
 	*_vctx = vctx;
 	return;

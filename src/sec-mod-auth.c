@@ -705,7 +705,7 @@ int handle_sec_auth_cont(int cfd, sec_mod_st * sec, const SecAuthContMsg * req)
 
 	if (e->status != PS_AUTH_INIT && e->status != PS_AUTH_CONT) {
 		seclog(sec, LOG_ERR, "auth cont received for %s "SESSION_STR" but we are on state %s(%u)!",
-		       e->acct_info.username, e->acct_info.safe_id, ps_status_to_str(e->status), e->status);
+		       e->acct_info.username, e->acct_info.safe_id, ps_status_to_str(e->status, 0), e->status);
 		ret = -1;
 		goto cleanup;
 	}

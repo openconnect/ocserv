@@ -7,6 +7,8 @@
   sent (#357)
 - Increased the maximum configuration line; this allows banner
   messages longer than 200 characters (#364)
+- Removed the listen-clear-file config option. This option was incompatible
+  with several clients, and thus is unusable for a generic server (#376)
 
 
 * Version 1.1.1 (released 2020-09-21)

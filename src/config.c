@@ -760,8 +760,8 @@ static int cfg_ini_handler(void *_ctx, const char *section, const char *name, co
 		} else if (strcmp(name, "udp-listen-host") == 0) {
 			PREAD_STRING(pool, vhost->perm_config.udp_listen_host);
 		} else if (strcmp(name, "listen-clear-file") == 0) {
-			if (!PWARN_ON_VHOST_STRDUP(vhost->name, "listen-clear-file", unix_conn_file))
-				PREAD_STRING(pool, vhost->perm_config.unix_conn_file);
+			fprintf(stderr, ERRSTR"the 'listen-clear-file' option was removed in ocserv 1.1.2\n");
+			return 0;
 		} else if (strcmp(name, "listen-netns") == 0) {
 			vhost->perm_config.listen_netns_name = talloc_strdup(pool, value);
 		} else if (strcmp(name, "tcp-port") == 0) {
@@ -1347,12 +1347,10 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 		}
 	}
 
-	if (vhost->perm_config.port == 0 && vhost->perm_config.unix_conn_file == NULL) {
+	if (vhost->perm_config.port == 0) {
 		if (defvhost) {
 			if (vhost->perm_config.port)
 				vhost->perm_config.port = defvhost->perm_config.port;
-			else if (vhost->perm_config.unix_conn_file)
-				vhost->perm_config.unix_conn_file = talloc_strdup(vhost, defvhost->perm_config.unix_conn_file);
 		} else {
 			fprintf(stderr, ERRSTR"%sthe tcp-port option is mandatory!\n", PREFIX_VHOST(vhost));
 			exit(1);
@@ -1412,13 +1410,6 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 	if (config->cert_req != 0 && config->cert_user_oid != NULL) {
 		if (!c_isdigit(config->cert_user_oid[0]) && strcmp(config->cert_user_oid, "SAN(rfc822name)") != 0) {
 			fprintf(stderr, ERRSTR"%sthe option 'cert-user-oid' has a unsupported value\n", PREFIX_VHOST(vhost));
-			exit(1);
-		}
-	}
-
-	if (vhost->perm_config.unix_conn_file != NULL && (config->cert_req != 0)) {
-		if (config->listen_proxy_proto == 0) {
-			fprintf(stderr, ERRSTR"%sthe option 'listen-clear-file' cannot be combined with 'auth=certificate'\n", PREFIX_VHOST(vhost));
 			exit(1);
 		}
 	}
@@ -1487,13 +1478,6 @@ static void check_cfg(vhost_cfg_st *vhost, vhost_cfg_st *defvhost, unsigned sile
 			fprintf(stderr, NOTESTR"%sthe cisco-client-compat option implies dtls-legacy = true; enabling\n", PREFIX_VHOST(vhost));
 		}
 		config->dtls_legacy = 1;
-	}
-
-	if (vhost->perm_config.unix_conn_file) {
-		if (config->dtls_psk && !silent) {
-			fprintf(stderr, NOTESTR"%s'dtls-psk' cannot be combined with unix socket file\n", PREFIX_VHOST(vhost));
-		}
-		config->dtls_psk = 0;
 	}
 
 	if (config->match_dtls_and_tls) {

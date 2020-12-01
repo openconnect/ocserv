@@ -255,68 +255,6 @@ int _listen_ports(void *pool, struct perm_cfg_st* config, struct addrinfo *res,
 	return 0;
 }
 
-static 
-int _listen_unix_ports(void *pool, struct perm_cfg_st* config, 
-		       struct listen_list_st *list)
-{
-	int s, e, ret;
-	struct sockaddr_un sa;
-
-	/* open the UNIX domain socket to accept connections */
-	if (config->unix_conn_file) {
-		memset(&sa, 0, sizeof(sa));
-		sa.sun_family = AF_UNIX;
-		strlcpy(sa.sun_path, config->unix_conn_file, sizeof(sa.sun_path));
-		if (remove(sa.sun_path) != 0) {
-			e = errno;
-			fprintf(stderr, "could not remove unix domain socket['%s']: %s", sa.sun_path,
-			       strerror(e));
-			return -1;
-		}
-
-		if (config->foreground != 0)
-			fprintf(stderr, "listening (UNIX) on %s...\n",
-				sa.sun_path);
-
-		s = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (s == -1) {
-			e = errno;
-			fprintf(stderr, "could not create socket '%s': %s", sa.sun_path,
-			       strerror(e));
-			return -1;
-		}
-
-		umask(006);
-		ret = bind(s, (struct sockaddr *)&sa, SUN_LEN(&sa));
-		if (ret == -1) {
-			e = errno;
-			fprintf(stderr, "could not bind socket '%s': %s", sa.sun_path,
-			       strerror(e));
-			close(s);
-			return -1;
-		}
-
-		ret = chown(sa.sun_path, config->uid, config->gid);
-		if (ret == -1) {
-			e = errno;
-			fprintf(stderr, "could not chown socket '%s': %s", sa.sun_path,
-			       strerror(e));
-		}
-
-		ret = listen(s, 1024);
-		if (ret == -1) {
-			e = errno;
-			fprintf(stderr, "could not listen to socket '%s': %s",
-			       sa.sun_path, strerror(e));
-			exit(1);
-		}
-		add_listener(pool, list, s, AF_UNIX, SOCK_TYPE_UNIX, 0, (struct sockaddr *)&sa, sizeof(sa));
-	}
-	fflush(stderr);
-
-	return 0;
-}
-
 /* Returns 0 on success or negative value on error.
  */
 static int
@@ -404,7 +342,7 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 	}
 #endif
 
-	if (config->port == 0 && config->unix_conn_file == NULL) {
+	if (config->port == 0) {
 		fprintf(stderr, "tcp-port option is mandatory!\n");
 		return -1;
 	}
@@ -434,11 +372,6 @@ listen_ports(void *pool, struct perm_cfg_st* config,
 			return -1;
 		}
 
-	}
-
-	ret = _listen_unix_ports(pool, config, list);
-	if (ret < 0) {
-		return -1;
 	}
 
 	if (list->total == 0) {
@@ -772,10 +705,6 @@ int sfd = -1;
 		 * the IP address and forward the socket.
 		 */
 		match_ip_only = 1;
-
-		/* don't bother IP matching when the listen-clear-file is in use */
-		if (GETPCONFIG(s)->unix_conn_file)
-			goto fail;
 	} else {
 		if (has_broken_random(s, s->msg_buffer, buffer_size)) {
 			mslog(s, NULL, LOG_INFO, "%s: detected broken DTLS client hello (no randomness); ignoring",

@@ -1751,7 +1751,7 @@ static int send_routes(worker_st *ws, struct http_req_st *req,
 			continue;
 		if (req->no_ipv4 != 0 && ip6 == 0)
 			continue;
-		oclog(ws, LOG_INFO, "%s route %s", txt, routes[i]);
+		oclog(ws, LOG_DEBUG, "%s route %s", txt, routes[i]);
 
 		if (ip6 != 0 && ws->full_ipv6) {
 			ret = cstp_printf(ws,

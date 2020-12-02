@@ -46,7 +46,10 @@ void __attribute__ ((format(printf, 3, 4)))
 	else
 		debug_prio = GETPCONFIG(ws)->debug;
 
-	if (priority == LOG_DEBUG && debug_prio < DEBUG_INFO)
+	if (priority == LOG_DEBUG && debug_prio < DEBUG_DEBUG)
+		return;
+
+	if (priority == LOG_INFO && debug_prio < DEBUG_INFO)
 		return;
 
 	if (priority == LOG_HTTP_DEBUG) {

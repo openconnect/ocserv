@@ -46,7 +46,8 @@
 
 /* Debug definitions for logger */
 #define DEBUG_BASIC 1
-#define DEBUG_INFO  3
+#define DEBUG_INFO  2
+#define DEBUG_DEBUG 3
 #define DEBUG_HTTP  4
 #define DEBUG_TRANSFERRED 5
 #define DEBUG_SENSITIVE 8

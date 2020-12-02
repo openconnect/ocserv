@@ -731,6 +731,10 @@ int sfd = -1;
 	}
 	buffer_size = ret;
 
+	// Sanitize values returned from oc_recvfrom_at to make coverity happy.
+	cli_addr_size = MIN(sizeof(cli_addr), cli_addr_size);
+	our_addr_size = MIN(sizeof(our_addr), our_addr_size);
+
 	if (buffer_size < RECORD_PAYLOAD_POS) {
 		mslog(s, NULL, LOG_INFO, "%s: too short UDP packet",
 		      human_addr((struct sockaddr*)&cli_addr, cli_addr_size, tbuf, sizeof(tbuf)));

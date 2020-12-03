@@ -91,7 +91,7 @@ Ubuntu20.04:
   script:
   - git submodule update --init
   - autoreconf -fvi
-  - ./configure --without-nuttcp-tests --enable-oidc-auth --enable-latency-stats
+  - ./configure --enable-oidc-auth --enable-latency-stats
   - make -j$JOBS
   - export MALLOC_CHECK_=3
   - make check -j$JOBS

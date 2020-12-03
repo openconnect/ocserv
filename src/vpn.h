@@ -393,7 +393,6 @@ struct perm_cfg_st {
 
 	char *listen_host;
 	char *udp_listen_host;
-	char* unix_conn_file;
 	char *listen_netns_name;
 	unsigned int port;
 	unsigned int udp_port;

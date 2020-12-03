@@ -125,7 +125,13 @@ int handle_commands_from_main(struct worker_st *ws)
 
 			if (fd == -1) {
 				oclog(ws, LOG_ERR, "received UDP fd message of wrong type");
-				goto udp_fd_fail;
+
+				if (tmsg)
+					udp_fd_msg__free_unpacked(tmsg, NULL);
+
+				if (DTLS_ACTIVE(ws)->udp_state == UP_WAIT_FD)
+					DTLS_ACTIVE(ws)->udp_state = UP_DISABLED;
+				return -1;
 			}
 
 			set_non_block(fd);
@@ -171,13 +177,6 @@ int handle_commands_from_main(struct worker_st *ws)
 
 	return 0;
 
-udp_fd_fail:
-	if (tmsg)
-		udp_fd_msg__free_unpacked(tmsg, NULL);
-	if (dtls && dtls->dtls_tptr.fd == -1)
-		dtls->udp_state = UP_DISABLED;
-
-	return -1;
 }
 
 /* Completes the VPN device information.

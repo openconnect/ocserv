@@ -311,18 +311,30 @@ ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec)
 
 void set_non_block(int fd)
 {
-	int val;
+	int val, ret;
 
 	val = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, val | O_NONBLOCK);
+	ret = fcntl(fd, F_SETFL, val | O_NONBLOCK);
+	if (ret == -1) {
+		/* We log but we do not fail; this seems to be failing when we test
+		 * on 32-bit mode container over a 64-bit kernel. I believe this is related to that:
+		 * https://patchwork.kernel.org/project/qemu-devel/patch/20200331133536.3328-1-linus.walleij@linaro.org/
+		 */
+		int e = errno;
+		syslog(LOG_ERR, "set_non_block: %s", strerror(e));
+	}
 }
 
 void set_block(int fd)
 {
-	int val;
+	int val, ret;
 
 	val = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
+	ret = fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
+	if (ret == -1) {
+		int e = errno;
+		syslog(LOG_ERR, "set_non_block: %s", strerror(e));
+	}
 }
 
 ssize_t recv_timeout(int sockfd, void *buf, size_t len, unsigned sec)

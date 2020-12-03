@@ -61,8 +61,9 @@ enum {
 static int ocserv_conv(int msg_size, const struct pam_message **msg, 
 		struct pam_response **resp, void *uptr)
 {
-struct pam_ctx_st * pctx = uptr;
-unsigned i;
+	struct pam_ctx_st * pctx = uptr;
+	unsigned i;
+	int ret;
 
 	if (msg_size == 0)
 		return PAM_SUCCESS;
@@ -79,8 +80,17 @@ unsigned i;
 			case PAM_TEXT_INFO:
 				syslog(LOG_DEBUG, "PAM-auth conv info: %s", msg[i]->msg);
 
-				str_append_str(&pctx->msg, msg[i]->msg);
-				str_append_data(&pctx->msg, " ", 1);
+				// That should never happen, but also not a big deal if we fail to add message here.
+				// coverity[check_return : FALSE]
+				ret = str_append_str(&pctx->msg, msg[i]->msg);
+				if (ret >= 0)
+					ret = str_append_data(&pctx->msg, " ", 1);
+
+				if (ret < 0) {
+					syslog(LOG_ERR, "Error in memory allocation in PAM");
+					return PAM_BUF_ERR;
+				}
+
 				pctx->sent_msg = 1;
 				break;
 			case PAM_PROMPT_ECHO_OFF:
@@ -93,7 +103,11 @@ unsigned i;
 				}
 
 				if (msg[i]->msg) {
-					str_append_str(&pctx->msg, msg[i]->msg);
+					ret = str_append_str(&pctx->msg, msg[i]->msg);
+					if (ret < 0) {
+						syslog(LOG_ERR, "Error in memory allocation in PAM");
+						return PAM_BUF_ERR;
+					}
 				}
 
 				syslog(LOG_DEBUG, "PAM-auth conv: echo-%s, msg: '%s'", (msg[i]->msg_style==PAM_PROMPT_ECHO_ON)?"on":"off", msg[i]->msg!=NULL?msg[i]->msg:"");
@@ -103,8 +117,13 @@ unsigned i;
 				co_resume();
 				pctx->state = PAM_S_INIT;
 
-				if (pctx->password[0] != 0)
+				if (pctx->password[0] != 0) {
 					pctx->replies[i].resp = strdup(pctx->password);
+					if (pctx->replies[i].resp == NULL) {
+						syslog(LOG_ERR, "Error in memory allocation in PAM");
+						return PAM_BUF_ERR;
+					}
+				}
 				pctx->sent_msg = 0;
 				break;
                 }

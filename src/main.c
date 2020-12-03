@@ -267,7 +267,12 @@ int _listen_unix_ports(void *pool, struct perm_cfg_st* config,
 		memset(&sa, 0, sizeof(sa));
 		sa.sun_family = AF_UNIX;
 		strlcpy(sa.sun_path, config->unix_conn_file, sizeof(sa.sun_path));
-		remove(sa.sun_path);
+		if (remove(sa.sun_path) != 0) {
+			e = errno;
+			fprintf(stderr, "could not remove unix domain socket['%s']: %s", sa.sun_path,
+			       strerror(e));
+			return -1;
+		}
 
 		if (config->foreground != 0)
 			fprintf(stderr, "listening (UNIX) on %s...\n",

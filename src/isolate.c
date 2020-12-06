@@ -37,6 +37,13 @@ void init_fd_limits_default(main_server_st * s)
 #endif
 }
 
+/* (Maximum clients) + (small buffer) + (sec mod fds)
+ * The (small buffer) is to allow unknown fds used by backends (e.g.,
+ * gnutls) as well as to allow running up to that many scripts (due to dup2)
+ * when close to the maximum limit.
+ */
+#define MAX_FD_LIMIT(clients) (clients + 128 + s->sec_mod_instance_count * 2)
+
 /* Adjusts the file descriptor limits for the main or worker processes
  */
 void update_fd_limits(main_server_st * s, unsigned main)
@@ -48,12 +55,11 @@ void update_fd_limits(main_server_st * s, unsigned main)
 
 	if (main) {
 		if (GETCONFIG(s)->max_clients > 0) 
-			// FUTURE: Should this be raises to account for scripts?
-			max = GETCONFIG(s)->max_clients + 32 + s->sec_mod_instance_count * 2;
+			max = MAX_FD_LIMIT(GETCONFIG(s)->max_clients);
 		else
 			// If the admin doesn't specify max_clients,
-			// then we are limiting it to around 4K.
-			max = 4 * 1024;
+			// then we are limiting it to around 8K.
+			max = MAX_FD_LIMIT(8 * 1024);
 
 		if (max > s->fd_limits_default_set.rlim_cur) {
 			new_set.rlim_cur = max;

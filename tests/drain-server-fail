@@ -20,7 +20,8 @@
 SERV="${SERV:-../src/ocserv}"
 OCCTL="${OCCTL:-../src/occtl/occtl}"
 srcdir=${srcdir:-.}
-NO_NEED_ROOT=1
+#we cannot use NO_NEED_ROOT here as occtl commands can only be issued by root
+NEED_SOCKET_WRAPPER=1
 PIDFILE=ocserv-pid.$$.tmp
 OCCTL_SOCKET=./occtl-drain-$$.socket
 

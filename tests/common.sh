@@ -40,11 +40,10 @@ if test -z "$NO_NEED_ROOT";then
 		echo "You need to run this script as root"
 		exit 77
 	fi
-else
-	if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
-		echo "Skipping test requiring ldpreload"
-		exit 77
-	fi
+fi
+
+# NO_NEED_ROOT implies NEED_SOCKET_WRAPPER
+if test "${NEED_SOCKET_WRAPPER}" = 1 || test "${NO_NEED_ROOT}" = 1;then
 	SOCKDIR="${srcdir}/tmp/sockwrap.$$.tmp"
 	mkdir -p $SOCKDIR
 	export SOCKET_WRAPPER_DIR=$SOCKDIR
@@ -53,6 +52,11 @@ else
 	ADDRESS=127.0.0.$SOCKET_WRAPPER_DEFAULT_IFACE
 	RAW_OPENCONNECT="${OPENCONNECT}"
 	OPENCONNECT="eval LD_PRELOAD=libsocket_wrapper.so ${OPENCONNECT}"
+
+	if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
+		echo "Skipping test requiring ldpreload"
+		exit 77
+	fi
 fi
 
 update_config() {

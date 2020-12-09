@@ -576,7 +576,7 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 	/* Extension(s) */
 	while (pos < buffer_size) {
 		uint16_t type;
-		uint16_t s;
+		uint16_t len;
 
 		if (pos+4 > buffer_size)
 			goto fallback;
@@ -589,16 +589,16 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 			if (pos+2 > buffer_size)
 				return 0; /* invalid format */
 
-			s = (buffer[pos] << 8) | buffer[pos+1];
-			if ((size_t)(pos+2+s) > buffer_size)
+			len = (buffer[pos] << 8) | buffer[pos+1];
+			if ((size_t)(pos+2+len) > buffer_size)
 				return 0; /* invalid format */
 			pos+=2;
 
-			s = buffer[pos];
-			if ((size_t)(pos+1+s) > buffer_size)
+			len = buffer[pos];
+			if ((size_t)(pos+1+len) > buffer_size)
 				return 0; /* invalid format */
 			pos++;
-			*id_size = s;
+			*id_size = len;
 			*id = &buffer[pos];
 			return 1;
 		}

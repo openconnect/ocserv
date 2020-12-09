@@ -54,7 +54,6 @@ in an embedded system (e.g., because a replacement library is included):
 libprotobuf-c-dev  / protobuf-c-devel
 libtalloc-dev      / libtalloc-devel
 libhttp-parser-dev / http-parser-devel
-libpcl1-dev        / pcllib-devel
 protobuf-c-compiler/ protobuf-c
 gperf              / gperf
 nuttcp             / nuttcp

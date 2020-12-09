@@ -385,7 +385,7 @@ minimal:
       - ./*.log
       - tests/*.log
 
-# Build a minimal version with every optional feature disable
+# Build a minimal version with every optional feature disabled
 minimal/Ubuntu20.04:
   stage: testing
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$UBUNTU20_BUILD

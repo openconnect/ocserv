@@ -1195,29 +1195,29 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 			}
 		}
 	} else {
-		const char * cfg_file = file;
+		const char *local_cfg_file = file;
 
-		if (cfg_file == NULL) {
+		if (local_cfg_file == NULL) {
 			fprintf(stderr, ERRSTR"no config file!\n");
 			exit(1);
 		}
 
 		/* parse configuration
 		*/
-		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+		ret = ini_parse(local_cfg_file, cfg_ini_handler, &ctx);
 		if (ret < 0 && strcmp(file, DEFAULT_CFG_FILE) == 0) {
-			cfg_file = OLD_DEFAULT_CFG_FILE;
-			ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+			local_cfg_file = OLD_DEFAULT_CFG_FILE;
+			ret = ini_parse(local_cfg_file, cfg_ini_handler, &ctx);
 		}
 
 		if (ret != 0) {
-			CONFIG_ERROR(cfg_file, ret);
+			CONFIG_ERROR(local_cfg_file, ret);
 			exit(1);
 		}
 		
-		ret = snapshot_create(config_snapshot, cfg_file);
+		ret = snapshot_create(config_snapshot, local_cfg_file);
 		if (ret < 0){
-			fprintf(stderr, ERRSTR"cannot snapshot config file %s\n", cfg_file);
+			fprintf(stderr, ERRSTR"cannot snapshot config file %s\n", local_cfg_file);
 			exit(1);
 		}
 		list_for_each(head, vhost, list) {
@@ -1231,23 +1231,23 @@ static void parse_cfg_file(void *pool, const char *file, struct list_head *head,
 
 	}
 #else
-	const char * cfg_file = file;
+	const char * local_cfg_file = file;
 
-	if (cfg_file == NULL) {
+	if (local_cfg_file == NULL) {
 		fprintf(stderr, ERRSTR"no config file!\n");
 		exit(1);
 	}
 
 	/* parse configuration
 	*/
-	ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+	ret = ini_parse(local_cfg_file, cfg_ini_handler, &ctx);
 	if (ret < 0 && file != NULL && strcmp(file, DEFAULT_CFG_FILE) == 0) {
-		cfg_file = OLD_DEFAULT_CFG_FILE;
-		ret = ini_parse(cfg_file, cfg_ini_handler, &ctx);
+		local_cfg_file = OLD_DEFAULT_CFG_FILE;
+		ret = ini_parse(local_cfg_file, cfg_ini_handler, &ctx);
 	}
 
 	if (ret != 0) {
-		CONFIG_ERROR(cfg_file, ret);
+		CONFIG_ERROR(local_cfg_file, ret);
 		exit(1);
 	}
 #endif

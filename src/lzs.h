@@ -15,5 +15,10 @@
  * Lesser General Public License for more details.
  */
 
+#ifndef LZS_H
+# define LZS_H
+
 int lzs_decompress(unsigned char *dst, int dstlen, const unsigned char *src, int srclen);
 int lzs_compress(unsigned char *dst, int dstlen, const unsigned char *src, int srclen);
+
+#endif

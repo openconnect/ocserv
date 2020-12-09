@@ -17,6 +17,9 @@
 
 */
 
+#ifndef CLOEXEC_H
+# define CLOEXEC_H
+
 #include <stdbool.h>
 
 /* Set the 'FD_CLOEXEC' flag of DESC if VALUE is true,
@@ -36,3 +39,5 @@ int set_cloexec_flag (int desc, bool value);
    be duplicated.  */
 
 int dup_cloexec (int fd);
+
+#endif /* CLOEXEC_H */

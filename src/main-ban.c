@@ -186,7 +186,12 @@ int add_ip_to_ban_list(main_server_st *s, const unsigned char *ip, unsigned ip_s
 
 	if (GETCONFIG(s)->max_ban_score > 0 && IS_BANNED(s, e)) {
 		if (print_msg && p_str_ip) {
-			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", str_ip, e->score, ctime(&e->expires));
+			char date[256];
+			struct tm tm;
+			if ((localtime_r(&e->expires, &tm) == NULL) || (strftime(date, sizeof(date), "%a %b %e %H:%M:%S %Y", &tm) == 0)) {
+				date[0] = 0;
+			}
+			mslog(s, NULL, LOG_INFO, "added IP '%s' (with score %d) to ban list, will be reset at: %s", str_ip, e->score, date);
 		}
 		ret = -1;
 	} else {

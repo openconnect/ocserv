@@ -251,7 +251,7 @@ static void method_reload(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: reload");
 
-	ev_feed_signal_event (loop, SIGHUP);
+	ev_feed_signal_event (main_loop, SIGHUP);
 
 	rep.status = 1;
 
@@ -273,7 +273,7 @@ static void method_stop(method_ctx *ctx, int cfd, uint8_t * msg,
 
 	mslog(ctx->s, NULL, LOG_DEBUG, "ctl: stop");
 
-	ev_feed_signal_event (loop, SIGTERM);
+	ev_feed_signal_event (main_loop, SIGTERM);
 
 	rep.status = 1;
 
@@ -870,7 +870,7 @@ struct ctl_watcher_st {
 
 static void ctl_cmd_wacher_cb(EV_P_ ev_io *w, int revents)
 {
-	main_server_st *s = ev_userdata(loop);
+	main_server_st *s = ev_userdata(main_loop);
 	int ret;
 	size_t length;
 	uint8_t cmd;
@@ -951,7 +951,7 @@ static void ctl_handle_commands(main_server_st * s)
 	wst->fd = cfd;
 
 	ev_io_init(&wst->ctl_cmd_io, ctl_cmd_wacher_cb, wst->fd, EV_READ);
-	ev_io_start(loop, &wst->ctl_cmd_io);
+	ev_io_start(main_loop, &wst->ctl_cmd_io);
 
 	return;
  fail:

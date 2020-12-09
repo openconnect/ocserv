@@ -17,4 +17,9 @@
  *   Nikos Mavrogiannopoulos <nmav@redhat.com>
  */
 
+#ifndef GEOIP_H
+# define GEOIP_H
+
 char * geo_lookup(const char *ip, char *buf, unsigned buf_size);
+
+#endif

@@ -205,7 +205,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 	char str_since[64];
 	char buf[MAX_TMPSTR_SIZE];
 	time_t t;
-	struct tm *tm;
+	struct tm *tm, _tm;
 	PROTOBUF_ALLOCATOR(pa, ctx);
 
 	init_reply(&raw);
@@ -238,7 +238,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 		print_single_value_int(stdout, params, "Sec-mod instance count", rep->n_sec_mod_pids, 1);
 
 		t = rep->start_time;
-		tm = localtime(&t);
+		tm = localtime_r(&t, &_tm);
 		print_time_ival7(buf, time(0), t);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
@@ -284,7 +284,7 @@ int handle_status_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st *para
 
 		t = rep->last_reset;
 		if (t > 0) {
-			tm = localtime(&t);
+			tm = localtime_r(&t, &_tm);
 			print_time_ival7(buf, time(0), t);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
@@ -634,7 +634,7 @@ void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_par
 	const char *dtls_ciphersuite;
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	time_t t;
-	struct tm *tm;
+	struct tm *tm, _tm;
 	char str_since[64];
 
 	if (HAVE_JSON(params)) {
@@ -654,7 +654,7 @@ void common_user_list(struct unix_ctx *ctx, UserListRep *rep, FILE *out, cmd_par
 		}
 
 		t = rep->user[i]->conn_time;
-		tm = localtime(&t);
+		tm = localtime_r(&t, &_tm);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		print_time_ival7(tmpbuf, time(0), t);
@@ -735,7 +735,7 @@ void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out,
 	const char *username;
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	time_t t;
-	struct tm *tm;
+	struct tm *tm, _tm;
 	char str_since[65];
 	const char *sid;
 
@@ -759,7 +759,7 @@ void session_list(struct unix_ctx *ctx, SecmListCookiesReplyMsg *rep, FILE *out,
 
 		t = rep->cookies[i]->created;
 		if (t > 0) {
-			tm = localtime(&t);
+			tm = localtime_r(&t, &_tm);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 			print_time_ival7(tmpbuf, time(0), t);
 		}
@@ -970,7 +970,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 	char str_since[64];
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	FILE *out;
-	struct tm *tm;
+	struct tm *tm, _tm;
 	time_t t;
 	PROTOBUF_ALLOCATOR(pa, ctx);
 	char txt_ip[MAX_IP_STR];
@@ -1008,7 +1008,7 @@ int handle_list_banned_cmd(struct unix_ctx *ctx, const char *arg, cmd_params_st 
 		if (points == 0) {
 			if (rep->info[i]->has_expires) {
 				t = rep->info[i]->expires;
-				tm = localtime(&t);
+				tm = localtime_r(&t, &_tm);
 				strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 			} else {
 				continue;
@@ -1096,7 +1096,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 	char str_since[64];
 	char tmpbuf[MAX_TMPSTR_SIZE];
 	char tmpbuf2[MAX_TMPSTR_SIZE];
-	struct tm *tm;
+	struct tm *tm, _tm;
 	time_t t;
 	unsigned at_least_one = 0;
 	int ret = 1, r;
@@ -1120,7 +1120,7 @@ int common_info_cmd(UserListRep * args, FILE *out, cmd_params_st *params)
 		print_single_value_int(out, params, "ID", args->user[i]->id, 1);
 
 		t = args->user[i]->conn_time;
-		tm = localtime(&t);
+		tm = localtime_r(&t, &_tm);
 		strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 
 		username = args->user[i]->username;
@@ -1257,7 +1257,7 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
 	const char *username, *groupname;
 	char str_since[65];
 	char str_since2[65];
-	struct tm *tm;
+	struct tm *tm, _tm;
 	time_t t;
 	unsigned at_least_one = 0;
 	int ret = 1;
@@ -1307,14 +1307,14 @@ int session_info_cmd(void *ctx, SecmListCookiesReplyMsg * args, FILE *out,
 		str_since2[0] = 0;
 
 		if (t > 0) {
-			tm = localtime(&t);
+			tm = localtime_r(&t, &_tm);
 			strftime(str_since, sizeof(str_since), DATE_TIME_FMT, tm);
 		}
 
 		t = args->cookies[i]->expires;
 
 		if (t > 0) {
-			tm = localtime(&t);
+			tm = localtime_r(&t, &_tm);
 			strftime(str_since2, sizeof(str_since2), DATE_TIME_FMT, tm);
 		}
 		print_pair_value(out, params, "Created", str_since, "Expires", str_since2, 1);

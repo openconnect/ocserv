@@ -91,7 +91,7 @@ static void resume_accept_cb (EV_P_ ev_timer *w, int revents);
 
 int syslog_open = 0;
 sigset_t sig_default_set;
-struct ev_loop *loop = NULL;
+struct ev_loop *main_loop = NULL;
 static unsigned allow_broken_clients = 0;
 
 typedef struct sec_mod_watcher_st {
@@ -463,8 +463,8 @@ void clear_lists(main_server_st *s)
 		if (ctmp->tun_lease.fd >= 0)
 			close(ctmp->tun_lease.fd);
 		list_del(&ctmp->list);
-		ev_child_stop(EV_A_ &ctmp->ev_child);
-		ev_io_stop(EV_A_ &ctmp->io);
+		ev_child_stop(main_loop, &ctmp->ev_child);
+		ev_io_stop(main_loop, &ctmp->io);
 		safe_memset(ctmp, 0, sizeof(*ctmp));
 		talloc_free(ctmp);
 		s->proc_list.total--;
@@ -472,7 +472,7 @@ void clear_lists(main_server_st *s)
 
 	list_for_each_safe(&s->script_list.head, script_tmp, script_pos, list) {
 		list_del(&script_tmp->list);
-		ev_child_stop(loop, &script_tmp->ev_child);
+		ev_child_stop(main_loop, &script_tmp->ev_child);
 		talloc_free(script_tmp);
 	}
 
@@ -483,18 +483,18 @@ void clear_lists(main_server_st *s)
 	if_address_cleanup(s);
 
 	/* clear libev state */
-	if (loop) {
-		ev_io_stop (loop, &ctl_watcher);
+	if (main_loop) {
+		ev_io_stop (main_loop, &ctl_watcher);
 		for (i = 0; i < s->sec_mod_instance_count; i++) {
-			ev_io_stop (loop, &sec_mod_watchers[i].sec_mod_watcher);
-			ev_child_stop (loop, &sec_mod_watchers[i].child_watcher);
+			ev_io_stop (main_loop, &sec_mod_watchers[i].sec_mod_watcher);
+			ev_child_stop (main_loop, &sec_mod_watchers[i].child_watcher);
 		}
-		ev_timer_stop(loop, &maintenance_watcher);
+		ev_timer_stop(main_loop, &maintenance_watcher);
 #if defined(CAPTURE_LATENCY_SUPPORT)
-		ev_timer_stop(loop, &latency_watcher);		
+		ev_timer_stop(main_loop, &latency_watcher);		
 #endif
 		/* free memory and descriptors by the event loop */
-		ev_loop_destroy (loop);
+		ev_loop_destroy (main_loop);
 	}
 }
 
@@ -576,7 +576,7 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 	/* Extension(s) */
 	while (pos < buffer_size) {
 		uint16_t type;
-		uint16_t s;
+		uint16_t len;
 
 		if (pos+4 > buffer_size)
 			goto fallback;
@@ -589,16 +589,16 @@ unsigned get_session_id(main_server_st* s, uint8_t *buffer, size_t buffer_size, 
 			if (pos+2 > buffer_size)
 				return 0; /* invalid format */
 
-			s = (buffer[pos] << 8) | buffer[pos+1];
-			if ((size_t)(pos+2+s) > buffer_size)
+			len = (buffer[pos] << 8) | buffer[pos+1];
+			if ((size_t)(pos+2+len) > buffer_size)
 				return 0; /* invalid format */
 			pos+=2;
 
-			s = buffer[pos];
-			if ((size_t)(pos+1+s) > buffer_size)
+			len = buffer[pos];
+			if ((size_t)(pos+1+len) > buffer_size)
 				return 0; /* invalid format */
 			pos++;
-			*id_size = s;
+			*id_size = len;
 			*id = &buffer[pos];
 			return 1;
 		}
@@ -924,7 +924,7 @@ static void terminate_server(main_server_st * s)
 		total--;
 	}
 
-	ev_break (loop, EVBREAK_ALL);
+	ev_break (main_loop, EVBREAK_ALL);
 }
 
 static void graceful_shutdown_watcher_cb(EV_P_ ev_timer *w, int revents)
@@ -1289,7 +1289,7 @@ static void maintenance_sig_watcher_cb(struct ev_loop *loop, ev_signal *w, int r
 
 static void syserr_cb (const char *msg)
 {
-	main_server_st *s = ev_userdata(loop);
+	main_server_st *s = ev_userdata(main_loop);
 
 	mslog(s, NULL, LOG_ERR, "libev fatal error: %s", msg);
 	abort();
@@ -1485,8 +1485,8 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	loop = EV_DEFAULT;
-	if (loop == NULL) {
+	main_loop = EV_DEFAULT;
+	if (main_loop == NULL) {
 		mslog(s, NULL, LOG_ERR, "could not initialise libev");
 		exit(1);
 	}
@@ -1540,7 +1540,7 @@ int main(int argc, char** argv)
 	/* increase the number of our allowed file descriptors */
 	update_fd_limits(s, 1);
 
-	ev_set_userdata (loop, s);
+	ev_set_userdata (main_loop, s);
 	ev_set_syserr_cb(syserr_cb);
 
 	ev_init(&ctl_watcher, ctl_watcher_cb);
@@ -1551,56 +1551,56 @@ int main(int argc, char** argv)
 
 	ev_init (&int_sig_watcher, term_sig_watcher_cb);
 	ev_signal_set (&int_sig_watcher, SIGINT);
-	ev_signal_start (loop, &int_sig_watcher);
+	ev_signal_start (main_loop, &int_sig_watcher);
 
 	ev_init (&term_sig_watcher, term_sig_watcher_cb);
 	ev_signal_set (&term_sig_watcher, SIGTERM);
-	ev_signal_start (loop, &term_sig_watcher);
+	ev_signal_start (main_loop, &term_sig_watcher);
 
 	ev_init (&reload_sig_watcher, reload_sig_watcher_cb);
 	ev_signal_set (&reload_sig_watcher, SIGHUP);
-	ev_signal_start (loop, &reload_sig_watcher);
+	ev_signal_start (main_loop, &reload_sig_watcher);
 
 	/* set the standard fds we watch */
 	list_for_each(&s->listen_list.head, ltmp, list) {
 		if (ltmp->fd == -1) continue;
 
-		ev_io_start (loop, &ltmp->io);
+		ev_io_start (main_loop, &ltmp->io);
 	}
 
 	for (i = 0; i < s->sec_mod_instance_count; i ++) {
 		ev_io_set(&sec_mod_watchers[i].sec_mod_watcher, s->sec_mod_instances[i].sec_mod_fd, EV_READ);
-		ev_io_start (loop, &sec_mod_watchers[i].sec_mod_watcher);
+		ev_io_start (main_loop, &sec_mod_watchers[i].sec_mod_watcher);
 	}
 
 	ctl_handler_set_fds(s, &ctl_watcher);
 
-	ev_io_start (loop, &ctl_watcher);
+	ev_io_start (main_loop, &ctl_watcher);
 
 	for (i = 0; i < s->sec_mod_instance_count; i ++) {
 		ev_child_init(&sec_mod_watchers[i].child_watcher, sec_mod_child_watcher_cb, s->sec_mod_instances[i].sec_mod_pid, 0);
-		ev_child_start (loop, &sec_mod_watchers[i].child_watcher);
+		ev_child_start (main_loop, &sec_mod_watchers[i].child_watcher);
 	}
 
 	ev_init(&maintenance_watcher, maintenance_watcher_cb);
 	ev_timer_set(&maintenance_watcher, MAIN_MAINTENANCE_TIME, MAIN_MAINTENANCE_TIME);
-	ev_timer_start(loop, &maintenance_watcher);
+	ev_timer_start(main_loop, &maintenance_watcher);
 
 	ev_init(&graceful_shutdown_watcher, graceful_shutdown_watcher_cb);
 
 #if defined(CAPTURE_LATENCY_SUPPORT)
 	ev_init(&latency_watcher, latency_watcher_cb);
 	ev_timer_set(&latency_watcher, LATENCY_AGGREGATION_TIME, LATENCY_AGGREGATION_TIME);
-	ev_timer_start(loop, &latency_watcher);
+	ev_timer_start(main_loop, &latency_watcher);
 #endif
 
 	/* allow forcing maintenance with SIGUSR2 */
 	ev_init (&maintenance_sig_watcher, maintenance_sig_watcher_cb);
 	ev_signal_set (&maintenance_sig_watcher, SIGUSR2);
-	ev_signal_start (loop, &maintenance_sig_watcher);
+	ev_signal_start (main_loop, &maintenance_sig_watcher);
 
 	/* Main server loop */
-	ev_run (loop, 0);
+	ev_run (main_loop, 0);
 
 	/* try to clean-up everything allocated to ease checks 
 	 * for memory leaks.

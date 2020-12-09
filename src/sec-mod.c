@@ -434,8 +434,6 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 			    SESSION_RESUME_REPLY_MSG__INIT;
 			SessionResumeFetchMsg *fmsg;
 
-			/* FIXME: rate limit that */
-
 			fmsg =
 			    session_resume_fetch_msg__unpack(&pa, buffer_size,
 							     buffer);
@@ -770,22 +768,22 @@ int serve_request_worker(sec_mod_st *sec, int cfd, pid_t pid, uint8_t *buffer, u
 
 static int load_keys(sec_mod_st *sec, unsigned force)
 {
-	unsigned i, need_reload;
+	unsigned i, reload_file;
 	int ret;
 	vhost_cfg_st *vhost = NULL;
 
 	list_for_each_rev(sec->vconfig, vhost, list) {
 		if (force == 0) {
-			need_reload = 0;
+			reload_file = 0;
 
 			for (i = 0; i < vhost->perm_config.key_size; i++) {
 				if (need_file_reload(vhost->perm_config.key[i], vhost->cert_last_access) != 0) {
-					need_reload = 1;
+					reload_file = 1;
 					break;
 				}
 			}
 
-			if (need_reload == 0)
+			if (reload_file == 0)
 				continue;
 		}
 

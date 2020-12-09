@@ -131,7 +131,7 @@ static void update_auth_time_stats(sec_mod_st * sec, time_t secs)
 
 	if (secs > sec->max_auth_time)
 		sec->max_auth_time = secs;
-	sec->avg_auth_time = (sec->avg_auth_time*(sec->total_authentications-1)+secs) / sec->total_authentications;
+	sec->avg_auth_time = ((uint64_t)sec->avg_auth_time*((uint64_t)(sec->total_authentications-1))+secs) / (uint64_t)sec->total_authentications;
 }
 
 static

@@ -49,7 +49,7 @@
 extern int saved_argc;
 extern char **saved_argv;
 
-extern struct ev_loop *loop;
+extern struct ev_loop *main_loop;
 extern ev_timer maintainance_watcher;
 
 #define MAIN_MAINTENANCE_TIME (900)

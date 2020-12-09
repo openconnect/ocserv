@@ -100,8 +100,8 @@ void remove_proc(main_server_st * s, struct proc_st *proc, unsigned flags)
 {
 	pid_t pid;
 
-	ev_io_stop(EV_A_ &proc->io);
-	ev_child_stop(EV_A_ &proc->ev_child);
+	ev_io_stop(main_loop, &proc->io);
+	ev_child_stop(main_loop, &proc->ev_child);
 
 	list_del(&proc->list);
 	s->stats.active_clients--;

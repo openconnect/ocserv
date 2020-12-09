@@ -591,7 +591,7 @@ int get_cert_names(worker_st * ws, const gnutls_datum_t * raw)
 				goto fail;
 			}
 			i++;
-		} while (ret >= 0);
+		} while (1);
 
 		ws->cert_groups_size = i;
 	}

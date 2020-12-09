@@ -434,8 +434,6 @@ int process_worker_packet(void *pool, int cfd, pid_t pid, sec_mod_st *sec, cmd_r
 			    SESSION_RESUME_REPLY_MSG__INIT;
 			SessionResumeFetchMsg *fmsg;
 
-			/* FIXME: rate limit that */
-
 			fmsg =
 			    session_resume_fetch_msg__unpack(&pa, buffer_size,
 							     buffer);

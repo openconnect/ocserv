@@ -1871,6 +1871,7 @@ static int connect_handler(worker_st * ws)
 	unsigned rnd;
 	unsigned i;
 	unsigned ip6;
+	time_t now = time(0);
 
 	ret = gnutls_rnd(GNUTLS_RND_NONCE, &rnd, sizeof(rnd));
 	if (ret < 0) {
@@ -2213,8 +2214,22 @@ static int connect_handler(worker_st * ws)
 		}
 	}
 
-	ret = cstp_puts(ws, "X-CSTP-Session-Timeout: none\r\n"
-		       "X-CSTP-Disconnected-Timeout: none\r\n"
+	if (!ws->user_config->has_session_timeout_secs) {
+		ret = cstp_puts(ws, "X-CSTP-Lease-Duration: none\r\n"
+				"X-CSTP-Session-Timeout: none\r\n");
+		SEND_ERR(ret);
+	} else {
+		time_t expiration = ws->session_start_time + ws->user_config->session_timeout_secs;
+		ret = cstp_printf(ws, "X-CSTP-Lease-Duration: %u\r\n"
+				  "X-CSTP-Session-Timeout: %u\r\n"
+				  "X-CSTP-Session-Timeout-Remaining: %ld\r\n",
+				  ws->user_config->session_timeout_secs,
+				  ws->user_config->session_timeout_secs,
+				  MAX(expiration - now, 0));
+		SEND_ERR(ret);
+	}
+
+	ret = cstp_puts(ws, "X-CSTP-Disconnected-Timeout: none\r\n"
 		       "X-CSTP-Keep: true\r\n"
 		       "X-CSTP-TCP-Keepalive: true\r\n"
 		       "X-CSTP-License: accept\r\n");

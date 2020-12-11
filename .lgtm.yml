@@ -1,8 +1,0 @@
-extraction:
-  cpp:
-    configure:
-      command:
-      - "autoreconf -fvi -Werror"
-      - ./configure
-    index:
-      build_command: "make -j4"

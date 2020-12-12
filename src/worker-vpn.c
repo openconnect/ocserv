@@ -95,7 +95,7 @@ struct worker_st *global_ws = NULL;
 static int terminate = 0;
 static int terminate_reason = REASON_SERVER_DISCONNECT;
 
-static struct ev_loop *loop = NULL;
+static struct ev_loop *worker_loop = NULL;
 ev_io command_watcher;
 ev_io tls_watcher;
 ev_io tun_watcher;
@@ -433,8 +433,8 @@ static int setup_dtls_connection(struct worker_st *ws, struct dtls_st * dtls)
 	dtls->dtls_session = session;
 	ev_init(&dtls->io, dtls_watcher_cb);
 	ev_io_set(&dtls->io, dtls->dtls_tptr.fd, EV_READ);
-	ev_io_start(loop, &dtls->io);
-	ev_invoke(loop, &dtls->io, EV_READ);
+	ev_io_start(worker_loop, &dtls->io);
+	ev_invoke(worker_loop, &dtls->io, EV_READ);
 
 	return 0;
  fail:
@@ -2624,7 +2624,7 @@ static int test_for_tcp_health_probe(struct worker_st *ws)
 
 static void syserr_cb (const char *msg)
 {
-	struct worker_st * ws = ev_userdata(loop);
+	struct worker_st * ws = ev_userdata(worker_loop);
 	int err = errno;
 
 	oclog(ws, LOG_ERR, "libev fatal error: %s / %s", msg, strerror(err));
@@ -2652,7 +2652,7 @@ static void cstp_send_terminate(struct worker_st * ws)
 
 static void command_watcher_cb (EV_P_ ev_io *w, int revents)
 {
-	struct worker_st *ws = ev_userdata(loop);
+	struct worker_st *ws = ev_userdata(worker_loop);
 
 	int ret = handle_commands_from_main(ws);
 	if (ret == ERR_NO_CMD_FD) {
@@ -2738,7 +2738,7 @@ static void invoke_dtls_if_needed(struct dtls_st * dtls)
 	if ((dtls->udp_state > UP_WAIT_FD) && 
 		(dtls->dtls_session != NULL) &&
 		(gnutls_record_check_pending(dtls->dtls_session))) {
-		ev_invoke(loop, &dtls->io, EV_READ);
+		ev_invoke(worker_loop, &dtls->io, EV_READ);
 	}
 }
 
@@ -2772,9 +2772,9 @@ static int worker_event_loop(struct worker_st * ws)
 	struct timespec tnow;
 
 #if defined(__linux__) && defined(HAVE_LIBSECCOMP)
-	loop = ev_default_loop(EVFLAG_NOENV|EVBACKEND_EPOLL);
+	worker_loop = ev_default_loop(EVFLAG_NOENV|EVBACKEND_EPOLL);
 #else
-	loop = EV_DEFAULT;
+	worker_loop = EV_DEFAULT;
 #endif
 
 	// Restore the signal handlers
@@ -2784,37 +2784,37 @@ static int worker_event_loop(struct worker_st * ws)
 	
 	ev_init(&alarm_sig_watcher, term_sig_watcher_cb);
 	ev_signal_set (&alarm_sig_watcher, SIGALRM);
-	ev_signal_start (loop, &alarm_sig_watcher);
+	ev_signal_start (worker_loop, &alarm_sig_watcher);
 
 	ev_init (&int_sig_watcher, term_sig_watcher_cb);
 	ev_signal_set (&int_sig_watcher, SIGINT);
-	ev_signal_start (loop, &int_sig_watcher);
+	ev_signal_start (worker_loop, &int_sig_watcher);
 
 	ev_init (&term_sig_watcher, term_sig_watcher_cb);
 	ev_signal_set (&term_sig_watcher, SIGTERM);
-	ev_signal_start (loop, &term_sig_watcher);
+	ev_signal_start (worker_loop, &term_sig_watcher);
 	
-	ev_set_userdata (loop, ws);
+	ev_set_userdata (worker_loop, ws);
 	ev_set_syserr_cb(syserr_cb);
 
 	ev_init(&command_watcher, command_watcher_cb);
 	ev_io_set(&command_watcher, ws->cmd_fd, EV_READ);
-	ev_io_start(loop, &command_watcher);
+	ev_io_start(worker_loop, &command_watcher);
 
 	ev_init(&tls_watcher, tls_watcher_cb);
 	ev_io_set(&tls_watcher, ws->conn_fd, EV_READ);
-	ev_io_start(loop, &tls_watcher);
+	ev_io_start(worker_loop, &tls_watcher);
 
 	ev_init(&DTLS_ACTIVE(ws)->io, dtls_watcher_cb);
 	ev_init(&DTLS_INACTIVE(ws)->io, dtls_watcher_cb);
 
 	ev_init(&tun_watcher, tun_watcher_cb);
 	ev_io_set(&tun_watcher, ws->tun_fd, EV_READ);
-	ev_io_start(loop, &tun_watcher);
+	ev_io_start(worker_loop, &tun_watcher);
 
 	ev_init (&period_check_watcher, periodic_check_watcher_cb);
 	ev_timer_set(&period_check_watcher, WORKER_MAINTENANCE_TIME, WORKER_MAINTENANCE_TIME);
-	ev_timer_start(loop, &period_check_watcher);
+	ev_timer_start(worker_loop, &period_check_watcher);
 
 
 	/* start dead peer detection */
@@ -2825,7 +2825,7 @@ static int worker_event_loop(struct worker_st * ws)
 	bandwidth_init(&ws->b_tx, ws->user_config->tx_per_sec);
 
 
-	ev_run(loop, 0);
+	ev_run(worker_loop, 0);
 	if (terminate != 0)
 	{
 		goto exit;

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <talloc.h>
+#include <assert.h>
 /* for inet_ntop */
 #include <arpa/inet.h>
 #include <syslog.h>
@@ -218,7 +219,8 @@ char *human_addr2(const struct sockaddr *sa, socklen_t salen,
 	if (salen == sizeof(struct sockaddr_in6)) {
 		port = (unsigned)ntohs(((struct sockaddr_in6*)sa)->sin6_port);
 
-		if (full != 0 && port != 0 && buflen > 0) {
+		if (full != 0 && port != 0) {
+			assert(buflen > 0); /* already checked, but to avoid regression */
 			*buf = '[';
 			buf++;
 			buflen--;

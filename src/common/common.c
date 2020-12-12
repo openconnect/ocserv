@@ -30,6 +30,7 @@
 #include <netinet/ip.h>
 #include <poll.h>
 #include <limits.h>
+#include <assert.h>
 #include <nettle/sha1.h>
 #include "common.h"
 #include "defs.h"
@@ -254,7 +255,8 @@ ssize_t force_read(int sockfd, void *buf, size_t len)
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
-		} else if (ret == 0 && left != 0) {
+		} else if (ret == 0) {
+			assert(left != 0); /* ensured by the while */
 			errno = ENOENT;
 			return -1;
 		}
@@ -295,7 +297,8 @@ ssize_t force_read_timeout(int sockfd, void *buf, size_t len, unsigned sec)
 		if (ret == -1) {
 			if (errno != EAGAIN && errno != EINTR)
 				return ret;
-		} else if (ret == 0 && left != 0) {
+		} else if (ret == 0) {
+			assert(left != 0);
 			errno = ENOENT;
 			return -1;
 		}

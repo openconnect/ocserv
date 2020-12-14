@@ -18,6 +18,44 @@ BUILT_SOURCES = ipc.pb-c.c ipc.pb-c.h \
 EXTRA_DIST = version.inc.in version.inc \
 	ipc.proto ctl.proto http-heads.gperf common.mk ocserv-fw
 
+CORE_LDADD = ../gl/libgnu.a libccan.a libcommon.a
+CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
+	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
+	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
+	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
+	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
+	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
+	$(CODE_COVERAGE_LDFLAGS)
+
+if LOCAL_HTTP_PARSER
+HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
+endif
+
+CORE_SOURCES = $(HTTP_PARSER_SOURCES) \
+	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
+	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
+	icmp-ping.c icmp-ping.h inih/ini.c inih/ini.h ip-lease.c ip-lease.h \
+	ip-util.c ip-util.h isolate.h isolate.c log.c main.h main-ctl.h \
+	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
+	sup-config/file.c sup-config/file.h sup-config/radius.c \
+	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
+	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h
+
+if ENABLE_COMPRESSION
+CORE_SOURCES += lzs.c lzs.h
+endif
+
+if HAVE_GSSAPI
+CORE_SOURCES += kkdcp_asn1_tab.c kkdcp.asn
+endif
+
+# Authentication module sources
+AUTH_SOURCES=auth/common.c auth/common.h auth/gssapi.c auth/gssapi.h \
+	auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c \
+	auth/radius.h auth-unix.c auth-unix.h
+
+ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
+
 
 sbin_PROGRAMS = ocserv ocserv-worker
 bin_SCRIPTS = ocserv-fw
@@ -43,52 +81,15 @@ ocserv_worker_LDADD = $(CORE_LDADD)
 
 noinst_LIBRARIES = libipc.a
 
-# Authentication module sources
-AUTH_SOURCES=auth/common.c auth/common.h auth/gssapi.c auth/gssapi.h \
-	auth/pam.c auth/pam.h auth/plain.c auth/plain.h auth/radius.c \
-	auth/radius.h auth-unix.c auth-unix.h
-
 if ENABLE_OIDC_AUTH
 AUTH_SOURCES += auth/openidconnect.c auth/openidconnect.h
 endif
-
-ACCT_SOURCES=acct/radius.c acct/radius.h acct/pam.c acct/pam.h
-
-CORE_SOURCES = $(CCAN_SOURCES) $(HTTP_PARSER_SOURCES) \
-	common/hmac.c common/hmac.h common/snapshot.c common/snapshot.h \
-	common-config.h config.c config-kkdcp.c config-ports.c defs.h gettime.h \
-	icmp-ping.c icmp-ping.h inih/ini.c inih/ini.h ip-lease.c ip-lease.h \
-	ip-util.c ip-util.h isolate.h isolate.c log.c main.h main-ctl.h \
-	script-list.h setproctitle.c setproctitle.h str.c str.h subconfig.c \
-	sup-config/file.c sup-config/file.h sup-config/radius.c \
-	sup-config/radius.h tlslib.c tlslib.h tun.c tun.h valid-hostname.c \
-	vasprintf.c vasprintf.h vhost.h vpn.h namespace.h
 
 if ENABLE_LATENCY_SUPPORT
 ocserv_worker_SOURCES += worker-latency.c worker-latency.h
 endif
 
-if ENABLE_COMPRESSION
-CORE_SOURCES += lzs.c lzs.h
-endif
 
-if HAVE_GSSAPI
-CORE_SOURCES += kkdcp_asn1_tab.c kkdcp.asn
-endif
-
-if LOCAL_HTTP_PARSER
-HTTP_PARSER_SOURCES = http-parser/http_parser.c http-parser/http_parser.h
-endif
-
-CORE_LDADD = ../gl/libgnu.a libccan.a libcommon.a
-CORE_LDADD += $(LIBGNUTLS_LIBS) $(PAM_LIBS) $(LIBUTIL) \
-	$(LIBSECCOMP) $(LIBWRAP) $(LIBCRYPT) $(NEEDED_HTTP_PARSER_LIBS) \
-	$(NEEDED_LIBPROTOBUF_LIBS) $(LIBSYSTEMD) $(LIBTALLOC_LIBS) \
-	$(RADCLI_LIBS) $(LIBLZ4_LIBS) $(LIBKRB5_LIBS) \
-	$(LIBTASN1_LIBS) $(LIBOATH_LIBS) $(LIBNETTLE_LIBS) \
-	$(LIBEV_LIBS) libipc.a $(NEEDED_LIBPROTOBUF_LIBS) \
-	$(CODE_COVERAGE_LDFLAGS) 
-	
 if ENABLE_LATENCY_SUPPORT
 ocserv_worker_LDADD += $(LIBM)
 endif

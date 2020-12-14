@@ -40,6 +40,10 @@
 #include "vhost.h"
 #include "ev.h"
 
+// Name of environment variable used to pass worker_startup_msg
+// between ocserv-main and ocserv-worker.
+#define OCSERV_ENV_WORKER_STARTUP_MSG "OCSERV_WORKER_STARTUP_MSG"
+
 typedef enum {
 	UP_DISABLED,
 	UP_WAIT_FD,

@@ -76,12 +76,7 @@ extern const ASN1_ARRAY_TYPE kkdcp_asn1_tab[];
 ASN1_TYPE _kkdcp_pkix1_asn = ASN1_TYPE_EMPTY;
 #endif
 
-// Name of environment variable used to pass worker_startup_msg 
-// between ocserv-main and ocserv-worker.
-#define OCSERV_ENV_WORKER_STARTUP_MSG "OCSERV_WORKER_STARTUP_MSG"
-
 extern struct snapshot_t * config_snapshot;
-
 
 int worker_argc = 0;
 char **worker_argv = NULL;

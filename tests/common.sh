@@ -35,11 +35,17 @@ if test "${DISABLE_ASAN_BROKEN_TESTS}" = 1;then
 	ISOLATE_WORKERS=false
 fi
 
-if test -z "$NO_NEED_ROOT";then
+if test -z "${NO_NEED_ROOT}";then
 	if test "$(id -u)" != "0";then
 		echo "You need to run this script as root"
 		exit 77
 	fi
+fi
+
+# Increase verbosity as this disables the anti-debugging measures
+# of the worker processes.
+if test "${COVERAGE}" = "1" && test -z "${VERBOSE}";then
+	VERBOSE=1
 fi
 
 # NO_NEED_ROOT implies NEED_SOCKET_WRAPPER

@@ -16,7 +16,7 @@ resource_rules:
         actions:
           status: close
           comment: |
-            {{author}} This issue was marked as needinfo with no update for long time. We are now closing it, but please re-open if it is still relevant. This is an automated message.
+            {{author}} This issue was marked as needinfo with no update for long time. We are now closing it, but please add the necessary information and re-open if it is still relevant. This is an automated message.
 
   merge_requests:
     rules:

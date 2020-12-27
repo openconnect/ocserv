@@ -2497,7 +2497,7 @@ static int parse_data(struct worker_st *ws, uint8_t *buf, size_t buf_size,
 			exit_worker_reason(ws, REASON_USER_DISCONNECT);
 		} else {
 			if (plain_size > 0) {
-				oclog(ws, LOG_DEBUG, "bye packet with payload: %u/%.2x", (unsigned)plain_size, plain[0]);
+				oclog_hex(ws, LOG_DEBUG, "bye packet with unknown payload", plain, plain_size, 0);
 				return -1;
 			}
 

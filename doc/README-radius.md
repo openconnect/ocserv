@@ -31,7 +31,7 @@ due to roaming). That caused accounting problems, and as there is no
 notion of ports in ocserv, it is no longer sent.
 This breaks the default configuration of freeradius servers which
 assumes that the NAS-Port is sent. To make ocserv authentication
-and account work with freeradius, you must configure the server
+and accounting work with freeradius, you must configure the server
 not to account NAS-Port by removing the NAS-Port attribute from the
 acct_unique section.
 ---

@@ -29,7 +29,6 @@ to server. In the previous versions the NAS-Port value was corresponding
 to the worker process ID (PID), which changed on client reconnect (e.g.,
 due to roaming). That caused accounting problems, and as there is no
 notion of ports in ocserv, it is no longer sent.
-
 This breaks the default configuration of freeradius servers which
 assumes that the NAS-Port is sent. To make ocserv authentication
 and account work with freeradius, you must configure the server

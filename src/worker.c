@@ -120,11 +120,6 @@ int main(int argc, char **argv)
 
 	restore_secmod_socket_file_name(ws->secmod_addr.sun_path);
 
-	// Close stdout and stderr early to avoid spurious logs
-	/* we don't need them */
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-
 	str = getenv("OCSERV_ALLOW_BROKEN_CLIENTS");
 	if (str && str[0] == '1' && str[1] == 0)
 		allow_broken_clients = 1;

@@ -4,6 +4,7 @@
 - Advertise X-CSTP-Lease-Duration and X-CSTP-Session-Timeout
 - No longer recommend building with system's libpcl but rather the
   bundled as it is not a very common shared library.
+- Corrected busyloop on failed DTLS handshakes (#400)
 
 
 * Version 1.1.2 (released 2020-12-06)

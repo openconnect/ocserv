@@ -1479,6 +1479,7 @@ static int dtls_mainloop(worker_st * ws, struct dtls_st * dtls, struct timespec 
 				      "error in DTLS handshake: %s\n",
 				      gnutls_strerror(ret));
 			dtls->udp_state = UP_DISABLED;
+			ev_io_stop(worker_loop, &dtls->io);
 			break;
 		}
 

@@ -431,7 +431,7 @@ static int setup_dtls_connection(struct worker_st *ws, struct dtls_st * dtls)
 	}
 
 	dtls->dtls_session = session;
-	ev_init(&dtls->io, dtls_watcher_cb);
+	ev_io_stop(worker_loop, &dtls->io);
 	ev_io_set(&dtls->io, dtls->dtls_tptr.fd, EV_READ);
 	ev_io_start(worker_loop, &dtls->io);
 	ev_invoke(worker_loop, &dtls->io, EV_READ);

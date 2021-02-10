@@ -555,15 +555,22 @@ static int os_open_tun(main_server_st * s, struct proc_st *proc)
 	if (fd < 0)
 		return fd;
 
-	/* get tun name */
-	ret = fstat(fd, &st);
-	if (ret < 0) {
-		e = errno;
-		mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", fd, strerror(e));
-		close(fd);
-		return -1;
-	}
-	strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
+#if defined(__OpenBSD__)
+        /* OpenBSD's devname does not return the correct name if unit_nr>=4.
+         * See https://gitlab.com/openconnect/ocserv/-/issues/399
+         */
+        snprintf(proc->tun_lease.name, sizeof(proc->tun_lease.name), "tun%d", unit_nr);
+#else
+        /* get tun name */
+        ret = fstat(fd, &st);
+        if (ret < 0) {
+                e = errno;
+                mslog(s, NULL, LOG_ERR, "tun fd %d: stat: %s\n", fd, strerror(e));
+                close(fd);
+                return -1;
+        }
+        strlcpy(proc->tun_lease.name, devname(st.st_rdev, S_IFCHR), sizeof(proc->tun_lease.name));
+#endif
 
 	if (fd >= 0) {
 		int i, e, ret;
